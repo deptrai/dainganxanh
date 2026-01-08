@@ -60,11 +60,11 @@ status: in_progress
   stories:
     - story: E2.1
       name: "Kết nối TreeService với TwentyORM"
-      status: ready-for-dev
-      points: 5
-      assigned_to: null
-      started: null
-      completed: null
+      status: done
+      points: 3
+      assigned_to: AI Agent
+      started: 2026-01-09
+      completed: 2026-01-09
       
     - story: E2.2
       name: "Kết nối TreePhotoService với S3"
@@ -210,10 +210,10 @@ status: in_progress
 
 total_stories: 21
 total_points: 85
-completed_stories: 3
-completed_points: 8
+completed_stories: 4
+completed_points: 11
 in_progress_stories: 0
-remaining_points: 77
+remaining_points: 74
 velocity_target: 30_points_per_week
 projected_weeks: 3
 
