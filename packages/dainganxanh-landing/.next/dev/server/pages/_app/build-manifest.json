@@ -1,0 +1,23 @@
+{
+  "devFiles": [],
+  "ampDevFiles": [],
+  "polyfillFiles": [],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [],
+  "pages": {
+    "/_app": [
+      "static/chunks/06114_next_dist_compiled_2a6fda16._.js",
+      "static/chunks/06114_next_dist_shared_lib_1e5acb85._.js",
+      "static/chunks/06114_next_dist_client_063fefdd._.js",
+      "static/chunks/06114_next_dist_369797ef._.js",
+      "static/chunks/06114_next_app_da68849f.js",
+      "static/chunks/[next]_entry_page-loader_ts_528afa4b._.js",
+      "static/chunks/06114_react-dom_923d409b._.js",
+      "static/chunks/06114_fa2675f1._.js",
+      "static/chunks/[root-of-the-server]__26d0aa37._.js",
+      "static/chunks/packages_dainganxanh-landing_pages__app_2da965e7._.js",
+      "static/chunks/turbopack-packages_dainganxanh-landing_pages__app_b4daa038._.js"
+    ]
+  },
+  "ampFirstPages": []
+}

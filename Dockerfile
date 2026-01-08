@@ -1,4 +1,4 @@
-# Dockerfile for Dokploy - builds from d/packages/dainganxanh-landing
+# Dockerfile for Dokploy - builds from packages/dainganxanh-landing
 # Context: repo root (.)
 # This file should be at repo root for Dokploy to find it
 
@@ -7,7 +7,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Copy package files from subdirectory
-COPY d/packages/dainganxanh-landing/package.json d/packages/dainganxanh-landing/yarn.lock* ./
+COPY packages/dainganxanh-landing/package.json packages/dainganxanh-landing/yarn.lock* ./
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
@@ -19,7 +19,7 @@ RUN \
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY d/packages/dainganxanh-landing .
+COPY packages/dainganxanh-landing .
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
