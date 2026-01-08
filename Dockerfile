@@ -1,13 +1,13 @@
-# Root Dockerfile for Dokploy deployment
-# This Dockerfile builds the Next.js landing page located in packages/dainganxanh-landing
-# It mirrors the multi‑stage Dockerfile that already exists in that folder.
+# Dockerfile for Dokploy - builds from d/packages/dainganxanh-landing
+# Context: repo root (.)
+# This file should be at repo root for Dokploy to find it
 
-# ---------- Stage 1: Install dependencies ----------
+# Stage 1: Dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy only the package files of the landing package
-COPY packages/dainganxanh-landing/package.json packages/dainganxanh-landing/yarn.lock* packages/dainganxanh-landing/package-lock.json* packages/dainganxanh-landing/pnpm-lock.yaml* ./
+# Copy package files from subdirectory
+COPY d/packages/dainganxanh-landing/package.json d/packages/dainganxanh-landing/yarn.lock* ./
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
@@ -15,21 +15,17 @@ RUN \
   else echo "Lockfile not found." && exit 1; \
   fi
 
-# ---------- Stage 2: Build the app ----------
+# Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY packages/dainganxanh-landing .
+COPY d/packages/dainganxanh-landing .
 
+# Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN \
-  if [ -f yarn.lock ]; then yarn build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm build; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN yarn build
 
-# ---------- Stage 3: Run the app ----------
+# Stage 3: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -39,7 +35,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built assets
+# Copy built files
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
