@@ -40,14 +40,14 @@ export default function HomePage() {
 
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
                     <FadeIn delay={0.4} className="inline-block">
-                        <div className="px-5 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white mb-8 animate-pulse shadow-lg">
-                            <span className="font-bold text-accent-gold text-lg">138,592</span> / 1,000,000 cây <span className="font-semibold">gieo hạt mầm</span>
+                        <div className="px-6 py-3 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white mb-8 animate-pulse shadow-lg">
+                            <span className="font-bold text-accent-gold text-3xl md:text-4xl">138,592</span> <span className="text-2xl md:text-3xl">/ 1,000,000 cây</span> <span className="font-semibold text-2xl md:text-3xl">gieo hạt mầm</span>
                         </div>
                     </FadeIn>
 
                     <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-8 leading-tight text-shadow">
                         <TextReveal text="Gieo Hạt Mầm Xanh" className="block text-white mb-2" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-accent-gold to-yellow-500 block drop-shadow-[0_2px_8px_rgba(251,191,36,0.8)]">Dệt Đại Ngàn, Gặt Phước Báu</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-green-400 to-emerald-500 block drop-shadow-[0_4px_12px_rgba(34,197,94,0.9)] filter brightness-125">Dệt Đại Ngàn, Gặt Phước Báu</span>
                     </h1>
                     <FadeIn delay={0.8}>
                         <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-12 font-light font-serif leading-relaxed drop-shadow-md">
@@ -326,6 +326,36 @@ export default function HomePage() {
 
             {/* Contact Popup */}
             <ContactPopup />
+
+            {/* Mobile Bottom Menu */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-brand-200 shadow-lg">
+                <div className="flex justify-around items-center py-3 px-2">
+                    <a href="#about" className="flex flex-col items-center gap-1 text-brand-600 hover:text-brand-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <span className="text-xs font-medium">Câu Chuyện</span>
+                    </a>
+                    <a href="#how-it-works" className="flex flex-col items-center gap-1 text-brand-600 hover:text-brand-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span className="text-xs font-medium">Cách Tham Gia</span>
+                    </a>
+                    <a href="#dashboard" className="flex flex-col items-center gap-1 text-brand-600 hover:text-brand-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <span className="text-xs font-medium">Vườn Của Tôi</span>
+                    </a>
+                    <button className="flex flex-col items-center gap-1 text-white bg-brand-500 hover:bg-brand-600 px-4 py-2 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-xs font-bold">Trồng Ngay</span>
+                    </button>
+                </div>
+            </nav>
         </main>
     )
 }
