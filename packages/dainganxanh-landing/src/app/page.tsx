@@ -47,7 +47,7 @@ export default function HomePage() {
 
                     <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-8 leading-tight text-shadow">
                         <TextReveal text="Gieo Hạt Mầm Xanh" className="block text-white mb-2" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-green-400 to-emerald-500 block drop-shadow-[0_4px_12px_rgba(34,197,94,0.9)] filter brightness-125">Dệt Đại Ngàn, Gặt Phước Báu</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-accent-gold to-brand-500 block drop-shadow-[0_4px_12px_rgba(34,197,94,0.9)] animate-gradient">Dệt Đại Ngàn, Gặt Phước Báu</span>
                     </h1>
                     <FadeIn delay={0.8}>
                         <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-12 font-light font-serif leading-relaxed drop-shadow-md">
