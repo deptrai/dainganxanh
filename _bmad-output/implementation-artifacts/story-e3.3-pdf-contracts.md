@@ -2,7 +2,7 @@
 
 **Epic:** E3 - Payment Gateway Integration  
 **Story Points:** 3  
-**Status:** ready-for-dev  
+**Status:** done  
 **Dependencies:** E3.1 (Banking Webhook), E3.2 (USDT Webhook)
 
 ---

@@ -2,7 +2,7 @@
 
 **Epic:** E3 - Payment Gateway Integration  
 **Story Points:** 5  
-**Status:** ready-for-dev  
+**Status:** done  
 **Dependencies:** E1.3 (Order Object)
 
 ---

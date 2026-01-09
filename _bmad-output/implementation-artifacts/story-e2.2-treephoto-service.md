@@ -2,7 +2,7 @@
 
 **Epic:** E2 - Tree Tracking Integration  
 **Story Points:** 5  
-**Status:** ready-for-dev  
+**Status:** done  
 **Dependencies:** E1.4 (TreePhoto Object)
 
 ---
