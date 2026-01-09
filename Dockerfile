@@ -44,3 +44,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
+# Force rebuild - 2026-01-09 16:43:38
