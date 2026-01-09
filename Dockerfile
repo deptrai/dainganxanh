@@ -7,13 +7,9 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Copy package files from subdirectory
-COPY packages/dainganxanh-landing/package.json packages/dainganxanh-landing/yarn.lock* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+COPY packages/dainganxanh-landing/package.json ./package.json
+COPY packages/dainganxanh-landing/yarn.lock ./yarn.lock
+RUN yarn --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
