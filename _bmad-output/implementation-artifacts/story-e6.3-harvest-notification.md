@@ -2,7 +2,7 @@
 
 **Epic:** E6 - Growth Features  
 **Story Points:** 3  
-**Status:** ready-for-dev  
+**Status:** done  
 **Dependencies:** E2.4 (Quarterly Update Cron)
 
 ---

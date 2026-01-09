@@ -2,7 +2,7 @@
 
 **Epic:** E6 - Growth Features  
 **Story Points:** 5  
-**Status:** ready-for-dev  
+**Status:** done  
 **Dependencies:** E4.1 (My Garden Dashboard)
 
 ---

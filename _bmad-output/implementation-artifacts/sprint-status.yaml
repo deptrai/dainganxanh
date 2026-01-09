@@ -113,11 +113,10 @@ status: in_progress
       
     - story: E3.3
       name: "Generate PDF Contracts"
-      status: ready-for-dev
-      points: 3
-      assigned_to: null
-      started: null
-      completed: null
+      status: done
+      assigned_to: AI Agent
+      started: 2026-01-09
+      completed: 2026-01-09
 
 - epic: E4
   name: "User Portal"
@@ -142,11 +141,11 @@ status: in_progress
       
     - story: E4.3
       name: "Order History Page"
-      status: ready-for-dev
+      status: done
       points: 3
-      assigned_to: null
-      started: null
-      completed: null
+      assigned_to: AI Agent
+      started: 2026-01-09
+      completed: 2026-01-09
 
 - epic: E5
   name: "Admin Dashboard"
@@ -155,7 +154,7 @@ status: in_progress
   stories:
     - story: E5.1
       name: "Order Management View"
-      status: ready-for-dev
+      status: done
       points: 5
       assigned_to: null
       started: null

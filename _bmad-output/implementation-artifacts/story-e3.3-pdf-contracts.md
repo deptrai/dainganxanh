@@ -40,24 +40,24 @@
 
 ## Technical Tasks
 
-- [ ] Task 1: HTML Template
-  - [ ] Subtask 1.1: Design contract template
-  - [ ] Subtask 1.2: Vietnamese content
-  - [ ] Subtask 1.3: Responsive layout
+- [x] Task 1: HTML Template
+  - [x] Subtask 1.1: Design contract template
+  - [x] Subtask 1.2: Vietnamese content
+  - [x] Subtask 1.3: Responsive layout
 
-- [ ] Task 2: PDF Generation
-  - [ ] Subtask 2.1: Setup Puppeteer
-  - [ ] Subtask 2.2: HTML → PDF conversion
-  - [ ] Subtask 2.3: Upload to S3
+- [x] Task 2: PDF Generation
+  - [x] Subtask 2.1: Setup Puppeteer
+  - [x] Subtask 2.2: HTML → PDF conversion
+  - [x] Subtask 2.3: Upload to S3
 
-- [ ] Task 3: Email Integration
-  - [ ] Subtask 3.1: Design email template
-  - [ ] Subtask 3.2: Attach PDF
-  - [ ] Subtask 3.3: Track email delivery
+- [x] Task 3: Email Integration
+  - [x] Subtask 3.1: Design email template
+  - [x] Subtask 3.2: Attach PDF
+  - [x] Subtask 3.3: Track email delivery
 
-- [ ] Task 4: Testing
-  - [ ] Subtask 4.1: Unit tests
-  - [ ] Subtask 4.2: Visual preview tests
+- [x] Task 4: Testing
+  - [x] Subtask 4.1: Unit tests
+  - [x] Subtask 4.2: Visual preview tests
 
 ---
 

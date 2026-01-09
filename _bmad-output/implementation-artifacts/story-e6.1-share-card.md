@@ -1,6 +1,6 @@
 # Story E6.1: Share Card Generation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { FadeIn, StaggerContainer, StaggerItem, ParallaxImage, ScaleHover, TextReveal } from '@/components/MotionWrapper'
+import ContactPopup from '@/components/ContactPopup'
 
 export default function HomePage() {
     return (
@@ -12,7 +13,8 @@ export default function HomePage() {
                             <span className="text-2xl font-serif font-bold text-brand-500">Đại Ngàn Xanh</span>
                         </div>
                         <div className="hidden md:flex space-x-8">
-                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Câu Chuyện Đại Ngàn Dó Đen Việt</a>
+                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Câu Chuyện Đại Ngàn</a>
+                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Dó Đen Việt</a>
                             <a href="#how-it-works" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Cách Tham Gia</a>
                             <a href="#dashboard" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Vườn Của Tôi</a>
                         </div>
@@ -39,13 +41,13 @@ export default function HomePage() {
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
                     <FadeIn delay={0.4} className="inline-block">
                         <div className="px-5 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white mb-8 animate-pulse shadow-lg">
-                            <span className="font-bold text-accent-gold text-lg">138,592</span> / 1,000,000 cây đã bén rễ
+                            <span className="font-bold text-accent-gold text-lg">138,592</span> / 1,000,000 cây <span className="font-semibold">gieo hạt mầm</span>
                         </div>
                     </FadeIn>
 
                     <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-8 leading-tight text-shadow">
                         <TextReveal text="Gieo Hạt Mầm Xanh" className="block text-white mb-2" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-gold to-brand-100 block">Dệt Đại Ngàn, Gặt Phước Báu</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-accent-gold to-yellow-500 block drop-shadow-[0_2px_8px_rgba(251,191,36,0.8)]">Dệt Đại Ngàn, Gặt Phước Báu</span>
                     </h1>
                     <FadeIn delay={0.8}>
                         <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-12 font-light font-serif leading-relaxed drop-shadow-md">
@@ -120,8 +122,8 @@ export default function HomePage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-3xl mx-auto mb-20">
                         <FadeIn>
-                            <span className="text-accent-gold font-bold tracking-widest uppercase mb-2 block">Giá Trị Của Người Gieo Mầm</span>
-                            <h2 className="font-serif text-4xl md:text-5xl font-bold text-brand-600 mb-6">Hơn Cả Một Cái Cây, <br />Bạn Sở Hữu Một Di Sản</h2>
+                            <h2 className="font-serif text-5xl md:text-6xl font-bold text-brand-600 mb-4">Giá Trị Của Người Gieo Mầm</h2>
+                            <p className="text-2xl md:text-3xl text-brand-500 font-serif">Hơn Cả Một Cái Cây, <br />Bạn Sở Hữu Một Di Sản</p>
                         </FadeIn>
                     </div>
                     <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -195,7 +197,7 @@ export default function HomePage() {
 
                     <div className="space-y-8">
                         <FadeIn>
-                            <span className="text-accent-gold font-bold tracking-widest uppercase">Thiên Nhiên và Công Nghệ được ứng dụng</span>
+                            <span className="text-accent-gold font-bold tracking-widest uppercase">Khi Thiên Nhiên Được Quan Sát Bằng Công Nghệ</span>
                             <h2 className="font-serif text-4xl lg:text-5xl font-bold leading-tight mt-2">Khu Vườn Trong Túi Bạn</h2>
                         </FadeIn>
                         <FadeIn delay={0.2}>
@@ -278,8 +280,7 @@ export default function HomePage() {
                             }
                         ].map((faq, index) => (
                             <StaggerItem key={index} className="border border-brand-100 rounded-2xl p-6 hover:shadow-soft transition-all duration-300 bg-brand-50/30 hover:bg-white cursor-pointer group">
-                                <h3 className="font-serif text-xl font-bold text-brand-800 mb-3 flex items-center">
-                                    <span className="mr-3 text-brand-500 text-2xl group-hover:scale-125 transition-transform duration-300">?</span>
+                                <h3 className="font-serif text-xl font-bold text-brand-800 mb-3">
                                     {faq.question}
                                 </h3>
                                 <p className="text-gray-700 ml-8 leading-relaxed text-lg">{faq.answer}</p>
@@ -297,8 +298,8 @@ export default function HomePage() {
 
                 <div className="relative z-10 max-w-4xl mx-auto px-4">
                     <FadeIn>
-                        <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-10 leading-tight">
-                            &ldquo;Hôm nay bạn gieo một hạt mầm xanh, <br />5 năm nữa con bạn sẽ có bóng mát của cả một khu rừng.&rdquo;
+                        <h2 className="font-serif text-5xl md:text-6xl font-bold text-white mb-10 leading-tight">
+                            Bạn hoàn toàn có thể trồng thêm <br />bất cứ lúc nào trong Vườn Của Tôi
                         </h2>
                     </FadeIn>
 
@@ -308,7 +309,7 @@ export default function HomePage() {
                                 Bắt Đầu Hành Trình Gieo Hạt
                             </button>
                         </ScaleHover>
-                        <p className="text-brand-100 text-sm opacity-80 mt-4 font-light tracking-wide">Bạn hoàn toàn có thể trồng thêm bất cứ lúc nào trong Vườn Của Tôi.</p>
+
                     </FadeIn>
                 </div>
             </section>
@@ -322,6 +323,9 @@ export default function HomePage() {
                     </FadeIn>
                 </div>
             </footer>
+
+            {/* Contact Popup */}
+            <ContactPopup />
         </main>
     )
 }

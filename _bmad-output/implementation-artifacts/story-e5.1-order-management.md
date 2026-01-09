@@ -2,7 +2,7 @@
 
 **Epic:** E5 - Admin Dashboard  
 **Story Points:** 5  
-**Status:** ready-for-dev  
+**Status:** in-progress  
 **Dependencies:** E1.3 (Order Object), E3.1 (Banking Webhook)
 
 ---
@@ -40,28 +40,31 @@
 
 ## Technical Tasks
 
-- [ ] Task 1: Order Management Route
-  - [ ] Subtask 1.1: Admin route /admin/orders
-  - [ ] Subtask 1.2: Access control (admin only)
+- [x] Task 1: Order Management Route
+  - [x] Subtask 1.1: Admin route /admin/orders
+  - [x] Subtask 1.2: Access control (admin only)
 
-- [ ] Task 2: Order Table
-  - [ ] Subtask 2.1: DataTable component
-  - [ ] Subtask 2.2: Filters panel
-  - [ ] Subtask 2.3: Sort by columns
+- [x] Task 2: Order Table
+  - [x] Subtask 2.1: DataTable component
+  - [x] Subtask 2.2: Filters panel
+  - [x] Subtask 2.3: Sort by columns
 
-- [ ] Task 3: Actions
-  - [ ] Subtask 3.1: Verify payment action
-  - [ ] Subtask 3.2: Assign to lot modal
-  - [ ] Subtask 3.3: View customer details
+- [x] Task 3: Actions
+  - [x] Subtask 3.1: Verify payment action
+  - [x] Subtask 3.2: Assign to lot modal
+  - [x] Subtask 3.3: View customer details
 
-- [ ] Task 4: Bulk Operations
-  - [ ] Subtask 4.1: Multi-select
-  - [ ] Subtask 4.2: Bulk action buttons
-  - [ ] Subtask 4.3: Confirmation dialogs
+- [x] Task 4: Bulk Operations
+  - [x] Subtask 4.1: Multi-select
+  - [x] Subtask 4.2: Bulk action buttons
+  - [x] Subtask 4.3: Confirmation dialogs
 
-- [ ] Task 5: Testing
-  - [ ] Subtask 5.1: Unit tests
-  - [ ] Subtask 5.2: E2E tests
+- [x] Task 5: Testing
+  - [x] Subtask 5.1: Unit tests
+  - [x] Subtask 5.2: E2E tests
+
+## Status
+**Done**
 
 ---
 
@@ -69,3 +72,20 @@
 
 - Consider using Twenty's built-in table components
 - Integrate with existing Twenty admin patterns
+
+## File List
+
+- packages/twenty-shared/src/types/AppPath.ts
+- packages/twenty-front/src/modules/app/hooks/useCreateAppRouter.tsx
+- packages/twenty-front/src/modules/app/hooks/useCreateAppRouter.spec.tsx
+- packages/twenty-front/src/pages/admin/AdminOrdersPage.tsx
+- packages/twenty-front/src/pages/admin/AdminOrdersPage.integration.spec.tsx
+- packages/twenty-front/src/pages/admin/components/AdminOrderTable.tsx
+- packages/twenty-front/src/pages/admin/components/AdminOrderTable.spec.tsx
+- packages/twenty-front/src/pages/admin/components/AssignLotModal.tsx
+- packages/twenty-front/src/pages/admin/components/ViewOrderModal.tsx
+- packages/twenty-front/src/modules/dainganxanh/admin/hooks/useAdminOrders.ts
+- packages/twenty-server/src/modules/dainganxanh/order-management/services/order.service.ts
+- packages/twenty-server/src/modules/dainganxanh/order-management/controllers/order.controller.ts
+- packages/twenty-server/src/modules/dainganxanh/order-management/controllers/order.controller.spec.ts
+

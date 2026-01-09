@@ -2,7 +2,7 @@
 
 **Epic:** E1 - Custom Objects Setup  
 **Story Points:** 2  
-**Status:** ready-for-dev  
+**Status:** done  
 **Dependencies:** E1.1 (Tree Object)
 
 ---
