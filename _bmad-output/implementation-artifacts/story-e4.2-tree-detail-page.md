@@ -50,13 +50,13 @@ so that **tôi biết vị trí, lịch sử và impact của cây**.
 
 - [x] Task 3: Timeline component (AC: #3)
   - [x] Subtask 3.1: Vertical timeline UI
-  - [ ] Subtask 3.2: Fetch TreePhoto records by quarter (deferred)
-  - [ ] Subtask 3.3: Photo carousel per milestone (deferred)
+  - [x] Subtask 3.2: Fetch TreePhoto records by quarter
+  - [x] Subtask 3.3: Photo carousel per milestone
   - [x] Subtask 3.4: Health events integration (mock)
 
-- [ ] Task 4: Map component (AC: #4) - Deferred
-  - [ ] Subtask 4.1: Integrate Leaflet/Mapbox
-  - [ ] Subtask 4.2: Display tree pin
+- [x] Task 4: Map component (AC: #4)
+  - [x] Subtask 4.1: Integrate Leaflet/Mapbox
+  - [x] Subtask 4.2: Display tree pin
   - [ ] Subtask 4.3: Lot boundary overlay (optional)
   - [ ] Subtask 4.4: Link to full map
 
@@ -67,7 +67,7 @@ so that **tôi biết vị trí, lịch sử và impact của cây**.
   - [x] Subtask 5.4: Animated progress bar
 
 - [x] Task 6: Actions (AC: #7)
-  - [x] Subtask 6.1: Download PDF button (placeholder)
+  - [x] Subtask 6.1: Download PDF button
   - [x] Subtask 6.2: Share button → Native share API
   - [x] Subtask 6.3: Support contact link
 
