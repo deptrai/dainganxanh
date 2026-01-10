@@ -16,7 +16,7 @@ interface OTPInputProps {
 }
 
 export function OTPInput({
-    length = 6,
+    length = 8,
     onComplete,
     onResend,
     countdown,
@@ -97,9 +97,9 @@ export function OTPInput({
             {/* OTP Input Boxes */}
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Nhập mã OTP (6 chữ số)
+                    Nhập mã OTP (8 chữ số)
                 </label>
-                <div className="flex gap-2 justify-center">
+                <div className="grid grid-cols-8 gap-1 sm:gap-1.5">
                     {otp.map((digit, index) => (
                         <motion.input
                             key={index}
@@ -116,7 +116,7 @@ export function OTPInput({
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.05 }}
                             className={cn(
-                                "w-12 h-14 text-center text-2xl font-bold rounded-xl",
+                                "w-9 h-9 sm:w-11 sm:h-11 text-center text-lg sm:text-xl font-bold rounded-xl",
                                 "border-2 transition-all",
                                 "focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2",
                                 error

@@ -1,9 +1,11 @@
 import Image from 'next/image'
 import { FadeIn, StaggerContainer, StaggerItem, ParallaxImage, ScaleHover, TextReveal } from '@/components/MotionWrapper'
+import { AuthCallbackHandler } from '@/components/AuthCallbackHandler'
 
 export default function HomePage() {
     return (
         <main className="overflow-x-hidden">
+            <AuthCallbackHandler />
             {/* Navbar - Glassmorphism */}
             <nav className="fixed w-full z-50 transition-all duration-300 top-0 py-4">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

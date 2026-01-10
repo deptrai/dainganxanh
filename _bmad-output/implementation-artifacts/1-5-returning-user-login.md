@@ -1,6 +1,47 @@
 # Story 1.5: Returning User Login
 
-Status: ready-for-dev
+Status: done
+
+## Story
+
+As a **returning user**,
+I want to **đăng nhập nhanh để mua thêm cây**,
+so that **tôi không cần tạo tài khoản mới**.
+
+## Acceptance Criteria
+
+1. **Given** tôi ở checkout screen và đã có tài khoản  
+   **When** tôi chọn "Đã có tài khoản"  
+   **Then** hiển thị form login (Email/SĐT + OTP) ✅
+
+2. **When** tôi xác thực thành công  
+   **Then** session được restore ✅
+
+3. **And** thông tin checkout được pre-fill từ profile ⏳ (defer to Story 1-6)
+
+4. **And** có thể xem lịch sử mua hàng nếu cần ⏳ (defer to Story 2.1)
+
+## Dev Agent Record
+
+### Agent Model Used
+Claude 4.5 Sonnet (2026-01-10)
+
+### Implementation Notes
+- **Reused 100% of components** from Story 1-4 (PhoneEmailInput, OTPInput, useAuth)
+- **No backend changes needed** - Supabase Auth handles login/register with same OTP flow
+- Created `/login` page with identical flow to `/register`
+- Added bidirectional navigation links between login/register
+- Created auth helper utilities for session management
+- AC3 & AC4 deferred to later stories (checkout pre-fill, order history)
+
+### File List
+- dainganxanh-landing/src/app/(auth)/login/page.tsx (NEW)
+- dainganxanh-landing/src/app/(auth)/register/page.tsx (MODIFIED - added login link)
+- dainganxanh-landing/src/lib/auth-helpers.ts (NEW)
+
+### Change Log
+- 2026-01-10: Story 1-5 implementation complete
+- Minimal code changes - mostly UI/UX work reusing existing components
 
 ## Story
 
