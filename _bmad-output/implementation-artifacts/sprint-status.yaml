@@ -1,0 +1,66 @@
+# Sprint Status - Đại Ngàn Xanh
+# Generated: 2026-01-10T20:33:00+07:00
+# ⚠️ DO NOT manually edit status values - use workflows to update
+
+# STATUS DEFINITIONS:
+# - backlog: Story chưa được tạo chi tiết
+# - ready-for-dev: Story đã có đầy đủ context, sẵn sàng implement
+# - in-progress: Dev đang làm
+# - review: Đang code review
+# - done: Hoàn thành tất cả AC và passed review
+
+sprint_name: "MVP Sprint 1 - User Acquisition"
+sprint_goal: "Hoàn thành flow từ Landing → Payment → Confirmation"
+start_date: "2026-01-10"
+end_date: "2026-02-10"
+
+development_status:
+  # Epic 1: User Acquisition & Onboarding (P0 - MVP Core)
+  epic-1: in-progress
+  1-1-landing-page-hero-video: ready-for-dev
+  1-2-package-selection: done
+  1-3-quantity-price-calculator: done
+  1-4-quick-registration-otp: done
+  1-5-returning-user-login: ready-for-dev
+  1-6-payment-gateway: ready-for-dev
+  1-7-success-animation-share: ready-for-dev
+  1-8-email-confirmation-contract: ready-for-dev
+  epic-1-retrospective: backlog
+
+  # Epic 2: Tree Tracking & Dashboard (P0/P1)
+  epic-2: in-progress
+  2-1-my-garden-dashboard: ready-for-dev
+  2-2-tree-detail-view: ready-for-dev
+  2-3-quarterly-update-notifications: ready-for-dev
+  2-4-timeline-placeholder-real: ready-for-dev
+  2-5-year5-harvest-notification: ready-for-dev
+  2-6-harvest-sell-back: ready-for-dev
+  2-7-harvest-keep-growing: ready-for-dev
+  2-8-harvest-receive-product: ready-for-dev
+  epic-2-retrospective: backlog
+
+  # Epic 3: Admin Operations (P0/P1)
+  epic-3: in-progress
+  3-1-order-management-dashboard: ready-for-dev
+  3-2-tree-lot-assignment: ready-for-dev
+  3-3-contract-printing: ready-for-dev
+  3-4-field-operations-checklist: ready-for-dev
+  3-5-photo-upload-gps: ready-for-dev
+  3-6-tree-health-status: ready-for-dev
+  3-7-analytics-reporting: ready-for-dev
+  epic-3-retrospective: backlog
+
+  # Epic 4: Viral & Growth (P1/P2)
+  epic-4: in-progress
+  4-1-referral-link-generation: ready-for-dev
+  4-2-social-share-prepopulated: ready-for-dev
+  epic-4-retrospective: backlog
+
+# Summary
+summary:
+  total_epics: 4
+  total_stories: 25
+  stories_ready: 25
+  stories_in_progress: 0
+  stories_done: 0
+  current_velocity: 0
