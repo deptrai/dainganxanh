@@ -22,7 +22,7 @@ interface UseAuthReturn {
 }
 
 export function useAuth(): UseAuthReturn {
-    const [mode, setMode] = useState<AuthMode>("phone");
+    const [mode, setMode] = useState<AuthMode>("email");
     const [step, setStep] = useState<OTPStep>("input");
     const [identifier, setIdentifier] = useState("");
     const [loading, setLoading] = useState(false);

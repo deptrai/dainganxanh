@@ -63,8 +63,9 @@ export function PhoneEmailInput({
 
     return (
         <div className={cn("space-y-4", className)}>
-            {/* Mode Toggle */}
+            {/* Mode Toggle - Phone tab hidden, Email only */}
             <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                {/* Phone tab commented out - Email only
                 <button
                     type="button"
                     onClick={() => onModeChange("phone")}
@@ -79,15 +80,14 @@ export function PhoneEmailInput({
                     <Phone className="w-4 h-4" />
                     <span>Số điện thoại</span>
                 </button>
+                */}
                 <button
                     type="button"
                     onClick={() => onModeChange("email")}
                     className={cn(
-                        "flex-1 py-2 px-4 rounded-lg font-medium transition-all",
+                        "w-full py-2 px-4 rounded-lg font-medium transition-all",
                         "flex items-center justify-center gap-2",
-                        mode === "email"
-                            ? "bg-white text-emerald-600 shadow-sm"
-                            : "text-gray-600 hover:text-gray-900"
+                        "bg-white text-emerald-600 shadow-sm"
                     )}
                 >
                     <Mail className="w-4 h-4" />
@@ -138,9 +138,7 @@ export function PhoneEmailInput({
                 {/* Helper Text */}
                 {!displayError && (
                     <p className="text-sm text-gray-500">
-                        {mode === "phone"
-                            ? "Nhập số điện thoại để nhận mã OTP qua SMS"
-                            : "Nhập email để nhận mã OTP"}
+                        Nhập email để nhận mã OTP
                     </p>
                 )}
             </div>

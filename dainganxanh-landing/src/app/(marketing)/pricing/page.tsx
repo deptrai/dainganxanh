@@ -9,8 +9,9 @@ export default function PricingPage() {
     const router = useRouter();
 
     const handleSelectPackage = () => {
-        // Navigate to quantity selector (Story 1.3)
-        router.push("/quantity");
+        // Navigate to quantity selector (Story 1.3) with default quantity
+        const defaultQuantity = 10; // Default to 10 trees
+        router.push(`/quantity?initial=${defaultQuantity}`);
     };
 
     return (

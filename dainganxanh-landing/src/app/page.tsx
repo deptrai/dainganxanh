@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { FadeIn, StaggerContainer, StaggerItem, ParallaxImage, ScaleHover, TextReveal } from '@/components/MotionWrapper'
 import { AuthCallbackHandler } from '@/components/AuthCallbackHandler'
 
@@ -19,9 +20,11 @@ export default function HomePage() {
                             <a href="#dashboard" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Vườn Của Tôi</a>
                         </div>
                         <ScaleHover>
-                            <button className="bg-brand-500 hover:bg-brand-600 text-white px-6 py-2 rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
-                                Trồng Ngay
-                            </button>
+                            <Link href="/pricing">
+                                <button className="bg-brand-500 hover:bg-brand-600 text-white px-6 py-2 rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
+                                    Trồng Ngay
+                                </button>
+                            </Link>
                         </ScaleHover>
                     </FadeIn>
                 </div>
@@ -57,9 +60,11 @@ export default function HomePage() {
 
                     <FadeIn delay={1.0} className="flex flex-col sm:flex-row justify-center gap-6">
                         <ScaleHover>
-                            <button className="bg-accent-gold hover:bg-yellow-400 text-brand-900 text-lg px-10 py-4 rounded-full font-bold shadow-soft hover:shadow-lg transition-all ring-4 ring-accent-gold/30">
-                                Gieo Mầm Ngay – 260.000đ
-                            </button>
+                            <Link href="/pricing">
+                                <button className="bg-accent-gold hover:bg-yellow-400 text-brand-900 text-lg px-10 py-4 rounded-full font-bold shadow-soft hover:shadow-lg transition-all ring-4 ring-accent-gold/30">
+                                    Gieo Mầm Ngay – 260.000đ
+                                </button>
+                            </Link>
                         </ScaleHover>
                         <ScaleHover>
                             <button className="glass-card hover:bg-white/90 text-white hover:text-brand-600 text-lg px-10 py-4 rounded-full font-bold transition-all flex items-center justify-center gap-2 group backdrop-blur-sm bg-white/10 hover:bg-white border-white/30">
@@ -219,9 +224,11 @@ export default function HomePage() {
 
                         <FadeIn delay={0.6}>
                             <ScaleHover>
-                                <button className="bg-white text-brand-900 px-8 py-3 rounded-full font-bold hover:bg-brand-50 transition-colors mt-4 shadow-lg hover:shadow-white/20">
-                                    Xem Vườn Trồng Tập Trung
-                                </button>
+                                <Link href="/pricing">
+                                    <button className="bg-white text-brand-900 px-8 py-3 rounded-full font-bold hover:bg-brand-50 transition-colors mt-4 shadow-lg hover:shadow-white/20">
+                                        Xem Vườn Trồng Tập Trung
+                                    </button>
+                                </Link>
                             </ScaleHover>
                         </FadeIn>
                     </div>
@@ -306,9 +313,11 @@ export default function HomePage() {
 
                     <FadeIn delay={0.3}>
                         <ScaleHover>
-                            <button className="bg-accent-gold hover:bg-yellow-400 text-brand-900 text-xl px-12 py-5 rounded-full font-bold shadow-soft hover:shadow-2xl transition-all mb-6 ring-4 ring-accent-gold/30">
-                                Bắt Đầu Hành Trình Gieo Hạt
-                            </button>
+                            <Link href="/pricing">
+                                <button className="bg-accent-gold hover:bg-yellow-400 text-brand-900 text-xl px-12 py-5 rounded-full font-bold shadow-soft hover:shadow-2xl transition-all mb-6 ring-4 ring-accent-gold/30">
+                                    Bắt Đầu Hành Trình Gieo Hạt
+                                </button>
+                            </Link>
                         </ScaleHover>
                         <p className="text-brand-100 text-sm opacity-80 mt-4 font-light tracking-wide">Bạn hoàn toàn có thể trồng thêm bất cứ lúc nào trong Vườn Của Tôi.</p>
                     </FadeIn>

@@ -50,7 +50,11 @@ export function PriceSummary({
                 {/* Total */}
                 <div className="text-center py-2">
                     <p className="text-sm text-gray-600 mb-1">Tổng cộng</p>
-                    <p className="text-4xl font-bold text-emerald-600">
+                    <p
+                        className="text-4xl font-bold text-emerald-600"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
                         {totalPrice}
                     </p>
                 </div>

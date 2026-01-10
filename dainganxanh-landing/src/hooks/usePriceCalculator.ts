@@ -54,24 +54,30 @@ export function usePriceCalculator(initialQuantity: number = 1): UsePriceCalcula
     }, [validateQuantity]);
 
     const increment = useCallback(() => {
-        const newQuantity = quantity + 1;
-        if (newQuantity <= MAX_QUANTITY) {
-            setQuantityState(newQuantity);
-            setError(null);
-        } else {
-            setError(`Số lượng tối đa là ${MAX_QUANTITY.toLocaleString('vi-VN')} cây`);
-        }
-    }, [quantity]);
+        setQuantityState(prev => {
+            const newQuantity = prev + 1;
+            if (newQuantity <= MAX_QUANTITY) {
+                setError(null);
+                return newQuantity;
+            } else {
+                setError(`Số lượng tối đa là ${MAX_QUANTITY.toLocaleString('vi-VN')} cây`);
+                return prev;
+            }
+        });
+    }, []);
 
     const decrement = useCallback(() => {
-        const newQuantity = quantity - 1;
-        if (newQuantity >= MIN_QUANTITY) {
-            setQuantityState(newQuantity);
-            setError(null);
-        } else {
-            setError(`Số lượng tối thiểu là ${MIN_QUANTITY} cây`);
-        }
-    }, [quantity]);
+        setQuantityState(prev => {
+            const newQuantity = prev - 1;
+            if (newQuantity >= MIN_QUANTITY) {
+                setError(null);
+                return newQuantity;
+            } else {
+                setError(`Số lượng tối thiểu là ${MIN_QUANTITY.toLocaleString('vi-VN')} cây`);
+                return prev;
+            }
+        });
+    }, []);
 
     const handleInputChange = useCallback((value: string) => {
         if (value === "") {
@@ -80,7 +86,14 @@ export function usePriceCalculator(initialQuantity: number = 1): UsePriceCalcula
             return;
         }
 
-        const numValue = parseInt(value, 10);
+        // Sanitize input: remove non-numeric characters except digits
+        const sanitized = value.replace(/[^\d]/g, "");
+        if (sanitized === "") {
+            setError("Vui lòng nhập số hợp lệ");
+            return;
+        }
+
+        const numValue = parseInt(sanitized, 10);
         if (isNaN(numValue)) {
             setError("Vui lòng nhập số hợp lệ");
             return;
