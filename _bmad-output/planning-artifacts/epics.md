@@ -281,18 +281,18 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 - Dashboard load time < 2 giây
 - Quarterly engagement rate > 80%
 
-### Story 2.1: My Garden Dashboard
+### Story 2.1: My Garden Dashboard (Package-Based)
 
 **As a** tree owner,
-**I want to** xem tất cả cây của mình trong một dashboard,
+**I want to** xem tất cả packages (lô cây) của mình trong một dashboard,
 **So that** tôi dễ dàng theo dõi tiến trình.
 
 **Acceptance Criteria:**
 
 **Given** tôi đã đăng nhập
 **When** navigate đến /dashboard
-**Then** hiển thị grid tất cả cây của tôi
-**And** mỗi tree card có: ảnh (placeholder nếu < 9 tháng), status, ngày trồng, CO2
+**Then** hiển thị grid tất cả packages (orders) của tôi
+**And** mỗi package card có: ảnh (placeholder nếu < 9 tháng), quantity badge, status, ngày trồng, CO2 total
 **And** có thể sort theo date hoặc status
 
 **Story Points:** 5
@@ -301,17 +301,17 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 
 ---
 
-### Story 2.2: Tree Detail View với GPS
+### Story 2.2: Package Detail View với GPS
 
 **As a** tree owner,
-**I want to** click vào cây để xem chi tiết,
-**So that** tôi biết vị trí và lịch sử phát triển.
+**I want to** click vào package để xem chi tiết lô cây,
+**So that** tôi biết vị trí và lịch sử phát triển của cả lô.
 
 **Acceptance Criteria:**
 
 **Given** tôi ở dashboard
-**When** click vào tree card
-**Then** hiển thị detail page với: timeline milestones, ảnh mới nhất, GPS trên map, growth metrics
+**When** click vào package card
+**Then** hiển thị detail page với: timeline milestones, ảnh mới nhất của lô, GPS location của lot, growth metrics (CO2 total, age)
 **And** section "Quarterly Reports" với download links
 
 **Story Points:** 8

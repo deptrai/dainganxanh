@@ -1,20 +1,20 @@
-# Story 2.1: My Garden Dashboard
+# Story 2.1: My Garden Dashboard (Package-Based)
 
 Status: review
 
 ## Story
 
 As a **tree owner**,
-I want to **xem tất cả cây của mình trong một dashboard**,
+I want to **xem tất cả packages (lô cây) của mình trong một dashboard**,
 so that **tôi dễ dàng theo dõi tiến trình**.
 
 ## Acceptance Criteria
 
 1. **Given** tôi đã đăng nhập  
    **When** navigate đến /crm/my-garden  
-   **Then** hiển thị grid tất cả cây của tôi
+   **Then** hiển thị grid tất cả packages (orders) của tôi
 
-2. **And** mỗi tree card có: ảnh (placeholder nếu < 9 tháng), status, ngày trồng, CO2
+2. **And** mỗi package card có: ảnh (placeholder nếu < 9 tháng), quantity badge, status, ngày trồng, CO2 total
 
 3. **And** có thể sort theo date hoặc status
 

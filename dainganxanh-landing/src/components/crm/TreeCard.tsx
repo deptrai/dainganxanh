@@ -28,9 +28,20 @@ const STATUS_CONFIG = {
 export default function TreeCard({ tree }: TreeCardProps) {
     const statusConfig = STATUS_CONFIG[tree.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.seedling
 
+    // Safely parse planted date with fallback
+    let plantedDate = new Date()
+    let isValidDate = false
+
+    if (tree.planted_at) {
+        const parsed = new Date(tree.planted_at)
+        if (!isNaN(parsed.getTime())) {
+            plantedDate = parsed
+            isValidDate = true
+        }
+    }
+
     // Check if tree is less than 9 months old
-    const plantedDate = new Date(tree.planted_at)
-    const monthsOld = (Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+    const monthsOld = isValidDate ? (Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30) : 0
     const showPlaceholder = !tree.latest_photo || monthsOld < 9
 
     return (
@@ -75,14 +86,14 @@ export default function TreeCard({ tree }: TreeCardProps) {
                 {/* Planted Date */}
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                     <span>📅</span>
-                    <span>Trồng: {format(plantedDate, 'dd/MM/yyyy', { locale: vi })}</span>
+                    <span>Trồng: {isValidDate ? format(plantedDate, 'dd/MM/yyyy', { locale: vi }) : 'Chưa xác định'}</span>
                 </div>
 
                 {/* CO2 Absorbed */}
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span>💨</span>
                     <span className="font-semibold text-emerald-600">
-                        {tree.co2_absorbed.toFixed(1)} kg CO₂
+                        {(tree.co2_absorbed ?? 0).toFixed(1)} kg CO₂
                     </span>
                 </div>
             </div>

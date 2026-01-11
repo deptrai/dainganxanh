@@ -33,8 +33,9 @@ function LoginContent() {
     const handleVerifyComplete = async (code: string) => {
         try {
             await verifyOTP(code);
-            // Redirect to intended destination
-            router.push(redirectTo);
+            // Use window.location.href instead of router.push() to force hard redirect
+            // This ensures cookies are properly synced for server-side session validation
+            window.location.href = redirectTo;
         } catch (err) {
             // Error handled by useAuth
             console.error("Verification failed:", err);
