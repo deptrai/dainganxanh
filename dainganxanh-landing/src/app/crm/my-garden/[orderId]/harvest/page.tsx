@@ -1,0 +1,149 @@
+import { createServerClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { format } from 'date-fns'
+import { vi } from 'date-fns/locale'
+
+interface HarvestPageProps {
+    params: {
+        orderId: string
+    }
+}
+
+export default async function HarvestPage({ params }: HarvestPageProps) {
+    const supabase = await createServerClient()
+
+    // Fetch tree data
+    const { data: order, error } = await supabase
+        .from('orders')
+        .select(`
+            *,
+            trees (
+                id,
+                tree_code,
+                status,
+                planted_at,
+                co2_absorbed
+            )
+        `)
+        .eq('id', params.orderId)
+        .single()
+
+    if (error || !order) {
+        notFound()
+    }
+
+    const tree = order.trees?.[0]
+    if (!tree) {
+        notFound()
+    }
+
+    // Calculate tree age
+    const plantedDate = new Date(tree.planted_at)
+    const ageInMonths = Math.floor((Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 p-6">
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <Link
+                        href={`/crm/my-garden/${params.orderId}`}
+                        className="text-emerald-600 hover:text-emerald-700 mb-4 inline-flex items-center gap-2"
+                    >
+                        ← Quay lại
+                    </Link>
+                    <h1 className="text-4xl font-bold text-emerald-900 mt-4">
+                        🌟 Cây Sẵn Sàng Thu Hoạch
+                    </h1>
+                    <p className="text-gray-600 mt-2">
+                        Chúc mừng! Cây của bạn đã đạt 5 năm tuổi và sẵn sàng cho thu hoạch.
+                    </p>
+                </div>
+
+                {/* Tree Summary Card */}
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border-4 border-yellow-400">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Thông Tin Cây</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-sm text-gray-600">Mã cây</p>
+                            <p className="text-lg font-bold text-emerald-700">{tree.tree_code}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600">Tuổi cây</p>
+                            <p className="text-lg font-bold text-emerald-700">{ageInMonths} tháng</p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600">Ngày trồng</p>
+                            <p className="text-lg font-bold text-emerald-700">
+                                {format(plantedDate, 'dd/MM/yyyy', { locale: vi })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600">CO₂ đã hấp thụ</p>
+                            <p className="text-lg font-bold text-emerald-700">
+                                {tree.co2_absorbed?.toFixed(1) || 0} kg
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Harvest Options - Coming Soon */}
+                <div className="bg-white rounded-xl shadow-lg p-8">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Lựa Chọn Thu Hoạch</h2>
+
+                    <div className="space-y-4">
+                        {/* Option 1: Sell Back */}
+                        <div className="border-2 border-gray-200 rounded-lg p-6 opacity-50">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="text-3xl">💰</span>
+                                <h3 className="text-xl font-bold text-gray-800">Bán lại cho Đại Ngàn Xanh</h3>
+                            </div>
+                            <p className="text-gray-600 mb-4">
+                                Nhận thanh toán ngay cho cây của bạn theo giá thị trường hiện tại.
+                            </p>
+                            <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                                Coming Soon - Story 2.6
+                            </span>
+                        </div>
+
+                        {/* Option 2: Keep Growing */}
+                        <div className="border-2 border-gray-200 rounded-lg p-6 opacity-50">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="text-3xl">🌳</span>
+                                <h3 className="text-xl font-bold text-gray-800">Tiếp tục nuôi cây</h3>
+                            </div>
+                            <p className="text-gray-600 mb-4">
+                                Giữ cây tiếp tục lớn để tăng giá trị và hấp thụ thêm CO₂.
+                            </p>
+                            <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                                Coming Soon - Story 2.7
+                            </span>
+                        </div>
+
+                        {/* Option 3: Transfer Ownership */}
+                        <div className="border-2 border-gray-200 rounded-lg p-6 opacity-50">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="text-3xl">🎁</span>
+                                <h3 className="text-xl font-bold text-gray-800">Chuyển nhượng quyền sở hữu</h3>
+                            </div>
+                            <p className="text-gray-600 mb-4">
+                                Tặng hoặc bán cây cho người khác trong cộng đồng.
+                            </p>
+                            <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                                Coming Soon - Story 2.8
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                            💡 <strong>Lưu ý:</strong> Các tùy chọn thu hoạch sẽ được kích hoạt trong các bản cập nhật tiếp theo.
+                            Vui lòng theo dõi thông báo từ Đại Ngàn Xanh.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}

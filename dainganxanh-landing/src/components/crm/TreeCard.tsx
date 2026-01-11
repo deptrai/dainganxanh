@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
+import HarvestBadge from './HarvestBadge'
 
 interface TreeCardProps {
     tree: {
@@ -44,10 +45,14 @@ export default function TreeCard({ tree }: TreeCardProps) {
     const monthsOld = isValidDate ? (Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30) : 0
     const showPlaceholder = !tree.latest_photo || monthsOld < 9
 
+    // Check if tree is ready for harvest (>= 60 months)
+    const isHarvestReady = monthsOld >= 60
+
     return (
         <Link
             href={`/crm/my-garden/${tree.id}`}
-            className="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group"
+            className={`block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group ${isHarvestReady ? 'ring-4 ring-yellow-400' : ''
+                }`}
         >
             {/* Image */}
             <div className="relative h-48 bg-gradient-to-br from-emerald-50 to-green-100">
@@ -74,6 +79,13 @@ export default function TreeCard({ tree }: TreeCardProps) {
                 <h3 className="font-bold text-lg text-emerald-800 mb-2">
                     {tree.tree_code}
                 </h3>
+
+                {/* Harvest Badge (if ready) */}
+                {isHarvestReady && (
+                    <div className="mb-3">
+                        <HarvestBadge ageInMonths={monthsOld} />
+                    </div>
+                )}
 
                 {/* Status Badge */}
                 <div className="flex items-center gap-2 mb-3">
