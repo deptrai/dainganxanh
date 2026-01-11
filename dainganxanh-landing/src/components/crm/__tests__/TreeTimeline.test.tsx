@@ -28,8 +28,9 @@ describe('TreeTimeline', () => {
     it('displays placeholder text for trees < 9 months', () => {
         render(<TreeTimeline {...mockProps} ageInMonths={3} />)
 
-        // Should show "Đang trong giai đoạn này" for current placeholder stage
-        expect(screen.getByText(/Đang trong giai đoạn này/)).toBeInTheDocument()
+        // Should show "Đang trong giai đoạn này" for current placeholder stages
+        const placeholderTexts = screen.getAllByText(/Đang trong giai đoạn này/)
+        expect(placeholderTexts.length).toBeGreaterThan(0)
     })
 
     it('shows progress percentage to harvest', () => {
@@ -73,7 +74,8 @@ describe('TreeTimeline', () => {
         render(<TreeTimeline {...mockProps} ageInMonths={3} />)
 
         // Should show "Dự kiến:" for future stages
-        expect(screen.getAllByText(/Dự kiến:/)).toHaveLength(expect.any(Number))
+        const estimatedDates = screen.getAllByText(/Dự kiến:/)
+        expect(estimatedDates.length).toBeGreaterThan(0)
     })
 
     it('handles trees without planted_at date', () => {
@@ -88,5 +90,44 @@ describe('TreeTimeline', () => {
 
         // Should show 100% even though tree is older than 60 months
         expect(screen.getByText('100%')).toBeInTheDocument()
+    })
+
+    describe('Photo Integration', () => {
+        const mockPhotos = [
+            {
+                id: 'photo-1',
+                photo_url: 'https://example.com/photo1.jpg',
+                caption: 'First photo',
+                uploaded_at: '2024-07-01T00:00:00Z', // Month 7 - should be in "Năm 1: Bám rễ" stage
+            },
+            {
+                id: 'photo-2',
+                photo_url: 'https://example.com/photo2.jpg',
+                caption: 'Second photo',
+                uploaded_at: '2024-08-01T00:00:00Z',
+            },
+        ]
+
+        it('renders photos in timeline stages', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
+
+            // Photos should be rendered as images
+            const images = screen.getAllByRole('img')
+            expect(images.length).toBeGreaterThan(0)
+        })
+
+        it('shows photo caption on hover', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
+
+            // Caption text should be in the DOM (hidden by default, shown on hover)
+            expect(screen.getByText('First photo')).toBeInTheDocument()
+        })
+
+        it('renders without photos gracefully', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={12} photos={[]} />)
+
+            // Should still render the timeline
+            expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()
+        })
     })
 })

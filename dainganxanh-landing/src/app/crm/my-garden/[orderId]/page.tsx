@@ -55,6 +55,8 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
 
     // Try to fetch lot info separately (if lot_id exists and lots table exists)
     let lotInfo = null
+    let treePhotos: { id: string, photo_url: string, caption: string | null, uploaded_at: string }[] = []
+
     if (order.lot_id) {
         try {
             const { data: lot } = await supabase
@@ -63,6 +65,17 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                 .eq('id', order.lot_id)
                 .single()
             lotInfo = lot
+
+            // Fetch photos for this lot
+            const { data: photos } = await supabase
+                .from('tree_photos')
+                .select('id, photo_url, caption, uploaded_at')
+                .eq('lot_id', order.lot_id)
+                .order('uploaded_at', { ascending: true })
+
+            if (photos) {
+                treePhotos = photos
+            }
         } catch (lotError) {
             console.log('Lots table not available or lot not found')
         }
@@ -73,6 +86,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
     const plantedDate = order.planted_at ? new Date(order.planted_at) : new Date(order.created_at)
     const ageInMonths = Math.floor((Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
     const progressToHarvest = Math.min((ageInMonths / 60) * 100, 100)
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50">
@@ -140,6 +154,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                     createdAt={order.created_at}
                     treeStatus={order.tree_status || 'pending'}
                     ageInMonths={ageInMonths}
+                    photos={treePhotos}
                 />
 
                 {/* Quarterly Reports */}

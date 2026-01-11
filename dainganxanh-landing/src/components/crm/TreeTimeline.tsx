@@ -9,11 +9,19 @@ interface TimelineStage {
     placeholder?: boolean
 }
 
+interface TreePhoto {
+    id: string
+    photo_url: string
+    caption?: string
+    uploaded_at: string
+}
+
 interface TreeTimelineProps {
     plantedAt: string | null
     createdAt: string
     treeStatus: string
     ageInMonths: number
+    photos?: TreePhoto[]
 }
 
 const TIMELINE_STAGES: TimelineStage[] = [
@@ -28,7 +36,7 @@ const TIMELINE_STAGES: TimelineStage[] = [
     { month: 60, label: 'Năm 5: Thu hoạch', icon: '✨' },
 ]
 
-export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMonths }: TreeTimelineProps) {
+export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMonths, photos = [] }: TreeTimelineProps) {
     const currentStageIndex = useMemo(() => {
         return TIMELINE_STAGES.findIndex((stage, index) => {
             const nextStage = TIMELINE_STAGES[index + 1]
@@ -47,6 +55,30 @@ export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMo
         const estimatedDate = new Date(baseDate)
         estimatedDate.setMonth(estimatedDate.getMonth() + monthsFromNow)
         return estimatedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
+    }
+
+    // Get photos that belong to a specific stage based on upload date
+    const getPhotosForStage = (stageIndex: number) => {
+        if (photos.length === 0) return []
+
+        const stage = TIMELINE_STAGES[stageIndex]
+        const nextStage = TIMELINE_STAGES[stageIndex + 1]
+
+        const baseDate = plantedAt ? new Date(plantedAt) : new Date(createdAt)
+        const stageStartDate = new Date(baseDate)
+        stageStartDate.setMonth(stageStartDate.getMonth() + stage.month)
+
+        const stageEndDate = new Date(baseDate)
+        if (nextStage) {
+            stageEndDate.setMonth(stageEndDate.getMonth() + nextStage.month)
+        } else {
+            stageEndDate.setFullYear(stageEndDate.getFullYear() + 10) // Far future
+        }
+
+        return photos.filter(photo => {
+            const uploadDate = new Date(photo.uploaded_at)
+            return uploadDate >= stageStartDate && uploadDate < stageEndDate
+        })
     }
 
     return (
@@ -102,7 +134,7 @@ export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMo
                                                 )}
                                             </h3>
 
-                                            {/* Placeholder indicator for young trees */}
+                                            {/* Placeholder indicator for young trees < 9 months */}
                                             {stage.placeholder && ageInMonths < 9 && (
                                                 <p className="text-sm text-gray-500 mt-1">
                                                     {ageInMonths < stage.month ? (
@@ -113,14 +145,47 @@ export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMo
                                                 </p>
                                             )}
 
-                                            {/* Real photos indicator for mature trees */}
-                                            {!stage.placeholder && ageInMonths >= 9 && (
-                                                <p className="text-sm text-green-600 mt-1">
+                                            {/* Status indicator for all non-placeholder or mature trees */}
+                                            {(!stage.placeholder || ageInMonths >= 9) && (
+                                                <p className={`text-sm mt-1 ${isFuture ? 'text-gray-400' : 'text-green-600'}`}>
                                                     {isCompleted && <>Hoàn thành</>}
                                                     {isCurrent && <>Đang diễn ra</>}
                                                     {isFuture && <>Dự kiến: {getEstimatedDate(stage.month)}</>}
                                                 </p>
                                             )}
+
+                                            {/* Photos for this stage */}
+                                            {(() => {
+                                                const stagePhotos = getPhotosForStage(index)
+                                                if (stagePhotos.length === 0) return null
+
+                                                return (
+                                                    <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+                                                        {stagePhotos.slice(0, 4).map((photo) => (
+                                                            <div
+                                                                key={photo.id}
+                                                                className="flex-shrink-0 relative group"
+                                                            >
+                                                                <img
+                                                                    src={photo.photo_url}
+                                                                    alt={photo.caption || 'Ảnh cây'}
+                                                                    className="w-20 h-20 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all cursor-pointer"
+                                                                />
+                                                                {photo.caption && (
+                                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-end p-1">
+                                                                        <span className="text-white text-xs truncate">{photo.caption}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                        {stagePhotos.length > 4 && (
+                                                            <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-sm font-medium">
+                                                                +{stagePhotos.length - 4}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })()}
                                         </div>
 
                                         {/* Month indicator */}
