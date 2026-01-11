@@ -31,7 +31,7 @@ development_status:
   epic-2: in-progress
   2-1-my-garden-dashboard: ready-for-dev
   2-2-tree-detail-view: ready-for-dev
-  2-3-quarterly-update-notifications: ready-for-dev
+  2-3-quarterly-update-notifications: done
   2-4-timeline-placeholder-real: ready-for-dev
   2-5-year5-harvest-notification: ready-for-dev
   2-6-harvest-sell-back: ready-for-dev
@@ -60,7 +60,7 @@ development_status:
 summary:
   total_epics: 4
   total_stories: 25
-  stories_ready: 25
+  stories_ready: 21
   stories_in_progress: 0
-  stories_done: 0
-  current_velocity: 0
+  stories_done: 4
+  current_velocity: 4

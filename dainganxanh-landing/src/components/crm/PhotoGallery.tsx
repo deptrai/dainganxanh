@@ -15,7 +15,7 @@ export default function PhotoGallery({ orderId, latestPhotoUrl, ageInMonths }: P
     const showPlaceholder = !latestPhotoUrl || ageInMonths < 9
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div id="photos" className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl">📸</span>
                 <h2 className="text-2xl font-bold text-gray-800">Thư Viện Ảnh</h2>

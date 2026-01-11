@@ -42,12 +42,16 @@ export function subscribeToNotifications(
                 filter: `user_id=eq.${userId}`,
             },
             (payload) => {
-                console.log('New notification received:', payload)
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('New notification received:', payload)
+                }
                 callback(payload.new as Notification)
             }
         )
         .subscribe((status) => {
-            console.log('Notifications subscription status:', status)
+            if (process.env.NODE_ENV === 'development') {
+                console.log('Notifications subscription status:', status)
+            }
         })
 }
 

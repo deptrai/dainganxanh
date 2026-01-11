@@ -1,6 +1,6 @@
 # Story 2.3: Quarterly Update Notifications
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -23,35 +23,46 @@ so that **tôi luôn engaged với cây của mình**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Database Schema & Webhook (AC: 1)
-  - [ ] 1.1 Tạo `notifications` table
-  - [ ] 1.2 Enable Realtime for notifications table
-  - [ ] 1.3 Configure Database Webhook for tree_photos INSERT
-  - [ ] 1.4 Tạo migration file
+- [x] Task 1: Database Schema & Webhook (AC: 1)
+  - [x] 1.1 Tạo `notifications` table
+  - [x] 1.2 Enable Realtime for notifications table
+  - [ ] 1.3 Configure Database Webhook for tree_photos INSERT (Manual step - see docs)
+  - [x] 1.4 Tạo migration files (notifications, lots, tree_photos, RLS fix)
 
-- [ ] Task 2: Edge Function - Notification Trigger (AC: 1, 2)
-  - [ ] 2.1 Tạo `supabase/functions/notify-tree-update/index.ts`
-  - [ ] 2.2 Fetch affected users từ lot → orders → users
-  - [ ] 2.3 Create notification record in database
-  - [ ] 2.4 Send email via existing send-email function
+- [x] Task 2: Edge Function - Notification Trigger (AC: 1, 2)
+  - [x] 2.1 Tạo `supabase/functions/notify-tree-update/index.ts`
+  - [x] 2.2 Fetch affected users từ lot → orders → users
+  - [x] 2.3 Create notification record in database
+  - [x] 2.4 Send email via send-quarterly-update function
 
-- [ ] Task 3: Email Template (AC: 2)
-  - [ ] 3.1 Tạo `email-templates/quarterly-update.html`
-  - [ ] 3.2 Embed photo thumbnails
-  - [ ] 3.3 CTA: "Xem cây của bạn"
-  - [ ] 3.4 Update send-email function to support new template
+- [x] Task 3: Email Template (AC: 2)
+  - [x] 3.1 Embed HTML template in send-quarterly-update function
+  - [x] 3.2 Embed photo thumbnails
+  - [x] 3.3 CTA: "Xem cây của bạn"
 
-- [ ] Task 4: Frontend - Realtime Subscription (AC: 1, 4)
-  - [ ] 4.1 Tạo `lib/supabase/realtime.ts` - subscription helper
-  - [ ] 4.2 Tạo `components/crm/NotificationBell.tsx`
-  - [ ] 4.3 Tạo `components/crm/NotificationDropdown.tsx`
-  - [ ] 4.4 Subscribe to notifications channel on mount
-  - [ ] 4.5 Mark as read on click
+- [x] Task 4: Frontend - Realtime Subscription (AC: 1, 4)
+  - [x] 4.1 Tạo `lib/supabase/client.ts` - browser client helper
+  - [x] 4.2 Tạo `lib/supabase/realtime.ts` - subscription helper
+  - [x] 4.3 Tạo `components/crm/NotificationBell.tsx` (with inline dropdown)
+  - [x] 4.4 Subscribe to notifications channel on mount
+  - [x] 4.5 Mark as read on click
 
-- [ ] Task 5: Deep Link Handling (AC: 3)
-  - [ ] 5.1 Parse notification data for orderId
-  - [ ] 5.2 Navigate to `/crm/my-garden/[orderId]`
-  - [ ] 5.3 Scroll to photos section
+- [x] Task 5: Deep Link Handling (AC: 3)
+  - [x] 5.1 Parse notification data for orderId
+  - [x] 5.2 Navigate to `/crm/my-garden/[orderId]`
+  - [x] 5.3 Scroll to photos section (Added id="photos" anchor)
+
+## Review Follow-ups (Code Review Findings)
+- [x] [HIGH] Add scroll-to-photos anchor navigation (AC #3) - DONE
+- [x] [MEDIUM] Add request body validation in notify-tree-update - DONE
+- [x] [MEDIUM] Remove/guard console.log statements in realtime.ts - DONE
+- [x] [LOW] Remove unused userId state in NotificationBell - DONE
+- [x] [LOW] Add TypeScript error type guard in notify-tree-update - DONE
+
+## Quality Improvements (Completed)
+- [x] Use date-fns for formatTimeAgo instead of custom logic
+- [x] Add unit tests for notification components (NotificationBell, realtime helpers)
+- [x] Add E2E test for notification flow (Playwright)
 
 ## Dev Notes
 
@@ -122,10 +133,22 @@ ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 {{agent_model_name_version}}
 
 ### File List
-- src/lib/supabase/realtime.ts (NEW)
-- src/components/crm/NotificationBell.tsx (NEW)
-- src/components/crm/NotificationDropdown.tsx (NEW)
-- supabase/functions/notify-tree-update/index.ts (NEW)
-- supabase/migrations/[timestamp]_create_notifications_table.sql (NEW)
-- email-templates/quarterly-update.html (NEW)
-- supabase/functions/send-email/index.ts (MODIFY - add template support)
+**Implementation Files:**
+- src/lib/supabase/client.ts (NEW - Supabase browser client helper)
+- src/lib/supabase/realtime.ts (NEW - Realtime subscription helpers)
+- src/components/crm/NotificationBell.tsx (NEW - Bell icon with inline dropdown, uses date-fns)
+- src/components/crm/PhotoGallery.tsx (MODIFIED - Added id="photos" anchor)
+- supabase/functions/notify-tree-update/index.ts (NEW - Webhook handler with validation)
+- supabase/functions/send-quarterly-update/index.ts (NEW - Email sender with embedded template)
+- supabase/migrations/20260111_create_notifications_table.sql (NEW)
+- supabase/migrations/20260111_create_lots_and_tree_photos.sql (NEW)
+- supabase/migrations/20260111_fix_notifications_rls.sql (NEW - RLS policy fix)
+
+**Test Files:**
+- src/components/crm/__tests__/NotificationBell.test.tsx (NEW - Unit tests)
+- src/lib/supabase/__tests__/realtime.test.ts (NEW - Unit tests)
+- e2e/notification-flow.spec.ts (NEW - E2E tests)
+- jest.config.ts (NEW - Jest configuration)
+- jest.setup.ts (NEW - Jest setup)
+- playwright.config.ts (NEW - Playwright configuration)
+- package.json (MODIFIED - Added test scripts)

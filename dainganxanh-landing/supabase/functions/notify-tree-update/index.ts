@@ -22,6 +22,15 @@ serve(async (req) => {
 
         console.log('Received tree photo webhook:', payload)
 
+        // Validate payload structure
+        if (!payload?.record?.lot_id || !payload?.record?.photo_url) {
+            console.error('Invalid webhook payload:', payload)
+            return new Response(
+                JSON.stringify({ error: 'Invalid payload: missing lot_id or photo_url' }),
+                { status: 400 }
+            )
+        }
+
         // Get lot information
         const { data: lot, error: lotError } = await supabase
             .from('lots')
@@ -137,7 +146,9 @@ serve(async (req) => {
     } catch (error) {
         console.error('Webhook processing failed:', error)
         return new Response(
-            JSON.stringify({ error: error.message }),
+            JSON.stringify({
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            }),
             {
                 headers: { 'Content-Type': 'application/json' },
                 status: 500,

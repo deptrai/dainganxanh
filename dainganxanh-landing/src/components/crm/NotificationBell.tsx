@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatDistanceToNow } from 'date-fns'
+import { vi } from 'date-fns/locale'
 import { createBrowserClient } from '@/lib/supabase/client'
 import {
     subscribeToNotifications,
@@ -15,7 +17,6 @@ export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false)
     const [notifications, setNotifications] = useState<NotificationType[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
-    const [userId, setUserId] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
 
@@ -30,8 +31,6 @@ export default function NotificationBell() {
                 const { data: { user } } = await supabase.auth.getUser()
 
                 if (user) {
-                    setUserId(user.id)
-
                     // Fetch initial notifications
                     const [notifs, count] = await Promise.all([
                         fetchNotifications(user.id),
@@ -83,23 +82,17 @@ export default function NotificationBell() {
         // Navigate to package detail if orderId exists
         if (notification.data?.orderIds && notification.data.orderIds.length > 0) {
             const orderId = notification.data.orderIds[0]
-            router.push(`/crm/my-garden/${orderId}`)
+            // Navigate with hash anchor to scroll to photos section
+            router.push(`/crm/my-garden/${orderId}#photos`)
             setIsOpen(false)
         }
     }, [router])
 
     const formatTimeAgo = (timestamp: string) => {
-        const now = new Date()
-        const then = new Date(timestamp)
-        const diffMs = now.getTime() - then.getTime()
-        const diffMins = Math.floor(diffMs / 60000)
-        const diffHours = Math.floor(diffMs / 3600000)
-        const diffDays = Math.floor(diffMs / 86400000)
-
-        if (diffMins < 1) return 'Vừa xong'
-        if (diffMins < 60) return `${diffMins} phút trước`
-        if (diffHours < 24) return `${diffHours} giờ trước`
-        return `${diffDays} ngày trước`
+        return formatDistanceToNow(new Date(timestamp), {
+            addSuffix: true,
+            locale: vi
+        })
     }
 
     return (
