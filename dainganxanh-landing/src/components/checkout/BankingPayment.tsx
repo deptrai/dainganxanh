@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Copy, Check, Building2 } from "lucide-react";
+import { Copy, Check, Building2, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
+import { supabase } from "@/lib/supabase";
 
 interface BankingPaymentProps {
     orderCode: string;
@@ -18,8 +20,65 @@ const BANK_INFO = {
 };
 
 export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
+    const router = useRouter();
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Handle payment confirmation
+    const handleConfirmPayment = async () => {
+        try {
+            setIsProcessing(true);
+            setError(null);
+
+            // Get current session with token
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session || !session.user) {
+                setError("Vui lòng đăng nhập để tiếp tục");
+                router.push("/login");
+                return;
+            }
+
+            const user = session.user;
+
+            // Calculate quantity from amount
+            const unitPrice = 260000;
+            const quantity = Math.round(amount / unitPrice);
+
+            // Call process-payment Edge Function with explicit JWT token
+            const { data, error: paymentError } = await supabase.functions.invoke("process-payment", {
+                body: {
+                    userId: user.id,
+                    userEmail: user.email,
+                    userName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Khách hàng",
+                    orderCode: orderCode,
+                    quantity: quantity,
+                    totalAmount: amount,
+                    paymentMethod: "banking"
+                },
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                }
+            });
+
+            if (paymentError) {
+                console.error("Payment error:", paymentError);
+                setError(paymentError.message || "Có lỗi xảy ra khi xử lý thanh toán");
+                return;
+            }
+
+            // Success - redirect to success page
+            router.push(`/checkout/success?orderCode=${orderCode}`);
+        } catch (err) {
+            console.error("Payment confirmation error:", err);
+            setError("Có lỗi xảy ra. Vui lòng thử lại sau.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
 
     // Generate VietQR code - FIXED: Use VietQR image URL directly
     useEffect(() => {
@@ -148,15 +207,27 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                 </ol>
             </div>
 
+            {/* Error Message */}
+            {error && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{error}</p>
+                </div>
+            )}
+
             {/* Manual Confirmation Button */}
             <button
-                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
-                onClick={() => {
-                    // TODO: Implement manual confirmation
-                    alert("Tính năng xác nhận thủ công đang được phát triển");
-                }}
+                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={handleConfirmPayment}
+                disabled={isProcessing}
             >
-                Tôi đã chuyển khoản
+                {isProcessing ? (
+                    <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Đang xử lý...</span>
+                    </>
+                ) : (
+                    "Tôi đã chuyển khoản"
+                )}
             </button>
         </motion.div>
     );

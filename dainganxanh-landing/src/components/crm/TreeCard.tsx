@@ -1,0 +1,91 @@
+'use client'
+
+import Image from 'next/image'
+import Link from 'next/link'
+import { format } from 'date-fns'
+import { vi } from 'date-fns/locale'
+
+interface TreeCardProps {
+    tree: {
+        id: string
+        tree_code: string
+        status: string
+        planted_at: string
+        co2_absorbed: number
+        latest_photo: string | null
+    }
+}
+
+const STATUS_CONFIG = {
+    seedling: { label: 'Mầm non', emoji: '🌱', color: 'bg-green-100 text-green-800' },
+    planted: { label: 'Đã trồng', emoji: '🌿', color: 'bg-emerald-100 text-emerald-800' },
+    growing: { label: 'Đang lớn', emoji: '🌲', color: 'bg-green-600 text-white' },
+    mature: { label: 'Trưởng thành', emoji: '🎋', color: 'bg-yellow-100 text-yellow-800' },
+    harvested: { label: 'Thu hoạch', emoji: '✨', color: 'bg-purple-100 text-purple-800' },
+    dead: { label: 'Chết', emoji: '⚫', color: 'bg-gray-100 text-gray-800' },
+}
+
+export default function TreeCard({ tree }: TreeCardProps) {
+    const statusConfig = STATUS_CONFIG[tree.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.seedling
+
+    // Check if tree is less than 9 months old
+    const plantedDate = new Date(tree.planted_at)
+    const monthsOld = (Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+    const showPlaceholder = !tree.latest_photo || monthsOld < 9
+
+    return (
+        <Link
+            href={`/crm/my-garden/${tree.id}`}
+            className="block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group"
+        >
+            {/* Image */}
+            <div className="relative h-48 bg-gradient-to-br from-emerald-50 to-green-100">
+                {showPlaceholder ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                            <span className="text-6xl">🌱</span>
+                            <p className="text-sm text-gray-600 mt-2">Cây đang lớn...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <Image
+                        src={tree.latest_photo!}
+                        alt={`Cây ${tree.tree_code}`}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                )}
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+                {/* Tree Code */}
+                <h3 className="font-bold text-lg text-emerald-800 mb-2">
+                    {tree.tree_code}
+                </h3>
+
+                {/* Status Badge */}
+                <div className="flex items-center gap-2 mb-3">
+                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
+                        <span>{statusConfig.emoji}</span>
+                        <span>{statusConfig.label}</span>
+                    </span>
+                </div>
+
+                {/* Planted Date */}
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <span>📅</span>
+                    <span>Trồng: {format(plantedDate, 'dd/MM/yyyy', { locale: vi })}</span>
+                </div>
+
+                {/* CO2 Absorbed */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>💨</span>
+                    <span className="font-semibold text-emerald-600">
+                        {tree.co2_absorbed.toFixed(1)} kg CO₂
+                    </span>
+                </div>
+            </div>
+        </Link>
+    )
+}

@@ -90,8 +90,21 @@ export function useAuth(): UseAuthReturn {
                 throw new Error("Không thể tạo phiên đăng nhập");
             }
 
-            // Success - session created, user profile auto-created by trigger
-            console.log("OTP verified successfully", data);
+            // CRITICAL FIX: Force session to be saved to localStorage
+            // This ensures session persists across page refreshes
+            await supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token,
+            });
+
+            // Double-check session was saved
+            const { data: { session: savedSession } } = await supabase.auth.getSession();
+            if (!savedSession) {
+                throw new Error("Session không được lưu. Vui lòng thử lại.");
+            }
+
+            // Success - session created and persisted
+            console.log("OTP verified successfully, session persisted", savedSession);
         } catch (err) {
             console.error("Verify OTP error:", err);
             setError(

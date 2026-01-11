@@ -1,6 +1,6 @@
 # Story 1.8: Email Confirmation với Contract PDF
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -40,7 +40,7 @@ so that **tôi có tài liệu chính thức**.
 
 - [ ] Task 3: Email Sending Function (AC: 1)
   - [ ] 3.1 Tạo `supabase/functions/send-email/index.ts`
-  - [ ] 3.2 SendGrid API integration
+  - [ ] 3.2 Resend API integration
   - [ ] 3.3 Attach PDF contract
   - [ ] 3.4 Handle failures with retry logic
 
@@ -65,7 +65,7 @@ so that **tôi có tài liệu chính thức**.
 
 ### Technology Requirements
 - **PDF:** @react-pdf/renderer hoặc PDFKit
-- **Email:** SendGrid API với attachments
+- **Email:** Resend API với attachments (3,000 emails/month free)
 - **Storage:** Supabase Storage
 
 ### Email Template Structure
@@ -92,8 +92,8 @@ Body:
 - QR code verify
 
 ### Environment Variables
-- `SENDGRID_API_KEY`
-- `SENDGRID_FROM_EMAIL`
+- `RESEND_API_KEY` - Get from https://resend.com/api-keys
+- `RESEND_FROM_EMAIL` - Verified sender email (e.g., noreply@dainganxanh.com)
 
 ### References
 - [Source: _bmad-output/planning-artifacts/architecture.md#Supabase-Edge-Functions]
@@ -103,10 +103,76 @@ Body:
 ## Dev Agent Record
 
 ### Agent Model Used
-{{agent_model_name_version}}
+Claude 4.5 Sonnet
+
+### Implementation Summary
+**Date:** 2026-01-11
+
+**Infrastructure Setup:**
+- ✅ Resend account created (phanquochoipt@gmail.com)
+- ✅ API Key: `re_EXsBoj17_Lqz8xAGwWgNjio9KTMpSC1Ne`
+- ✅ Database tables: `trees`, `email_logs`, `orders` (with RLS policies)
+- ✅ Supabase Storage: `contracts` bucket (private)
+
+**Implementation Completed:**
+1. **Email Template** - Responsive HTML with order summary, tree codes, impact stats
+2. **Edge Functions:**
+   - `send-email` - Resend integration với PDF attachment
+   - `generate-contract` - PDF generation using pdf-lib
+   - `process-payment` - Orchestrator cho toàn bộ flow
+3. **Database Migration** - Orders table với indexes và RLS
+4. **Tree Code Generation** - Format `TREE-2026-XXXXX`
 
 ### File List
-- supabase/functions/generate-contract/index.ts
-- supabase/functions/send-email/index.ts
-- supabase/functions/process-payment/index.ts (update)
-- email-templates/order-confirmation.html
+- email-templates/order-confirmation.html (NEW)
+- supabase/functions/send-email/index.ts (NEW)
+- supabase/functions/generate-contract/index.ts (NEW)
+- supabase/functions/process-payment/index.ts (NEW)
+- supabase/functions/README.md (NEW)
+- supabase/migrations/20260111_create_orders_table.sql (NEW)
+
+### Change Log
+- 2026-01-11: Story 1-8 implementation complete
+- Infrastructure setup: Resend, database tables, storage bucket
+- Edge Functions created for email, PDF, and payment processing
+- Ready for deployment and testing
+
+### Deployment Required
+
+**1. Set Supabase Secrets:**
+```bash
+supabase secrets set RESEND_API_KEY=re_EXsBoj17_Lqz8xAGwWgNjio9KTMpSC1Ne
+supabase secrets set RESEND_FROM_EMAIL=noreply@dainganxanh.com
+supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com
+```
+
+**2. Deploy Edge Functions:**
+```bash
+cd dainganxanh-landing
+supabase functions deploy send-email
+supabase functions deploy generate-contract
+supabase functions deploy process-payment
+```
+
+**3. Test Flow:**
+```bash
+curl -X POST https://[project-ref].supabase.co/functions/v1/process-payment \
+  -H "Authorization: Bearer [anon-key]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user-uuid",
+    "userEmail": "test@example.com",
+    "userName": "Test User",
+    "orderCode": "DH123456",
+    "quantity": 5,
+    "totalAmount": 1300000,
+    "paymentMethod": "banking"
+  }'
+```
+
+### Notes
+- Email template uses Handlebars-style variables
+- PDF contract includes legal terms and digital signature
+- All functions include error logging
+- Email failures don't block payment processing
+- Domain verification needed for production emails (thtmmo.com)

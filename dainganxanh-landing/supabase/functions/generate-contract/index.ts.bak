@@ -1,0 +1,253 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1'
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+interface ContractRequest {
+    orderId: string
+    userId: string
+    userName: string
+    userEmail: string
+    orderCode: string
+    quantity: number
+    totalAmount: number
+    treeCodes: string[]
+}
+
+serve(async (req) => {
+    try {
+        console.log("Function invoked");
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+        console.log("Supabase client initialized");
+        const payload: ContractRequest = await req.json()
+
+        // Create PDF document
+        const pdfDoc = await PDFDocument.create()
+
+
+
+
+
+        const page = pdfDoc.addPage([595, 842]) // A4 size
+
+        // Using Helvetica font (ASCII-only) - Vietnamese accents will be removed
+        // TODO: Implement client-side PDF generation for full Vietnamese support
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+        // Comprehensive Vietnamese accent removal for Helvetica/WinAnsi compatibility
+        const removeAccents = (str: string): string => {
+            return str
+                // Vietnamese special characters (must be before normalization)
+                .replace(/Đ/g, 'D').replace(/đ/g, 'd')
+                .replace(/Ơ/g, 'O').replace(/ơ/g, 'o')
+                .replace(/Ư/g, 'U').replace(/ư/g, 'u')
+                // Subscript numbers (CO₂ → CO2)
+                .replace(/[₀₁₂₃₄₅₆₇₈₉]/g, (m) => '0123456789'['₀₁₂₃₄₅₆₇₈₉'.indexOf(m)])
+                // Normalize and remove combining diacritics
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+        }
+
+        const { width, height } = page.getSize()
+        const margin = 50
+        let yPosition = height - margin
+
+        // Helper function to draw text (with accent removal)
+        const drawText = (text: string, size: number, isBold = false, color = rgb(0, 0, 0)) => {
+            page.drawText(removeAccents(text), {
+                x: margin,
+                y: yPosition,
+                size,
+                font,
+                color,
+            })
+            yPosition -= size + 10
+        }
+
+
+        const { width, height } = page.getSize()
+        const margin = 50
+        let yPosition = height - margin
+
+        // Helper function to draw text
+        const drawText = (text: string, size: number, isBold = false, color = rgb(0, 0, 0)) => {
+            page.drawText(text, {
+                x: margin,
+                y: yPosition,
+                size,
+                font,
+                color,
+            })
+            yPosition -= size + 10
+        }
+
+
+
+
+        // Header
+        drawText('ĐẠI NGÀN XANH', 24, true, rgb(0.18, 0.31, 0.09))
+        drawText('Gieo Hạt Lành, Gặt Phước Báu', 12, false, rgb(0.4, 0.4, 0.4))
+        yPosition -= 20
+
+        // Title
+        drawText('HỢP ĐỒNG CHĂM SÓC CÂY XANH', 18, true)
+        yPosition -= 10
+
+        // Contract Info
+        drawText(`Mã hợp đồng: ${payload.orderCode}`, 12)
+        drawText(`Ngay tao: ${new Date().toLocaleDateString('en-US')}`, 12)
+        yPosition -= 20
+
+        // Customer Info
+        drawText('THÔNG TIN KHÁCH HÀNG', 14, true)
+        yPosition -= 5
+        drawText(`Họ và tên: ${payload.userName}`, 12)
+        drawText(`Email: ${payload.userEmail}`, 12)
+        drawText(`Mã khách hàng: ${payload.userId.substring(0, 8)}`, 12)
+        yPosition -= 20
+
+        // Order Details
+        drawText('CHI TIẾT ĐƠN HÀNG', 14, true)
+        yPosition -= 5
+        drawText(`Số lượng cây: ${payload.quantity} cây`, 12)
+        drawText(`Tổng giá trị: ${payload.totalAmount.toLocaleString('vi-VN')} VNĐ`, 12)
+        drawText(`Tác động môi trường: -${payload.quantity * 100} kg CO₂/năm`, 12)
+        yPosition -= 20
+
+        // Tree Codes
+        drawText('MÃ CÂY', 14, true)
+        yPosition -= 5
+        payload.treeCodes.forEach((code, index) => {
+            drawText(`${index + 1}. ${code}`, 12)
+        })
+        yPosition -= 20
+
+        // Terms
+        drawText('ĐIỀU KHOẢN HỢP ĐỒNG', 14, true)
+        yPosition -= 5
+
+        const terms = [
+            '1. Cam kết chăm sóc: Đại Ngàn Xanh cam kết chăm sóc cây trong vòng 5 năm kể từ ngày trồng.',
+            '2. Báo cáo định kỳ: Khách hàng sẽ nhận báo cáo tình trạng cây hàng quý qua email.',
+            '3. Quyền sở hữu: Khách hàng sở hữu cây và có quyền thăm vườn bất cứ lúc nào.',
+            '4. Thu mua lại: Sau 5 năm, Đại Ngàn Xanh cam kết thu mua lại gỗ với giá thị trường.',
+            '5. Bảo hiểm: Cây được bảo hiểm toàn diện trong suốt thời gian chăm sóc.',
+        ]
+
+        terms.forEach(term => {
+            const lines = splitTextToFitWidth(term, width - 2 * margin, font, 11)
+            lines.forEach(line => {
+                page.drawText(removeAccents(line), {
+                    x: margin,
+                    y: yPosition,
+                    size: 11,
+                    font,
+                })
+                yPosition -= 18
+            })
+        })
+
+        yPosition -= 20
+
+        // Signature
+        drawText('CHỮ KÝ ĐIỆN TỬ', 14, true)
+        yPosition -= 5
+        drawText('Hợp đồng này được ký điện tử và có giá trị pháp lý.', 10, false, rgb(0.4, 0.4, 0.4))
+        drawText(`Mã xác thực: ${payload.orderCode}-${Date.now().toString(36)}`, 10, false, rgb(0.4, 0.4, 0.4))
+
+        yPosition -= 40
+        drawText('___________________________', 12)
+        drawText('Đại diện Đại Ngàn Xanh', 10)
+
+        // Footer
+        page.drawText(
+            removeAccents('© 2026 Đại Ngàn Xanh. Mọi quyền được bảo lưu.'),
+            {
+                x: margin,
+                y: 30,
+                size: 8,
+                font,
+                color: rgb(0.5, 0.5, 0.5),
+            }
+        )
+
+        // Generate PDF bytes
+        const pdfBytes = await pdfDoc.save()
+
+        // Upload to Supabase Storage
+        const fileName = `${payload.orderCode}-${Date.now()}.pdf`
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('contracts')
+            .upload(fileName, pdfBytes, {
+                contentType: 'application/pdf',
+                upsert: false,
+            })
+
+        if (uploadError) {
+            throw new Error(`Upload failed: ${uploadError.message}`)
+        }
+
+        // Get public URL (even though bucket is private, we need the path)
+        const { data: { publicUrl } } = supabase.storage
+            .from('contracts')
+            .getPublicUrl(fileName)
+
+        return new Response(
+            JSON.stringify({
+                success: true,
+                fileName,
+                filePath: uploadData.path,
+                message: 'Contract generated successfully',
+            }),
+            {
+                headers: { 'Content-Type': 'application/json' },
+                status: 200,
+            }
+        )
+
+    } catch (error) {
+        console.error('Contract generation failed:', error)
+        return new Response(
+            JSON.stringify({
+                success: false,
+                error: error.message,
+            }),
+            {
+                headers: { 'Content-Type': 'application/json' },
+                status: 500,
+            }
+        )
+    }
+})
+
+// Helper function to split text into lines
+function splitTextToFitWidth(
+    text: string,
+    maxWidth: number,
+    font: any,
+    fontSize: number
+): string[] {
+    const words = text.split(' ')
+    const lines: string[] = []
+    let currentLine = ''
+
+    words.forEach(word => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        const testWidth = font.widthOfTextAtSize(testLine, fontSize)
+
+        if (testWidth > maxWidth && currentLine) {
+            lines.push(currentLine)
+            currentLine = word
+        } else {
+            currentLine = testLine
+        }
+    })
+
+    if (currentLine) {
+        lines.push(currentLine)
+    }
+
+    return lines
+}
