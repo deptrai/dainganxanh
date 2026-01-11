@@ -130,4 +130,43 @@ describe('TreeTimeline', () => {
             expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()
         })
     })
+
+    describe('Edge Cases', () => {
+        it('handles ageInMonths of 0 correctly', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={0} />)
+
+            // Should show first stage as current
+            expect(screen.getByText('Đặt hàng thành công')).toBeInTheDocument()
+            expect(screen.getByText(/Bạn đang ở đây/)).toBeInTheDocument()
+        })
+
+        it('handles very large ageInMonths (beyond 60 months)', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={120} />)
+
+            // Should cap progress at 100%
+            expect(screen.getByText('100%')).toBeInTheDocument()
+        })
+
+        it('handles exactly 60 months (harvest time)', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={60} />)
+
+            // Should be at final stage
+            expect(screen.getByText('Năm 5: Thu hoạch')).toBeInTheDocument()
+        })
+
+        it('renders timeline stages with aria labels for accessibility', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={6} />)
+
+            // Check for role="list" and role="listitem"
+            expect(screen.getByRole('list', { name: /giai đoạn phát triển/i })).toBeInTheDocument()
+            expect(screen.getAllByRole('listitem').length).toBe(9)
+        })
+
+        it('handles photos prop as undefined', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={12} />)
+
+            // Should render without errors
+            expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()
+        })
+    })
 })

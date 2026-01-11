@@ -24,6 +24,24 @@ interface TreeTimelineProps {
     photos?: TreePhoto[]
 }
 
+// Translations - extracted for future i18n support
+const T = {
+    title: 'Hành Trình Cây',
+    currentIndicator: '← Bạn đang ở đây',
+    completed: 'Hoàn thành',
+    inProgress: 'Đang diễn ra',
+    upcoming: 'Sắp tới',
+    estimated: 'Dự kiến',
+    inThisStage: 'Đang trong giai đoạn này',
+    month: 'Tháng',
+    currentAge: 'Tuổi cây hiện tại',
+    progressToHarvest: 'Tiến độ đến thu hoạch',
+    monthUnit: 'tháng',
+    photoError: '📷 Lỗi',
+    photoAlt: 'Ảnh cây',
+    stagesAriaLabel: 'Các giai đoạn phát triển cây',
+} as const
+
 const TIMELINE_STAGES: TimelineStage[] = [
     { month: 0, label: 'Đặt hàng thành công', icon: '✅' },
     { month: 1, label: 'Đang ươm giống', icon: '🌱', placeholder: true },
@@ -36,6 +54,19 @@ const TIMELINE_STAGES: TimelineStage[] = [
     { month: 60, label: 'Năm 5: Thu hoạch', icon: '✨' },
 ]
 
+// Utility function for robust date arithmetic (handles edge cases like month overflow)
+function addMonths(date: Date, months: number): Date {
+    const result = new Date(date)
+    const targetMonth = result.getMonth() + months
+    result.setMonth(targetMonth)
+    // Handle edge case where adding months overshoots (e.g., Jan 31 + 1 month = Mar 3)
+    // If the day changed, it means we overflowed - go back to last day of target month
+    if (result.getDate() !== date.getDate()) {
+        result.setDate(0) // Set to last day of previous month
+    }
+    return result
+}
+
 // Sub-component for individual photo with error handling
 function StagePhoto({ photo }: { photo: TreePhoto }) {
     const [hasError, setHasError] = useState(false)
@@ -44,7 +75,7 @@ function StagePhoto({ photo }: { photo: TreePhoto }) {
     if (hasError) {
         return (
             <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                📷 Lỗi
+                {T.photoError}
             </div>
         )
     }
@@ -52,11 +83,11 @@ function StagePhoto({ photo }: { photo: TreePhoto }) {
     return (
         <div className="flex-shrink-0 relative group w-20 h-20">
             {!isLoaded && (
-                <div className="absolute inset-0 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="absolute inset-0 bg-gray-200 rounded-lg animate-pulse motion-reduce:animate-none" />
             )}
             <Image
                 src={photo.photo_url}
-                alt={photo.caption || 'Ảnh cây'}
+                alt={photo.caption || T.photoAlt}
                 width={80}
                 height={80}
                 className={`w-20 h-20 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all cursor-pointer ${!isLoaded ? 'opacity-0' : 'opacity-100'}`}
@@ -89,8 +120,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
 
     const getEstimatedDate = (monthsFromNow: number) => {
         const baseDate = plantedAt ? new Date(plantedAt) : new Date(createdAt)
-        const estimatedDate = new Date(baseDate)
-        estimatedDate.setMonth(estimatedDate.getMonth() + monthsFromNow)
+        const estimatedDate = addMonths(baseDate, monthsFromNow)
         return estimatedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
     }
 
@@ -104,15 +134,10 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
         TIMELINE_STAGES.forEach((stage, stageIndex) => {
             const nextStage = TIMELINE_STAGES[stageIndex + 1]
 
-            const stageStartDate = new Date(baseDate)
-            stageStartDate.setMonth(stageStartDate.getMonth() + stage.month)
-
-            const stageEndDate = new Date(baseDate)
-            if (nextStage) {
-                stageEndDate.setMonth(stageEndDate.getMonth() + nextStage.month)
-            } else {
-                stageEndDate.setFullYear(stageEndDate.getFullYear() + 10)
-            }
+            const stageStartDate = addMonths(baseDate, stage.month)
+            const stageEndDate = nextStage
+                ? addMonths(baseDate, nextStage.month)
+                : new Date(baseDate.getFullYear() + 10, baseDate.getMonth(), baseDate.getDate())
 
             result[stageIndex] = photos.filter(photo => {
                 const uploadDate = new Date(photo.uploaded_at)
@@ -127,7 +152,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl">📅</span>
-                <h2 className="text-2xl font-bold text-gray-800">Hành Trình Cây</h2>
+                <h2 className="text-2xl font-bold text-gray-800">{T.title}</h2>
             </div>
 
             <div className="relative">
@@ -135,7 +160,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                 <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
 
                 {/* Timeline stages */}
-                <div className="space-y-8">
+                <div className="space-y-8" role="list" aria-label={T.stagesAriaLabel}>
                     {TIMELINE_STAGES.map((stage, index) => {
                         const status = getStageStatus(index)
                         const isCurrent = status === 'current'
@@ -143,15 +168,21 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                         const isFuture = status === 'future'
 
                         return (
-                            <div key={stage.month} className="relative flex gap-6">
+                            <div
+                                key={stage.month}
+                                className="relative flex gap-6"
+                                role="listitem"
+                                aria-label={`${stage.label} - ${status === 'completed' ? T.completed : status === 'current' ? T.inProgress : T.upcoming}`}
+                            >
                                 {/* Icon */}
                                 <div
                                     className={`
-                    relative z-10 flex items-center justify-center w-12 h-12 rounded-full text-2xl
-                    ${isCompleted ? 'bg-green-100 ring-4 ring-green-200' : ''}
-                    ${isCurrent ? 'bg-emerald-500 ring-4 ring-emerald-200 animate-pulse' : ''}
-                    ${isFuture ? 'bg-gray-100' : ''}
-                  `}
+                                        relative z-10 flex items-center justify-center w-12 h-12 rounded-full text-2xl
+                                        ${isCompleted ? 'bg-green-100 ring-4 ring-green-200' : ''}
+                                        ${isCurrent ? 'bg-emerald-500 ring-4 ring-emerald-200 animate-pulse motion-reduce:animate-none' : ''}
+                                        ${isFuture ? 'bg-gray-100' : ''}
+                                    `}
+                                    aria-hidden="true"
                                 >
                                     {stage.icon}
                                 </div>
@@ -171,7 +202,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                                                 {stage.label}
                                                 {isCurrent && (
                                                     <span className="ml-2 text-sm font-normal text-emerald-600">
-                                                        ← Bạn đang ở đây
+                                                        {T.currentIndicator}
                                                     </span>
                                                 )}
                                             </h3>
@@ -180,9 +211,9 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                                             {stage.placeholder && ageInMonths < 9 && (
                                                 <p className="text-sm text-gray-500 mt-1">
                                                     {ageInMonths < stage.month ? (
-                                                        <>Dự kiến: {getEstimatedDate(stage.month)}</>
+                                                        <>{T.estimated}: {getEstimatedDate(stage.month)}</>
                                                     ) : (
-                                                        <>Đang trong giai đoạn này</>
+                                                        <>{T.inThisStage}</>
                                                     )}
                                                 </p>
                                             )}
@@ -190,9 +221,9 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                                             {/* Status indicator for all non-placeholder or mature trees */}
                                             {(!stage.placeholder || ageInMonths >= 9) && (
                                                 <p className={`text-sm mt-1 ${isFuture ? 'text-gray-400' : 'text-green-600'}`}>
-                                                    {isCompleted && <>Hoàn thành</>}
-                                                    {isCurrent && <>Đang diễn ra</>}
-                                                    {isFuture && <>Dự kiến: {getEstimatedDate(stage.month)}</>}
+                                                    {isCompleted && <>{T.completed}</>}
+                                                    {isCurrent && <>{T.inProgress}</>}
+                                                    {isFuture && <>{T.estimated}: {getEstimatedDate(stage.month)}</>}
                                                 </p>
                                             )}
 
@@ -219,13 +250,13 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                                         {/* Month indicator */}
                                         <span
                                             className={`
-                        text-sm font-medium px-3 py-1 rounded-full
-                        ${isCompleted ? 'bg-green-100 text-green-700' : ''}
-                        ${isCurrent ? 'bg-emerald-100 text-emerald-700' : ''}
-                        ${isFuture ? 'bg-gray-100 text-gray-500' : ''}
-                      `}
+                                                text-sm font-medium px-3 py-1 rounded-full
+                                                ${isCompleted ? 'bg-green-100 text-green-700' : ''}
+                                                ${isCurrent ? 'bg-emerald-100 text-emerald-700' : ''}
+                                                ${isFuture ? 'bg-gray-100 text-gray-500' : ''}
+                                            `}
                                         >
-                                            Tháng {stage.month}
+                                            {T.month} {stage.month}
                                         </span>
                                     </div>
                                 </div>
@@ -239,11 +270,11 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
             <div className="mt-8 p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm text-gray-600">Tuổi cây hiện tại</p>
-                        <p className="text-2xl font-bold text-emerald-700">{ageInMonths} tháng</p>
+                        <p className="text-sm text-gray-600">{T.currentAge}</p>
+                        <p className="text-2xl font-bold text-emerald-700">{ageInMonths} {T.monthUnit}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-sm text-gray-600">Tiến độ đến thu hoạch</p>
+                        <p className="text-sm text-gray-600">{T.progressToHarvest}</p>
                         <p className="text-2xl font-bold text-emerald-700">
                             {Math.min(Math.round((ageInMonths / 60) * 100), 100)}%
                         </p>
