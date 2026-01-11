@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FadeIn, StaggerContainer, StaggerItem, ParallaxImage, ScaleHover, TextReveal } from '@/components/MotionWrapper'
 import { AuthCallbackHandler } from '@/components/AuthCallbackHandler'
+import { AuthNavLink } from '@/components/AuthNavLink'
 
 export default function HomePage() {
     return (
@@ -17,7 +18,7 @@ export default function HomePage() {
                         <div className="hidden md:flex space-x-8">
                             <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Câu Chuyện Đại Ngàn Dó Đen Việt</a>
                             <a href="#how-it-works" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Cách Tham Gia</a>
-                            <a href="#dashboard" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Vườn Của Tôi</a>
+                            <AuthNavLink />
                         </div>
                         <ScaleHover>
                             <Link href="/pricing">

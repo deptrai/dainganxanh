@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@/lib/supabase/client";
 import { LogOut, User } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -12,14 +12,16 @@ export function UserHeader() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Get initial session
-        const getUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setUser(session?.user || null);
+        const supabase = createBrowserClient();
+
+        // Get initial session using getUser() for proper validation
+        const fetchUser = async () => {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            setUser(authUser);
             setLoading(false);
         };
 
-        getUser();
+        fetchUser();
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -30,10 +32,11 @@ export function UserHeader() {
     }, []);
 
     const handleLogout = async () => {
+        const supabase = createBrowserClient();
         try {
             await supabase.auth.signOut();
-            router.push("/");
-            router.refresh();
+            // Use hard redirect to ensure cookies are cleared
+            window.location.href = "/";
         } catch (error) {
             console.error("Logout error:", error);
         }

@@ -1,73 +1,91 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Xác nhận đơn hàng - Đại Ngàn Xanh</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       line-height: 1.6;
       color: #333;
       background-color: #f5f5f5;
     }
+
     .container {
       max-width: 600px;
       margin: 0 auto;
       background: white;
     }
+
     .header {
       background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
       padding: 40px 20px;
       text-align: center;
     }
+
     .logo {
       font-size: 32px;
       font-weight: bold;
       color: white;
       margin-bottom: 10px;
     }
+
     .header-subtitle {
       color: #d4edda;
       font-size: 14px;
     }
+
     .content {
       padding: 40px 30px;
     }
+
     .greeting {
       font-size: 24px;
       color: #2d5016;
       margin-bottom: 20px;
     }
+
     .message {
       font-size: 16px;
       color: #666;
       margin-bottom: 30px;
       line-height: 1.8;
     }
+
     .order-summary {
       background: #f8f9fa;
       border-radius: 8px;
       padding: 20px;
       margin-bottom: 30px;
     }
+
     .order-summary h3 {
       color: #2d5016;
       font-size: 18px;
       margin-bottom: 15px;
     }
+
     .order-row {
       display: flex;
       justify-content: space-between;
       padding: 10px 0;
       border-bottom: 1px solid #e0e0e0;
     }
+
     .order-row:last-child {
       border-bottom: none;
       font-weight: bold;
       color: #2d5016;
     }
+
     .tree-codes {
       background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
       border-radius: 8px;
@@ -75,16 +93,19 @@
       margin-bottom: 30px;
       color: white;
     }
+
     .tree-codes h3 {
       font-size: 18px;
       margin-bottom: 15px;
       color: #d4edda;
     }
+
     .code-list {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
     }
+
     .code-item {
       background: rgba(255, 255, 255, 0.2);
       padding: 8px 16px;
@@ -93,6 +114,7 @@
       font-size: 14px;
       font-weight: bold;
     }
+
     .impact-stats {
       background: #e8f5e9;
       border-radius: 8px;
@@ -100,24 +122,29 @@
       margin-bottom: 30px;
       text-align: center;
     }
+
     .impact-stats h4 {
       color: #2d5016;
       font-size: 16px;
       margin-bottom: 15px;
     }
+
     .stat {
       display: inline-block;
       margin: 0 20px;
     }
+
     .stat-value {
       font-size: 32px;
       font-weight: bold;
       color: #4a7c2c;
     }
+
     .stat-label {
       font-size: 14px;
       color: #666;
     }
+
     .cta-button {
       display: inline-block;
       background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
@@ -130,6 +157,7 @@
       margin: 20px 0;
       text-align: center;
     }
+
     .footer {
       background: #f8f9fa;
       padding: 30px;
@@ -137,30 +165,45 @@
       color: #666;
       font-size: 14px;
     }
+
     .footer-links {
       margin: 20px 0;
     }
+
     .footer-links a {
       color: #4a7c2c;
       text-decoration: none;
       margin: 0 10px;
     }
+
     .social-icons {
       margin: 20px 0;
     }
+
     .social-icons a {
       display: inline-block;
       margin: 0 10px;
       color: #4a7c2c;
       text-decoration: none;
     }
+
     @media only screen and (max-width: 600px) {
-      .content { padding: 30px 20px; }
-      .greeting { font-size: 20px; }
-      .stat { display: block; margin: 10px 0; }
+      .content {
+        padding: 30px 20px;
+      }
+
+      .greeting {
+        font-size: 20px;
+      }
+
+      .stat {
+        display: block;
+        margin: 10px 0;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- Header -->
@@ -172,9 +215,9 @@
     <!-- Content -->
     <div class="content">
       <h2 class="greeting">Xin chào {{user_name}}! 🎉</h2>
-      
+
       <p class="message">
-        Cảm ơn bạn đã chung tay cùng Đại Ngàn Xanh gieo mầm cho tương lai xanh! 
+        Cảm ơn bạn đã chung tay cùng Đại Ngàn Xanh gieo mầm cho tương lai xanh!
         Đơn hàng của bạn đã được xác nhận thành công.
       </p>
 
@@ -234,18 +277,19 @@
       </center>
 
       <p class="message" style="margin-top: 30px;">
-        <strong>Hợp đồng điện tử:</strong> Vui lòng xem file đính kèm để biết chi tiết về cam kết chăm sóc 5 năm và chính sách thu mua lại.
+        <strong>Hợp đồng điện tử:</strong> Vui lòng xem file đính kèm để biết chi tiết về cam kết chăm sóc 5 năm và
+        chính sách thu mua lại.
       </p>
     </div>
 
     <!-- Footer -->
     <div class="footer">
       <div class="footer-links">
-        <a href="https://dainganxanh.com">Trang chủ</a> |
-        <a href="https://dainganxanh.com/about">Về chúng tôi</a> |
-        <a href="https://dainganxanh.com/contact">Liên hệ</a>
+        <a href="https://dainganxanh.com.vn">Trang chủ</a> |
+        <a href="https://dainganxanh.com.vn/about">Về chúng tôi</a> |
+        <a href="https://dainganxanh.com.vn/contact">Liên hệ</a>
       </div>
-      
+
       <div class="social-icons">
         <a href="#">Facebook</a> |
         <a href="#">Zalo</a> |
@@ -259,4 +303,5 @@
     </div>
   </div>
 </body>
+
 </html>

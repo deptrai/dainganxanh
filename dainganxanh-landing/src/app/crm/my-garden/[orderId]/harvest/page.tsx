@@ -1,5 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
@@ -11,35 +11,38 @@ interface HarvestPageProps {
 }
 
 export default async function HarvestPage({ params }: HarvestPageProps) {
+    const { orderId } = await params
     const supabase = await createServerClient()
 
-    // Fetch tree data
+    // Check authentication
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+        redirect('/login?redirect=/crm/my-garden')
+    }
+
+    // Fetch order with trees using correct column names
     const { data: order, error } = await supabase
         .from('orders')
-        .select(`
-            *,
-            trees (
-                id,
-                tree_code,
-                status,
-                planted_at,
-                co2_absorbed
-            )
-        `)
-        .eq('id', params.orderId)
+        .select('*')
+        .eq('id', orderId)
+        .eq('user_id', user.id)
         .single()
 
     if (error || !order) {
         notFound()
     }
 
-    const tree = order.trees?.[0]
-    if (!tree) {
-        notFound()
-    }
+    // Fetch trees for this order
+    const { data: trees } = await supabase
+        .from('trees')
+        .select('id, code, order_id, created_at, status')
+        .eq('order_id', orderId)
+        .limit(1)
 
-    // Calculate tree age
-    const plantedDate = new Date(tree.planted_at)
+    const tree = trees?.[0]
+
+    // Calculate tree age from order or tree created_at
+    const plantedDate = tree ? new Date(tree.created_at) : new Date(order.created_at)
     const ageInMonths = Math.floor((Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
 
     return (
@@ -48,7 +51,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                 {/* Header */}
                 <div className="mb-8">
                     <Link
-                        href={`/crm/my-garden/${params.orderId}`}
+                        href={`/crm/my-garden/${orderId}`}
                         className="text-emerald-600 hover:text-emerald-700 mb-4 inline-flex items-center gap-2"
                     >
                         ← Quay lại
@@ -67,7 +70,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <p className="text-sm text-gray-600">Mã cây</p>
-                            <p className="text-lg font-bold text-emerald-700">{tree.tree_code}</p>
+                            <p className="text-lg font-bold text-emerald-700">{tree?.code || order.order_code || 'N/A'}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Tuổi cây</p>
@@ -82,7 +85,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                         <div>
                             <p className="text-sm text-gray-600">CO₂ đã hấp thụ</p>
                             <p className="text-lg font-bold text-emerald-700">
-                                {tree.co2_absorbed?.toFixed(1) || 0} kg
+                                {order.co2_absorbed?.toFixed(1) || (order.quantity * 20)} kg
                             </p>
                         </div>
                     </div>

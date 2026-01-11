@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
-    const router = useRouter();
-
     useEffect(() => {
         const handleAuthCallback = async () => {
+            const supabase = createBrowserClient()
+
             // Get the hash fragment from URL
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
             const accessToken = hashParams.get("access_token");
@@ -23,23 +22,23 @@ export default function AuthCallbackPage() {
 
                 if (error) {
                     console.error("Error setting session:", error);
-                    router.push("/login?error=auth_failed");
+                    window.location.href = "/login?error=auth_failed";
                     return;
                 }
 
                 if (data.session) {
                     console.log("Session created successfully:", data.session.user.email);
-                    // Redirect to checkout or home
-                    router.push("/");
+                    // Use hard redirect to ensure cookies are synced
+                    window.location.href = "/";
                 }
             } else {
                 // No tokens found, redirect to login
-                router.push("/login");
+                window.location.href = "/login";
             }
         };
 
         handleAuthCallback();
-    }, [router]);
+    }, []);
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">

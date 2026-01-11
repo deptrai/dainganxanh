@@ -6,6 +6,7 @@ import TreeTimeline from '@/components/crm/TreeTimeline'
 import PhotoGallery from '@/components/crm/PhotoGallery'
 import QuarterlyReports from '@/components/crm/QuarterlyReports'
 import GrowthMetrics from '@/components/crm/GrowthMetrics'
+import TreeCard from '@/components/crm/TreeCard'
 import Link from 'next/link'
 
 interface PackageDetailPageProps {
@@ -87,6 +88,24 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
     const ageInMonths = Math.floor((Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
     const progressToHarvest = Math.min((ageInMonths / 60) * 100, 100)
 
+    // Fetch individual trees for this order
+    const { data: trees } = await supabase
+        .from('trees')
+        .select('id, code, order_id, user_id, created_at, status')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true })
+
+    // Map trees to TreeCard format
+    const treesForDisplay = (trees || []).map(tree => ({
+        id: tree.id,
+        tree_code: tree.code,
+        order_id: orderId,
+        status: tree.status || 'seedling',
+        planted_at: tree.created_at,
+        co2_absorbed: 0,
+        latest_photo: null
+    }))
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50">
@@ -137,6 +156,23 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                                 <p className="text-gray-600">Lô cây đang được phân bổ...</p>
                                 <p className="text-sm text-gray-500 mt-1">Thông tin vị trí sẽ có sau khi cây được trồng</p>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Individual Trees */}
+                {treesForDisplay && treesForDisplay.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <span className="text-3xl">🌳</span>
+                            <h2 className="text-2xl font-bold text-gray-800">
+                                Danh Sách Cây Của Bạn ({treesForDisplay.length} cây)
+                            </h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {treesForDisplay.map((tree) => (
+                                <TreeCard key={tree.id} tree={tree} />
+                            ))}
                         </div>
                     </div>
                 )}

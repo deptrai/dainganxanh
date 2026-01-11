@@ -51,8 +51,8 @@ supabase functions deploy process-payment
 
 # Set secrets
 supabase secrets set RESEND_API_KEY=re_EXsBoj17_Lqz8xAGwWgNjio9KTMpSC1Ne
-supabase secrets set RESEND_FROM_EMAIL=noreply@dainganxanh.com
-supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com
+supabase secrets set RESEND_FROM_EMAIL=noreply@dainganxanh.com.vn
+supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com.vn
 ```
 
 ### Local Testing

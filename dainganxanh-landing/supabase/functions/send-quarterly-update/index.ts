@@ -3,8 +3,8 @@ import { Resend } from 'npm:resend@2.0.0'
 
 // Environment validation
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@dainganxanh.com'
-const BASE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://dainganxanh.com'
+const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@dainganxanh.com.vn'
+const BASE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://dainganxanh.com.vn'
 
 if (!RESEND_API_KEY) {
   console.error('RESEND_API_KEY is not configured')

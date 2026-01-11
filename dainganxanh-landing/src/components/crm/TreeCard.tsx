@@ -10,6 +10,7 @@ interface TreeCardProps {
     tree: {
         id: string
         tree_code: string
+        order_id?: string
         status: string
         planted_at: string
         co2_absorbed: number
@@ -45,12 +46,14 @@ export default function TreeCard({ tree }: TreeCardProps) {
     const monthsOld = isValidDate ? (Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30) : 0
     const showPlaceholder = !tree.latest_photo || monthsOld < 9
 
-    // Check if tree is ready for harvest (>= 60 months)
-    const isHarvestReady = monthsOld >= 60
+    // Check if tree is ready for harvest (configurable via environment)
+    const minutesOld = isValidDate ? (Date.now() - plantedDate.getTime()) / (1000 * 60) : 0
+    const isDev = process.env.NODE_ENV !== 'production'
+    const isHarvestReady = isDev ? minutesOld >= 3 : monthsOld >= 60
 
     return (
         <Link
-            href={`/crm/my-garden/${tree.id}`}
+            href={`/crm/my-garden/${tree.order_id || tree.id}`}
             className={`block bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group ${isHarvestReady ? 'ring-4 ring-yellow-400' : ''
                 }`}
         >

@@ -17,6 +17,7 @@ export async function middleware(request: NextRequest) {
                     return request.cookies.get(name)?.value
                 },
                 set(name: string, value: string, options: any) {
+                    // Set cookie on both request and response
                     request.cookies.set({
                         name,
                         value,
@@ -54,15 +55,22 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // IMPORTANT: Use getSession() instead of getUser() to refresh session
-    // getSession() will automatically refresh the session if needed
+    // IMPORTANT: Use getUser() instead of getSession() for security
+    // getUser() validates the token with Supabase servers and refreshes if needed
+    // getSession() only reads from cookies without validation (can be spoofed)
     const {
-        data: { session },
-    } = await supabase.auth.getSession()
+        data: { user },
+        error,
+    } = await supabase.auth.getUser()
+
+    // Log session status for debugging
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[Middleware] Path: ${request.nextUrl.pathname}, User: ${user?.email || 'none'}, Error: ${error?.message || 'none'}`)
+    }
 
     // Protect /crm routes - require authentication
     if (request.nextUrl.pathname.startsWith('/crm')) {
-        if (!session) {
+        if (!user) {
             // Redirect to login with return URL
             const redirectUrl = new URL('/login', request.url)
             redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)

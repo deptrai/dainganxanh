@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@/lib/supabase/client";
 
 type AuthMode = "phone" | "email";
 type OTPStep = "input" | "verify";
@@ -34,6 +34,7 @@ export function useAuth(): UseAuthReturn {
     const sendOTP = useCallback(async () => {
         setLoading(true);
         setError(null);
+        const supabase = createBrowserClient();
 
         try {
             const { error: otpError } = await supabase.auth.signInWithOtp(
@@ -74,6 +75,7 @@ export function useAuth(): UseAuthReturn {
     const verifyOTP = useCallback(async (code: string) => {
         setLoading(true);
         setError(null);
+        const supabase = createBrowserClient();
 
         try {
             const verifyParams = mode === "phone"

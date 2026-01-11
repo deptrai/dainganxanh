@@ -93,7 +93,7 @@ Body:
 
 ### Environment Variables
 - `RESEND_API_KEY` - Get from https://resend.com/api-keys
-- `RESEND_FROM_EMAIL` - Verified sender email (e.g., noreply@dainganxanh.com)
+- `RESEND_FROM_EMAIL` - Verified sender email (e.g., noreply@dainganxanh.com.vn)
 
 ### References
 - [Source: _bmad-output/planning-artifacts/architecture.md#Supabase-Edge-Functions]
@@ -142,8 +142,8 @@ Claude 4.5 Sonnet
 **1. Set Supabase Secrets:**
 ```bash
 supabase secrets set RESEND_API_KEY=re_EXsBoj17_Lqz8xAGwWgNjio9KTMpSC1Ne
-supabase secrets set RESEND_FROM_EMAIL=noreply@dainganxanh.com
-supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com
+supabase secrets set RESEND_FROM_EMAIL=noreply@dainganxanh.com.vn
+supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com.vn
 ```
 
 **2. Deploy Edge Functions:**

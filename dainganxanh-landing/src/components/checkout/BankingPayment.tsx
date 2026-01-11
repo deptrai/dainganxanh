@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Copy, Check, Building2, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@/lib/supabase/client";
 
 interface BankingPaymentProps {
     orderCode: string;
@@ -28,20 +28,22 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
 
     // Handle payment confirmation
     const handleConfirmPayment = async () => {
+        const supabase = createBrowserClient();
         try {
             setIsProcessing(true);
             setError(null);
 
-            // Get current session with token
-            const { data: { session } } = await supabase.auth.getSession();
+            // Get current user with token validation
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-            if (!session || !session.user) {
+            if (userError || !user) {
                 setError("Vui lòng đăng nhập để tiếp tục");
                 router.push("/login");
                 return;
             }
 
-            const user = session.user;
+            // Get session for access token (we already validated user above)
+            const { data: { session } } = await supabase.auth.getSession();
 
             // Calculate quantity from amount
             const unitPrice = 260000;
@@ -59,7 +61,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                     paymentMethod: "banking"
                 },
                 headers: {
-                    Authorization: `Bearer ${session.access_token}`,
+                    Authorization: `Bearer ${session?.access_token}`,
                 }
             });
 

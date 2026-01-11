@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createBrowserClient } from "@/lib/supabase/client";
 
 export function AuthCallbackHandler() {
-    const router = useRouter();
-
     useEffect(() => {
         const handleAuthCallback = async () => {
             // Check if we have auth tokens in the URL hash
@@ -18,6 +15,7 @@ export function AuthCallbackHandler() {
 
             if (accessToken && refreshToken) {
                 console.log("Found auth tokens in URL, setting session...");
+                const supabase = createBrowserClient();
 
                 // Set the session using the tokens from the magic link
                 const { data, error } = await supabase.auth.setSession({
@@ -37,18 +35,15 @@ export function AuthCallbackHandler() {
                     console.log("✅ Session created successfully for:", data.session.user.email);
                     alert(`Đăng nhập thành công! Chào mừng ${data.session.user.email}`);
 
-                    // Clean up the hash
+                    // Clean up the hash and force hard redirect to sync cookies
                     window.location.hash = "";
-
-                    // Redirect to home or dashboard
-                    router.push("/");
-                    router.refresh();
+                    window.location.href = "/";
                 }
             }
         };
 
         handleAuthCallback();
-    }, [router]);
+    }, []);
 
     return null; // This component doesn't render anything
 }

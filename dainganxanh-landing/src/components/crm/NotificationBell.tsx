@@ -79,7 +79,17 @@ export default function NotificationBell() {
             prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
         )
 
-        // Navigate to package detail if orderId exists
+        // Handle harvest_ready notifications
+        if (notification.type === 'harvest_ready') {
+            if (notification.data?.treeId && notification.data?.orderId) {
+                // Navigate to harvest page for this specific tree
+                router.push(`/crm/my-garden/${notification.data.orderId}/harvest?treeId=${notification.data.treeId}`)
+                setIsOpen(false)
+                return
+            }
+        }
+
+        // Navigate to package detail if orderId exists (for other notification types)
         if (notification.data?.orderIds && notification.data.orderIds.length > 0) {
             const orderId = notification.data.orderIds[0]
             // Navigate with hash anchor to scroll to photos section
@@ -172,7 +182,7 @@ export default function NotificationBell() {
                                             {/* Icon */}
                                             <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                                                 <span className="text-xl">
-                                                    {notification.type === 'tree_update' ? '🌳' : '📦'}
+                                                    {notification.type === 'harvest_ready' ? '🌟' : notification.type === 'tree_update' ? '🌳' : '📦'}
                                                 </span>
                                             </div>
 
