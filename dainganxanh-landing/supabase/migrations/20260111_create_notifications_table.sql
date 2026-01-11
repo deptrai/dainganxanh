@@ -1,5 +1,8 @@
+-- Drop existing table and policies if they exist (for clean re-run)
+DROP TABLE IF EXISTS notifications CASCADE;
+
 -- Create notifications table for real-time user notifications
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type TEXT NOT NULL, -- 'tree_update', 'order_status', 'quarterly_report', etc.
@@ -11,9 +14,9 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- Create indexes for efficient querying
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_user_read ON notifications(user_id, read);
-CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
 -- Enable Row Level Security
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
@@ -37,6 +40,7 @@ CREATE POLICY "Service role can insert notifications"
   WITH CHECK (true);
 
 -- Enable Realtime for notifications table
+-- Note: If table already exists in publication, this will be handled by the DROP TABLE CASCADE above
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 
 -- Add comment for documentation

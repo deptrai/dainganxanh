@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase/client'
 import {
@@ -8,50 +8,71 @@ import {
     fetchNotifications,
     markAsRead,
     getUnreadCount,
-    type Notification,
+    type Notification as NotificationType,
 } from '@/lib/supabase/realtime'
 
 export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false)
-    const [notifications, setNotifications] = useState<Notification[]>([])
+    const [notifications, setNotifications] = useState<NotificationType[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [userId, setUserId] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
     const router = useRouter()
 
     // Get current user and setup subscription
     useEffect(() => {
         const supabase = createBrowserClient()
+        let subscription: ReturnType<typeof subscribeToNotifications> | null = null
 
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                setUserId(user.id)
+        const initializeNotifications = async () => {
+            setIsLoading(true)
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
 
-                // Fetch initial notifications
-                fetchNotifications(user.id).then(setNotifications)
-                getUnreadCount(user.id).then(setUnreadCount)
+                if (user) {
+                    setUserId(user.id)
 
-                // Subscribe to real-time updates
-                const subscription = subscribeToNotifications(user.id, (newNotification) => {
-                    setNotifications((prev) => [newNotification, ...prev])
-                    setUnreadCount((prev) => prev + 1)
+                    // Fetch initial notifications
+                    const [notifs, count] = await Promise.all([
+                        fetchNotifications(user.id),
+                        getUnreadCount(user.id)
+                    ])
+                    setNotifications(notifs)
+                    setUnreadCount(count)
 
-                    // Show browser notification if permitted
-                    if (Notification.permission === 'granted') {
-                        new Notification(newNotification.title, {
-                            body: newNotification.body || undefined,
-                            icon: '/icon-192x192.png',
-                        })
-                    }
-                })
+                    // Subscribe to real-time updates
+                    subscription = subscribeToNotifications(user.id, (newNotification) => {
+                        setNotifications((prev) => [newNotification, ...prev])
+                        setUnreadCount((prev) => prev + 1)
 
-                return () => {
-                    subscription.unsubscribe()
+                        // Show browser notification if permitted
+                        // Using 'window.Notification' to avoid shadowing with our NotificationType
+                        if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                            new window.Notification(newNotification.title, {
+                                body: newNotification.body || undefined,
+                                icon: '/icon-192x192.png',
+                            })
+                        }
+                    })
                 }
+            } catch (error) {
+                console.error('Error initializing notifications:', error)
+            } finally {
+                setIsLoading(false)
             }
-        })
+        }
+
+        initializeNotifications()
+
+        // Proper cleanup - this is called when component unmounts
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe()
+            }
+        }
     }, [])
 
-    const handleNotificationClick = async (notification: Notification) => {
+    const handleNotificationClick = useCallback(async (notification: NotificationType) => {
         // Mark as read
         await markAsRead(notification.id)
         setUnreadCount((prev) => Math.max(0, prev - 1))
@@ -65,7 +86,7 @@ export default function NotificationBell() {
             router.push(`/crm/my-garden/${orderId}`)
             setIsOpen(false)
         }
-    }
+    }, [router])
 
     const formatTimeAgo = (timestamp: string) => {
         const now = new Date()
