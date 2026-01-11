@@ -1,8 +1,8 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import PackageGrid from '@/components/crm/PackageGrid'
-import TreeSortFilter from '@/components/crm/TreeSortFilter'
 import EmptyGarden from '@/components/crm/EmptyGarden'
+import MyGardenHeader from '@/components/crm/MyGardenHeader'
 
 export default async function MyGardenPage() {
     const supabase = await createServerClient()
@@ -54,20 +54,12 @@ export default async function MyGardenPage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            {/* Header with Stats */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-emerald-800">
-                        🌳 Vườn Cây Của Tôi
-                    </h1>
-                    {processedOrders.length > 0 && (
-                        <p className="text-gray-600 mt-1">
-                            {totalTrees.toLocaleString()} cây • {totalCO2.toLocaleString()} kg CO₂/năm
-                        </p>
-                    )}
-                </div>
-                <TreeSortFilter />
-            </div>
+            {/* Header with Stats and Notifications */}
+            <MyGardenHeader
+                totalTrees={totalTrees}
+                totalCO2={totalCO2}
+                hasOrders={processedOrders.length > 0}
+            />
 
             {processedOrders.length === 0 ? (
                 <EmptyGarden />

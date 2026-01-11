@@ -23,55 +23,65 @@ so that **tôi luôn engaged với cây của mình**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Push Notification Setup (AC: 1, 3)
-  - [ ] 1.1 Setup Firebase Cloud Messaging (FCM)
-  - [ ] 1.2 Request notification permission on login
-  - [ ] 1.3 Store FCM token trong user profile
-  - [ ] 1.4 Service worker cho background notifications
+- [ ] Task 1: Database Schema & Webhook (AC: 1)
+  - [ ] 1.1 Tạo `notifications` table
+  - [ ] 1.2 Enable Realtime for notifications table
+  - [ ] 1.3 Configure Database Webhook for tree_photos INSERT
+  - [ ] 1.4 Tạo migration file
 
-- [ ] Task 2: Notification Trigger (AC: 1)
-  - [ ] 2.1 Database trigger khi tree_photos insert
-  - [ ] 2.2 Tạo `supabase/functions/notify-tree-update/index.ts`
-  - [ ] 2.3 Fetch affected users từ trees → orders → users
-  - [ ] 2.4 Send FCM push notification
+- [ ] Task 2: Edge Function - Notification Trigger (AC: 1, 2)
+  - [ ] 2.1 Tạo `supabase/functions/notify-tree-update/index.ts`
+  - [ ] 2.2 Fetch affected users từ lot → orders → users
+  - [ ] 2.3 Create notification record in database
+  - [ ] 2.4 Send email via existing send-email function
 
-- [ ] Task 3: Email Notification (AC: 2)
-  - [ ] 3.1 Update `supabase/functions/send-email/index.ts`
-  - [ ] 3.2 Template: `quarterly-update.html`
-  - [ ] 3.3 Embed photo thumbnails
-  - [ ] 3.4 CTA: "Xem cây của bạn"
+- [ ] Task 3: Email Template (AC: 2)
+  - [ ] 3.1 Tạo `email-templates/quarterly-update.html`
+  - [ ] 3.2 Embed photo thumbnails
+  - [ ] 3.3 CTA: "Xem cây của bạn"
+  - [ ] 3.4 Update send-email function to support new template
 
-- [ ] Task 4: In-App Notification Center (AC: 4)
-  - [ ] 4.1 Tạo `notifications` table trong database
+- [ ] Task 4: Frontend - Realtime Subscription (AC: 1, 4)
+  - [ ] 4.1 Tạo `lib/supabase/realtime.ts` - subscription helper
   - [ ] 4.2 Tạo `components/crm/NotificationBell.tsx`
   - [ ] 4.3 Tạo `components/crm/NotificationDropdown.tsx`
-  - [ ] 4.4 Mark as read on click
+  - [ ] 4.4 Subscribe to notifications channel on mount
+  - [ ] 4.5 Mark as read on click
 
 - [ ] Task 5: Deep Link Handling (AC: 3)
-  - [ ] 5.1 Parse notification data for treeId
-  - [ ] 5.2 Navigate to `/crm/my-garden/[treeId]`
-  - [ ] 5.3 Scroll to new photos section
+  - [ ] 5.1 Parse notification data for orderId
+  - [ ] 5.2 Navigate to `/crm/my-garden/[orderId]`
+  - [ ] 5.3 Scroll to photos section
 
 ## Dev Notes
 
 ### Architecture Compliance
-- **Push:** Firebase Cloud Messaging (FCM)
-- **Email:** SendGrid (existing)
-- **Database:** New `notifications` table
+- **Real-time Notifications:** Supabase Realtime (postgres_changes subscription)
+- **Email:** Resend (existing `send-email` Edge Function)
+- **Database:** New `notifications` table + Database Webhook
+- **Edge Function:** `notify-tree-update` triggered by webhook
 
-### FCM Setup
-```bash
-npm install firebase
-```
-
+### Supabase Realtime Setup
 ```typescript
-// lib/firebase.ts
-import { initializeApp } from 'firebase/app'
-import { getMessaging } from 'firebase/messaging'
+// lib/supabase/realtime.ts
+import { createBrowserClient } from '@/lib/supabase/client'
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  // ...
+export function subscribeToNotifications(userId: string, callback: (notification: any) => void) {
+  const supabase = createBrowserClient()
+  
+  return supabase
+    .channel('notifications')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
+      },
+      callback
+    )
+    .subscribe()
 }
 ```
 
@@ -83,11 +93,22 @@ CREATE TABLE notifications (
   type TEXT NOT NULL, -- 'tree_update', 'order_status', etc.
   title TEXT NOT NULL,
   body TEXT,
-  data JSONB, -- { treeId: '...', photoUrl: '...' }
+  data JSONB, -- { orderId: '...', photoUrl: '...', lotName: '...' }
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX idx_notifications_user ON notifications(user_id, read);
+
+-- Enable Realtime for notifications table
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+```
+
+### Database Webhook Configuration
+```sql
+-- Configure in Supabase Dashboard → Database → Webhooks
+-- Webhook URL: https://[project-ref].supabase.co/functions/v1/notify-tree-update
+-- Events: INSERT on tree_photos table
+-- HTTP Headers: Authorization: Bearer [service_role_key]
 ```
 
 ### References
@@ -101,10 +122,10 @@ CREATE INDEX idx_notifications_user ON notifications(user_id, read);
 {{agent_model_name_version}}
 
 ### File List
-- src/lib/firebase.ts
-- src/components/crm/NotificationBell.tsx
-- src/components/crm/NotificationDropdown.tsx
-- supabase/functions/notify-tree-update/index.ts
-- supabase/migrations/[timestamp]_create_notifications_table.sql
-- email-templates/quarterly-update.html
-- public/firebase-messaging-sw.js
+- src/lib/supabase/realtime.ts (NEW)
+- src/components/crm/NotificationBell.tsx (NEW)
+- src/components/crm/NotificationDropdown.tsx (NEW)
+- supabase/functions/notify-tree-update/index.ts (NEW)
+- supabase/migrations/[timestamp]_create_notifications_table.sql (NEW)
+- email-templates/quarterly-update.html (NEW)
+- supabase/functions/send-email/index.ts (MODIFY - add template support)
