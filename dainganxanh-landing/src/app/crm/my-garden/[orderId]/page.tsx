@@ -152,7 +152,6 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                 <TreeTimeline
                     plantedAt={order.planted_at}
                     createdAt={order.created_at}
-                    treeStatus={order.tree_status || 'pending'}
                     ageInMonths={ageInMonths}
                     photos={treePhotos}
                 />

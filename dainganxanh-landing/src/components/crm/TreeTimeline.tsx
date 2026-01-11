@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import Image from 'next/image'
 
 interface TimelineStage {
     month: number
@@ -19,7 +20,6 @@ interface TreePhoto {
 interface TreeTimelineProps {
     plantedAt: string | null
     createdAt: string
-    treeStatus: string
     ageInMonths: number
     photos?: TreePhoto[]
 }
@@ -36,7 +36,44 @@ const TIMELINE_STAGES: TimelineStage[] = [
     { month: 60, label: 'Năm 5: Thu hoạch', icon: '✨' },
 ]
 
-export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMonths, photos = [] }: TreeTimelineProps) {
+// Sub-component for individual photo with error handling
+function StagePhoto({ photo }: { photo: TreePhoto }) {
+    const [hasError, setHasError] = useState(false)
+    const [isLoaded, setIsLoaded] = useState(false)
+
+    if (hasError) {
+        return (
+            <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">
+                📷 Lỗi
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex-shrink-0 relative group w-20 h-20">
+            {!isLoaded && (
+                <div className="absolute inset-0 bg-gray-200 rounded-lg animate-pulse" />
+            )}
+            <Image
+                src={photo.photo_url}
+                alt={photo.caption || 'Ảnh cây'}
+                width={80}
+                height={80}
+                className={`w-20 h-20 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all cursor-pointer ${!isLoaded ? 'opacity-0' : 'opacity-100'}`}
+                onLoad={() => setIsLoaded(true)}
+                onError={() => setHasError(true)}
+                unoptimized // For external URLs
+            />
+            {photo.caption && isLoaded && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-end p-1">
+                    <span className="text-white text-xs truncate">{photo.caption}</span>
+                </div>
+            )}
+        </div>
+    )
+}
+
+export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos = [] }: TreeTimelineProps) {
     const currentStageIndex = useMemo(() => {
         return TIMELINE_STAGES.findIndex((stage, index) => {
             const nextStage = TIMELINE_STAGES[index + 1]
@@ -57,29 +94,34 @@ export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMo
         return estimatedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
     }
 
-    // Get photos that belong to a specific stage based on upload date
-    const getPhotosForStage = (stageIndex: number) => {
-        if (photos.length === 0) return []
-
-        const stage = TIMELINE_STAGES[stageIndex]
-        const nextStage = TIMELINE_STAGES[stageIndex + 1]
+    // Memoize photos grouped by stage - prevents recalculation on each render
+    const photosPerStage = useMemo(() => {
+        if (photos.length === 0) return {}
 
         const baseDate = plantedAt ? new Date(plantedAt) : new Date(createdAt)
-        const stageStartDate = new Date(baseDate)
-        stageStartDate.setMonth(stageStartDate.getMonth() + stage.month)
+        const result: Record<number, TreePhoto[]> = {}
 
-        const stageEndDate = new Date(baseDate)
-        if (nextStage) {
-            stageEndDate.setMonth(stageEndDate.getMonth() + nextStage.month)
-        } else {
-            stageEndDate.setFullYear(stageEndDate.getFullYear() + 10) // Far future
-        }
+        TIMELINE_STAGES.forEach((stage, stageIndex) => {
+            const nextStage = TIMELINE_STAGES[stageIndex + 1]
 
-        return photos.filter(photo => {
-            const uploadDate = new Date(photo.uploaded_at)
-            return uploadDate >= stageStartDate && uploadDate < stageEndDate
+            const stageStartDate = new Date(baseDate)
+            stageStartDate.setMonth(stageStartDate.getMonth() + stage.month)
+
+            const stageEndDate = new Date(baseDate)
+            if (nextStage) {
+                stageEndDate.setMonth(stageEndDate.getMonth() + nextStage.month)
+            } else {
+                stageEndDate.setFullYear(stageEndDate.getFullYear() + 10)
+            }
+
+            result[stageIndex] = photos.filter(photo => {
+                const uploadDate = new Date(photo.uploaded_at)
+                return uploadDate >= stageStartDate && uploadDate < stageEndDate
+            })
         })
-    }
+
+        return result
+    }, [photos, plantedAt, createdAt])
 
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
@@ -156,27 +198,13 @@ export default function TreeTimeline({ plantedAt, createdAt, treeStatus, ageInMo
 
                                             {/* Photos for this stage */}
                                             {(() => {
-                                                const stagePhotos = getPhotosForStage(index)
+                                                const stagePhotos = photosPerStage[index] || []
                                                 if (stagePhotos.length === 0) return null
 
                                                 return (
                                                     <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
                                                         {stagePhotos.slice(0, 4).map((photo) => (
-                                                            <div
-                                                                key={photo.id}
-                                                                className="flex-shrink-0 relative group"
-                                                            >
-                                                                <img
-                                                                    src={photo.photo_url}
-                                                                    alt={photo.caption || 'Ảnh cây'}
-                                                                    className="w-20 h-20 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-all cursor-pointer"
-                                                                />
-                                                                {photo.caption && (
-                                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-end p-1">
-                                                                        <span className="text-white text-xs truncate">{photo.caption}</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                            <StagePhoto key={photo.id} photo={photo} />
                                                         ))}
                                                         {stagePhotos.length > 4 && (
                                                             <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-sm font-medium">

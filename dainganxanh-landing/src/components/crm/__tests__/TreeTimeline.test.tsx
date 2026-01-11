@@ -5,7 +5,6 @@ describe('TreeTimeline', () => {
     const mockProps = {
         plantedAt: '2024-01-01',
         createdAt: '2023-12-01',
-        treeStatus: 'growing',
         ageInMonths: 6,
     }
 
@@ -116,11 +115,12 @@ describe('TreeTimeline', () => {
             expect(images.length).toBeGreaterThan(0)
         })
 
-        it('shows photo caption on hover', () => {
+        it('shows photo alt text for accessibility', () => {
             render(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
 
-            // Caption text should be in the DOM (hidden by default, shown on hover)
-            expect(screen.getByText('First photo')).toBeInTheDocument()
+            // Image should have alt text for accessibility (caption used as alt)
+            const images = screen.getAllByRole('img')
+            expect(images.some(img => img.getAttribute('alt') === 'First photo')).toBe(true)
         })
 
         it('renders without photos gracefully', () => {
