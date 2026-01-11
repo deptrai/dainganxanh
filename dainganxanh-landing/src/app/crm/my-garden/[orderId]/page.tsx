@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import PackageDetailHeader from '@/components/crm/PackageDetailHeader'
 import LotMap from '@/components/crm/LotMap'
-import GrowthTimeline from '@/components/crm/GrowthTimeline'
+import TreeTimeline from '@/components/crm/TreeTimeline'
 import PhotoGallery from '@/components/crm/PhotoGallery'
 import QuarterlyReports from '@/components/crm/QuarterlyReports'
 import GrowthMetrics from '@/components/crm/GrowthMetrics'
@@ -134,8 +134,8 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                     ageInMonths={ageInMonths}
                 />
 
-                {/* Growth Timeline */}
-                <GrowthTimeline
+                {/* Tree Timeline */}
+                <TreeTimeline
                     plantedAt={order.planted_at}
                     createdAt={order.created_at}
                     treeStatus={order.tree_status || 'pending'}
