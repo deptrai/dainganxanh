@@ -14,6 +14,12 @@ export interface Notification {
         lotId?: string
         lotName?: string
         photoUrl?: string
+        // Harvest notification fields
+        treeId?: string
+        orderId?: string
+        treeCode?: string
+        ageMonths?: number
+        co2Absorbed?: number
     } | null
     read: boolean
     created_at: string
@@ -119,4 +125,22 @@ export async function getUnreadCount(userId: string): Promise<number> {
     }
 
     return count || 0
+}
+
+/**
+ * Mark all notifications as read for a user
+ * @param userId - The user ID
+ */
+export async function markAllAsRead(userId: string): Promise<void> {
+    const supabase = createBrowserClient()
+
+    const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('read', false)
+
+    if (error) {
+        console.error('Error marking all notifications as read:', error)
+    }
 }

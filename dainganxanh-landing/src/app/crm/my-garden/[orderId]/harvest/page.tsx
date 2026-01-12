@@ -85,7 +85,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                         <div>
                             <p className="text-sm text-gray-600">CO₂ đã hấp thụ</p>
                             <p className="text-lg font-bold text-emerald-700">
-                                {order.co2_absorbed?.toFixed(1) || (order.quantity * 20)} kg
+                                {order.co2_absorbed?.toFixed(1) || (ageInMonths / 12 * 20).toFixed(1)} kg
                             </p>
                         </div>
                     </div>

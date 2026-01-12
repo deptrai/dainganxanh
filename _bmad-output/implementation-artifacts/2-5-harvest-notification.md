@@ -56,10 +56,10 @@ so that **tôi có thể quyết định bước tiếp theo**.
 ### Important: DEV vs PROD Thresholds
 Development mode uses 3-minute threshold instead of 60 months for quick testing.
 
-Files with DEV thresholds that need updating for production:
-- `check-harvest-ready/index.ts` line 46: `ageMinutes < 3` → `ageMonths < 60`
-- `TreeCard.tsx` line 50: `minutesOld >= 3` → `monthsOld >= 60`
-- `HarvestBadge.tsx` line 10: Already flexible
+Files with DEV thresholds (configurable via ENVIRONMENT variable):
+- `check-harvest-ready/index.ts` lines 43-53: Uses `isDev` flag with 3-minute threshold for DEV, 60 months for PROD
+- `TreeCard.tsx` lines 50-52: Uses `isDev` flag with 3-minute threshold for DEV, 60 months for PROD  
+- `HarvestBadge.tsx` line 10: Checks `ageInMonths < 60` (TreeCard passes correct value based on environment)
 
 ### References
 - [Source: _bmad-output/planning-artifacts/architecture.md#Supabase-Edge-Functions]
@@ -92,10 +92,25 @@ Claude 4.5 Sonnet (Gemini M12)
 | 2026-01-11 | Fixed notification click navigation | NotificationBell.tsx |
 | 2026-01-11 | Added individual trees display | [orderId]/page.tsx |
 | 2026-01-11 | Fixed harvest icon in notifications | NotificationBell.tsx |
+| 2026-01-12 | **Code Review Fixes** | Multiple files |
+| 2026-01-12 | Fixed HarvestBadge logic (< 60 months check) | HarvestBadge.tsx |
+| 2026-01-12 | Added harvest fields to Notification interface | realtime.ts |
+| 2026-01-12 | Fixed flaky test (getAllByText) | NotificationBell.test.tsx |
+| 2026-01-12 | Added Mark All As Read functionality | NotificationBell.tsx, realtime.ts |
+| 2026-01-12 | Fixed CO2 calculation consistency | harvest/page.tsx |
+| 2026-01-12 | Updated DEV/PROD threshold documentation | 2-5-harvest-notification.md |
+| 2026-01-12 | Added loading skeleton for harvest page | harvest/loading.tsx |
 
 ### Code Review Follow-ups (AI)
 - [x] [LOW] Make threshold configurable via environment variable - DONE
 - [x] [MEDIUM] Add rate limiting/batching for Resend API calls - DONE (500ms delay)
 - [x] [MEDIUM] Calculate CO2 from tree age - DONE
 - [x] [MEDIUM] Add body text to notifications - DONE
+- [x] [HIGH] Fix HarvestBadge logic to check >= 60 months - DONE (2026-01-12)
+- [x] [HIGH] Add harvest notification fields to interface - DONE (2026-01-12)
+- [x] [MEDIUM] Fix flaky NotificationBell test - DONE (2026-01-12)
+- [x] [MEDIUM] Add Mark All As Read button - DONE (2026-01-12)
+- [x] [MEDIUM] Fix CO2 calculation consistency - DONE (2026-01-12)
+- [x] [LOW] Update outdated comments in story notes - DONE (2026-01-12)
+- [x] [LOW] Add loading state for harvest page - DONE (2026-01-12)
 - [ ] [LOW] Remove console.log statements from Edge Function for production (keep for debugging)

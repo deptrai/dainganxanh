@@ -33,7 +33,7 @@ development_status:
   2-2-tree-detail-view: ready-for-dev
   2-3-quarterly-update-notifications: done
   2-4-timeline-placeholder-real: done
-  2-5-year5-harvest-notification: ready-for-dev
+  2-5-year5-harvest-notification: done  # ✅ Code review passed 2026-01-12
   2-6-harvest-sell-back: ready-for-dev
   2-7-harvest-keep-growing: ready-for-dev
   2-8-harvest-receive-product: ready-for-dev
@@ -60,7 +60,7 @@ development_status:
 summary:
   total_epics: 4
   total_stories: 25
-  stories_ready: 21
+  stories_ready: 20
   stories_in_progress: 0
-  stories_done: 4
-  current_velocity: 4
+  stories_done: 5
+  current_velocity: 5

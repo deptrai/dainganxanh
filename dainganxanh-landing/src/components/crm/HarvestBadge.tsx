@@ -5,9 +5,9 @@ interface HarvestBadgeProps {
 }
 
 export default function HarvestBadge({ ageInMonths }: HarvestBadgeProps) {
-    // Show badge for trees >= 3 minutes old (DEV mode)
-    // Note: ageInMonths is still in months, but TreeCard passes it when minutesOld >= 3
-    if (ageInMonths < 0) {  // Always show if called
+    // Show badge only for trees >= 60 months old (harvest ready)
+    // In DEV mode, TreeCard will pass this when minutesOld >= 3
+    if (ageInMonths < 60) {
         return null
     }
 

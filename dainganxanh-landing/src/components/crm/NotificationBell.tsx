@@ -9,6 +9,7 @@ import {
     subscribeToNotifications,
     fetchNotifications,
     markAsRead,
+    markAllAsRead,
     getUnreadCount,
     type Notification as NotificationType,
 } from '@/lib/supabase/realtime'
@@ -105,6 +106,17 @@ export default function NotificationBell() {
         })
     }
 
+    const handleMarkAllAsRead = useCallback(async () => {
+        const supabase = createBrowserClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (user) {
+            await markAllAsRead(user.id)
+            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+            setUnreadCount(0)
+        }
+    }, [])
+
     return (
         <div className="relative">
             {/* Bell Icon Button */}
@@ -146,10 +158,18 @@ export default function NotificationBell() {
 
                     {/* Dropdown Panel */}
                     <div className="absolute right-0 z-20 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
-                        <div className="p-4 border-b border-gray-200">
+                        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900">
                                 Thông báo
                             </h3>
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={handleMarkAllAsRead}
+                                    className="text-sm text-green-600 hover:text-green-700 font-medium"
+                                >
+                                    Đánh dấu tất cả đã đọc
+                                </button>
+                            )}
                         </div>
 
                         {notifications.length === 0 ? (

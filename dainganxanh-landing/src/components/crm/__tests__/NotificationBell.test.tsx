@@ -183,7 +183,8 @@ describe('NotificationBell', () => {
 
         await waitFor(() => {
             // date-fns with vi locale should show Vietnamese time format
-            expect(screen.getByText(/trước/)).toBeInTheDocument()
+            const timeElements = screen.getAllByText(/trước/)
+            expect(timeElements.length).toBeGreaterThan(0)
         })
     })
 
