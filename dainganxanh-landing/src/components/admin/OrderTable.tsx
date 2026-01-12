@@ -1,0 +1,174 @@
+"use client"
+
+import { useState, Fragment } from 'react'
+import { Order } from '@/hooks/useAdminOrders'
+import VerifyOrderButton from './VerifyOrderButton'
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+
+interface OrderTableProps {
+    orders: Order[]
+    verifyOrder: (orderId: string) => Promise<void>
+}
+
+type SortField = 'created_at' | 'total_amount' | 'quantity'
+type SortDirection = 'asc' | 'desc'
+
+const statusColors = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    paid: 'bg-blue-100 text-blue-800',
+    verified: 'bg-green-100 text-green-800',
+    assigned: 'bg-purple-100 text-purple-800',
+    completed: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+}
+
+const statusLabels = {
+    pending: 'Chờ xác minh',
+    paid: 'Đã thanh toán',
+    verified: 'Đã xác minh',
+    assigned: 'Đã gán cây',
+    completed: 'Hoàn thành',
+    cancelled: 'Đã hủy',
+}
+
+export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
+    const [sortField, setSortField] = useState<SortField>('created_at')
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+    const [expandedRow, setExpandedRow] = useState<string | null>(null)
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortField(field)
+            setSortDirection('desc')
+        }
+    }
+
+    const sortedOrders = [...orders].sort((a, b) => {
+        const aValue = a[sortField]
+        const bValue = b[sortField]
+
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+        return 0
+    })
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleString('vi-VN')
+    }
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+        }).format(amount)
+    }
+
+    const SortIcon = ({ field }: { field: SortField }) => {
+        if (sortField !== field) return null
+        return sortDirection === 'asc' ? (
+            <ChevronUpIcon className="w-4 h-4 inline ml-1" />
+        ) : (
+            <ChevronDownIcon className="w-4 h-4 inline ml-1" />
+        )
+    }
+
+    return (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Order ID
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            User
+                        </th>
+                        <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('quantity')}
+                        >
+                            Số lượng <SortIcon field="quantity" />
+                        </th>
+                        <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('total_amount')}
+                        >
+                            Tổng tiền <SortIcon field="total_amount" />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Thanh toán
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Trạng thái
+                        </th>
+                        <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('created_at')}
+                        >
+                            Ngày tạo <SortIcon field="created_at" />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hành động
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedOrders.map((order) => (
+                        <Fragment key={order.id}>
+                            <tr
+                                className="hover:bg-gray-50 cursor-pointer"
+                                onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
+                            >
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {order.id.slice(0, 8)}...
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div>{order.user_email || order.user_phone || 'N/A'}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.quantity} cây
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {formatCurrency(order.total_amount)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.payment_method}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[order.status]}`}>
+                                        {statusLabels[order.status]}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {formatDate(order.created_at)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    {order.status === 'pending' || order.status === 'paid' ? (
+                                        <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
+                                    ) : (
+                                        <span className="text-gray-400">-</span>
+                                    )}
+                                </td>
+                            </tr>
+                            {expandedRow === order.id && (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-4 bg-gray-50">
+                                        <div className="space-y-2 text-sm">
+                                            <div><strong>Full Order ID:</strong> {order.id}</div>
+                                            <div><strong>User ID:</strong> {order.user_id}</div>
+                                            {order.verified_at && (
+                                                <div><strong>Verified At:</strong> {formatDate(order.verified_at)}</div>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </Fragment>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    )
+}
