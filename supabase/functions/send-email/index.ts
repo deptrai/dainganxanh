@@ -19,9 +19,11 @@ interface EmailRequest {
 }
 
 serve(async (req) => {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    let payload: EmailRequest | null = null
+
     try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
-        const payload: EmailRequest = await req.json()
+        payload = await req.json()
 
         // Embedded email template (Edge Functions can't access file system)
         const emailTemplate = `<!DOCTYPE html>
@@ -156,20 +158,19 @@ serve(async (req) => {
     } catch (error) {
         console.error('Email sending failed:', error)
 
-        // Log failure
-        try {
-            const supabase = createClient(supabaseUrl, supabaseServiceKey)
-            const payload: EmailRequest = await req.json()
-
-            await supabase.from('email_logs').insert({
-                order_id: payload.orderId,
-                email_type: 'order_confirmation',
-                recipient: payload.userEmail,
-                status: 'failed',
-                error_message: error.message,
-            })
-        } catch (logError) {
-            console.error('Failed to log error:', logError)
+        // Log failure (only if we have payload data)
+        if (payload) {
+            try {
+                await supabase.from('email_logs').insert({
+                    order_id: payload.orderId,
+                    email_type: 'order_confirmation',
+                    recipient: payload.userEmail,
+                    status: 'failed',
+                    error_message: error.message,
+                })
+            } catch (logError) {
+                console.error('Failed to log error:', logError)
+            }
         }
 
         return new Response(

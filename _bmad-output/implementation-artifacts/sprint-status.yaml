@@ -24,7 +24,7 @@ development_status:
   1-5-returning-user-login: done
   1-6-payment-gateway: ready-for-dev
   1-7-success-animation-share: ready-for-dev
-  1-8-email-confirmation-contract: ready-for-dev
+  1-8-email-confirmation-contract: done
   epic-1-retrospective: backlog
 
   # Epic 2: Tree Tracking & Dashboard (P0/P1)
@@ -62,5 +62,5 @@ summary:
   total_stories: 25
   stories_ready: 20
   stories_in_progress: 0
-  stories_done: 5
+  stories_done: 6
   current_velocity: 5

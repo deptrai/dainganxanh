@@ -32,18 +32,14 @@ const removeAccents = (str: string): string => {
 
 serve(async (req) => {
     try {
-        console.log("Function invoked");
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
-        console.log("Supabase client initialized");
         const payload: ContractRequest = await req.json()
-        console.log("Payload received:", payload.orderCode);
 
         // Create PDF document
         const pdfDoc = await PDFDocument.create()
 
         // Using Helvetica font (ASCII-only) - Vietnamese accents will be removed
         const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-        console.log("Font embedded successfully");
 
         const page = pdfDoc.addPage([595, 842]) // A4 size
 
@@ -82,7 +78,7 @@ serve(async (req) => {
         yPosition -= 5
         drawText(`Ho va ten: ${removeAccents(payload.userName)}`, 12)
         drawText(`Email: ${payload.userEmail}`, 12)
-        drawText(`Ma khach hang: ${payload.userId.substring(0, 8)}`, 12)
+        drawText(`Ma khach hang: ${payload.userId ? payload.userId.substring(0, 8) : 'N/A'}`, 12)
         yPosition -= 20
 
         // Order Details
@@ -151,13 +147,10 @@ serve(async (req) => {
         )
 
         // Generate PDF bytes
-        console.log("Generating PDF bytes...");
         const pdfBytes = await pdfDoc.save()
-        console.log("PDF generated, size:", pdfBytes.length);
 
         // Upload to Supabase Storage
         const fileName = `${payload.orderCode}-${Date.now()}.pdf`
-        console.log("Uploading to storage:", fileName);
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('contracts')
             .upload(fileName, pdfBytes, {
@@ -168,7 +161,6 @@ serve(async (req) => {
         if (uploadError) {
             throw new Error(`Upload failed: ${uploadError.message}`)
         }
-        console.log("Upload successful:", uploadData.path);
 
         // Get public URL (even though bucket is private, we need the path)
         const { data: { publicUrl } } = supabase.storage

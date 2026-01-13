@@ -30,20 +30,31 @@ serve(async (req) => {
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
         const payload: PaymentRequest = await req.json()
 
+        // Input validation
+        if (!payload.userEmail || !payload.userEmail.includes('@')) {
+            throw new Error('Invalid email address')
+        }
+        if (!payload.quantity || payload.quantity < 1 || payload.quantity > 1000) {
+            throw new Error('Quantity must be between 1 and 1000')
+        }
+        if (!payload.totalAmount || payload.totalAmount <= 0) {
+            throw new Error('Total amount must be positive')
+        }
+        if (!payload.orderCode || payload.orderCode.length < 3) {
+            throw new Error('Invalid order code')
+        }
+
         console.log('Processing payment:', payload.orderCode)
 
-        // 1. Generate tree codes
+        // 1. Generate unique tree codes (timestamp + random to avoid race conditions)
         const treeCodes: string[] = []
         const year = new Date().getFullYear()
+        const timestamp = Date.now()
 
         for (let i = 0; i < payload.quantity; i++) {
-            // Get next sequence number
-            const { count } = await supabase
-                .from('trees')
-                .select('*', { count: 'exact', head: true })
-
-            const sequence = (count || 0) + i + 1
-            const code = `TREE-${year}-${sequence.toString().padStart(5, '0')}`
+            // Use timestamp + index + random suffix for uniqueness
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+            const code = `TREE-${year}-${timestamp}-${i.toString().padStart(2, '0')}${random}`
             treeCodes.push(code)
         }
 
@@ -87,9 +98,21 @@ serve(async (req) => {
             throw new Error(`Trees insertion failed: ${treesError.message}`)
         }
 
-        console.log('Trees inserted successfully')
+        // 4. Generate PDF contract with 30s timeout
+        const contractPayload = {
+            orderId: order.id,
+            userId: payload.userId,
+            userName: payload.userName,
+            userEmail: payload.userEmail,
+            orderCode: payload.orderCode,
+            quantity: payload.quantity,
+            totalAmount: payload.totalAmount,
+            treeCodes,
+        }
 
-        // 4. Generate PDF contract
+        const contractController = new AbortController()
+        const contractTimeout = setTimeout(() => contractController.abort(), 30000)
+
         const contractResponse = await fetch(
             `${supabaseUrl}/functions/v1/generate-contract`,
             {
@@ -98,55 +121,59 @@ serve(async (req) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${supabaseServiceKey}`,
                 },
-                body: JSON.stringify({
-                    orderId: order.id,
-                    userId: payload.userId,
-                    userName: payload.userName,
-                    userEmail: payload.userEmail,
-                    orderCode: payload.orderCode,
-                    quantity: payload.quantity,
-                    totalAmount: payload.totalAmount,
-                    treeCodes,
-                }),
+                body: JSON.stringify(contractPayload),
+                signal: contractController.signal,
             }
         )
+        clearTimeout(contractTimeout)
+
+        console.log('Contract response status:', contractResponse.status)
 
         if (!contractResponse.ok) {
-            throw new Error('Contract generation failed')
+            const errorBody = await contractResponse.text()
+            console.error('Contract generation failed. Status:', contractResponse.status)
+            console.error('Error body:', errorBody)
+            throw new Error(`Contract generation failed: ${contractResponse.status} - ${errorBody}`)
         }
 
         const contractData = await contractResponse.json()
-        console.log('Contract generated:', contractData.fileName)
 
-        // 5. Send confirmation email
-        const emailResponse = await fetch(
-            `${supabaseUrl}/functions/v1/send-email`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseServiceKey}`,
-                },
-                body: JSON.stringify({
-                    orderId: order.id,
-                    userId: payload.userId,
-                    userEmail: payload.userEmail,
-                    userName: payload.userName,
-                    orderCode: payload.orderCode,
-                    quantity: payload.quantity,
-                    totalAmount: payload.totalAmount,
-                    treeCodes,
-                    contractPdfUrl: contractData.filePath,
-                }),
+        // 5. Send confirmation email with 30s timeout (non-blocking)
+        const emailController = new AbortController()
+        const emailTimeout = setTimeout(() => emailController.abort(), 30000)
+
+        try {
+            const emailResponse = await fetch(
+                `${supabaseUrl}/functions/v1/send-email`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabaseServiceKey}`,
+                    },
+                    body: JSON.stringify({
+                        orderId: order.id,
+                        userId: payload.userId,
+                        userEmail: payload.userEmail,
+                        userName: payload.userName,
+                        orderCode: payload.orderCode,
+                        quantity: payload.quantity,
+                        totalAmount: payload.totalAmount,
+                        treeCodes,
+                        contractPdfUrl: contractData.filePath,
+                    }),
+                    signal: emailController.signal,
+                }
+            )
+            clearTimeout(emailTimeout)
+
+            if (!emailResponse.ok) {
+                console.error('Email sending failed - non-blocking')
             }
-        )
-
-        if (!emailResponse.ok) {
-            console.error('Email sending failed')
-            // Don't throw - email failure shouldn't fail the whole payment
-        } else {
-            const emailData = await emailResponse.json()
-            console.log('Email sent:', emailData.emailId)
+        } catch (emailError) {
+            clearTimeout(emailTimeout)
+            console.error('Email sending error (non-blocking):', emailError)
+            // Don't throw - email failure shouldn't fail the payment
         }
 
         return new Response(
