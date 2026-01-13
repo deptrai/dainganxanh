@@ -12,7 +12,7 @@ import {
 const navigation = [
     { name: 'Dashboard', href: '/crm/admin', icon: HomeIcon },
     { name: 'Orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
-    { name: 'Reports', href: '/crm/admin/reports', icon: ChartBarIcon },
+    { name: 'Analytics', href: '/crm/admin/analytics', icon: ChartBarIcon },
     { name: 'Settings', href: '/crm/admin/settings', icon: Cog6ToothIcon },
 ]
 
