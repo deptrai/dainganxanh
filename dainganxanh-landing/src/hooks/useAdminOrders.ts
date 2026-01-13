@@ -15,6 +15,8 @@ export interface Order {
     // Joined from users table
     user_email?: string
     user_phone?: string
+    contract_url?: string | null
+    order_code?: string
 }
 
 export interface OrderFilters {

@@ -5,6 +5,7 @@ import { Order } from '@/hooks/useAdminOrders'
 import VerifyOrderButton from './VerifyOrderButton'
 import LotAssignmentModal from './LotAssignmentModal'
 import { assignOrderToLot } from '@/actions/assignOrderToLot'
+import { ContractActions } from '@/components/admin/ContractActions'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface OrderTableProps {
@@ -199,11 +200,26 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                             {expandedRow === order.id && (
                                 <tr>
                                     <td colSpan={8} className="px-6 py-4 bg-gray-50">
-                                        <div className="space-y-2 text-sm">
-                                            <div><strong>Full Order ID:</strong> {order.id}</div>
-                                            <div><strong>User ID:</strong> {order.user_id}</div>
-                                            {order.verified_at && (
-                                                <div><strong>Verified At:</strong> {formatDate(order.verified_at)}</div>
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div><strong>Full Order ID:</strong> {order.id}</div>
+                                                <div><strong>User ID:</strong> {order.user_id}</div>
+                                                {order.verified_at && (
+                                                    <div><strong>Verified At:</strong> {formatDate(order.verified_at)}</div>
+                                                )}
+                                                <div><strong>Contract:</strong> {order.contract_url ? 'Yes' : 'No'}</div>
+                                            </div>
+
+                                            {/* Contract Actions */}
+                                            {order.contract_url && (
+                                                <div className="border-t pt-4">
+                                                    <h4 className="text-sm font-semibold mb-2">Hợp Đồng & In Ấn</h4>
+                                                    <ContractActions
+                                                        orderId={order.id}
+                                                        contractUrl={order.contract_url}
+                                                        orderCode={order.order_code || order.id.substring(0, 8)}
+                                                    />
+                                                </div>
                                             )}
                                         </div>
                                     </td>
@@ -215,17 +231,19 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
             </table>
 
             {/* Assignment Modal */}
-            {assigningOrder && (
-                <LotAssignmentModal
-                    orderId={assigningOrder.id}
-                    quantity={assigningOrder.quantity}
-                    onClose={() => {
-                        setAssigningOrder(null)
-                        setAssignError(null)
-                    }}
-                    onAssign={handleAssignToLot}
-                />
-            )}
-        </div>
+            {
+                assigningOrder && (
+                    <LotAssignmentModal
+                        orderId={assigningOrder.id}
+                        quantity={assigningOrder.quantity}
+                        onClose={() => {
+                            setAssigningOrder(null)
+                            setAssignError(null)
+                        }}
+                        onAssign={handleAssignToLot}
+                    />
+                )
+            }
+        </div >
     )
 }

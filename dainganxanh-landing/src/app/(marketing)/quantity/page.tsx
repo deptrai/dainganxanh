@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -10,7 +11,7 @@ import { PriceSummary } from "@/components/checkout/PriceSummary";
 import { QuantityErrorBoundary } from "@/components/checkout/QuantityErrorBoundary";
 import { cn } from "@/lib/utils";
 
-export default function QuantityPage() {
+function QuantityPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -176,5 +177,13 @@ export default function QuantityPage() {
                 </div>
             </div>
         </QuantityErrorBoundary>
+    );
+}
+
+export default function QuantityPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Đang tải...</div>}>
+            <QuantityPageContent />
+        </Suspense>
     );
 }

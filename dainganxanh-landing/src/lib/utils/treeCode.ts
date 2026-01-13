@@ -1,8 +1,12 @@
 /**
  * Tree Code Generation Utility
- * Format: TREE-{year}-{prefix}{sequence}
- * Example: TREE-2026-ABC12001, TREE-2026-ABC12002
+ * Format: TREE-{year}-{prefix}{sequence}-{timestamp}
+ * Example: TREE-2026-ABC12001-123456
  */
+
+// Counter to ensure uniqueness when generating codes in rapid succession
+let lastTimestamp = 0
+let counter = 0
 
 /**
  * Generate a unique tree code with timestamp
@@ -14,9 +18,19 @@ export function generateTreeCode(orderId: string, sequence: number): string {
     const year = new Date().getFullYear()
     const prefix = orderId.slice(0, 5).toUpperCase()
     const seq = String(sequence).padStart(3, '0')
-    // Add millisecond timestamp to ensure uniqueness even if same order assigned multiple times
-    const timestamp = Date.now().toString().slice(-6) // Last 6 digits of timestamp
-    return `TREE-${year}-${prefix}${seq}-${timestamp}`
+
+    // Add millisecond timestamp with counter to ensure uniqueness
+    let timestamp = Date.now()
+    if (timestamp === lastTimestamp) {
+        counter++
+    } else {
+        lastTimestamp = timestamp
+        counter = 0
+    }
+
+    // Use last 6 digits of timestamp + counter
+    const uniqueId = (timestamp + counter).toString().slice(-6)
+    return `TREE-${year}-${prefix}${seq}-${uniqueId}`
 }
 
 /**
