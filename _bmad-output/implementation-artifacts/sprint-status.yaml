@@ -42,7 +42,7 @@ development_status:
   # Epic 3: Admin Operations (P0/P1)
   epic-3: in-progress
   3-1-order-management-dashboard: done
-  3-2-tree-lot-assignment: ready-for-dev
+  3-2-tree-lot-assignment: done
   3-3-contract-printing: ready-for-dev
   3-4-field-operations-checklist: ready-for-dev
   3-5-photo-upload-gps: ready-for-dev

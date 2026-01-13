@@ -3,6 +3,8 @@
 import { useState, Fragment } from 'react'
 import { Order } from '@/hooks/useAdminOrders'
 import VerifyOrderButton from './VerifyOrderButton'
+import LotAssignmentModal from './LotAssignmentModal'
+import { assignOrderToLot } from '@/actions/assignOrderToLot'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface OrderTableProps {
@@ -35,6 +37,24 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
+    const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
+    const [assignError, setAssignError] = useState<string | null>(null)
+
+    const handleAssignToLot = async (lotId: string) => {
+        if (!assigningOrder) return
+
+        try {
+            const result = await assignOrderToLot(assigningOrder.id, lotId)
+            if (!result.success) {
+                throw new Error(result.error || 'Assignment failed')
+            }
+            // Refresh orders list
+            window.location.reload()
+        } catch (error) {
+            setAssignError(error instanceof Error ? error.message : 'Unknown error')
+            throw error
+        }
+    }
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -76,6 +96,18 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
 
     return (
         <div className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Error Toast */}
+            {assignError && (
+                <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between">
+                    <p className="text-red-800 text-sm">{assignError}</p>
+                    <button
+                        onClick={() => setAssignError(null)}
+                        className="text-red-600 hover:text-red-800"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
@@ -145,11 +177,23 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                     {formatDate(order.created_at)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    {order.status === 'pending' || order.status === 'paid' ? (
-                                        <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
-                                    ) : (
-                                        <span className="text-gray-400">-</span>
-                                    )}
+                                    <div className="flex gap-2">
+                                        {order.status === 'pending' || order.status === 'paid' ? (
+                                            <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
+                                        ) : order.status === 'verified' || order.status === 'completed' ? (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setAssigningOrder(order)
+                                                }}
+                                                className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                                            >
+                                                Gán lô cây
+                                            </button>
+                                        ) : (
+                                            <span className="text-gray-400">-</span>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                             {expandedRow === order.id && (
@@ -169,6 +213,19 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                     ))}
                 </tbody>
             </table>
+
+            {/* Assignment Modal */}
+            {assigningOrder && (
+                <LotAssignmentModal
+                    orderId={assigningOrder.id}
+                    quantity={assigningOrder.quantity}
+                    onClose={() => {
+                        setAssigningOrder(null)
+                        setAssignError(null)
+                    }}
+                    onAssign={handleAssignToLot}
+                />
+            )}
         </div>
     )
 }
