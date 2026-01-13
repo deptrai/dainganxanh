@@ -12,6 +12,7 @@ interface PaymentRequest {
     quantity: number
     totalAmount: number
     paymentMethod: 'banking' | 'usdt'
+    referredBy?: string // Optional: User ID of referrer
 }
 
 serve(async (req) => {
@@ -70,6 +71,7 @@ serve(async (req) => {
                 total_amount: payload.totalAmount,
                 payment_method: payload.paymentMethod,
                 status: 'completed',
+                referred_by: payload.referredBy || null, // Store referrer ID
             })
             .select()
             .single()
@@ -80,6 +82,28 @@ serve(async (req) => {
         }
 
         console.log('Order created:', order.id)
+
+        // 2.1. Mark referral click as converted if this order was referred
+        if (payload.referredBy) {
+            console.log('Marking referral conversion for referrer:', payload.referredBy)
+            const { error: conversionError } = await supabase
+                .from('referral_clicks')
+                .update({
+                    converted: true,
+                    order_id: order.id,
+                })
+                .eq('referrer_id', payload.referredBy)
+                .eq('converted', false)
+                .order('created_at', { ascending: false })
+                .limit(1)
+
+            if (conversionError) {
+                console.error('Failed to mark referral conversion (non-blocking):', conversionError)
+                // Don't throw - conversion tracking failure shouldn't fail the payment
+            } else {
+                console.log('Referral conversion marked successfully')
+            }
+        }
 
         // 3. Insert trees into database
         const treeRecords = treeCodes.map(code => ({
