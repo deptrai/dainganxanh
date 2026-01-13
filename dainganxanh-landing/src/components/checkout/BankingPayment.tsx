@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Copy, Check, Building2, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
+import Cookies from "js-cookie";
 import { createBrowserClient } from "@/lib/supabase/client";
 
 interface BankingPaymentProps {
@@ -49,22 +50,22 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
             const unitPrice = 260000;
             const quantity = Math.round(amount / unitPrice);
 
-            // Read ref cookie to get referrer
-            const refCookie = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('ref='))
-                ?.split('=')[1];
+            // Read ref cookie to get referrer (using safe cookie parser)
+            const refCookie = Cookies.get('ref');
 
             let referrerId = null;
             if (refCookie) {
-                // Find referrer by referral code
-                const { data: referrer } = await supabase
+                // Find referrer by referral code with error handling
+                const { data: referrer, error: referrerError } = await supabase
                     .from('users')
                     .select('id')
                     .eq('referral_code', refCookie)
                     .single();
 
-                if (referrer) {
+                if (referrerError) {
+                    console.error('Referral lookup failed:', referrerError);
+                    // Don't block checkout, but log the error
+                } else if (referrer) {
                     referrerId = referrer.id;
                 }
             }

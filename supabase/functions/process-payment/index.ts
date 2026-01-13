@@ -45,6 +45,59 @@ serve(async (req) => {
             throw new Error('Invalid order code')
         }
 
+        // VALIDATION: referredBy (if provided)
+        if (payload.referredBy) {
+            // Check UUID format
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (!uuidRegex.test(payload.referredBy)) {
+                throw new Error('Invalid referrer ID format')
+            }
+
+            // Prevent self-referral
+            if (payload.referredBy === payload.userId) {
+                throw new Error('Self-referral not allowed')
+            }
+
+            // Verify referrer exists
+            const { data: referrer, error: referrerError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('id', payload.referredBy)
+                .single()
+
+            if (referrerError || !referrer) {
+                console.error('Invalid referrer ID:', payload.referredBy)
+                throw new Error('Invalid referrer')
+            }
+        }
+
+        // IDEMPOTENCY CHECK: Prevent duplicate orders
+        const { data: existingOrder } = await supabase
+            .from('orders')
+            .select('id, code')
+            .eq('code', payload.orderCode)
+            .single()
+
+        if (existingOrder) {
+            console.log('Order already exists (idempotent):', existingOrder.code)
+            // Return success with existing order ID
+            return new Response(
+                JSON.stringify({
+                    success: true,
+                    orderId: existingOrder.id,
+                    orderCode: existingOrder.code,
+                    message: 'Order already processed (idempotent)',
+                }),
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                    },
+                    status: 200,
+                }
+            )
+        }
+
         console.log('Processing payment:', payload.orderCode)
 
         // 1. Generate unique tree codes (timestamp + random to avoid race conditions)
@@ -86,22 +139,44 @@ serve(async (req) => {
         // 2.1. Mark referral click as converted if this order was referred
         if (payload.referredBy) {
             console.log('Marking referral conversion for referrer:', payload.referredBy)
-            const { error: conversionError } = await supabase
+
+            // Find unconverted clicks from this referrer in the last 7 days
+            // Use time window to reduce race condition risk
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            const { data: unconvertedClicks, error: fetchError } = await supabase
                 .from('referral_clicks')
-                .update({
-                    converted: true,
-                    order_id: order.id,
-                })
+                .select('id, created_at')
                 .eq('referrer_id', payload.referredBy)
                 .eq('converted', false)
+                .gte('created_at', sevenDaysAgo)
                 .order('created_at', { ascending: false })
-                .limit(1)
 
-            if (conversionError) {
-                console.error('Failed to mark referral conversion (non-blocking):', conversionError)
-                // Don't throw - conversion tracking failure shouldn't fail the payment
+            if (fetchError) {
+                console.error('Failed to fetch referral clicks:', fetchError)
+            } else if (unconvertedClicks && unconvertedClicks.length > 0) {
+                // Use the most recent click
+                const clickToConvert = unconvertedClicks[0]
+
+                // Log warning if multiple unconverted clicks exist (potential race condition)
+                if (unconvertedClicks.length > 1) {
+                    console.warn(`Multiple unconverted clicks found (${unconvertedClicks.length}), converting most recent`)
+                }
+
+                const { error: conversionError } = await supabase
+                    .from('referral_clicks')
+                    .update({
+                        converted: true,
+                        order_id: order.id,
+                    })
+                    .eq('id', clickToConvert.id)
+
+                if (conversionError) {
+                    console.error('Failed to mark referral conversion (non-blocking):', conversionError)
+                } else {
+                    console.log('Referral conversion marked successfully for click:', clickToConvert.id)
+                }
             } else {
-                console.log('Referral conversion marked successfully')
+                console.warn('No unconverted clicks found for referrer in the last 7 days')
             }
         }
 

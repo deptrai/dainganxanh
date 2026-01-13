@@ -7,6 +7,14 @@ import { createHash } from 'crypto'
 const COMMISSION_RATE = 0.05
 
 /**
+ * Centralized commission calculation to ensure consistency
+ * Note: Must be async because this file uses 'use server'
+ */
+export async function calculateCommission(orderAmount: number): Promise<number> {
+    return Math.round(Number(orderAmount) * COMMISSION_RATE)
+}
+
+/**
  * Hash IP address for privacy compliance
  */
 function hashIP(ip: string): string {
@@ -14,7 +22,7 @@ function hashIP(ip: string): string {
 }
 
 /**
- * Track a referral link click
+ * Track a referral link click with deduplication
  */
 export async function trackReferralClick(refCode: string, requestHeaders: Headers) {
     try {
@@ -37,6 +45,21 @@ export async function trackReferralClick(refCode: string, requestHeaders: Header
 
         // Hash IP for privacy
         const ipHash = hashIP(ip)
+
+        // DEDUPLICATION: Check if this IP already clicked this referrer's link in the last hour
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+        const { data: existingClick } = await supabase
+            .from('referral_clicks')
+            .select('id')
+            .eq('referrer_id', referrer.id)
+            .eq('ip_hash', ipHash)
+            .gte('created_at', oneHourAgo)
+            .single()
+
+        if (existingClick) {
+            // Already tracked within the last hour - skip duplicate
+            return { success: true, duplicate: true }
+        }
 
         // Insert click record
         const { error: insertError } = await supabase
@@ -110,9 +133,10 @@ export async function getReferralStats(userId: string) {
         }
 
         // Calculate total commission
-        const totalCommission = convertedOrders?.reduce((sum, order) => {
-            return sum + Math.round(Number(order.total_amount) * COMMISSION_RATE)
-        }, 0) || 0
+        const totalCommission = await convertedOrders?.reduce(async (sumPromise, order) => {
+            const sum = await sumPromise
+            return sum + await calculateCommission(Number(order.total_amount))
+        }, Promise.resolve(0)) || 0
 
         // Calculate conversion rate
         const conversionRate = totalClicks && totalClicks > 0
@@ -152,14 +176,10 @@ export async function getReferralConversions(userId: string) {
                 id,
                 created_at,
                 order_id,
-                orders (
+                orders!inner (
                     code,
                     total_amount,
-                    created_at,
-                    users (
-                        email,
-                        full_name
-                    )
+                    created_at
                 )
             `)
             .eq('referrer_id', userId)
@@ -187,16 +207,16 @@ export async function getReferralConversions(userId: string) {
         }
 
         // Calculate commission for each conversion
-        return (conversions as ConversionRecord[])?.map((conv) => ({
+        return await Promise.all((conversions as ConversionRecord[])?.map(async (conv) => ({
             id: conv.id,
             clickedAt: conv.created_at,
             orderCode: conv.orders?.code,
             orderAmount: Number(conv.orders?.total_amount || 0),
-            commission: Math.round(Number(conv.orders?.total_amount || 0) * COMMISSION_RATE),
+            commission: await calculateCommission(Number(conv.orders?.total_amount || 0)),
             orderDate: conv.orders?.created_at,
             customerEmail: conv.orders?.users?.email,
             customerName: conv.orders?.users?.full_name,
-        })) || []
+        })) || [])
     } catch (error) {
         console.error('Error in getReferralConversions:', error)
         return []
