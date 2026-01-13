@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react'
 import KPICard from '@/components/admin/KPICard'
 import PlantingChart from '@/components/admin/PlantingChart'
+import RevenueChart from '@/components/admin/RevenueChart'
 import ConversionFunnel from '@/components/admin/ConversionFunnel'
 import ExportButton from '@/components/admin/ExportButton'
-import { getAnalyticsKPIs, getPlantingChartData, getConversionFunnelData } from '@/actions/analytics'
-import type { AnalyticsKPIs, PlantingChartData, ConversionFunnelData } from '@/actions/analytics'
+import { getAnalyticsKPIs, getPlantingChartData, getRevenueChartData, getConversionFunnelData } from '@/actions/analytics'
+import type { AnalyticsKPIs, PlantingChartData, RevenueChartData, ConversionFunnelData } from '@/actions/analytics'
 
 export default function AnalyticsPage() {
     const [kpis, setKpis] = useState<AnalyticsKPIs | null>(null)
     const [plantingData, setPlantingData] = useState<PlantingChartData[] | null>(null)
+    const [revenueData, setRevenueData] = useState<RevenueChartData[] | null>(null)
     const [funnelData, setFunnelData] = useState<ConversionFunnelData[] | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -32,9 +34,10 @@ export default function AnalyticsPage() {
             }
 
             // Fetch all data in parallel
-            const [kpisResult, plantingResult, funnelResult] = await Promise.all([
+            const [kpisResult, plantingResult, revenueResult, funnelResult] = await Promise.all([
                 getAnalyticsKPIs(range),
                 getPlantingChartData(range),
+                getRevenueChartData(range),
                 getConversionFunnelData()
             ])
 
@@ -44,12 +47,16 @@ export default function AnalyticsPage() {
             if (plantingResult.error) {
                 throw new Error(plantingResult.error)
             }
+            if (revenueResult.error) {
+                throw new Error(revenueResult.error)
+            }
             if (funnelResult.error) {
                 throw new Error(funnelResult.error)
             }
 
             setKpis(kpisResult.data)
             setPlantingData(plantingResult.data)
+            setRevenueData(revenueResult.data)
             setFunnelData(funnelResult.data)
         } catch (err) {
             console.error('Fetch analytics error:', err)
@@ -133,37 +140,46 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
-                {/* KPI Cards */}
+                {/* KPI Cards with Trends */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <KPICard
                         title="Tổng số cây"
                         value={kpis?.totalTrees || 0}
                         icon="🌳"
                         color="emerald"
+                        trend={kpis?.trends?.trees}
                     />
                     <KPICard
                         title="Người dùng hoạt động"
                         value={kpis?.activeUsers || 0}
                         icon="👥"
                         color="blue"
+                        trend={kpis?.trends?.users}
                     />
                     <KPICard
                         title="Tổng doanh thu"
                         value={`${(kpis?.totalRevenue || 0).toLocaleString('vi-VN')} ₫`}
                         icon="💰"
                         color="purple"
+                        trend={kpis?.trends?.revenue}
                     />
                     <KPICard
                         title="Carbon Offset"
                         value={`${(kpis?.carbonOffset || 0).toLocaleString('vi-VN')} kg`}
                         icon="🌍"
                         color="green"
+                        trend={kpis?.trends?.carbon}
                     />
                 </div>
 
-                {/* Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Charts Row 1 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <PlantingChart data={plantingData || []} />
+                    <RevenueChart data={revenueData || []} />
+                </div>
+
+                {/* Charts Row 2 */}
+                <div className="grid grid-cols-1">
                     <ConversionFunnel data={funnelData || []} />
                 </div>
             </div>

@@ -1,6 +1,6 @@
 # Story 3.7: Analytics & Reporting Dashboard
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -22,47 +22,57 @@ so that **báo cáo cho stakeholders**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Analytics Page (AC: 1, 4)
-  - [ ] 1.1 Tạo `/src/app/crm/admin/analytics/page.tsx`
-  - [ ] 1.2 KPI cards grid
-  - [ ] 1.3 Date range selector
-  - [ ] 1.4 Refresh button
+- [x] Task 1: Analytics Page (AC: 1, 4)
+  - [x] 1.1 Tạo `/src/app/crm/admin/analytics/page.tsx`
+  - [x] 1.2 KPI cards grid
+  - [x] 1.3 Date range selector
+  - [x] 1.4 Refresh button
 
-- [ ] Task 2: KPI Cards (AC: 1)
-  - [ ] 2.1 Tạo `components/admin/KPICard.tsx`
-  - [ ] 2.2 Total trees planted
-  - [ ] 2.3 Active users (last 30 days)
-  - [ ] 2.4 Total revenue
-  - [ ] 2.5 Carbon offset (trees × 20kg CO2)
-  - [ ] 2.6 Trend indicators (vs last period)
+- [x] Task 2: KPI Cards (AC: 1)
+  - [x] 2.1 Tạo `components/admin/KPICard.tsx`
+  - [x] 2.2 Total trees planted
+  - [x] 2.3 Active users (last 30 days)
+  - [x] 2.4 Total revenue
+  - [x] 2.5 Carbon offset (trees × 20kg CO2)
+  - [x] 2.6 Trend indicators (vs last period)
 
-- [ ] Task 3: Charts (AC: 2)
-  - [ ] 3.1 Tạo `components/admin/PlantingChart.tsx`
-  - [ ] 3.2 Line chart: Trees planted over time
-  - [ ] 3.3 Bar chart: Revenue by month
-  - [ ] 3.4 Funnel chart: Conversion funnel
+- [x] Task 3: Charts (AC: 2)
+  - [x] 3.1 Tạo `components/admin/PlantingChart.tsx`
+  - [x] 3.2 Line chart: Trees planted over time
+  - [x] 3.3 Bar chart: Revenue by month
+  - [x] 3.4 Funnel chart: Conversion funnel
 
-- [ ] Task 4: Conversion Funnel (AC: 2)
-  - [ ] 4.1 Stages: Landing → Register → Checkout → Pay → Complete
-  - [ ] 4.2 Calculate conversion rates
-  - [ ] 4.3 Identify drop-off points
+- [x] Task 4: Conversion Funnel (AC: 2)
+  - [x] 4.1 Stages: Landing → Register → Checkout → Pay → Complete
+  - [x] 4.2 Calculate conversion rates
+  - [x] 4.3 Identify drop-off points
 
-- [ ] Task 5: Export Functionality (AC: 3)
-  - [ ] 5.1 Tạo `components/admin/ExportButton.tsx`
-  - [ ] 5.2 Export as PDF (with charts)
-  - [ ] 5.3 Export as Excel (raw data)
+- [x] Task 5: Export Functionality (AC: 3)
+  - [x] 5.1 Tạo `components/admin/ExportButton.tsx`
+  - [x] 5.2 Export as PDF (with charts)
+  - [x] 5.3 Export as Excel (raw data)
 
-- [ ] Task 6: API for Analytics (AC: 1, 2, 4)
-  - [ ] 6.1 Tạo `/src/app/api/admin/analytics/route.ts`
-  - [ ] 6.2 Aggregate queries
-  - [ ] 6.3 Cache results (5 min)
+- [x] Task 6: Server Actions for Analytics (AC: 1, 2, 4)
+  - [x] 6.1 Tạo `/src/actions/analytics.ts`
+  - [x] 6.2 Aggregate queries
+  - [x] 6.3 Cache results (5 min)
+  - [x] 6.4 Admin role verification (security)
 
 ## Dev Notes
 
 ### Architecture Compliance
 - **Route:** `/crm/admin/analytics`
-- **Charts:** Recharts hoặc Chart.js
+- **Charts:** Recharts
 - **Export:** jsPDF + xlsx
+- **Pattern:** Server Actions (not API routes)
+
+### Security
+- All server actions verify admin role before returning data
+- Uses `verifyAdminRole()` helper function
+
+### Caching
+- In-memory cache with 5 minute TTL
+- Cache keys based on date range
 
 ### Analytics Queries
 ```sql
@@ -107,20 +117,6 @@ SELECT 'completed', COUNT(*) FROM orders WHERE status = 'completed';
 npm install recharts jspdf xlsx
 ```
 
-```typescript
-// components/admin/PlantingChart.tsx
-import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts'
-
-const PlantingChart = ({ data }) => (
-  <LineChart data={data}>
-    <XAxis dataKey="month" />
-    <YAxis />
-    <Tooltip />
-    <Line type="monotone" dataKey="count" stroke="#2E8B57" />
-  </LineChart>
-)
-```
-
 ### References
 - [Source: _bmad-output/planning-artifacts/architecture.md#Admin-Routes]
 - [Source: _bmad-output/planning-artifacts/wireframes.md#Admin-Dashboard]
@@ -130,13 +126,31 @@ const PlantingChart = ({ data }) => (
 ## Dev Agent Record
 
 ### Agent Model Used
-{{agent_model_name_version}}
+Gemini Advanced Agentic Coding (Antigravity)
+
+### Completion Date
+2026-01-14
+
+### Code Review Status
+✅ PASSED - All issues fixed
 
 ### File List
-- src/app/crm/admin/analytics/page.tsx
-- src/components/admin/KPICard.tsx
-- src/components/admin/PlantingChart.tsx
-- src/components/admin/RevenueChart.tsx
-- src/components/admin/ConversionFunnel.tsx
-- src/components/admin/ExportButton.tsx
-- src/app/api/admin/analytics/route.ts
+- src/actions/analytics.ts (NEW)
+- src/actions/__tests__/analytics.test.ts (NEW)
+- src/app/crm/admin/analytics/page.tsx (NEW)
+- src/components/admin/KPICard.tsx (NEW)
+- src/components/admin/PlantingChart.tsx (NEW)
+- src/components/admin/RevenueChart.tsx (NEW)
+- src/components/admin/ConversionFunnel.tsx (NEW)
+- src/components/admin/ExportButton.tsx (NEW)
+- package.json (MODIFIED - added recharts, jspdf, xlsx)
+
+### Change Log
+- 2026-01-14: Initial implementation
+- 2026-01-14: Code review fixes:
+  - Added admin role verification
+  - Added trend indicators
+  - Added RevenueChart component
+  - Added Landing stage to funnel (with fallback)
+  - Added 5-min caching
+  - Updated story file with correct file list

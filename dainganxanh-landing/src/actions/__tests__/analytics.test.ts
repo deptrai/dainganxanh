@@ -18,6 +18,13 @@ describe('analytics server actions', () => {
         })
     })
 
+    describe('getRevenueChartData', () => {
+        it('should have correct function signature', () => {
+            const { getRevenueChartData } = require('../analytics')
+            expect(typeof getRevenueChartData).toBe('function')
+        })
+    })
+
     describe('getConversionFunnelData', () => {
         it('should have correct function signature', () => {
             const { getConversionFunnelData } = require('../analytics')
@@ -25,3 +32,4 @@ describe('analytics server actions', () => {
         })
     })
 })
+
