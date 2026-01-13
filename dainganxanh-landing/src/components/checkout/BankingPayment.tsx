@@ -49,6 +49,26 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
             const unitPrice = 260000;
             const quantity = Math.round(amount / unitPrice);
 
+            // Read ref cookie to get referrer
+            const refCookie = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('ref='))
+                ?.split('=')[1];
+
+            let referrerId = null;
+            if (refCookie) {
+                // Find referrer by referral code
+                const { data: referrer } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('referral_code', refCookie)
+                    .single();
+
+                if (referrer) {
+                    referrerId = referrer.id;
+                }
+            }
+
             // Call process-payment Edge Function with explicit JWT token
             const { data, error: paymentError } = await supabase.functions.invoke("process-payment", {
                 body: {
@@ -58,7 +78,8 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                     orderCode: orderCode,
                     quantity: quantity,
                     totalAmount: amount,
-                    paymentMethod: "banking"
+                    paymentMethod: "banking",
+                    referredBy: referrerId, // Add referrer ID
                 },
                 headers: {
                     Authorization: `Bearer ${session?.access_token}`,

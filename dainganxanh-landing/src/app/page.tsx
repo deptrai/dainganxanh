@@ -3,10 +3,15 @@ import Link from 'next/link'
 import { FadeIn, StaggerContainer, StaggerItem, ParallaxImage, ScaleHover, TextReveal } from '@/components/MotionWrapper'
 import { AuthCallbackHandler } from '@/components/AuthCallbackHandler'
 import { AuthNavLink } from '@/components/AuthNavLink'
+import { ReferralTracker } from '@/components/ReferralTracker'
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
+    const params = await searchParams
+    const refCode = params.ref
+
     return (
         <main className="overflow-x-hidden">
+            <ReferralTracker refCode={refCode} />
             <AuthCallbackHandler />
             {/* Navbar - Glassmorphism */}
             <nav className="fixed w-full z-50 transition-all duration-300 top-0 py-4">
