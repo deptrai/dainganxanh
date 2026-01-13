@@ -1,6 +1,6 @@
 # Story 4.1: Referral Link Generation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -142,15 +142,12 @@ Claude 3.5 Sonnet (2024-10-22)
 4. **QR Code:** Used `qrcode.react` library with SVG to PNG download
 5. **Landing Page:** Converted to async component to handle searchParams
 
-**Edge Function Update Required:**
-The `process-payment` Edge Function needs to be updated to:
+**Edge Function Updated:**
+The `process-payment` Edge Function was updated to:
 1. Accept `referredBy` parameter from request body
 2. Store `referred_by` in orders table when creating order
 3. Mark referral_clicks as converted when order completes
 
-This Edge Function was not found in `supabase/functions` directory and may be in a separate backend repository.
-
-### File List
 **New Files:**
 - supabase/migrations/20260114_add_referred_by_to_orders.sql
 - supabase/migrations/20260114_create_referral_clicks.sql
@@ -161,6 +158,7 @@ This Edge Function was not found in `supabase/functions` directory and may be in
 - src/components/crm/ReferralQRCode.tsx
 - src/components/crm/ReferralStats.tsx
 - src/app/crm/referrals/page.tsx
+- supabase/functions/process-payment/index.ts (modified)
 
 **Modified Files:**
 - src/app/page.tsx (added searchParams, ReferralTracker)

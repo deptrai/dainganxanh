@@ -1,8 +1,10 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
-import { cookies, headers } from 'next/headers'
 import { createHash } from 'crypto'
+
+// Commission rate constant (5% of order value)
+const COMMISSION_RATE = 0.05
 
 /**
  * Hash IP address for privacy compliance
@@ -59,10 +61,18 @@ export async function trackReferralClick(refCode: string, requestHeaders: Header
 
 /**
  * Get referral statistics for a user
+ * @param userId - Must match authenticated user ID
  */
 export async function getReferralStats(userId: string) {
     try {
         const supabase = await createServerClient()
+
+        // AUTH CHECK: Verify user is querying their own stats
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user || user.id !== userId) {
+            console.error('Unauthorized access to getReferralStats')
+            return null
+        }
 
         // Get total clicks
         const { count: totalClicks, error: clicksError } = await supabase
@@ -99,8 +109,7 @@ export async function getReferralStats(userId: string) {
             return null
         }
 
-        // Calculate total commission (5% of order amount)
-        const COMMISSION_RATE = 0.05
+        // Calculate total commission
         const totalCommission = convertedOrders?.reduce((sum, order) => {
             return sum + Math.round(Number(order.total_amount) * COMMISSION_RATE)
         }, 0) || 0
@@ -124,10 +133,18 @@ export async function getReferralStats(userId: string) {
 
 /**
  * Get list of referral conversions with order details
+ * @param userId - Must match authenticated user ID
  */
 export async function getReferralConversions(userId: string) {
     try {
         const supabase = await createServerClient()
+
+        // AUTH CHECK: Verify user is querying their own conversions
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user || user.id !== userId) {
+            console.error('Unauthorized access to getReferralConversions')
+            return []
+        }
 
         const { data: conversions, error } = await supabase
             .from('referral_clicks')
@@ -154,9 +171,23 @@ export async function getReferralConversions(userId: string) {
             return []
         }
 
+        interface ConversionRecord {
+            id: string
+            created_at: string
+            order_id: string | null
+            orders: {
+                code: string
+                total_amount: number
+                created_at: string
+                users: {
+                    email: string
+                    full_name: string
+                } | null
+            } | null
+        }
+
         // Calculate commission for each conversion
-        const COMMISSION_RATE = 0.05
-        return conversions?.map((conv: any) => ({
+        return (conversions as ConversionRecord[])?.map((conv) => ({
             id: conv.id,
             clickedAt: conv.created_at,
             orderCode: conv.orders?.code,
@@ -174,10 +205,18 @@ export async function getReferralConversions(userId: string) {
 
 /**
  * Regenerate referral code for a user
+ * @param userId - Must match authenticated user ID
  */
 export async function regenerateReferralCode(userId: string) {
     try {
         const supabase = await createServerClient()
+
+        // AUTH CHECK: Verify user is regenerating their own code
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user || user.id !== userId) {
+            console.error('Unauthorized access to regenerateReferralCode')
+            return { success: false, error: 'Unauthorized' }
+        }
 
         // Generate new unique code (8 characters alphanumeric)
         const generateCode = () => {
@@ -228,3 +267,4 @@ export async function regenerateReferralCode(userId: string) {
         return { success: false, error: 'Internal error' }
     }
 }
+
