@@ -43,17 +43,7 @@ function LoginContent() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50">
-            {/* Navigation */}
-            <nav className="container mx-auto px-4 py-4">
-                <Link
-                    href="/"
-                    className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Trang chủ</span>
-                </Link>
-            </nav>
+        <div>
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-8 max-w-md">

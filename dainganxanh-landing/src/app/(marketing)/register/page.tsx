@@ -41,7 +41,7 @@ function RegisterContent() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50">
+        <div>
             {/* Navigation */}
             <nav className="container mx-auto px-4 py-4">
                 <Link
