@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { Home, Trees } from "lucide-react";
 import { SuccessAnimation } from "@/components/checkout/SuccessAnimation";
 import { ShareCardPreview } from "@/components/checkout/ShareCardPreview";
-import { ShareButton } from "@/components/checkout/ShareButton";
+import { ShareButton } from "@/components/shared/ShareButton";
 
 function SuccessContent() {
     const router = useRouter();
@@ -94,11 +94,14 @@ function SuccessContent() {
                     orderCode={orderCode}
                 />
 
-                {/* Share Button */}
+                {/* Share Button - Updated to use new shared component */}
                 <ShareButton
-                    treeCount={quantity}
-                    orderCode={orderCode}
-                    userName={userName}
+                    context="purchase"
+                    data={{
+                        trees: quantity,
+                        refCode: orderCode,
+                        userName: userName
+                    }}
                 />
 
                 {/* Navigation Buttons */}
