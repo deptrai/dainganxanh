@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { ReferralLink } from '@/components/crm/ReferralLink'
 import { ReferralQRCode } from '@/components/crm/ReferralQRCode'
 import { ReferralStats } from '@/components/crm/ReferralStats'
+import WithdrawalButton from '@/components/crm/WithdrawalButton'
 import { getReferralStats, getReferralConversions } from '@/actions/referrals'
 
 export default async function ReferralsPage() {
@@ -14,10 +15,10 @@ export default async function ReferralsPage() {
     // Layout handles redirect, but we need user for data fetching
     if (!user) return null
 
-    // Get user's referral code
+    // Get user's referral code and full name
     const { data: userData } = await supabase
         .from('users')
-        .select('referral_code')
+        .select('referral_code, full_name')
         .eq('id', user.id)
         .single()
 
@@ -59,6 +60,9 @@ export default async function ReferralsPage() {
 
                 {/* Stats Cards */}
                 <ReferralStats stats={stats} />
+
+                {/* Withdrawal Section */}
+                <WithdrawalButton userId={user.id} userFullName={userData.full_name} />
 
                 {/* Referral Link and QR Code */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
