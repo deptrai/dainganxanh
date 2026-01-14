@@ -22,7 +22,7 @@ export function CRMHeader() {
             {/* Navigation Menu */}
             <nav className="border-t border-gray-100">
                 <div className="container mx-auto px-4">
-                    <div className="flex items-center gap-1 overflow-x-auto">
+                    <div className="flex items-center justify-center gap-4 overflow-x-auto">
                         {navItems.map((item) => {
                             const Icon = item.icon
                             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
