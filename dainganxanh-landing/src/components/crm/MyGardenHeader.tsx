@@ -6,10 +6,11 @@ import TreeSortFilter from './TreeSortFilter'
 interface MyGardenHeaderProps {
     totalTrees: number
     totalCO2: number
+    totalAmount: number
     hasOrders: boolean
 }
 
-export default function MyGardenHeader({ totalTrees, totalCO2, hasOrders }: MyGardenHeaderProps) {
+export default function MyGardenHeader({ totalTrees, totalCO2, totalAmount, hasOrders }: MyGardenHeaderProps) {
     return (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
@@ -18,7 +19,7 @@ export default function MyGardenHeader({ totalTrees, totalCO2, hasOrders }: MyGa
                 </h1>
                 {hasOrders && (
                     <p className="text-gray-600 mt-1">
-                        {totalTrees.toLocaleString()} cây • {totalCO2.toLocaleString()} kg CO₂/năm
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)} • {totalTrees.toLocaleString()} cây • {totalCO2.toLocaleString()} kg CO₂/năm
                     </p>
                 )}
             </div>

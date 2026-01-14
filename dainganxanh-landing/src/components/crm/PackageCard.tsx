@@ -16,6 +16,7 @@ interface PackageCardProps {
         co2_absorbed: number | null
         latest_photo_url: string | null
         created_at: string
+        total_amount: number | null
     }
 }
 
@@ -99,6 +100,14 @@ export default function PackageCard({ order }: PackageCardProps) {
                     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
                         <span>{statusConfig.emoji}</span>
                         <span>{statusConfig.label}</span>
+                    </span>
+                </div>
+
+                {/* Price */}
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                    <span>💰</span>
+                    <span className="font-semibold text-emerald-700">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_amount || 0)}
                     </span>
                 </div>
 

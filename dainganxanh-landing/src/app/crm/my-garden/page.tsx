@@ -28,7 +28,8 @@ export default async function MyGardenPage() {
             planted_at,
             co2_absorbed,
             latest_photo_url,
-            created_at
+            created_at,
+            total_amount
         `)
         .eq('user_id', user.id)
         .in('status', ['paid', 'verified', 'assigned', 'completed'])
@@ -46,11 +47,13 @@ export default async function MyGardenPage() {
         planted_at: order.planted_at || null,
         co2_absorbed: order.co2_absorbed ?? (order.quantity * 20),
         latest_photo_url: order.latest_photo_url || null,
+        total_amount: order.total_amount || 0,
     }))
 
-    // Calculate total trees and CO2
+    // Calculate total trees, CO2, and amount
     const totalTrees = processedOrders.reduce((sum, order) => sum + order.quantity, 0)
     const totalCO2 = processedOrders.reduce((sum, order) => sum + (order.co2_absorbed || 0), 0)
+    const totalAmount = processedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0)
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -58,6 +61,7 @@ export default async function MyGardenPage() {
             <MyGardenHeader
                 totalTrees={totalTrees}
                 totalCO2={totalCO2}
+                totalAmount={totalAmount}
                 hasOrders={processedOrders.length > 0}
             />
 

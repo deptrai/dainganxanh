@@ -13,6 +13,7 @@ interface PackageGridProps {
         co2_absorbed: number | null
         latest_photo_url: string | null
         created_at: string
+        total_amount: number | null
     }>
 }
 
