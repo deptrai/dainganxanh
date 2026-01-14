@@ -2,6 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ProfileSettings from '@/components/admin/settings/ProfileSettings'
+import PasswordChangeForm from '@/components/admin/settings/PasswordChangeForm'
+import NotificationToggles from '@/components/admin/settings/NotificationToggles'
+import SystemConfigForm from '@/components/admin/settings/SystemConfigForm'
+import EmailTemplatesList from '@/components/admin/settings/EmailTemplatesList'
 
 export default function SettingsPage() {
     const router = useRouter()
@@ -23,8 +28,8 @@ export default function SettingsPage() {
                             <button
                                 onClick={() => setActiveTab('profile')}
                                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'profile'
-                                        ? 'border-emerald-500 text-emerald-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-emerald-500 text-emerald-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 Profile
@@ -32,8 +37,8 @@ export default function SettingsPage() {
                             <button
                                 onClick={() => setActiveTab('system')}
                                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'system'
-                                        ? 'border-emerald-500 text-emerald-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-emerald-500 text-emerald-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 System
@@ -41,8 +46,8 @@ export default function SettingsPage() {
                             <button
                                 onClick={() => setActiveTab('notifications')}
                                 className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'notifications'
-                                        ? 'border-emerald-500 text-emerald-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-emerald-500 text-emerald-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 Notifications
@@ -54,84 +59,21 @@ export default function SettingsPage() {
                     <div className="p-6">
                         {activeTab === 'profile' && (
                             <div className="space-y-6">
-                                <div>
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Settings</h2>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p className="text-blue-800">
-                                            🚧 <strong>Coming Soon</strong> - Profile management features will be available in the next release.
-                                        </p>
-                                        <ul className="mt-2 ml-4 text-sm text-blue-700 list-disc">
-                                            <li>Update admin profile information</li>
-                                            <li>Change password</li>
-                                            <li>Manage notification preferences</li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4">
-                                    <button
-                                        onClick={() => router.push('/crm/admin')}
-                                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                                    >
-                                        Back to Dashboard
-                                    </button>
-                                </div>
+                                <ProfileSettings />
+                                <PasswordChangeForm />
                             </div>
                         )}
 
                         {activeTab === 'system' && (
                             <div className="space-y-6">
-                                <div>
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-4">System Settings</h2>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p className="text-blue-800">
-                                            🚧 <strong>Coming Soon</strong> - System configuration features will be available in the next release.
-                                        </p>
-                                        <ul className="mt-2 ml-4 text-sm text-blue-700 list-disc">
-                                            <li>Configure email templates</li>
-                                            <li>Manage payment gateway settings</li>
-                                            <li>Set up automated workflows</li>
-                                            <li>Configure tree planting schedules</li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4">
-                                    <button
-                                        onClick={() => router.push('/crm/admin/analytics')}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                                    >
-                                        View Analytics Instead
-                                    </button>
-                                </div>
+                                <SystemConfigForm />
+                                <EmailTemplatesList />
                             </div>
                         )}
 
                         {activeTab === 'notifications' && (
                             <div className="space-y-6">
-                                <div>
-                                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Notification Settings</h2>
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p className="text-blue-800">
-                                            🚧 <strong>Coming Soon</strong> - Notification preferences will be available in the next release.
-                                        </p>
-                                        <ul className="mt-2 ml-4 text-sm text-blue-700 list-disc">
-                                            <li>Email notifications for new orders</li>
-                                            <li>SMS alerts for critical events</li>
-                                            <li>Slack/Discord integration</li>
-                                            <li>Daily/weekly digest emails</li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4">
-                                    <button
-                                        onClick={() => router.push('/crm/admin/orders')}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                    >
-                                        Manage Orders Instead
-                                    </button>
-                                </div>
+                                <NotificationToggles />
                             </div>
                         )}
                     </div>
