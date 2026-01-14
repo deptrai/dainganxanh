@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
+import { createBrowserClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, LogIn } from "lucide-react";
@@ -29,6 +30,18 @@ function LoginContent() {
         verifyOTP,
         resendOTP,
     } = useAuth();
+
+    // Auto-redirect if already logged in
+    useEffect(() => {
+        const checkSession = async () => {
+            const supabase = createBrowserClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                window.location.href = redirectTo;
+            }
+        };
+        checkSession();
+    }, [redirectTo]);
 
     const handleVerifyComplete = async (code: string) => {
         try {

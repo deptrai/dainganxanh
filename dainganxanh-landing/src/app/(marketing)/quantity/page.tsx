@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { createBrowserClient } from "@/lib/supabase/client";
 import { usePriceCalculator } from "@/hooks/usePriceCalculator";
 import { QuantitySelector } from "@/components/checkout/QuantitySelector";
 import { PriceSummary } from "@/components/checkout/PriceSummary";
@@ -30,11 +31,16 @@ function QuantityPageContent() {
         formattedUnitPrice,
     } = usePriceCalculator(validInitialQuantity);
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (isValid) {
-            // Navigate to registration (Story 1.4)
-            // Pass quantity via URL params or state
-            router.push(`/register?quantity=${quantity}`);
+            const supabase = createBrowserClient();
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session) {
+                router.push(`/checkout?quantity=${quantity}`);
+            } else {
+                router.push(`/register?quantity=${quantity}`);
+            }
         }
     };
 
