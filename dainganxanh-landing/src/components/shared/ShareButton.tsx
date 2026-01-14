@@ -24,17 +24,20 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
     const handleShare = async () => {
         setShareError(null);
 
-        // Track share initiated
-        trackShareInitiated({
-            source,
-            method: 'native',
-            trees: data.trees,
-            refCode: data.refCode,
-            context,
-        });
+        // Simple mobile detection to prefer custom UI on desktop
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Check if Web Share API is available
-        if (navigator.share) {
+        // Check if Web Share API is available AND request is from mobile
+        if (navigator.share && isMobile) {
+            // Track share initiated
+            trackShareInitiated({
+                source,
+                method: 'native',
+                trees: data.trees,
+                refCode: data.refCode,
+                context,
+            });
+
             try {
                 await navigator.share({
                     title: shareMessage.title,
@@ -55,13 +58,27 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
             } catch (error) {
                 // User cancelled or share failed
                 if ((error as Error).name !== "AbortError") {
-                    setShareError("Không thể chia sẻ. Vui lòng thử lại hoặc sử dụng các tùy chọn bên dưới.");
+                    setShareError("Không thể chia sẻ. Vui lòng thử lại hoặc sao chép link.");
+                    // Fallback to custom UI on error
                     setShowFallback(true);
                 }
             }
         } else {
-            // Fallback for browsers without Web Share API
-            setShowFallback(true);
+            // Desktop or no Web Share API -> Show Custom Switch
+            // Toggle fallback UI
+            setShowFallback((prev) => {
+                // If we are about to show the fallback UI, track the initiation
+                if (!prev) {
+                    trackShareInitiated({
+                        source,
+                        method: 'custom_ui',
+                        trees: data.trees,
+                        refCode: data.refCode,
+                        context,
+                    });
+                }
+                return !prev;
+            });
         }
     };
 
