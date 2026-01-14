@@ -7,7 +7,7 @@ import { ArrowLeft, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
 import { BankingPayment } from "@/components/checkout/BankingPayment";
-import { UserHeader } from "@/components/layout/UserHeader";
+
 
 function CheckoutContent() {
     const searchParams = useSearchParams();
@@ -26,9 +26,8 @@ function CheckoutContent() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50">
-            {/* User Header */}
-            <UserHeader />
+        <div>
+
 
             {/* Navigation */}
             <nav className="container mx-auto px-4 py-4">
