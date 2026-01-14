@@ -25,10 +25,11 @@ so that **nhận hoa hồng khi bạn bè mua**.
 ## Tasks / Subtasks
 
 - [x] Task 1: Referral Page (AC: 1, 2, 3)
-  - [x] 1.1 Tạo `/src/app/crm/referrals/page.tsx`
+  - [x] 1.1 Tạo `/src/app/referrals/page.tsx` (moved from `/crm/referrals`)
   - [x] 1.2 Display user's referral code
   - [x] 1.3 Full link với QR code
   - [x] 1.4 Copy to clipboard button
+  - [x] 1.5 Add navigation button to My Garden header
 
 - [x] Task 2: Referral Link Generator (AC: 1)
   - [x] 2.1 Referral code đã tự động generate khi register (users.referral_code)
@@ -58,9 +59,10 @@ so that **nhận hoa hồng khi bạn bè mua**.
 ## Dev Notes
 
 ### Architecture Compliance
-- **Route:** `/crm/referrals`
+- **Route:** `/referrals` (moved from `/crm/referrals` - 2026-01-14)
 - **Tracking:** Server-side click tracking
 - **Database:** `referral_clicks` table
+- **Navigation:** Button in My Garden header
 
 ### Database Schema Addition
 ```sql
@@ -157,12 +159,13 @@ The `process-payment` Edge Function was updated to:
 - src/components/crm/ReferralLink.tsx
 - src/components/crm/ReferralQRCode.tsx
 - src/components/crm/ReferralStats.tsx
-- src/app/crm/referrals/page.tsx
+- src/app/(marketing)/referrals/page.tsx (moved from crm/referrals)
 - supabase/functions/process-payment/index.ts (modified)
 
 **Modified Files:**
 - src/app/page.tsx (added searchParams, ReferralTracker)
 - src/components/checkout/BankingPayment.tsx (added ref cookie reading, referredBy param)
+- src/components/crm/MyGardenHeader.tsx (added referral link button)
 
 ### Test Results
 - Referrals unit tests: 4/4 passing ✅
@@ -173,6 +176,7 @@ The `process-payment` Edge Function was updated to:
 - 2026-01-14: Created database migrations for referred_by and referral_clicks
 - 2026-01-14: Integrated ref tracking into landing page and checkout flow
 - 2026-01-14: **CODE REVIEW:** Completed adversarial code review, identified 10 issues, fixed 9 (1 deferred)
+- 2026-01-14: **ROUTING FIX:** Moved referral page from `/crm/referrals` to `/referrals` and added navigation button
 
 ## Code Review & Fixes (2026-01-14)
 

@@ -10,9 +10,9 @@ export default async function ReferralsPage() {
 
     // Check authentication
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        redirect('/login')
-    }
+
+    // Layout handles redirect, but we need user for data fetching
+    if (!user) return null
 
     // Get user's referral code
     const { data: userData } = await supabase
@@ -23,7 +23,7 @@ export default async function ReferralsPage() {
 
     if (!userData?.referral_code) {
         return (
-            <div className="min-h-screen bg-gray-50 p-8">
+            <div className="container mx-auto px-4 py-8">
                 <div className="max-w-4xl mx-auto">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                         <p className="text-red-600">Không tìm thấy mã giới thiệu. Vui lòng liên hệ hỗ trợ.</p>
@@ -47,7 +47,7 @@ export default async function ReferralsPage() {
     const referralUrl = `https://dainganxanh.com.vn/?ref=${userData.referral_code}`
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
+        <div className="container mx-auto px-4 py-8">
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <div>
