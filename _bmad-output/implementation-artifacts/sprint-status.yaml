@@ -54,13 +54,16 @@ development_status:
   epic-4: in-progress
   4-1-referral-link-generation: ready-for-dev
   4-2-social-share-prepopulated: done  # ✅ Code review passed 2026-01-14
+  4-3-withdrawal-management: done  # ✅ Completed 2026-01-13
+  4-4-admin-settings-profile: done  # ✅ Completed 2026-01-14
+  4-5-admin-settings-system: review  # ✅ Implementation complete 2026-01-14
   epic-4-retrospective: backlog
 
 # Summary
 summary:
   total_epics: 4
-  total_stories: 25
-  stories_ready: 20
+  total_stories: 28  # Updated: added 4-3, 4-4, 4-5
+  stories_ready: 21  # Updated: 4-5 is ready-for-dev
   stories_in_progress: 0
-  stories_done: 6
+  stories_done: 8  # Updated: 4-3, 4-4 done
   current_velocity: 5

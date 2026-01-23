@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, TreePine, Gift, Share2, Bell } from 'lucide-react'
+import { Home, TreePine, Share2, Package } from 'lucide-react'
 import { UserHeader } from './UserHeader'
 
 const navItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
+    { name: 'Mua cây', href: '/pricing', icon: Package },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
 ]
@@ -14,33 +15,38 @@ const navItems = [
 export function CRMHeader() {
     const pathname = usePathname()
 
+    // Helper to determine active state (copied from MarketingHeader logic)
+    const isActive = (path: string) => {
+        if (path === '/' && pathname === '/') return true;
+        if (path !== '/' && pathname.startsWith(path)) return true;
+        return false;
+    };
+
     return (
         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
             {/* User Info Header */}
             <UserHeader />
 
             {/* Navigation Menu */}
-            <nav className="border-t border-gray-100">
-                <div className="container mx-auto px-4">
-                    <div className="flex items-center justify-center gap-4 overflow-x-auto">
+            <nav className="border-t border-gray-100 bg-white overflow-x-auto">
+                <div className="flex justify-center w-full">
+                    <div className="flex w-full max-w-md">
                         {navItems.map((item) => {
-                            const Icon = item.icon
-                            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-
+                            const active = isActive(item.href)
                             return (
                                 <Link
                                     key={item.href}
                                     href={item.href}
                                     className={`
-                                        flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap
-                                        ${isActive
-                                            ? 'text-emerald-600 border-b-2 border-emerald-600'
-                                            : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                        flex-1 flex flex-col items-center justify-center py-3 px-2 text-xs font-medium transition-colors border-b-2
+                                        ${active
+                                            ? 'border-emerald-500 text-emerald-600 stroke-[2.5px]'
+                                            : 'border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                                         }
                                     `}
                                 >
-                                    <Icon className="w-4 h-4" />
-                                    <span>{item.name}</span>
+                                    <item.icon className={`w-5 h-5 mb-1 ${active ? 'stroke-[2.5px]' : ''}`} />
+                                    <span className="truncate max-w-[80px]">{item.name}</span>
                                 </Link>
                             )
                         })}

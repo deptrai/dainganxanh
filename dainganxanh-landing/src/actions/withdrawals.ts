@@ -1,7 +1,7 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
-import { sendEmail } from '@/lib/email'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+
 
 // Normalize Vietnamese text for comparison
 function normalizeVietnamese(text: string): string {
@@ -95,7 +95,8 @@ export async function requestWithdrawal(data: {
     }
 
     // Create withdrawal record
-    const { error: insertError } = await supabase
+    // Create withdrawal record
+    const { data: newWithdrawal, error: insertError } = await supabase
         .from('withdrawals')
         .insert({
             user_id: user.id,
@@ -105,6 +106,8 @@ export async function requestWithdrawal(data: {
             bank_account_name: data.bankAccountName,
             status: 'pending'
         })
+        .select()
+        .single()
 
     if (insertError) {
         console.error('Error creating withdrawal:', insertError)
@@ -120,25 +123,35 @@ export async function requestWithdrawal(data: {
     const adminIds = admins?.map(a => a.id) || []
 
     if (adminIds.length > 0) {
-        const { data: adminUsers } = await supabase.auth.admin.listUsers()
+        const supabaseAdmin = createServiceRoleClient()
+        const { data: adminUsers } = await supabaseAdmin.auth.admin.listUsers()
         const adminEmails = adminUsers.users
             .filter(u => adminIds.includes(u.id))
             .map(u => u.email)
             .filter(Boolean)
 
+        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
         for (const email of adminEmails) {
-            await sendEmail({
-                to: email!,
-                subject: `🔔 Yêu cầu rút tiền mới từ ${profile.full_name}`,
-                html: `
-          <h2>Yêu cầu rút tiền mới</h2>
-          <p><strong>User:</strong> ${profile.full_name} (${profile.email})</p>
-          <p><strong>Số tiền:</strong> ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.amount)}</p>
-          <p><strong>Ngân hàng:</strong> ${data.bankName}</p>
-          <p><strong>STK:</strong> ${data.bankAccountNumber}</p>
-          <p><strong>Tên TK:</strong> ${data.bankAccountName}</p>
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/crm/admin/withdrawals">Xem chi tiết</a></p>
-        `
+            // Send email via Edge Function
+            await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${serviceKey}`,
+                },
+                body: JSON.stringify({
+                    type: 'request_created',
+                    to: email, // Send to admin email
+                    userEmail: profile.email,
+                    fullName: profile.full_name,
+                    amount: data.amount,
+                    bankName: data.bankName,
+                    bankAccountNumber: data.bankAccountNumber,
+                    bankAccountName: data.bankAccountName,
+                    withdrawalId: newWithdrawal.id
+                }),
             })
         }
     }
@@ -176,7 +189,7 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
             approved_at: new Date().toISOString()
         })
         .eq('id', withdrawalId)
-        .select('user_id, amount, bank_name')
+        .select('user_id, amount, bank_name, bank_account_number, bank_account_name')
         .single()
 
     if (updateError) {
@@ -185,19 +198,30 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
     }
 
     // Send email to user
-    const { data: { user: withdrawalUser } } = await supabase.auth.admin.getUserById(withdrawal.user_id)
+    const supabaseAdmin = createServiceRoleClient()
+    const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
-        await sendEmail({
-            to: withdrawalUser.email,
-            subject: '✅ Yêu cầu rút tiền đã được duyệt',
-            html: `
-        <h2>Yêu cầu rút tiền đã được duyệt</h2>
-        <p><strong>Số tiền:</strong> ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(withdrawal.amount))}</p>
-        <p><strong>Ngân hàng:</strong> ${withdrawal.bank_name}</p>
-        <p>Tiền đã được chuyển vào tài khoản của bạn.</p>
-        <p><a href="${proofImageUrl}">Xem ảnh chuyển khoản</a></p>
-      `
+        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+                type: 'request_approved',
+                to: withdrawalUser.email,
+                fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng', // Assuming full_name is in user_metadata
+                amount: withdrawal.amount,
+                bankName: withdrawal.bank_name,
+                bankAccountNumber: withdrawal.bank_account_number,
+                bankAccountName: withdrawal.bank_account_name,
+                withdrawalId: withdrawalId,
+                proofImageUrl: proofImageUrl
+            }),
         })
     }
 
@@ -234,7 +258,7 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
             approved_at: new Date().toISOString()
         })
         .eq('id', withdrawalId)
-        .select('user_id, amount')
+        .select('user_id, amount, bank_name, bank_account_number, bank_account_name')
         .single()
 
     if (updateError) {
@@ -243,18 +267,30 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
     }
 
     // Send email to user
-    const { data: { user: withdrawalUser } } = await supabase.auth.admin.getUserById(withdrawal.user_id)
+    const supabaseAdmin = createServiceRoleClient()
+    const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
-        await sendEmail({
-            to: withdrawalUser.email,
-            subject: '❌ Yêu cầu rút tiền đã bị từ chối',
-            html: `
-        <h2>Yêu cầu rút tiền đã bị từ chối</h2>
-        <p><strong>Số tiền:</strong> ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(withdrawal.amount))}</p>
-        <p><strong>Lý do:</strong> ${reason}</p>
-        <p>Vui lòng liên hệ admin để biết thêm chi tiết.</p>
-      `
+        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+                type: 'request_rejected',
+                to: withdrawalUser.email,
+                fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
+                amount: withdrawal.amount,
+                bankName: withdrawal.bank_name,
+                bankAccountNumber: withdrawal.bank_account_number,
+                bankAccountName: withdrawal.bank_account_name,
+                withdrawalId: withdrawalId,
+                rejectionReason: reason
+            }),
         })
     }
 

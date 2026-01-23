@@ -6,14 +6,19 @@ import {
     ClipboardDocumentListIcon,
     ChartBarIcon,
     Cog6ToothIcon,
-    HomeIcon
+    HomeIcon,
+    BanknotesIcon,
+    RectangleGroupIcon
 } from '@heroicons/react/24/outline'
 
 const navigation = [
     { name: 'Orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
+    { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
+    { name: 'Withdrawals', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
     { name: 'Analytics', href: '/crm/admin/analytics', icon: ChartBarIcon },
     { name: 'Settings', href: '/crm/admin/settings', icon: Cog6ToothIcon },
 ]
+
 
 export default function AdminSidebar() {
     const pathname = usePathname()
