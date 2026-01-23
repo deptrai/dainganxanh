@@ -23,7 +23,7 @@ export const COST_BREAKDOWN: CostBreakdown[] = [
         icon: "Heart"
     },
     {
-        label: "Quỹ phát triển cộng đồng",
+        label: "Quỹ đại sứ xanh",
         amount: 26000,
         description: "Hỗ trợ cộng đồng địa phương và bảo vệ môi trường",
         icon: "Users"

@@ -50,17 +50,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
                     <FadeIn delay={0.4} className="inline-block">
                         <div className="px-5 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white mb-8 animate-pulse shadow-lg">
-                            <span className="font-bold text-accent-gold text-lg">138,592</span> / 1,000,000 cây đã bén rễ
+                            <span className="font-bold text-accent-gold text-3xl md:text-4xl">138,592</span> <span className="text-2xl md:text-3xl">/ 1,000,000 cây đã bén rễ</span>
                         </div>
                     </FadeIn>
 
                     <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-8 leading-tight text-shadow">
-                        <TextReveal text="Gieo Hạt Mầm Xanh" className="block text-white mb-2" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-gold to-brand-100 block">Dệt Đại Ngàn, Gặt Phước Báu</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-300 to-white bg-[length:200%_auto] animate-gradient-x block drop-shadow-lg">Dệt Đại Ngàn, Gặt Phước Báu</span>
                     </h1>
                     <FadeIn delay={0.8}>
                         <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-12 font-light font-serif leading-relaxed drop-shadow-md">
-                            Cùng viết tên bạn vào 1.000.000 cây rừng Dó Đen Việt. Chỉ với 260.000 VNĐ, bạn đang gửi một lời tạ lỗi chân thành đến Mẹ Thiên Nhiên.
+                            Cùng viết tên bạn vào 1.000.000 cây rừng Dó Đen Việt. Bạn đang gửi một lời tạ lỗi chân thành đến Mẹ Thiên Nhiên.
                         </p>
                     </FadeIn>
 
@@ -68,7 +67,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                         <ScaleHover>
                             <Link href="/pricing">
                                 <button className="bg-accent-gold hover:bg-yellow-400 text-brand-900 text-lg px-10 py-4 rounded-full font-bold shadow-soft hover:shadow-lg transition-all ring-4 ring-accent-gold/30">
-                                    Gieo Mầm Ngay – 260.000đ
+                                    Gieo Mầm Ngay
                                 </button>
                             </Link>
                         </ScaleHover>
