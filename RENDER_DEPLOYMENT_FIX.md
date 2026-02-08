@@ -94,6 +94,13 @@ Nếu vẫn lỗi sau khi set env vars:
 3. Click "Clear build cache"
 4. Sau đó trigger deploy lại
 
+## 🐳 Dockerfile đã được cập nhật
+
+**Quan trọng:** Dockerfile đã được sửa để nhận env vars từ Render:
+- Thêm `ARG` declarations cho tất cả `NEXT_PUBLIC_*` variables
+- Env vars sẽ được inject vào build stage
+- Commit mới nhất đã bao gồm fix này
+
 ## 📝 Checklist
 
 - [ ] Đã thêm `NEXT_PUBLIC_SUPABASE_URL` vào Render
