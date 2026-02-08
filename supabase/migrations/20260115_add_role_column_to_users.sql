@@ -1,5 +1,6 @@
 -- Migration: Add role column to users table
 -- This is required for admin access control
+-- Date: 2026-01-15
 
 -- Step 1: Add role column with default value 'user'
 ALTER TABLE users 
@@ -23,3 +24,4 @@ SELECT email, role, created_at
 FROM users 
 ORDER BY created_at DESC 
 LIMIT 10;
+
