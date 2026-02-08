@@ -6,20 +6,27 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Copy package files from subdirectory
 COPY dainganxanh-landing/package.json ./package.json
-COPY dainganxanh-landing/yarn.lock ./yarn.lock
-RUN yarn --frozen-lockfile
+COPY dainganxanh-landing/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY dainganxanh-landing .
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN yarn build
+RUN pnpm build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
