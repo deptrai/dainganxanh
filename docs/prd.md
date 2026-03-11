@@ -11,7 +11,7 @@
 ## 📋 EXECUTIVE SUMMARY
 
 ### Product Vision
-Đại Ngàn Xanh là nền tảng kết nối người quan tâm môi trường với dự án trồng 1 triệu cây Dó Đen tại Việt Nam, sử dụng công nghệ blockchain để đảm bảo minh bạch và tạo giá trị bền vững thông qua trầm hương và tín chỉ carbon.[1][2]
+Đại Ngàn Xanh là nền tảng kết nối người quan tâm môi trường với dự án trồng 1 triệu cây Dó Đen tại Việt Nam, sử dụng công nghệ để đảm bảo minh bạch và tạo giá trị bền vững thông qua trầm hương và tín chỉ carbon.[1][2]
 
 ### Business Objectives
 - **Revenue Goal:** 260 tỷ VNĐ từ việc bán 1 triệu cây trong 5 năm
