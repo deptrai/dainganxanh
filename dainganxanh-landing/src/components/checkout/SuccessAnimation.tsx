@@ -124,12 +124,15 @@ export function SuccessAnimation({ treeCount }: SuccessAnimationProps) {
 }
 
 function TypewriterText({ text }: { text: string }) {
+    // Use [...text] instead of text.split("") to correctly handle Unicode/emoji characters
+    const chars = [...text];
     return (
         <motion.span
             initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
+            suppressHydrationWarning
         >
-            {text.split("").map((char, i) => (
+            {chars.map((char, i) => (
                 <motion.span
                     key={i}
                     initial={{ opacity: 0 }}
@@ -138,6 +141,7 @@ function TypewriterText({ text }: { text: string }) {
                         delay: 1.5 + i * 0.05,
                         duration: 0.1,
                     }}
+                    suppressHydrationWarning
                 >
                     {char}
                 </motion.span>

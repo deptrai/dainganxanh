@@ -3,7 +3,7 @@
  * Currently logs to console, can be extended to Mixpanel/GA4
  */
 
-export type ShareMethod = 'native' | 'copy' | 'email' | 'facebook' | 'zalo' | 'twitter' | 'linkedin'
+export type ShareMethod = 'native' | 'copy' | 'email' | 'facebook' | 'zalo' | 'twitter' | 'linkedin' | 'custom_ui'
 export type ShareSource = 'success_screen' | 'dashboard' | 'tree_detail'
 
 export interface ShareEvent {
