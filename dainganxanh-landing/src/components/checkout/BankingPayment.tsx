@@ -49,6 +49,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
             // Calculate quantity from amount
             const unitPrice = 260000;
             const quantity = Math.round(amount / unitPrice);
+            const userName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Khách hàng";
 
             // Read ref cookie to get referrer (using safe cookie parser)
             const refCookie = Cookies.get('ref');
@@ -75,7 +76,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                 body: {
                     userId: user.id,
                     userEmail: user.email,
-                    userName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Khách hàng",
+                    userName: userName,
                     orderCode: orderCode,
                     quantity: quantity,
                     totalAmount: amount,
@@ -93,8 +94,8 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                 return;
             }
 
-            // Success - redirect to success page
-            router.push(`/checkout/success?orderCode=${orderCode}`);
+            // Success - redirect to success page with quantity and name for correct display
+            router.push(`/checkout/success?orderCode=${orderCode}&quantity=${quantity}&name=${encodeURIComponent(userName)}`);
         } catch (err) {
             console.error("Payment confirmation error:", err);
             setError("Có lỗi xảy ra. Vui lòng thử lại sau.");
