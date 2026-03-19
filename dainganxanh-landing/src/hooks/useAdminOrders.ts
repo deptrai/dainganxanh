@@ -67,6 +67,20 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         const supabase = createBrowserClient()
 
         try {
+            // If searching by email, find matching user_ids first
+            let searchUserIds: string[] | null = null
+            if (filters.search) {
+                const searchTerm = filters.search.trim()
+                // Check if it looks like an email (contains @)
+                if (searchTerm.includes('@')) {
+                    const { data: matchedUsers } = await supabase
+                        .from('users')
+                        .select('id')
+                        .ilike('email', `%${searchTerm}%`)
+                    searchUserIds = (matchedUsers || []).map((u: any) => u.id)
+                }
+            }
+
             // First, get total count
             let countQuery = supabase
                 .from('orders')
@@ -80,6 +94,21 @@ export function useAdminOrders(): UseAdminOrdersReturn {
             }
             if (filters.dateTo) {
                 countQuery = countQuery.lte('created_at', filters.dateTo)
+            }
+            if (filters.search) {
+                const searchTerm = filters.search.trim()
+                if (searchUserIds !== null) {
+                    // Email search: filter by matched user_ids
+                    if (searchUserIds.length > 0) {
+                        countQuery = countQuery.in('user_id', searchUserIds)
+                    } else {
+                        // No users matched, force zero results
+                        countQuery = countQuery.eq('user_id', 'no-match')
+                    }
+                } else {
+                    // Order ID / order_code search
+                    countQuery = countQuery.or(`id.ilike.%${searchTerm}%,order_code.ilike.%${searchTerm}%`)
+                }
             }
 
             const { count } = await countQuery
@@ -103,9 +132,21 @@ export function useAdminOrders(): UseAdminOrdersReturn {
                 query = query.eq('status', filters.status)
             }
 
-            // Apply search filter (order ID only for now, will filter by email after fetching users)
+            // Apply search filter
             if (filters.search) {
-                query = query.or(`id.ilike.%${filters.search}%,code.ilike.%${filters.search}%`)
+                const searchTerm = filters.search.trim()
+                if (searchUserIds !== null) {
+                    // Email search: filter by matched user_ids
+                    if (searchUserIds.length > 0) {
+                        query = query.in('user_id', searchUserIds)
+                    } else {
+                        // No users matched, force zero results
+                        query = query.eq('user_id', 'no-match')
+                    }
+                } else {
+                    // Order ID / order_code search
+                    query = query.or(`id.ilike.%${searchTerm}%,order_code.ilike.%${searchTerm}%`)
+                }
             }
 
             // Apply date range filters
