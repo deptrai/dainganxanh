@@ -65,6 +65,20 @@ export async function assignOrderToLot(
             }
         }
 
+        // 2.5. Check if trees already exist for this order (prevent duplicate assignment)
+        const { data: existingTrees } = await supabase
+            .from('trees')
+            .select('id')
+            .eq('order_id', orderId)
+            .limit(1)
+
+        if (existingTrees && existingTrees.length > 0) {
+            return {
+                success: false,
+                error: 'Đơn hàng này đã được gán lô cây. Không thể gán lại.',
+            }
+        }
+
         // 3. Generate tree codes
         const treeCodes = generateTreeCodes(order.id, order.quantity)
 

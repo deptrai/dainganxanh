@@ -16,24 +16,17 @@ function normalizeVietnamese(text: string): string {
 export async function getAvailableBalance(userId: string) {
     const supabase = await createServerClient()
 
-    // Total commission earned
-    const { data: clicks } = await supabase
-        .from('referral_clicks')
-        .select('order_id')
-        .eq('referrer_id', userId)
-        .eq('converted', true)
+    // Total commission earned — query directly from orders.referred_by
+    // to stay consistent with getReferralStats and avoid missing commissions
+    // when referral_clicks were not created (e.g. direct code entry) or
+    // when the click was older than the 7-day conversion window.
+    const { data: orders } = await supabase
+        .from('orders')
+        .select('total_amount')
+        .eq('referred_by', userId)
+        .eq('status', 'completed')
 
-    const orderIds = clicks?.map(c => c.order_id) || []
-
-    let totalCommission = 0
-    if (orderIds.length > 0) {
-        const { data: orders } = await supabase
-            .from('orders')
-            .select('total_amount')
-            .in('id', orderIds)
-
-        totalCommission = orders?.reduce((sum, o) => sum + (o.total_amount * 0.05), 0) || 0
-    }
+    const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.05), 0) || 0
 
     // Total withdrawn (approved only)
     const { data: withdrawals } = await supabase
