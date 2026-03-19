@@ -155,7 +155,7 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                 onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
                             >
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {order.id.slice(0, 8)}...
+                                    {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     <div>{order.user_email || order.user_phone || 'N/A'}</div>
