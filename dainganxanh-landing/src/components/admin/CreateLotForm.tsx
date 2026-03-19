@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createBrowserClient } from '@/lib/supabase/client'
+import { createLot } from '@/actions/lots'
 
 interface CreateLotFormProps {
     onClose: () => void
@@ -26,8 +26,6 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
         setError(null)
 
         try {
-            const supabase = createBrowserClient()
-
             // Validate
             if (!formData.name || !formData.region || !formData.total_trees) {
                 throw new Error('Vui lòng điền đầy đủ thông tin bắt buộc')
@@ -38,34 +36,31 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
                 throw new Error('Sức chứa phải là số dương')
             }
 
-            // Prepare data
-            const lotData: any = {
-                name: formData.name.trim(),
-                region: formData.region.trim(),
-                description: formData.description.trim() || null,
-                total_trees: totalTrees,
-                planted: 0, // New lot starts with 0 planted
-            }
-
-            // Add GPS if provided
+            // Prepare GPS if provided
+            let location_lat: number | null = null
+            let location_lng: number | null = null
             if (formData.location_lat && formData.location_lng) {
                 const lat = parseFloat(formData.location_lat)
                 const lng = parseFloat(formData.location_lng)
-
                 if (isNaN(lat) || isNaN(lng)) {
                     throw new Error('Tọa độ GPS không hợp lệ')
                 }
-
-                lotData.location_lat = lat
-                lotData.location_lng = lng
+                location_lat = lat
+                location_lng = lng
             }
 
-            // Insert
-            const { error: insertError } = await supabase
-                .from('lots')
-                .insert([lotData])
+            const result = await createLot({
+                name: formData.name,
+                region: formData.region,
+                description: formData.description || null,
+                total_trees: totalTrees,
+                location_lat,
+                location_lng,
+            })
 
-            if (insertError) throw insertError
+            if (!result.success) {
+                throw new Error(result.error || 'Không thể tạo lô cây')
+            }
 
             onSuccess()
             onClose()
