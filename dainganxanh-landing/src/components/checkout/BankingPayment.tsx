@@ -14,10 +14,10 @@ interface BankingPaymentProps {
 }
 
 const BANK_INFO = {
-    bank: process.env.NEXT_PUBLIC_BANK_NAME || "MB Bank",
-    accountNumber: process.env.NEXT_PUBLIC_BANK_ACCOUNT || "0123456789",
-    accountName: process.env.NEXT_PUBLIC_BANK_HOLDER || "CTY TNHH DAI NGAN XANH",
-    branch: process.env.NEXT_PUBLIC_BANK_BRANCH || "TP HCM",
+    bank: "MB Bank",
+    accountNumber: "771368999999",
+    accountName: "CTY CP BIOCARE",
+    branch: "TP HCM",
 };
 
 export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
