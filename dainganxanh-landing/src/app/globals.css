@@ -2,6 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Blog prose styles — replaces @tailwindcss/typography */
+.blog-prose {
+  @apply text-gray-800 leading-relaxed;
+  max-width: 100%;
+}
+.blog-prose h1,
+.blog-prose h2,
+.blog-prose h3,
+.blog-prose h4 {
+  @apply font-bold text-gray-900 mt-8 mb-4;
+}
+.blog-prose h1 { @apply text-3xl; }
+.blog-prose h2 { @apply text-2xl; }
+.blog-prose h3 { @apply text-xl; }
+.blog-prose h4 { @apply text-lg; }
+.blog-prose p { @apply mb-4; }
+.blog-prose a { @apply text-emerald-600 hover:text-emerald-800 underline; }
+.blog-prose ul { @apply list-disc pl-6 mb-4 space-y-1; }
+.blog-prose ol { @apply list-decimal pl-6 mb-4 space-y-1; }
+.blog-prose li { @apply text-gray-700; }
+.blog-prose blockquote {
+  @apply border-l-4 border-emerald-400 pl-4 italic text-gray-600 my-6;
+}
+.blog-prose pre {
+  @apply bg-gray-900 text-gray-100 rounded-xl p-4 overflow-x-auto my-6 text-sm;
+}
+.blog-prose code {
+  @apply bg-gray-100 text-emerald-700 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+.blog-prose pre code {
+  @apply bg-transparent text-gray-100 p-0;
+}
+.blog-prose img {
+  @apply rounded-xl my-6 max-w-full;
+}
+.blog-prose hr {
+  @apply border-gray-200 my-8;
+}
+.blog-prose table {
+  @apply w-full border-collapse my-6;
+}
+.blog-prose th {
+  @apply bg-emerald-50 border border-gray-200 px-4 py-2 text-left font-semibold text-gray-900;
+}
+.blog-prose td {
+  @apply border border-gray-200 px-4 py-2 text-gray-700;
+}
+
 @layer utilities {
   .text-shadow {
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);

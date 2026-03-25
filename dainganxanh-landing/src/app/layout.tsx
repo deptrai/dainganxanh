@@ -45,6 +45,21 @@ export const metadata: Metadata = {
     },
 }
 
+const organizationJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Đại Ngàn Xanh',
+    url: 'https://dainganxanh.vn',
+    logo: {
+        '@type': 'ImageObject',
+        url: 'https://dainganxanh.vn/opengraph-image',
+    },
+    description: 'Nền tảng trồng 1 triệu cây Dó Đen bản địa tại Việt Nam, theo dõi minh bạch và carbon credit.',
+    sameAs: [
+        'https://facebook.com/dainganxanh',
+    ],
+}
+
 export default function RootLayout({
     children,
 }: {
@@ -57,6 +72,10 @@ export default function RootLayout({
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
             </head>
             <body className="font-sans text-brand-600 bg-brand-50 antialiased selection:bg-brand-500 selection:text-white">
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+                />
                 {children}
             </body>
         </html>

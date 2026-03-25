@@ -9,6 +9,34 @@ export const metadata: Metadata = {
     },
 }
 
+const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: 'Cây Dó Đen — Gói Cá Nhân',
+    description: 'Trồng 1 cây Dó Đen bản địa tại Việt Nam. Theo dõi minh bạch qua dashboard. Thu hoạch trầm hương sau 5 năm.',
+    image: 'https://dainganxanh.vn/opengraph-image',
+    brand: {
+        '@type': 'Organization',
+        name: 'Đại Ngàn Xanh',
+    },
+    offers: {
+        '@type': 'Offer',
+        priceCurrency: 'VND',
+        price: '260000',
+        availability: 'https://schema.org/InStock',
+        url: 'https://dainganxanh.vn/pricing',
+        seller: { '@type': 'Organization', name: 'Đại Ngàn Xanh' },
+    },
+}
+
 export default function PricingPage() {
-    return <PricingPageClient />
+    return (
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+            />
+            <PricingPageClient />
+        </>
+    )
 }
