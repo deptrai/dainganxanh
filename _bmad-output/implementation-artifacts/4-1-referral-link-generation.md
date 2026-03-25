@@ -92,13 +92,13 @@ CREATE INDEX idx_referral_clicks_referrer ON referral_clicks(referrer_id);
 
 ### Commission Calculation
 ```typescript
-const COMMISSION_RATE = 0.05 // 5% of order value
+const COMMISSION_RATE = 0.10 // 10% of order value
 
 const calculateCommission = (orderAmount: number) => {
   return Math.round(orderAmount * COMMISSION_RATE)
 }
 
-// Example: Order 1,300,000 VNĐ → Commission 65,000 VNĐ
+// Example: Order 1,300,000 VNĐ → Commission 130,000 VNĐ
 ```
 
 ### Landing Page Ref Handling
@@ -140,7 +140,7 @@ Claude 3.5 Sonnet (2024-10-22)
 **Key Implementation Decisions:**
 1. **Ref Tracking:** Created `ReferralTracker` server component to handle ref param server-side for cookie setting and tracking
 2. **IP Hashing:** Used SHA-256 to hash IP addresses for GDPR compliance
-3. **Commission Rate:** Set at 5% as specified in Dev Notes
+3. **Commission Rate:** Set at 10% as specified in Dev Notes
 4. **QR Code:** Used `qrcode.react` library with SVG to PNG download
 5. **Landing Page:** Converted to async component to handle searchParams
 
@@ -294,7 +294,7 @@ Performed adversarial Senior Developer code review using Sequential Thinking MCP
 - [ ] Verify order created successfully
 - [ ] In User A dashboard → refresh
 - [ ] Verify conversions count = 1
-- [ ] Verify commission displayed (5% of order value)
+- [ ] Verify commission displayed (10% of order value)
 - [ ] Verify conversion appears in table với order details
 
 ### Test Case 5: Duplicate Order Prevention (Idempotency)
@@ -307,7 +307,7 @@ Performed adversarial Senior Developer code review using Sequential Thinking MCP
 - [ ] User A dashboard shows:
   - [ ] Total clicks (matches actual clicks)
   - [ ] Conversions (matches actual orders)
-  - [ ] Commission (5% of total order value)
+  - [ ] Commission (10% of total order value)
   - [ ] Conversion rate % (conversions/clicks * 100)
 - [ ] Table shows all converted orders với:
   - [ ] Order code

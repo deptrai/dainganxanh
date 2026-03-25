@@ -88,7 +88,7 @@ export function ReferralLink({ referralCode, onRegenerate }: ReferralLinkProps) 
 
             {/* Helper Text */}
             <p className="text-sm text-gray-500">
-                Chia sẻ link này với bạn bè để nhận hoa hồng 5% khi họ mua cây.
+                Chia sẻ link này với bạn bè để nhận hoa hồng 10% khi họ mua cây.
             </p>
         </div>
     )

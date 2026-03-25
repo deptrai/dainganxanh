@@ -185,7 +185,7 @@ export async function getAvailableBalance(userId: string) {
       .select('total_amount')
       .in('id', orderIds)
     
-    totalCommission = orders?.reduce((sum, o) => sum + (o.total_amount * 0.05), 0) || 0
+    totalCommission = orders?.reduce((sum, o) => sum + (o.total_amount * 0.10), 0) || 0
   }
   
   // Total withdrawn (approved only)

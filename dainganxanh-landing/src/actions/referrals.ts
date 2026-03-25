@@ -3,8 +3,8 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
 
-// Commission rate constant (5% of order value)
-const COMMISSION_RATE = 0.05
+// Commission rate constant (10% of order value)
+const COMMISSION_RATE = 0.10
 
 /**
  * Centralized commission calculation to ensure consistency

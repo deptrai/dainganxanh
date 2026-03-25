@@ -54,7 +54,7 @@ export default async function ReferralsPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-brand-600 mb-2">Giới Thiệu Bạn Bè</h1>
                     <p className="text-gray-600">
-                        Chia sẻ link giới thiệu và nhận hoa hồng 5% khi bạn bè mua cây
+                        Chia sẻ link giới thiệu và nhận hoa hồng 10% khi bạn bè mua cây
                     </p>
                 </div>
 

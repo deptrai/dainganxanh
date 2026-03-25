@@ -26,7 +26,7 @@ export async function getAvailableBalance(userId: string) {
         .eq('referred_by', userId)
         .eq('status', 'completed')
 
-    const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.05), 0) || 0
+    const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.10), 0) || 0
 
     // Total withdrawn (approved only)
     const { data: withdrawals } = await supabase
