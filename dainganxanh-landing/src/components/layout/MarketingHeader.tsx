@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { Home, TreePine, Share2, Package, User, LogIn } from "lucide-react";
+import { Home, TreePine, Share2, Package, User, LogIn, BookOpen } from "lucide-react";
 import { UserHeader } from "./UserHeader";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -12,6 +12,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 const navItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
     { name: 'Mua cây', href: '/pricing', icon: Package },
+    { name: 'Blog', href: '/blog', icon: BookOpen },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
 ]

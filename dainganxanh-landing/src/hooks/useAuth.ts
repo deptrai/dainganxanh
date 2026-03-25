@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { devBypassOTP } from "@/actions/dev-auth";
 
 type AuthMode = "phone" | "email";
 type OTPStep = "input" | "verify";
@@ -78,6 +79,35 @@ export function useAuth(): UseAuthReturn {
         const supabase = createBrowserClient();
 
         try {
+            // DEV BYPASS: Accept "12345678" as universal test OTP
+            // TODO: Remove before production deployment
+            if (code === "12345678") {
+                console.warn("⚠️ DEV BYPASS: Using test OTP");
+                const result = await devBypassOTP(identifier, mode, code);
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                if (result.tokenHash) {
+                    const { data: bypassData, error: bypassError } = await supabase.auth.verifyOtp({
+                        token_hash: result.tokenHash,
+                        type: "magiclink",
+                    });
+
+                    if (bypassError) throw bypassError;
+                    if (!bypassData.session) throw new Error("Không thể tạo phiên đăng nhập");
+
+                    await supabase.auth.setSession({
+                        access_token: bypassData.session.access_token,
+                        refresh_token: bypassData.session.refresh_token,
+                    });
+
+                    console.log("DEV BYPASS: Session created successfully");
+                    return;
+                }
+            }
+
             const verifyParams = mode === "phone"
                 ? { phone: identifier, token: code, type: "sms" as const }
                 : { email: identifier, token: code, type: "email" as const };

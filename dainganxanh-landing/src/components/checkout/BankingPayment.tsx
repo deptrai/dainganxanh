@@ -105,6 +105,42 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
     };
 
 
+    // Pre-create pending order in background when component mounts (AC: #1, #2, #6)
+    // Fire-and-forget — does NOT block UI, errors are silently ignored
+    useEffect(() => {
+        if (!orderCode || !amount) return
+
+        const prePendingOrder = async () => {
+            try {
+                const supabase = createBrowserClient()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) return // Not authenticated — skip silently
+
+                const userName =
+                    user.user_metadata?.full_name ||
+                    user.email?.split('@')[0]
+
+                await fetch('/api/orders/pending', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: orderCode,
+                        user_email: user.email,
+                        user_name: userName,
+                        quantity: Math.round(amount / 260000),
+                        total_amount: amount,
+                        payment_method: 'banking',
+                    }),
+                })
+            } catch (err) {
+                // Silent fail — pre-create is best-effort, must not affect UX
+                console.error('[pending-order] pre-create failed:', err)
+            }
+        }
+
+        prePendingOrder()
+    }, [orderCode, amount])
+
     // Generate VietQR code - FIXED: Use VietQR image URL directly
     useEffect(() => {
         // VietQR format: https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-{TEMPLATE}.png?amount={AMOUNT}&addInfo={INFO}
