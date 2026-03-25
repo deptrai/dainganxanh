@@ -8,13 +8,17 @@ import {
     Cog6ToothIcon,
     HomeIcon,
     BanknotesIcon,
-    RectangleGroupIcon
+    RectangleGroupIcon,
+    ArrowPathIcon,
+    DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
     { name: 'Orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
     { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
     { name: 'Withdrawals', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
+    { name: 'Casso Logs', href: '/crm/admin/casso', icon: ArrowPathIcon },
+    { name: 'Blog', href: '/crm/admin/blog', icon: DocumentTextIcon },
     { name: 'Analytics', href: '/crm/admin/analytics', icon: ChartBarIcon },
     { name: 'Settings', href: '/crm/admin/settings', icon: Cog6ToothIcon },
 ]
