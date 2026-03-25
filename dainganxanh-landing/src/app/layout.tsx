@@ -17,20 +17,31 @@ const raleway = Raleway({
 })
 
 export const metadata: Metadata = {
-    title: 'Đại Ngàn Xanh - Gieo Hạt Lành, Gặt Phước Báu',
+    metadataBase: new URL('https://dainganxanh.vn'),
+    title: {
+        default: 'Đại Ngàn Xanh - Gieo Hạt Lành, Gặt Phước Báu',
+        template: '%s | Đại Ngàn Xanh',
+    },
     description: 'Trồng 1.000.000 cây Dó Đen bản địa cho Việt Nam. Chỉ 260.000 VNĐ/cây, theo dõi minh bạch qua dashboard online.',
     keywords: ['trồng cây', 'dó đen', 'môi trường', 'carbon credit', 'trầm hương', 'Việt Nam'],
     authors: [{ name: 'Đại Ngàn Xanh' }],
+    alternates: {
+        canonical: 'https://dainganxanh.vn',
+    },
     openGraph: {
         title: 'Đại Ngàn Xanh - Gieo Hạt Lành, Gặt Phước Báu',
         description: 'Gieo một mầm xanh, dệt nên đại ngàn vĩnh cửu',
         type: 'website',
         locale: 'vi_VN',
+        url: 'https://dainganxanh.vn',
+        siteName: 'Đại Ngàn Xanh',
+        images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Đại Ngàn Xanh' }],
     },
     twitter: {
         card: 'summary_large_image',
         title: 'Đại Ngàn Xanh',
         description: 'Trồng 1.000.000 cây Dó Đen bản địa cho Việt Nam',
+        images: ['/opengraph-image'],
     },
 }
 
