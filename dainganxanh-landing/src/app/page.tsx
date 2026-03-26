@@ -5,6 +5,9 @@ import { AuthCallbackHandler } from '@/components/AuthCallbackHandler'
 import { AuthNavLink } from '@/components/AuthNavLink'
 import { ReferralTracker } from '@/components/ReferralTracker'
 import { VideoButton } from '@/components/marketing/VideoButton'
+import { HeroVideo } from '@/components/marketing/HeroVideo'
+import { TreeCounter } from '@/components/marketing/TreeCounter'
+import { CTAButton } from '@/components/marketing/CTAButton'
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
     const params = await searchParams
@@ -39,20 +42,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
             {/* Hero Section */}
             <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                    <ParallaxImage
-                        src="/hero-forest.png"
-                        alt="Rừng Dó Đen bình minh"
-                        className="w-full h-full"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-brand-900/40"></div>
-                </div>
+                <HeroVideo src="/hero-video.mp4" poster="/hero-forest.png" />
 
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
                     <FadeIn delay={0.4} className="inline-block">
-                        <div className="px-5 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white mb-8 animate-pulse shadow-lg">
-                            <span className="font-bold text-accent-gold text-3xl md:text-4xl">138,592</span> <span className="text-2xl md:text-3xl">/ 1,000,000 cây đã bén rễ</span>
-                        </div>
+                        <TreeCounter />
                     </FadeIn>
 
                     <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-8 leading-tight text-shadow">
@@ -65,13 +59,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     </FadeIn>
 
                     <FadeIn delay={1.0} className="flex flex-col sm:flex-row justify-center gap-6">
-                        <ScaleHover>
-                            <Link href="/pricing">
-                                <button className="bg-accent-gold hover:bg-yellow-400 text-brand-900 text-lg px-10 py-4 rounded-full font-bold shadow-soft hover:shadow-lg transition-all ring-4 ring-accent-gold/30">
-                                    Gieo Mầm Ngay
-                                </button>
-                            </Link>
-                        </ScaleHover>
+                        <CTAButton href="/pricing">Gieo Mầm Ngay</CTAButton>
                         <VideoButton />
                     </FadeIn>
                 </div>
