@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Copy, Check, Building2, Loader2 } from "lucide-react";
-import QRCode from "qrcode";
+import { Copy, Check, Building2, Loader2, CheckCircle2, Clock } from "lucide-react";
 import Cookies from "js-cookie";
 import { createBrowserClient } from "@/lib/supabase/client";
 
@@ -20,134 +19,129 @@ const BANK_INFO = {
     branch: "TP HCM",
 };
 
+const POLL_INTERVAL = 5000; // 5 seconds
+const POLL_TIMEOUT = 30 * 60 * 1000; // 30 minutes max
+
 export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
     const router = useRouter();
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [paymentStatus, setPaymentStatus] = useState<"waiting" | "confirmed" | "error">("waiting");
+    const [pendingCreated, setPendingCreated] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const startTimeRef = useRef<number>(Date.now());
 
-    // Handle payment confirmation
-    const handleConfirmPayment = async () => {
-        const supabase = createBrowserClient();
-        try {
-            setIsProcessing(true);
-            setError(null);
-
-            // Get current user with token validation
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-            if (userError || !user) {
-                setError("Vui lòng đăng nhập để tiếp tục");
-                router.push("/login");
-                return;
-            }
-
-            // Get session for access token (we already validated user above)
-            const { data: { session } } = await supabase.auth.getSession();
-
-            // Calculate quantity from amount
-            const unitPrice = 260000;
-            const quantity = Math.round(amount / unitPrice);
-            const userName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Khách hàng";
-
-            // Read ref cookie to get referrer (using safe cookie parser)
-            const refCookie = Cookies.get('ref');
-
-            let referrerId = null;
-            if (refCookie) {
-                // Find referrer by referral code with error handling
-                const { data: referrer, error: referrerError } = await supabase
-                    .from('users')
-                    .select('id')
-                    .eq('referral_code', refCookie)
-                    .single();
-
-                if (referrerError) {
-                    console.error('Referral lookup failed:', referrerError);
-                    // Don't block checkout, but log the error
-                } else if (referrer) {
-                    referrerId = referrer.id;
-                }
-            }
-
-            // Call process-payment Edge Function with explicit JWT token
-            const { data, error: paymentError } = await supabase.functions.invoke("process-payment", {
-                body: {
-                    userId: user.id,
-                    userEmail: user.email,
-                    userName: userName,
-                    orderCode: orderCode,
-                    quantity: quantity,
-                    totalAmount: amount,
-                    paymentMethod: "banking",
-                    referredBy: referrerId, // Add referrer ID
-                },
-                headers: {
-                    Authorization: `Bearer ${session?.access_token}`,
-                }
-            });
-
-            if (paymentError) {
-                console.error("Payment error:", paymentError);
-                setError(paymentError.message || "Có lỗi xảy ra khi xử lý thanh toán");
-                return;
-            }
-
-            // Success - redirect to success page with quantity and name for correct display
-            router.push(`/checkout/success?orderCode=${orderCode}&quantity=${quantity}&name=${encodeURIComponent(userName)}`);
-        } catch (err) {
-            console.error("Payment confirmation error:", err);
-            setError("Có lỗi xảy ra. Vui lòng thử lại sau.");
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-
-    // Pre-create pending order in background when component mounts (AC: #1, #2, #6)
-    // Fire-and-forget — does NOT block UI, errors are silently ignored
+    // Pre-create pending order
     useEffect(() => {
-        if (!orderCode || !amount) return
+        if (!orderCode || !amount) return;
 
-        const prePendingOrder = async () => {
+        const createPendingOrder = async () => {
             try {
-                const supabase = createBrowserClient()
-                const { data: { user } } = await supabase.auth.getUser()
-                if (!user) return // Not authenticated — skip silently
+                const supabase = createBrowserClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
 
-                const userName =
-                    user.user_metadata?.full_name ||
-                    user.email?.split('@')[0]
+                const userName = user.user_metadata?.full_name || user.email?.split("@")[0];
+                const refCookie = Cookies.get("ref");
+                let referredBy = null;
 
-                await fetch('/api/orders/pending', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                if (refCookie) {
+                    const { data: referrer } = await supabase
+                        .from("users")
+                        .select("id")
+                        .eq("referral_code", refCookie)
+                        .single();
+                    if (referrer) referredBy = referrer.id;
+                }
+
+                await fetch("/api/orders/pending", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         code: orderCode,
                         user_email: user.email,
                         user_name: userName,
                         quantity: Math.round(amount / 260000),
                         total_amount: amount,
-                        payment_method: 'banking',
+                        payment_method: "banking",
+                        referred_by: referredBy,
                     }),
-                })
+                });
+                setPendingCreated(true);
             } catch (err) {
-                // Silent fail — pre-create is best-effort, must not affect UX
-                console.error('[pending-order] pre-create failed:', err)
+                console.error("[pending-order] pre-create failed:", err);
+                setPendingCreated(true); // Still allow polling even if pre-create fails
             }
+        };
+
+        createPendingOrder();
+    }, [orderCode, amount]);
+
+    // Poll order status
+    const pollStatus = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/orders/status?code=${orderCode}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.status === "completed") {
+                setPaymentStatus("confirmed");
+                // Stop polling
+                if (pollRef.current) clearInterval(pollRef.current);
+                if (timerRef.current) clearInterval(timerRef.current);
+
+                // Get user info for redirect
+                const supabase = createBrowserClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                const quantity = Math.round(amount / 260000);
+                const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
+
+                // Redirect after short delay for UX
+                setTimeout(() => {
+                    router.push(
+                        `/checkout/success?orderCode=${orderCode}&quantity=${quantity}&name=${encodeURIComponent(userName)}`
+                    );
+                }, 2000);
+            }
+        } catch {
+            // Silent fail — polling should not break UX
         }
+    }, [orderCode, amount, router]);
 
-        prePendingOrder()
-    }, [orderCode, amount])
-
-    // Generate VietQR code - FIXED: Use VietQR image URL directly
+    // Start polling when pending order is created
     useEffect(() => {
-        // VietQR format: https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-{TEMPLATE}.png?amount={AMOUNT}&addInfo={INFO}
-        const vietQRUrl = `https://img.vietqr.io/image/MB-${BANK_INFO.accountNumber}-compact.png?amount=${amount}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(BANK_INFO.accountName)}`;
+        if (!pendingCreated || !orderCode) return;
 
+        startTimeRef.current = Date.now();
+
+        // Poll every 5s
+        pollRef.current = setInterval(() => {
+            const elapsed = Date.now() - startTimeRef.current;
+            if (elapsed > POLL_TIMEOUT) {
+                if (pollRef.current) clearInterval(pollRef.current);
+                if (timerRef.current) clearInterval(timerRef.current);
+                return;
+            }
+            pollStatus();
+        }, POLL_INTERVAL);
+
+        // Update elapsed timer every second
+        timerRef.current = setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }, 1000);
+
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [pendingCreated, orderCode, pollStatus]);
+
+    // Generate VietQR URL
+    useEffect(() => {
         if (orderCode && amount) {
-            setQrCodeUrl(vietQRUrl); // Use VietQR image directly, not QR code of URL!
+            const vietQRUrl = `https://img.vietqr.io/image/MB-${BANK_INFO.accountNumber}-compact.png?amount=${amount}&addInfo=${encodeURIComponent(orderCode)}&accountName=${encodeURIComponent(BANK_INFO.accountName)}`;
+            setQrCodeUrl(vietQRUrl);
         }
     }, [orderCode, amount]);
 
@@ -181,6 +175,32 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
         );
     };
 
+    const formatElapsed = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return m > 0 ? `${m} phút ${s.toString().padStart(2, "0")} giây` : `${s} giây`;
+    };
+
+    // Payment confirmed state
+    if (paymentStatus === "confirmed") {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-6 bg-emerald-50 rounded-2xl p-8 shadow-xl border-2 border-emerald-300 text-center"
+            >
+                <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-emerald-900 mb-2">
+                    Thanh toán thành công!
+                </h3>
+                <p className="text-emerald-700">
+                    Đang chuyển hướng đến trang xác nhận...
+                </p>
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto mt-4" />
+            </motion.div>
+        );
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -203,7 +223,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                     <div className="bg-white p-4 rounded-xl border-2 border-emerald-200">
                         <img
                             src={qrCodeUrl}
-                            alt="QR Code thanh toán"
+                            alt="QR Code thanh toan"
                             className="w-48 h-48"
                         />
                         <p className="text-center text-sm text-gray-600 mt-2">
@@ -220,7 +240,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                         <p className="text-sm text-gray-600">Ngân hàng</p>
                         <p className="font-semibold text-gray-900">{BANK_INFO.bank}</p>
                     </div>
-                    <CopyButton text={BANK_INFO.bank} field="bank" label="ngân hàng" />
+                    <CopyButton text={BANK_INFO.bank} field="bank" label="ngan hang" />
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -228,7 +248,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                         <p className="text-sm text-gray-600">Số tài khoản</p>
                         <p className="font-mono font-semibold text-gray-900">{BANK_INFO.accountNumber}</p>
                     </div>
-                    <CopyButton text={BANK_INFO.accountNumber} field="account" label="số tài khoản" />
+                    <CopyButton text={BANK_INFO.accountNumber} field="account" label="so tai khoan" />
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -236,7 +256,7 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                         <p className="text-sm text-gray-600">Chủ tài khoản</p>
                         <p className="font-semibold text-gray-900">{BANK_INFO.accountName}</p>
                     </div>
-                    <CopyButton text={BANK_INFO.accountName} field="name" label="chủ tài khoản" />
+                    <CopyButton text={BANK_INFO.accountName} field="name" label="chu tai khoan" />
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200">
@@ -244,52 +264,48 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                         <p className="text-sm text-emerald-700 font-semibold">Nội dung chuyển khoản</p>
                         <p className="font-mono font-bold text-emerald-900">{orderCode}</p>
                     </div>
-                    <CopyButton text={orderCode} field="orderCode" label="nội dung chuyển khoản" />
+                    <CopyButton text={orderCode} field="orderCode" label="noi dung chuyen khoan" />
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg border border-emerald-200">
                     <div>
                         <p className="text-sm text-emerald-700 font-semibold">Số tiền</p>
-                        <p className="font-bold text-emerald-900 text-lg">{amount.toLocaleString('vi-VN')} ₫</p>
+                        <p className="font-bold text-emerald-900 text-lg">{amount.toLocaleString("vi-VN")} VND</p>
                     </div>
-                    <CopyButton text={amount.toString()} field="amount" label="số tiền" />
+                    <CopyButton text={amount.toString()} field="amount" label="so tien" />
                 </div>
             </div>
 
             {/* Instructions */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-900 mb-2">📝 Hướng dẫn:</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">Hướng dẫn:</h4>
                 <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
                     <li>Mở ứng dụng ngân hàng của bạn</li>
                     <li>Quét mã QR hoặc nhập thông tin tài khoản</li>
                     <li><strong>Quan trọng:</strong> Nhập đúng nội dung chuyển khoản: <span className="font-mono font-bold">{orderCode}</span></li>
                     <li>Xác nhận chuyển khoản</li>
-                    <li>Chúng tôi sẽ xác nhận đơn hàng trong vòng 5 phút</li>
+                    <li>Hệ thống sẽ tự động xác nhận trong vòng 1-5 phút</li>
                 </ol>
             </div>
 
-            {/* Error Message */}
-            {error && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{error}</p>
+            {/* Waiting Status */}
+            <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Clock className="w-6 h-6 text-amber-600" />
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-semibold text-amber-900">
+                            Đang chờ xác nhận thanh toán...
+                        </p>
+                        <p className="text-sm text-amber-700">
+                            Hệ thống tự động xác nhận khi nhận được chuyển khoản ({formatElapsed(elapsedSeconds)})
+                        </p>
+                    </div>
+                    <Loader2 className="w-5 h-5 animate-spin text-amber-600 flex-shrink-0" />
                 </div>
-            )}
-
-            {/* Manual Confirmation Button */}
-            <button
-                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                onClick={handleConfirmPayment}
-                disabled={isProcessing}
-            >
-                {isProcessing ? (
-                    <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Đang xử lý...</span>
-                    </>
-                ) : (
-                    "Tôi đã chuyển khoản"
-                )}
-            </button>
+            </div>
         </motion.div>
     );
 }
