@@ -195,7 +195,7 @@ export async function deletePost(id: string) {
 
   if (error) {
     console.error('deletePost error:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: 'Không thể xoá bài viết. Vui lòng thử lại.' }
   }
 
   revalidatePath('/blog')
