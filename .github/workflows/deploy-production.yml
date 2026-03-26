@@ -1,0 +1,24 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Dokploy Deploy
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: push" \
+            -d "{\"ref\": \"refs/heads/production\", \"repository\": {\"name\": \"dainganxanh\"}}")
+          echo "Dokploy response: $response"
+          if [ "$response" != "200" ]; then
+            echo "Deploy trigger failed with HTTP $response"
+            exit 1
+          fi
+          echo "Deploy triggered successfully!"
