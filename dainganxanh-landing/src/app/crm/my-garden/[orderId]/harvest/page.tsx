@@ -3,6 +3,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
+import HarvestSellBack from '@/components/crm/HarvestSellBack'
+import HarvestKeepGrowing from '@/components/crm/HarvestKeepGrowing'
+import HarvestReceiveProduct from '@/components/crm/HarvestReceiveProduct'
 
 interface HarvestPageProps {
     params: {
@@ -97,46 +100,25 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
 
                     <div className="space-y-4">
                         {/* Option 1: Sell Back */}
-                        <div className="border-2 border-gray-200 rounded-lg p-6 opacity-50">
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="text-3xl">💰</span>
-                                <h3 className="text-xl font-bold text-gray-800">Bán lại cho Đại Ngàn Xanh</h3>
-                            </div>
-                            <p className="text-gray-600 mb-4">
-                                Nhận thanh toán ngay cho cây của bạn theo giá thị trường hiện tại.
-                            </p>
-                            <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-                                Coming Soon - Story 2.6
-                            </span>
-                        </div>
+                        <HarvestSellBack
+                            orderId={order.id}
+                            totalAmount={order.total_amount || 0}
+                            orderCode={order.order_code || null}
+                            plantedDate={plantedDate.toISOString()}
+                        />
 
                         {/* Option 2: Keep Growing */}
-                        <div className="border-2 border-gray-200 rounded-lg p-6 opacity-50">
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="text-3xl">🌳</span>
-                                <h3 className="text-xl font-bold text-gray-800">Tiếp tục nuôi cây</h3>
-                            </div>
-                            <p className="text-gray-600 mb-4">
-                                Giữ cây tiếp tục lớn để tăng giá trị và hấp thụ thêm CO₂.
-                            </p>
-                            <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-                                Coming Soon - Story 2.7
-                            </span>
-                        </div>
+                        <HarvestKeepGrowing
+                            orderId={order.id}
+                            treeCode={tree?.code || order.order_code || 'N/A'}
+                            ageInMonths={ageInMonths}
+                        />
 
-                        {/* Option 3: Transfer Ownership */}
-                        <div className="border-2 border-gray-200 rounded-lg p-6 opacity-50">
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="text-3xl">🎁</span>
-                                <h3 className="text-xl font-bold text-gray-800">Chuyển nhượng quyền sở hữu</h3>
-                            </div>
-                            <p className="text-gray-600 mb-4">
-                                Tặng hoặc bán cây cho người khác trong cộng đồng.
-                            </p>
-                            <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-                                Coming Soon - Story 2.8
-                            </span>
-                        </div>
+                        {/* Option 3: Receive Product */}
+                        <HarvestReceiveProduct
+                            orderId={order.id}
+                            orderCode={order.order_code || undefined}
+                        />
                     </div>
 
                     <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
