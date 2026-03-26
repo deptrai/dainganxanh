@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     title: 'Chọn Gói Trồng Cây',
     description: 'Chọn gói trồng cây Dó Đen bản địa phù hợp. Chỉ 260.000 VNĐ/cây, theo dõi minh bạch qua dashboard online.',
     alternates: {
-        canonical: 'https://dainganxanh.vn/pricing',
+        canonical: 'https://dainganxanh.com.vn/pricing',
     },
 }
 
@@ -14,7 +14,7 @@ const productJsonLd = {
     '@type': 'Product',
     name: 'Cây Dó Đen — Gói Cá Nhân',
     description: 'Trồng 1 cây Dó Đen bản địa tại Việt Nam. Theo dõi minh bạch qua dashboard. Thu hoạch trầm hương sau 5 năm.',
-    image: 'https://dainganxanh.vn/opengraph-image',
+    image: 'https://dainganxanh.com.vn/opengraph-image',
     brand: {
         '@type': 'Organization',
         name: 'Đại Ngàn Xanh',
@@ -24,7 +24,7 @@ const productJsonLd = {
         priceCurrency: 'VND',
         price: '260000',
         availability: 'https://schema.org/InStock',
-        url: 'https://dainganxanh.vn/pricing',
+        url: 'https://dainganxanh.com.vn/pricing',
         seller: { '@type': 'Organization', name: 'Đại Ngàn Xanh' },
     },
 }

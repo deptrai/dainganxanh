@@ -14,7 +14,7 @@ export async function submitSellBack(orderId: string) {
     // Verify ownership
     const { data: order, error: orderError } = await supabase
         .from('orders')
-        .select('id, user_id, total_amount, status, order_code, created_at')
+        .select('id, user_id, total_amount, status, code, created_at')
         .eq('id', orderId)
         .eq('user_id', user.id)
         .single()
@@ -23,8 +23,8 @@ export async function submitSellBack(orderId: string) {
         return { success: false, error: 'Không tìm thấy đơn hàng.' }
     }
 
-    if (order.status === 'harvested' || order.status === 'harvested_sellback') {
-        return { success: false, error: 'Đơn hàng này đã được thu hoạch.' }
+    if (['harvested', 'harvested_sellback', 'harvested_receive_product', 'keep_growing'].includes(order.status)) {
+        return { success: false, error: 'Đơn hàng này đã được thu hoạch hoặc đang tiếp tục nuôi.' }
     }
 
     // Calculate buyback price (2x original for 5-year trees)
@@ -182,7 +182,7 @@ export async function submitReceiveProduct(
     // Verify the order belongs to the user
     const { data: order, error: orderError } = await supabase
         .from('orders')
-        .select('id, user_id, status, order_code')
+        .select('id, user_id, status, code')
         .eq('id', orderId)
         .eq('user_id', user.id)
         .single()
@@ -191,8 +191,8 @@ export async function submitReceiveProduct(
         return { success: false, error: 'Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập.' }
     }
 
-    if (order.status === 'harvested' || order.status === 'harvested_receive_product') {
-        return { success: false, error: 'Đơn hàng này đã được thu hoạch.' }
+    if (['harvested', 'harvested_receive_product', 'harvested_sellback', 'keep_growing'].includes(order.status)) {
+        return { success: false, error: 'Đơn hàng này đã được thu hoạch hoặc đang tiếp tục nuôi.' }
     }
 
     // Validate product type

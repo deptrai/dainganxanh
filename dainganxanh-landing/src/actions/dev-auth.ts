@@ -9,6 +9,9 @@ const DEV_OTP = '12345678'
  * TODO: Remove before production deployment
  */
 export async function devBypassOTP(identifier: string, mode: 'phone' | 'email', code: string) {
+    if (process.env.NODE_ENV !== 'development') {
+        return { error: 'Not available in production' }
+    }
     if (code !== DEV_OTP) {
         return { error: 'Invalid dev OTP' }
     }

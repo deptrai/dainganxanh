@@ -30,7 +30,7 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 serve(async (req) => {
-  // Allow only POST (called by cron scheduler)
+  // Allow CORS preflight for OPTIONS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
@@ -38,6 +38,15 @@ serve(async (req) => {
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
       },
+    })
+  }
+
+  // Verify Authorization header — must match service role key
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${supabaseServiceKey}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 401,
     })
   }
 

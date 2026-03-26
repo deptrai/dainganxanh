@@ -43,6 +43,12 @@ export async function createPost(formData: FormData) {
   if (!slug || !slug.trim()) {
     return { success: false, error: 'Slug không được để trống' }
   }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    return { success: false, error: 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang' }
+  }
+  if (!content || !content.trim() || content.trim() === '<p></p>') {
+    return { success: false, error: 'Nội dung bài viết không được để trống' }
+  }
 
   // Check slug unique
   const { data: existing } = await supabase
@@ -82,7 +88,7 @@ export async function createPost(formData: FormData) {
 
   if (error) {
     console.error('createPost error:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: 'Không thể tạo bài viết. Vui lòng thử lại.' }
   }
 
   revalidatePath('/blog')
@@ -111,6 +117,12 @@ export async function updatePost(id: string, formData: FormData) {
   }
   if (!slug || !slug.trim()) {
     return { success: false, error: 'Slug không được để trống' }
+  }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    return { success: false, error: 'Slug chỉ được chứa chữ thường, số và dấu gạch ngang' }
+  }
+  if (!content || !content.trim() || content.trim() === '<p></p>') {
+    return { success: false, error: 'Nội dung bài viết không được để trống' }
   }
 
   // Check slug unique (excluding current post)
@@ -164,7 +176,7 @@ export async function updatePost(id: string, formData: FormData) {
 
   if (error) {
     console.error('updatePost error:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: 'Không thể cập nhật bài viết. Vui lòng thử lại.' }
   }
 
   revalidatePath('/blog')
@@ -202,8 +214,19 @@ export async function uploadBlogImage(formData: FormData): Promise<{ success: bo
     return { success: false, error: 'Không có file được chọn' }
   }
 
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { success: false, error: 'Chỉ hỗ trợ định dạng JPG, PNG, WebP, GIF' }
+  }
+  if (file.size > MAX_SIZE) {
+    return { success: false, error: 'File quá lớn, tối đa 5MB' }
+  }
+
   const supabaseAdmin = createServiceRoleClient()
-  const fileExt = file.name.split('.').pop()
+  const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+  const rawExt = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const fileExt = ALLOWED_EXTENSIONS.includes(rawExt) ? rawExt : 'jpg'
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
 
   const { error: uploadError } = await supabaseAdmin.storage
