@@ -12,7 +12,7 @@ jobs:
       - name: Trigger Dokploy Deploy
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
+            -X POST "https://sys.joyone.vn/api/deploy/bJFa1ZN0v4-aZd0ZIHnyn" \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
             -d "{\"ref\": \"refs/heads/production\", \"repository\": {\"name\": \"dainganxanh\"}}")
