@@ -7,7 +7,7 @@ interface FarmCameraProps {
     streamName?: string;
 }
 
-const GO2RTC_URL = process.env.NEXT_PUBLIC_GO2RTC_URL || "http://167.172.66.16:1984";
+const GO2RTC_URL = process.env.NEXT_PUBLIC_GO2RTC_URL || "https://stream.dainganxanh.com.vn";
 
 export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
     const [isOnline, setIsOnline] = useState<boolean | null>(null);

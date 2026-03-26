@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
 
-const GO2RTC_URL = process.env.NEXT_PUBLIC_GO2RTC_URL || "http://167.172.66.16:1984";
+const GO2RTC_URL = process.env.NEXT_PUBLIC_GO2RTC_URL || "https://stream.dainganxanh.com.vn";
 
 // Server-side probe — bypasses browser SSL cert restrictions
 export async function GET(request: NextRequest) {
