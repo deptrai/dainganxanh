@@ -13,10 +13,10 @@ interface BankingPaymentProps {
 }
 
 const BANK_INFO = {
-    bank: "MB Bank",
-    accountNumber: "771368999999",
-    accountName: "CTY CP BIOCARE",
-    branch: "TP HCM",
+    bank: process.env.NEXT_PUBLIC_BANK_NAME || "MB Bank",
+    accountNumber: process.env.NEXT_PUBLIC_BANK_ACCOUNT || "771368999999",
+    accountName: process.env.NEXT_PUBLIC_BANK_HOLDER || "CTY CP BIOCARE",
+    branch: process.env.NEXT_PUBLIC_BANK_BRANCH || "TP HCM",
 };
 
 const POLL_INTERVAL = 5000; // 5 seconds

@@ -7,7 +7,7 @@ interface PendingOrderRequest {
   user_name?: string
   quantity: number
   total_amount: number
-  payment_method: 'banking' | 'usdt'
+  payment_method: 'banking'
   referred_by?: string | null
 }
 
