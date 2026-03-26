@@ -1,7 +1,21 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { MIN_WITHDRAWAL } from '@/lib/constants'
 
+// Helper: send email via send-withdrawal-email Edge Function
+async function sendWithdrawalEmail(type: string, to: string, payload: Record<string, unknown>) {
+    const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ type, to, ...payload }),
+    })
+}
 
 // Normalize Vietnamese text for comparison
 function normalizeVietnamese(text: string): string {
@@ -83,7 +97,7 @@ export async function requestWithdrawal(data: {
         return { success: false, error: 'Số dư không đủ' }
     }
 
-    if (data.amount < 200000) {
+    if (data.amount < MIN_WITHDRAWAL) {
         return { success: false, error: 'Số tiền rút tối thiểu là 200,000 VNĐ' }
     }
 
@@ -123,28 +137,15 @@ export async function requestWithdrawal(data: {
             .map(u => u.email)
             .filter(Boolean)
 
-        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
         for (const email of adminEmails) {
-            // Send email via Edge Function
-            await fetch(functionUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${serviceKey}`,
-                },
-                body: JSON.stringify({
-                    type: 'request_created',
-                    to: email, // Send to admin email
-                    userEmail: profile.email,
-                    fullName: profile.full_name,
-                    amount: data.amount,
-                    bankName: data.bankName,
-                    bankAccountNumber: data.bankAccountNumber,
-                    bankAccountName: data.bankAccountName,
-                    withdrawalId: newWithdrawal.id
-                }),
+            await sendWithdrawalEmail('request_created', email as string, {
+                userEmail: profile.email,
+                fullName: profile.full_name,
+                amount: data.amount,
+                bankName: data.bankName,
+                bankAccountNumber: data.bankAccountNumber,
+                bankAccountName: data.bankAccountName,
+                withdrawalId: newWithdrawal.id,
             })
         }
     }
@@ -195,26 +196,14 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
     const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
-        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-        await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({
-                type: 'request_approved',
-                to: withdrawalUser.email,
-                fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng', // Assuming full_name is in user_metadata
-                amount: withdrawal.amount,
-                bankName: withdrawal.bank_name,
-                bankAccountNumber: withdrawal.bank_account_number,
-                bankAccountName: withdrawal.bank_account_name,
-                withdrawalId: withdrawalId,
-                proofImageUrl: proofImageUrl
-            }),
+        await sendWithdrawalEmail('request_approved', withdrawalUser.email, {
+            fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
+            amount: withdrawal.amount,
+            bankName: withdrawal.bank_name,
+            bankAccountNumber: withdrawal.bank_account_number,
+            bankAccountName: withdrawal.bank_account_name,
+            withdrawalId,
+            proofImageUrl,
         })
     }
 
@@ -264,26 +253,14 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
     const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
-        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
-        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-        await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({
-                type: 'request_rejected',
-                to: withdrawalUser.email,
-                fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
-                amount: withdrawal.amount,
-                bankName: withdrawal.bank_name,
-                bankAccountNumber: withdrawal.bank_account_number,
-                bankAccountName: withdrawal.bank_account_name,
-                withdrawalId: withdrawalId,
-                rejectionReason: reason
-            }),
+        await sendWithdrawalEmail('request_rejected', withdrawalUser.email, {
+            fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
+            amount: withdrawal.amount,
+            bankName: withdrawal.bank_name,
+            bankAccountNumber: withdrawal.bank_account_number,
+            bankAccountName: withdrawal.bank_account_name,
+            withdrawalId,
+            rejectionReason: reason,
         })
     }
 

@@ -21,6 +21,11 @@ describe('ShareButton', () => {
             share: mockShare,
             clipboard: mockClipboard,
         })
+        // Reset userAgent to desktop default
+        Object.defineProperty(navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            configurable: true,
+        })
     })
 
     it('should render share button', () => {
@@ -36,6 +41,11 @@ describe('ShareButton', () => {
 
     it('should call Web Share API when available', async () => {
         mockShare.mockResolvedValue(undefined)
+        // Set mobile user agent so the component uses native share
+        Object.defineProperty(navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)',
+            configurable: true,
+        })
 
         render(
             <ShareButton
@@ -104,6 +114,11 @@ describe('ShareButton', () => {
     describe('Analytics Tracking', () => {
         it('should track share initiated and completed for native share', async () => {
             mockShare.mockResolvedValue(undefined)
+            // Set mobile user agent so the component uses native share
+            Object.defineProperty(navigator, 'userAgent', {
+                value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)',
+                configurable: true,
+            })
 
             render(
                 <ShareButton

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import HarvestBadge from './HarvestBadge'
+import { HARVEST_MONTHS, PHOTO_PLACEHOLDER_MONTHS, TREE_STATUS_CONFIG } from '@/lib/constants'
 
 interface TreeCardProps {
     tree: {
@@ -18,17 +19,8 @@ interface TreeCardProps {
     }
 }
 
-const STATUS_CONFIG = {
-    seedling: { label: 'Mầm non', emoji: '🌱', color: 'bg-green-100 text-green-800' },
-    planted: { label: 'Đã trồng', emoji: '🌿', color: 'bg-emerald-100 text-emerald-800' },
-    growing: { label: 'Đang lớn', emoji: '🌲', color: 'bg-green-600 text-white' },
-    mature: { label: 'Trưởng thành', emoji: '🎋', color: 'bg-yellow-100 text-yellow-800' },
-    harvested: { label: 'Thu hoạch', emoji: '✨', color: 'bg-purple-100 text-purple-800' },
-    dead: { label: 'Chết', emoji: '⚫', color: 'bg-gray-100 text-gray-800' },
-}
-
 export default function TreeCard({ tree }: TreeCardProps) {
-    const statusConfig = STATUS_CONFIG[tree.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.seedling
+    const statusConfig = TREE_STATUS_CONFIG[tree.status as keyof typeof TREE_STATUS_CONFIG] || TREE_STATUS_CONFIG.seedling
 
     // Safely parse planted date with fallback
     let plantedDate = new Date()
@@ -44,12 +36,12 @@ export default function TreeCard({ tree }: TreeCardProps) {
 
     // Check if tree is less than 9 months old
     const monthsOld = isValidDate ? (Date.now() - plantedDate.getTime()) / (1000 * 60 * 60 * 24 * 30) : 0
-    const showPlaceholder = !tree.latest_photo || monthsOld < 9
+    const showPlaceholder = !tree.latest_photo || monthsOld < PHOTO_PLACEHOLDER_MONTHS
 
     // Check if tree is ready for harvest (configurable via environment)
     const minutesOld = isValidDate ? (Date.now() - plantedDate.getTime()) / (1000 * 60) : 0
     const isDev = process.env.NODE_ENV !== 'production'
-    const isHarvestReady = isDev ? minutesOld >= 3 : monthsOld >= 60
+    const isHarvestReady = isDev ? minutesOld >= 3 : monthsOld >= HARVEST_MONTHS
 
     return (
         <Link

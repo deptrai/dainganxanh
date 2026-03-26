@@ -207,7 +207,7 @@ export async function getReferralConversions(userId: string) {
         }
 
         // Calculate commission for each conversion
-        return await Promise.all((conversions as ConversionRecord[])?.map(async (conv) => ({
+        return await Promise.all((conversions as unknown as ConversionRecord[])?.map(async (conv) => ({
             id: conv.id,
             clickedAt: conv.created_at,
             orderCode: conv.orders?.code,

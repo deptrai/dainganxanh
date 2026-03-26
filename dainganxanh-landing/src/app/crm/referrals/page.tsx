@@ -114,7 +114,7 @@ export default async function ReferralsPage() {
                                                 +{conversion.commission.toLocaleString('vi-VN')}đ
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {new Date(conversion.orderDate).toLocaleDateString('vi-VN')}
+                                                {conversion.orderDate ? new Date(conversion.orderDate).toLocaleDateString('vi-VN') : '-'}
                                             </td>
                                         </tr>
                                     ))}

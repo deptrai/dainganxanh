@@ -60,7 +60,7 @@ describe('OrderTable', () => {
 
         expect(screen.getByText('test@example.com')).toBeInTheDocument()
         expect(screen.getByText('5 cây')).toBeInTheDocument()
-        expect(screen.getByText('banking')).toBeInTheDocument()
+        expect(screen.getAllByText('banking')[0]).toBeInTheDocument()
     })
 
     it('shows status badges with correct colors', () => {

@@ -29,6 +29,7 @@ describe('assignOrderToLot', () => {
             insert: jest.fn().mockReturnThis(),
             update: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
+            limit: jest.fn().mockResolvedValue({ data: [], error: null }),
             single: jest.fn(),
         }
 

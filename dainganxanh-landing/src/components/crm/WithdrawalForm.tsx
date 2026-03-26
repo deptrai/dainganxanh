@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { requestWithdrawal } from '@/actions/withdrawals'
+import { MIN_WITHDRAWAL } from '@/lib/constants'
 
 interface WithdrawalFormProps {
     availableBalance: number
@@ -59,7 +60,7 @@ export default function WithdrawalForm({
             newErrors.amount = 'Vui lòng nhập số tiền'
         } else {
             const amount = Number(formData.amount)
-            if (isNaN(amount) || amount < 200000) {
+            if (isNaN(amount) || amount < MIN_WITHDRAWAL) {
                 newErrors.amount = 'Số tiền rút tối thiểu là 200,000 VNĐ'
             } else if (amount > availableBalance) {
                 newErrors.amount = 'Số tiền vượt quá số dư khả dụng'
@@ -176,7 +177,7 @@ export default function WithdrawalForm({
                             value={formData.amount}
                             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                             placeholder="Tối thiểu 200,000 VNĐ"
-                            min="200000"
+                            min={MIN_WITHDRAWAL}
                             max={availableBalance}
                             step="1000"
                             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.amount ? 'border-red-500' : 'border-gray-300'

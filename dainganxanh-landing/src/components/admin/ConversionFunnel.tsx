@@ -39,10 +39,10 @@ export default function ConversionFunnel({ data }: ConversionFunnelProps) {
                             border: '1px solid #e5e7eb',
                             borderRadius: '8px'
                         }}
-                        formatter={(value: number, name: string, props: any) => {
-                            const percentage = props.payload.percentage
+                        formatter={((value: number, _name: string, props: { payload?: { percentage?: number } }) => {
+                            const percentage = props.payload?.percentage ?? 0
                             return [`${value.toLocaleString('vi-VN')} (${percentage.toFixed(1)}%)`, 'Count']
-                        }}
+                        }) as any}
                     />
                     <Bar dataKey="count" radius={[0, 8, 8, 0]}>
                         {data.map((entry, index) => (
