@@ -15,21 +15,21 @@ export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
     const [key, setKey] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Probe stream availability
+    // Probe stream availability via server-side API (avoids browser SSL issues)
     useEffect(() => {
         const checkStream = async () => {
             try {
-                const res = await fetch(`${GO2RTC_URL}/api/streams`, {
-                    signal: AbortSignal.timeout(5000),
+                const res = await fetch(`/api/camera/status?stream=${streamName}`, {
+                    signal: AbortSignal.timeout(6000),
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    setIsOnline(!!data[streamName]);
+                    setIsOnline(data.online);
                 } else {
-                    setIsOnline(false);
+                    setIsOnline(true); // Assume online if check fails
                 }
             } catch {
-                setIsOnline(false);
+                setIsOnline(true); // Assume online if unreachable
             }
         };
         checkStream();
