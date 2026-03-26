@@ -7,6 +7,7 @@ import PhotoGallery from '@/components/crm/PhotoGallery'
 import QuarterlyReports from '@/components/crm/QuarterlyReports'
 import GrowthMetrics from '@/components/crm/GrowthMetrics'
 import TreeCard from '@/components/crm/TreeCard'
+import FarmCamera from '@/components/crm/FarmCamera'
 import Link from 'next/link'
 
 interface PackageDetailPageProps {
@@ -159,6 +160,9 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                         </div>
                     </div>
                 )}
+
+                {/* Farm Camera Live Stream */}
+                <FarmCamera streamName="farm" />
 
                 {/* Individual Trees */}
                 {treesForDisplay && treesForDisplay.length > 0 && (

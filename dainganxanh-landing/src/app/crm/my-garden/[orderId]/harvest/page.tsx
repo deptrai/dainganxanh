@@ -73,7 +73,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <p className="text-sm text-gray-600">Mã cây</p>
-                            <p className="text-lg font-bold text-emerald-700">{tree?.code || order.order_code || 'N/A'}</p>
+                            <p className="text-lg font-bold text-emerald-700">{tree?.code || order.code || 'N/A'}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Tuổi cây</p>
@@ -103,21 +103,21 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                         <HarvestSellBack
                             orderId={order.id}
                             totalAmount={order.total_amount || 0}
-                            orderCode={order.order_code || null}
+                            orderCode={order.code || null}
                             plantedDate={plantedDate.toISOString()}
                         />
 
                         {/* Option 2: Keep Growing */}
                         <HarvestKeepGrowing
                             orderId={order.id}
-                            treeCode={tree?.code || order.order_code || 'N/A'}
+                            treeCode={tree?.code || order.code || 'N/A'}
                             ageInMonths={ageInMonths}
                         />
 
                         {/* Option 3: Receive Product */}
                         <HarvestReceiveProduct
                             orderId={order.id}
-                            orderCode={order.order_code || undefined}
+                            orderCode={order.code || undefined}
                         />
                     </div>
 

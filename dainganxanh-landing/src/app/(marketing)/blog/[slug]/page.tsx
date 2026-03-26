@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const description = post.meta_desc || post.excerpt || ''
 
   return {
-    title: `${title} — Đại Ngàn Xanh`,
+    title,
     description,
     openGraph: {
       title,
@@ -81,7 +81,19 @@ export default async function PostPage({ params }: PostPageProps) {
     ? format(new Date(post.published_at), "dd MMMM yyyy", { locale: vi })
     : null
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: 'https://dainganxanh.com.vn' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://dainganxanh.com.vn/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `https://dainganxanh.com.vn/blog/${slug}` },
+    ],
+  }
+
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
     <article className="container mx-auto px-4 py-10 max-w-3xl">
       {/* Back link */}
       <Link
@@ -163,5 +175,6 @@ export default async function PostPage({ params }: PostPageProps) {
         </Link>
       </div>
     </article>
+    </>
   )
 }

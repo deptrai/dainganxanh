@@ -49,7 +49,7 @@ export default function Image() {
             margin: '24px 0 0',
           }}
         >
-          dainganxanh.vn
+          dainganxanh.com.vn
         </p>
       </div>
     ),

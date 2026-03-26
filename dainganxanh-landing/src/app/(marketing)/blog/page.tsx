@@ -6,7 +6,7 @@ import { PostList } from '@/components/blog/PostList'
 export const revalidate = 3600 // ISR: revalidate every 1 hour
 
 export const metadata: Metadata = {
-  title: 'Blog — Đại Ngàn Xanh',
+  title: 'Blog',
   description: 'Cập nhật mới nhất về cây Dó Đen, carbon credit và vườn cây Đại Ngàn Xanh.',
 }
 

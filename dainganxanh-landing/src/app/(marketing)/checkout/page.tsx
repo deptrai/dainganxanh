@@ -5,14 +5,12 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
 import { motion } from "framer-motion";
-import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
 import { BankingPayment } from "@/components/checkout/BankingPayment";
 
 
 function CheckoutContent() {
     const searchParams = useSearchParams();
     const quantity = parseInt(searchParams.get("quantity") || "1");
-    const [paymentMethod, setPaymentMethod] = useState<"banking" | "usdt">("banking");
     const [orderCode, setOrderCode] = useState("");
 
     // Calculate total
@@ -66,28 +64,10 @@ function CheckoutContent() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.1 }}
                     >
-                        <PaymentMethodSelector
-                            selected={paymentMethod}
-                            onChange={setPaymentMethod}
+                        <BankingPayment
+                            orderCode={orderCode}
+                            amount={total}
                         />
-
-                        {paymentMethod === "banking" && (
-                            <BankingPayment
-                                orderCode={orderCode}
-                                amount={total}
-                            />
-                        )}
-
-                        {paymentMethod === "usdt" && (
-                            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-6">
-                                <p className="text-yellow-800 font-semibold">
-                                    🚧 Tính năng đang phát triển
-                                </p>
-                                <p className="text-yellow-700 text-sm mt-2">
-                                    Thanh toán USDT sẽ sớm được hỗ trợ. Vui lòng chọn chuyển khoản ngân hàng.
-                                </p>
-                            </div>
-                        )}
                     </motion.div>
 
                     {/* Right: Order Summary */}

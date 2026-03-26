@@ -4,13 +4,25 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
 
 export async function POST(req: NextRequest) {
+  // Guard: env var must be configured
+  if (!process.env.CASSO_SECURE_TOKEN) {
+    console.error('CASSO_SECURE_TOKEN is not configured')
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
+
   // AC1 — Verify secure-token header
   const token = req.headers.get('secure-token')
   if (token !== process.env.CASSO_SECURE_TOKEN) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await req.json()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let body: any
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
   const tx = body?.data
 
   // Casso gửi test ping không có data — acknowledge và return

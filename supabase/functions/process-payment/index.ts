@@ -71,16 +71,15 @@ serve(async (req) => {
             }
         }
 
-        // IDEMPOTENCY CHECK: Prevent duplicate orders
+        // IDEMPOTENCY CHECK: Prevent duplicate processing
         const { data: existingOrder } = await supabase
             .from('orders')
-            .select('id, code')
+            .select('id, code, status, referred_by')
             .eq('code', payload.orderCode)
             .single()
 
-        if (existingOrder) {
-            console.log('Order already exists (idempotent):', existingOrder.code)
-            // Return success with existing order ID
+        if (existingOrder && existingOrder.status === 'completed') {
+            console.log('Order already completed (idempotent):', existingOrder.code)
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -106,7 +105,6 @@ serve(async (req) => {
         const timestamp = Date.now()
 
         for (let i = 0; i < payload.quantity; i++) {
-            // Use timestamp + index + random suffix for uniqueness
             const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
             const code = `TREE-${year}-${timestamp}-${i.toString().padStart(2, '0')}${random}`
             treeCodes.push(code)
@@ -114,27 +112,51 @@ serve(async (req) => {
 
         console.log('Generated tree codes:', treeCodes)
 
-        // 2. Create order record (assuming orders table exists)
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-                code: payload.orderCode,
-                user_id: payload.userId || null, // Allow null for testing
-                quantity: payload.quantity,
-                total_amount: payload.totalAmount,
-                payment_method: payload.paymentMethod,
-                status: 'completed',
-                referred_by: payload.referredBy || null, // Store referrer ID
-            })
-            .select()
-            .single()
+        // 2. Create or update order record
+        let order: { id: string; code: string }
 
-        if (orderError) {
-            console.error('Order creation failed:', orderError)
-            throw new Error(`Order creation failed: ${orderError.message}`)
+        if (existingOrder) {
+            // Pending order exists (pre-created by checkout page) → update to completed
+            const { data: updated, error: updateError } = await supabase
+                .from('orders')
+                .update({
+                    status: 'completed',
+                    payment_method: payload.paymentMethod,
+                    referred_by: payload.referredBy || existingOrder.referred_by || null,
+                })
+                .eq('id', existingOrder.id)
+                .select('id, code')
+                .single()
+
+            if (updateError) {
+                console.error('Order update failed:', updateError)
+                throw new Error(`Order update failed: ${updateError.message}`)
+            }
+            order = updated
+            console.log('Order updated pending→completed:', order.id)
+        } else {
+            // No pending order → insert as completed (fallback path)
+            const { data: inserted, error: insertError } = await supabase
+                .from('orders')
+                .insert({
+                    code: payload.orderCode,
+                    user_id: payload.userId || null,
+                    quantity: payload.quantity,
+                    total_amount: payload.totalAmount,
+                    payment_method: payload.paymentMethod,
+                    status: 'completed',
+                    referred_by: payload.referredBy || null,
+                })
+                .select('id, code')
+                .single()
+
+            if (insertError) {
+                console.error('Order creation failed:', insertError)
+                throw new Error(`Order creation failed: ${insertError.message}`)
+            }
+            order = inserted
+            console.log('Order created:', order.id)
         }
-
-        console.log('Order created:', order.id)
 
         // 2.1. Mark referral click as converted if this order was referred
         if (payload.referredBy) {

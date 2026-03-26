@@ -27,7 +27,7 @@ const mockOrders: Order[] = [
         user_id: 'user-2',
         quantity: 10,
         total_amount: 10000000,
-        payment_method: 'momo',
+        payment_method: 'banking',
         status: 'verified',
         verified_at: '2026-01-12T11:00:00Z',
         created_at: '2026-01-12T09:00:00Z',
