@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/crm/', '/api/', '/login', '/register'],
       },
     ],
-    sitemap: 'https://dainganxanh.vn/sitemap.xml',
+    sitemap: 'https://dainganxanh.com.vn/sitemap.xml',
   }
 }
