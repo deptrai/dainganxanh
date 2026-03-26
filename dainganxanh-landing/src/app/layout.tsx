@@ -17,7 +17,7 @@ const raleway = Raleway({
 })
 
 export const metadata: Metadata = {
-    metadataBase: new URL('https://dainganxanh.vn'),
+    metadataBase: new URL('https://dainganxanh.com.vn'),
     title: {
         default: 'Đại Ngàn Xanh - Gieo Hạt Lành, Gặt Phước Báu',
         template: '%s | Đại Ngàn Xanh',
@@ -26,14 +26,14 @@ export const metadata: Metadata = {
     keywords: ['trồng cây', 'dó đen', 'môi trường', 'carbon credit', 'trầm hương', 'Việt Nam'],
     authors: [{ name: 'Đại Ngàn Xanh' }],
     alternates: {
-        canonical: 'https://dainganxanh.vn',
+        canonical: 'https://dainganxanh.com.vn',
     },
     openGraph: {
         title: 'Đại Ngàn Xanh - Gieo Hạt Lành, Gặt Phước Báu',
         description: 'Gieo một mầm xanh, dệt nên đại ngàn vĩnh cửu',
         type: 'website',
         locale: 'vi_VN',
-        url: 'https://dainganxanh.vn',
+        url: 'https://dainganxanh.com.vn',
         siteName: 'Đại Ngàn Xanh',
         images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Đại Ngàn Xanh' }],
     },
@@ -49,10 +49,10 @@ const organizationJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Đại Ngàn Xanh',
-    url: 'https://dainganxanh.vn',
+    url: 'https://dainganxanh.com.vn',
     logo: {
         '@type': 'ImageObject',
-        url: 'https://dainganxanh.vn/opengraph-image',
+        url: 'https://dainganxanh.com.vn/opengraph-image',
     },
     description: 'Nền tảng trồng 1 triệu cây Dó Đen bản địa tại Việt Nam, theo dõi minh bạch và carbon credit.',
     sameAs: [
