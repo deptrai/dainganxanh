@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyNewOrder } from '@/lib/utils/telegram'
 
 interface PendingOrderRequest {
@@ -12,11 +12,37 @@ interface PendingOrderRequest {
   referred_by?: string | null
 }
 
+export async function GET() {
+  try {
+    // Auth check with user session
+    const supabase = await createServerClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Use service role to bypass RLS (user authenticated above)
+    const serviceSupabase = createServiceRoleClient()
+    const { data } = await serviceSupabase
+      .from('orders')
+      .select('id, code, quantity, total_amount, created_at')
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    return NextResponse.json({ order: data ?? null })
+  } catch (err) {
+    console.error('Unexpected error in GET /api/orders/pending:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // Auth check with user session
     const supabase = await createServerClient()
-
-    // Require authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -34,10 +60,19 @@ export async function POST(req: NextRequest) {
     if (!/^DH[A-Z0-9]{6}$/i.test(body.code)) {
       return NextResponse.json({ error: 'Invalid order code format' }, { status: 400 })
     }
+    // Validate total_amount matches expected server-side calculation
+    const UNIT_PRICE = 260000
+    const expectedAmount = body.quantity * UNIT_PRICE
+    if (body.total_amount !== expectedAmount) {
+      return NextResponse.json({ error: 'Invalid total_amount' }, { status: 400 })
+    }
+
+    // Use service role to bypass RLS (user authenticated above)
+    const serviceSupabase = createServiceRoleClient()
 
     // Upsert with onConflict: 'code' for idempotency
     // If the same orderCode already exists (e.g. user F5'd the page), return existing record
-    const { error: upsertError } = await supabase
+    const { error: upsertError } = await serviceSupabase
       .from('orders')
       .upsert(
         {
@@ -60,7 +95,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch the order (works for both new inserts and existing records)
-    const { data, error: fetchError } = await supabase
+    const { data, error: fetchError } = await serviceSupabase
       .from('orders')
       .select('id, code')
       .eq('code', body.code)

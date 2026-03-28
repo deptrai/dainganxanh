@@ -1,36 +1,31 @@
-import { cookies, headers } from 'next/headers'
-import { trackReferralClick } from '@/actions/referrals'
+"use client";
+
+import { useEffect } from 'react';
+import Cookies from 'js-cookie';
+import { trackReferralClick } from '@/actions/referrals';
 
 /**
- * Server component to handle referral tracking
- * This runs on the server and sets cookies before rendering
+ * Client component to handle referral tracking.
+ * Sets the ref cookie on the client side (js-cookie) so it persists across navigation.
  */
-export async function ReferralTracker({ refCode }: { refCode?: string }) {
-    if (!refCode) return null
+export function ReferralTracker({ refCode }: { refCode?: string }) {
+    useEffect(() => {
+        if (!refCode) return;
 
-    try {
-        // Set cookie for 30 days
-        const cookieStore = await cookies()
-        cookieStore.set('ref', refCode, {
-            maxAge: 30 * 24 * 60 * 60, // 30 days
-            path: '/',
-            // NOTE: httpOnly must be false because we need to read this cookie
-            // in the client-side checkout flow (BankingPayment component)
-            // TODO: Refactor checkout to read cookie server-side, then enable httpOnly
-            httpOnly: false,
-            sameSite: 'lax', // Prevent CSRF while allowing normal navigation
-            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-        })
+        // Only set if no existing ref cookie (first referrer wins)
+        const existing = Cookies.get('ref');
+        if (!existing) {
+            Cookies.set('ref', refCode, {
+                expires: 30,
+                path: '/',
+                sameSite: 'lax',
+                secure: window.location.protocol === 'https:',
+            });
+        }
 
-        // Track click server-side (fire-and-forget, don't block page render)
-        const headersList = await headers()
-        trackReferralClick(refCode, headersList).catch((error) => {
-            console.error('Error tracking referral click:', error)
-        })
-    } catch (error) {
-        // Log error but don't crash the landing page
-        console.error('Error in ReferralTracker:', error)
-    }
+        // Track click server-side (fire-and-forget)
+        trackReferralClick(refCode).catch(() => {});
+    }, [refCode]);
 
-    return null
+    return null;
 }

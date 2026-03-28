@@ -18,7 +18,7 @@ async function sendTelegramMessage(message: string): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId,
+        chat_id: Number(chatId),
         text: message,
         parse_mode: 'HTML',
       }),
@@ -75,6 +75,51 @@ export async function notifyPaymentSuccess(params: {
     `🌳 Số cây: <b>${params.quantity} cây</b>\n` +
     `💰 Số tiền: <b>${formatVND(params.totalAmount)}</b>${treeList}\n` +
     `🎉 Đơn hàng đã hoàn tất!`
+
+  await sendTelegramMessage(message)
+}
+
+export async function notifyWithdrawalRequest(params: {
+  userName: string
+  userEmail: string
+  amount: number
+  bankName: string
+  bankAccountNumber: string
+}): Promise<void> {
+  const message =
+    `💸 <b>Yêu cầu rút tiền mới!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 Người dùng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `💰 Số tiền: <b>${formatVND(params.amount)}</b>\n` +
+    `🏦 Ngân hàng: ${params.bankName}\n` +
+    `💳 STK: <code>${params.bankAccountNumber}</code>\n` +
+    `⏳ Trạng thái: Chờ duyệt`
+
+  await sendTelegramMessage(message)
+}
+
+export async function notifyTreeAssigned(params: {
+  orderCode: string
+  userName: string
+  userEmail: string
+  quantity: number
+  lotName: string
+  lotRegion: string
+  treeCodes: string[]
+}): Promise<void> {
+  const treeList = params.treeCodes.slice(0, 3).join(', ') +
+    (params.treeCodes.length > 3 ? ` +${params.treeCodes.length - 3} cây` : '')
+
+  const message =
+    `🌲 <b>Gán lô cây thành công!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${params.orderCode}</code>\n` +
+    `👤 Khách hàng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `🌳 Số cây: <b>${params.quantity} cây</b>\n` +
+    `📍 Lô: ${params.lotName} — ${params.lotRegion}\n` +
+    `🔖 Mã cây: <code>${treeList}</code>`
 
   await sendTelegramMessage(message)
 }

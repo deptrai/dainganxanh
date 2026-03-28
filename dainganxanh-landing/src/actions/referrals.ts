@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
+import { headers } from 'next/headers'
 
 // Commission rate constant (10% of order value)
 const COMMISSION_RATE = 0.10
@@ -24,7 +25,7 @@ function hashIP(ip: string): string {
 /**
  * Track a referral link click with deduplication
  */
-export async function trackReferralClick(refCode: string, requestHeaders: Headers) {
+export async function trackReferralClick(refCode: string) {
     try {
         const supabase = await createServerClient()
 
@@ -39,7 +40,8 @@ export async function trackReferralClick(refCode: string, requestHeaders: Header
             return { success: false, error: 'Invalid referral code' }
         }
 
-        // Get IP and user agent
+        // Get IP and user agent from request headers
+        const requestHeaders = await headers()
         const ip = requestHeaders.get('x-forwarded-for') || requestHeaders.get('x-real-ip') || 'unknown'
         const userAgent = requestHeaders.get('user-agent') || 'unknown'
 

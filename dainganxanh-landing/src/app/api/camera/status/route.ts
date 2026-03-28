@@ -8,28 +8,37 @@ export async function GET(request: NextRequest) {
     const stream = request.nextUrl.searchParams.get("stream") || "farm";
 
     try {
-        const apiUrl = `${GO2RTC_URL}/api/streams`;
-
         // Use node https agent that accepts self-signed certs (dev/staging only)
-        const agent = apiUrl.startsWith("https")
+        const agent = GO2RTC_URL.startsWith("https")
             ? new https.Agent({ rejectUnauthorized: false })
             : undefined;
 
-        const res = await fetch(apiUrl, {
+        // Check if stream config exists
+        const streamsRes = await fetch(`${GO2RTC_URL}/api/streams`, {
             // @ts-expect-error node fetch agent
             agent,
             signal: AbortSignal.timeout(5000),
             next: { revalidate: 0 },
         });
 
-        if (!res.ok) return NextResponse.json({ online: false });
+        if (!streamsRes.ok) return NextResponse.json({ online: false, streaming: false });
 
-        const data = await res.json();
-        const streamData = data[stream];
-        const hasProducer = streamData?.producers?.some((p: { bytes_recv?: number }) => p.bytes_recv && p.bytes_recv > 0);
+        const streams = await streamsRes.json();
+        const streamData = streams[stream];
+        if (!streamData) return NextResponse.json({ online: false, streaming: false });
 
-        return NextResponse.json({ online: !!streamData, streaming: !!hasProducer });
+        // Try to grab a single frame — the only reliable way to know if the RTSP source is alive
+        const frameRes = await fetch(`${GO2RTC_URL}/api/frame.jpeg?src=${stream}`, {
+            // @ts-expect-error node fetch agent
+            agent,
+            signal: AbortSignal.timeout(8000),
+            next: { revalidate: 0 },
+        });
+
+        const isStreaming = frameRes.ok && Number(frameRes.headers.get("content-length") || "0") > 0;
+
+        return NextResponse.json({ online: true, streaming: isStreaming });
     } catch {
-        return NextResponse.json({ online: false });
+        return NextResponse.json({ online: false, streaming: false });
     }
 }

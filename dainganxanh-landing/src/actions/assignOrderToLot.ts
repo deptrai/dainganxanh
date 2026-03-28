@@ -2,6 +2,7 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { generateTreeCodes } from '@/lib/utils/treeCode'
+import { notifyTreeAssigned } from '@/lib/utils/telegram'
 
 interface AssignOrderToLotResult {
     success: boolean
@@ -27,7 +28,7 @@ export async function assignOrderToLot(
         console.log('[assignOrderToLot] Querying order:', orderId)
         const { data: order, error: orderError } = await supabase
             .from('orders')
-            .select('id, quantity, user_id, status')
+            .select('id, code, quantity, user_id, status')
             .eq('id', orderId)
             .single()
 
@@ -172,6 +173,18 @@ export async function assignOrderToLot(
                         lotLocationLng: lot.location_lng,
                     }),
                 })
+            }
+            // Gửi Telegram cho admin (non-blocking)
+            if (userData?.email) {
+                notifyTreeAssigned({
+                    orderCode: order.code,
+                    userName: userData.full_name || 'Khách hàng',
+                    userEmail: userData.email,
+                    quantity: order.quantity,
+                    lotName: lot.name,
+                    lotRegion: lot.region,
+                    treeCodes,
+                }).catch((err) => console.error('[Telegram] notifyTreeAssigned failed:', err))
             }
         } catch (emailError) {
             // Log but don't fail the assignment if email fails

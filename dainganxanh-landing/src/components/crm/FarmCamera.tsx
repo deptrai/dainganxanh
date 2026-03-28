@@ -10,7 +10,7 @@ interface FarmCameraProps {
 const GO2RTC_URL = process.env.NEXT_PUBLIC_GO2RTC_URL || "https://stream.dainganxanh.com.vn";
 
 export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
-    const [isOnline, setIsOnline] = useState<boolean | null>(null);
+    const [status, setStatus] = useState<"loading" | "streaming" | "configured" | "offline">("loading");
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [key, setKey] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -20,16 +20,18 @@ export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
         const checkStream = async () => {
             try {
                 const res = await fetch(`/api/camera/status?stream=${streamName}`, {
-                    signal: AbortSignal.timeout(6000),
+                    signal: AbortSignal.timeout(10000),
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    setIsOnline(data.online);
+                    if (data.streaming) setStatus("streaming");
+                    else if (data.online) setStatus("configured");
+                    else setStatus("offline");
                 } else {
-                    setIsOnline(true); // Assume online if check fails
+                    setStatus("offline");
                 }
             } catch {
-                setIsOnline(true); // Assume online if unreachable
+                setStatus("offline");
             }
         };
         checkStream();
@@ -60,16 +62,28 @@ export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {isOnline === true && (
+                    {status === "streaming" && (
                         <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                             Đang phát
                         </span>
                     )}
-                    {isOnline === false && (
+                    {status === "configured" && (
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                            <Video className="w-3.5 h-3.5" />
+                            Camera mất tín hiệu
+                        </span>
+                    )}
+                    {status === "offline" && (
                         <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                             <VideoOff className="w-3.5 h-3.5" />
                             Ngoại tuyến
+                        </span>
+                    )}
+                    {status === "loading" && (
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            Đang kiểm tra...
                         </span>
                     )}
                     <button
@@ -90,13 +104,7 @@ export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
             </div>
 
             <div ref={containerRef} className="relative bg-black rounded-xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
-                {isOnline === false ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                        <VideoOff className="w-12 h-12 mb-3 opacity-50" />
-                        <p className="font-medium">Camera đang ngoại tuyến</p>
-                        <p className="text-sm mt-1 opacity-70">Vui lòng thử lại sau</p>
-                    </div>
-                ) : (
+                {status === "streaming" ? (
                     <iframe
                         key={key}
                         src={streamUrl}
@@ -104,11 +112,34 @@ export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
                         allow="autoplay; fullscreen"
                         title="Camera vườn trực tiếp"
                     />
+                ) : status === "configured" ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-amber-400">
+                        <Video className="w-12 h-12 mb-3 opacity-50" />
+                        <p className="font-medium text-amber-300">Camera mất tín hiệu</p>
+                        <p className="text-sm mt-1 opacity-70 text-amber-200/70">Nguồn RTSP không phản hồi — đang thử kết nối lại</p>
+                        <button
+                            onClick={() => { setStatus("loading"); setKey(k => k + 1); }}
+                            className="mt-3 px-4 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg text-sm transition-colors"
+                        >
+                            Thử lại
+                        </button>
+                    </div>
+                ) : status === "loading" ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                        <RefreshCw className="w-10 h-10 mb-3 opacity-50 animate-spin" />
+                        <p className="font-medium">Đang kết nối camera...</p>
+                    </div>
+                ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                        <VideoOff className="w-12 h-12 mb-3 opacity-50" />
+                        <p className="font-medium">Camera đang ngoại tuyến</p>
+                        <p className="text-sm mt-1 opacity-70">Server stream không phản hồi</p>
+                    </div>
                 )}
             </div>
 
             <p className="text-xs text-gray-400 mt-3 text-center">
-                Stream trực tiếp từ vườn — độ trễ ~2–5 giây
+                {status === "streaming" ? "Stream trực tiếp từ vườn — độ trễ ~2–5 giây" : "Tự động kiểm tra lại mỗi 30 giây"}
             </p>
         </div>
     );

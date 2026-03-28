@@ -37,6 +37,7 @@ development_status:
   2-6-harvest-sell-back: done  # ✅ Deployed 2026-03-26
   2-7-harvest-keep-growing: done  # ✅ Deployed 2026-03-26
   2-8-harvest-receive-product: done  # ✅ Deployed 2026-03-26
+  2-9-farm-camera-live-stream: done  # ✅ Added 2026-03-28
   epic-2-retrospective: backlog
 
   # Epic 3: Admin Operations (P0/P1)
@@ -48,6 +49,7 @@ development_status:
   3-5-photo-upload-gps: done
   3-6-tree-health-status: done
   3-7-analytics-reporting: done
+  3-8-admin-user-management: done  # ✅ Added 2026-03-28
   epic-3-retrospective: backlog
 
   # Epic 4: Viral & Growth (P1/P2)
@@ -57,6 +59,7 @@ development_status:
   4-3-withdrawal-management: done
   4-4-admin-settings-profile: done
   4-5-admin-settings-system: done
+  4-6-referral-code-improvements: done  # ✅ Added 2026-03-28
   epic-4-retrospective: backlog
 
   # Epic 5: Payment Automation — Casso Integration (Sprint 1)
@@ -64,6 +67,9 @@ development_status:
   5-1-pending-order-at-checkout: done  # ✅ Deployed 2026-03-26
   5-2-casso-webhook-integration: done  # ✅ Deployed 2026-03-26
   5-3-casso-admin-transaction-log: done  # ✅ Deployed 2026-03-26
+  5-4-casso-transaction-sync: done  # ✅ Added 2026-03-28
+  5-5-order-cancellation: done  # ✅ Added 2026-03-28
+  5-6-casso-hmac-v2-verification: done  # ✅ Added 2026-03-28
   epic-5-retrospective: backlog
 
   # Epic 6: SEO Optimization (Sprint 1)
@@ -78,12 +84,28 @@ development_status:
   7-2-blog-admin-cms: done  # ✅ Deployed 2026-03-26
   epic-7-retrospective: backlog
 
+  # Epic 8: Notifications & Alerts (2026-03-28)
+  epic-8: done
+  8-1-telegram-group-notifications: done  # ✅ Added 2026-03-28
+  epic-8-retrospective: backlog
+
+  # Epic 9: Admin Operations Extended (2026-03-28)
+  # Stories folded into Epic 3 (3-8)
+  epic-9: done
+
+  # Epic 10: Auto Contract Generation (2026-03-28)
+  epic-10: in-progress
+  10-1-customer-identity-checkout: ready-for-dev
+  10-2-docx-contract-generation: ready-for-dev
+  10-3-auto-send-contract-email: ready-for-dev
+  epic-10-retrospective: backlog
+
 # Summary
 summary:
-  total_epics: 7
-  total_stories: 36
-  stories_ready: 0
+  total_epics: 10
+  total_stories: 47
+  stories_ready: 3
   stories_in_progress: 0
-  stories_done: 36  # All stories complete!
+  stories_done: 44  # 36 original + 8 newly documented
   current_velocity: 11
-  last_updated: "2026-03-26"  # All 36/36 stories complete
+  last_updated: "2026-03-28"

@@ -99,14 +99,15 @@
 
 **FR-05: Payment Gateway Integration**
 - **Priority:** P0
-- **Description:** Thanh toán qua Banking hoặc USDT
+- **Description:** Thanh toán qua chuyển khoản ngân hàng (MB Bank via VietQR + Casso auto-confirm)
+- **Updated:** 2026-03-28 — USDT/MoMo đã loại bỏ, chỉ banking (xem FR-38)
 - **Acceptance Criteria:**
   - Given user confirmed order
-  - When user selects payment method (Banking / USDT)
-  - Then redirect to payment gateway
-  - And webhook confirms payment success
+  - When user chuyển khoản qua QR code VietQR
+  - Then Casso webhook xác nhận tự động trong 5 phút
   - And update order status to "Paid"
-- **Dependencies:** Banking API, USDT wallet integration
+- **Dependencies:** Casso API, MB Bank `771368999999`
+- **Status:** Implemented
 
 **FR-06: Success Animation & Share Card**[5]
 - **Priority:** P0
@@ -301,11 +302,14 @@
 - **Priority:** P0
 - **Description:** Tự động xác nhận thanh toán qua MB Bank khi Casso gửi webhook
 - **Added:** 2026-01-14
+- **Updated:** 2026-03-28 — HMAC SHA-512 sorted keys verification (Casso V2)
 - **Acceptance Criteria:**
-  - Verify Secure-Token header
-  - Match transaction description với order code
+  - Verify `x-casso-signature` header (HMAC-SHA512 with sorted JSON keys)
+  - Match transaction description với order code regex `DH[A-Z0-9]{6}`
+  - Amount tolerance: ±1,000 VND
   - Update order status tự động trong 5 phút
-- **Dependencies:** Casso account, MB Bank `771368999999`
+- **Dependencies:** Casso account, MB Bank `771368999999`, `CASSO_SECURE_TOKEN`
+- **Status:** Implemented
 
 **FR-24: Pre-create Pending Order at Checkout**
 - **Priority:** P0
@@ -339,6 +343,84 @@
 - **Description:** Gửi thông báo Telegram group khi: đơn mới, thanh toán thành công, admin gán mã giới thiệu
 - **Added:** 2026-03-28
 - **Dependencies:** Telegram Bot Token + Group Chat ID
+
+**FR-34: Farm Camera Live Stream**
+- **Priority:** P2
+- **Description:** Hiển thị live camera stream từ vườn trồng cây qua go2rtc gateway
+- **Added:** 2026-03-28
+- **Acceptance Criteria:**
+  - Given user hoặc admin truy cập dashboard
+  - When stream available → hiển thị iframe live video
+  - When stream offline → hiển thị trạng thái offline
+  - And auto-check status mỗi 30 giây
+- **Dependencies:** go2rtc server, `stream.dainganxanh.com.vn`
+- **Route:** Component `FarmCamera.tsx` trên `/crm/my-garden/[orderId]`
+- **Status:** Implemented
+
+**FR-35: Order Cancellation**
+- **Priority:** P1
+- **Description:** User có thể hủy đơn hàng pending trước khi thanh toán
+- **Added:** 2026-03-28
+- **Acceptance Criteria:**
+  - Given đơn hàng status = pending
+  - When user click "Hủy đơn hàng" tại checkout
+  - Then status chuyển sang cancelled
+- **Route:** `POST /api/orders/cancel`
+- **Status:** Implemented
+
+**FR-36: Casso Admin Transaction Sync**
+- **Priority:** P1
+- **Description:** Admin đồng bộ thủ công giao dịch Casso 24h gần nhất để xử lý các payment bị miss webhook
+- **Added:** 2026-03-28
+- **Acceptance Criteria:**
+  - Given admin ở trang Casso admin
+  - When click "Đồng bộ giao dịch"
+  - Then fetch transactions từ Casso API (24h gần nhất)
+  - And auto-match với pending orders
+  - And cho phép retry thủ công cho giao dịch lỗi
+- **Dependencies:** `CASSO_API_KEY`
+- **Status:** Implemented
+
+**FR-37: Referral Commission Rate (10%)**
+- **Priority:** P1
+- **Description:** Hoa hồng giới thiệu = 10% giá trị đơn hàng. Hardcoded `COMMISSION_RATE = 0.10`
+- **Added:** 2026-03-28
+- **Note:** Hiện hardcoded trong `src/actions/referrals.ts`. Nên chuyển sang system settings (FR-45 future)
+- **Status:** Implemented
+
+**FR-38: Banking-Only Payment**
+- **Priority:** P0
+- **Description:** Chỉ hỗ trợ chuyển khoản ngân hàng (MB Bank via VietQR). USDT và MoMo đã được loại bỏ
+- **Added:** 2026-03-28 (refactored từ FR-05)
+- **Status:** Implemented
+
+**FR-32: Customer Identity Data Collection**
+- **Priority:** P0
+- **Description:** Thu thập thông tin pháp lý khách hàng (CCCD, ngày sinh, địa chỉ, SĐT) tại checkout trước khi thanh toán, phục vụ tạo hợp đồng tự động
+- **Added:** 2026-03-28
+- **Acceptance Criteria:**
+  - Given user ở bước checkout
+  - When user điền form thông tin cá nhân
+  - Then validate: CCCD (12 số), ngày sinh, địa chỉ, SĐT bắt buộc
+  - And lưu vào orders table
+  - And chỉ hiện QR thanh toán sau khi điền đủ thông tin
+- **Dependencies:** DB migration (thêm columns vào orders)
+
+**FR-33: Auto-generate Contract from DOCX Template**
+- **Priority:** P0
+- **Description:** Tự động điền thông tin khách hàng vào hợp đồng mẫu DOCX, convert sang PDF, overlay chữ ký công ty, và gửi email cho khách sau khi thanh toán thành công
+- **Added:** 2026-03-28
+- **Acceptance Criteria:**
+  - Given Casso webhook xác nhận thanh toán
+  - When hệ thống trigger contract generation
+  - Then fill DOCX template với customer data (tên, CCCD, ngày sinh, địa chỉ, số lượng cây, tổng tiền)
+  - And convert DOCX → PDF
+  - And overlay chữ ký + con dấu công ty lên trang cuối
+  - And upload PDF lên Supabase Storage
+  - And lưu contract_url vào orders
+  - And gửi email kèm PDF attachment cho khách
+- **Dependencies:** FR-32, docx-templates, ConvertAPI, pdf-lib
+- **Replaces:** Phần PDF generation cơ bản trong FR-07 (giữ nguyên email flow)
 
 **FR-30: SEO Core Setup**
 - **Priority:** P1

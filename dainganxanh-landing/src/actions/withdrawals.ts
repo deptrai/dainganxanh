@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { notifyWithdrawalRequest } from '@/lib/utils/telegram'
 
 
 // Normalize Vietnamese text for comparison
@@ -148,6 +149,15 @@ export async function requestWithdrawal(data: {
             })
         }
     }
+
+    // Gửi Telegram cho admin (non-blocking)
+    notifyWithdrawalRequest({
+        userName: profile.full_name,
+        userEmail: profile.email,
+        amount: data.amount,
+        bankName: data.bankName,
+        bankAccountNumber: data.bankAccountNumber,
+    }).catch((err) => console.error('[Telegram] notifyWithdrawalRequest failed:', err))
 
     return { success: true }
 }
