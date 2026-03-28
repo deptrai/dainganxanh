@@ -14,13 +14,18 @@ async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{
 
   const tMatch = sig.match(/t=(\d+)/)
   const v1Match = sig.match(/v1=([a-f0-9]+)/)
-  if (!tMatch || !v1Match) return { rawBody, ok: false }
+  console.log('[casso-webhook] sig header:', sig.slice(0, 60))
+  if (!tMatch || !v1Match) {
+    console.log('[casso-webhook] missing t or v1 in signature')
+    return { rawBody, ok: false }
+  }
 
   const timestamp = tMatch[1]
   const expected = createHmac('sha256', secret)
     .update(`${timestamp}.${rawBody}`)
     .digest('hex')
 
+  console.log('[casso-webhook] expected:', expected.slice(0, 16), '| received:', v1Match[1].slice(0, 16))
   return { rawBody, ok: expected === v1Match[1] }
 }
 
