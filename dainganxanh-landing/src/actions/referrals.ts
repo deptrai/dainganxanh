@@ -227,6 +227,21 @@ export async function getReferralConversions(userId: string) {
  * Regenerate referral code for a user
  * @param userId - Must match authenticated user ID
  */
+/**
+ * Convert a display name or email to a clean slug for referral code.
+ * Removes Vietnamese diacritics and other special characters.
+ * e.g. "Nguyễn Văn A" → "nguyenvana", "john.doe@gmail.com" → "johndoe"
+ */
+function slugifyForReferral(input: string): string {
+    return input
+        .normalize('NFD')                        // decompose diacritics
+        .replace(/[\u0300-\u036f]/g, '')         // remove combining marks
+        .replace(/[đĐ]/g, 'd')                   // Vietnamese đ
+        .replace(/[^a-zA-Z0-9]/g, '')            // keep only alphanumeric
+        .toLowerCase()
+        .slice(0, 20)
+}
+
 export async function regenerateReferralCode(userId: string) {
     try {
         const supabase = await createServerClient()
@@ -238,22 +253,28 @@ export async function regenerateReferralCode(userId: string) {
             return { success: false, error: 'Unauthorized' }
         }
 
-        // Generate new unique code (8 characters alphanumeric)
-        const generateCode = () => {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Exclude similar chars
-            let code = ''
-            for (let i = 0; i < 8; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length))
-            }
-            return code
+        // Get user profile for name
+        const { data: profile } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', userId)
+            .single()
+
+        // Generate base slug from full_name → email prefix → fallback
+        const rawName = profile?.full_name?.trim()
+            || profile?.email?.split('@')[0]?.trim()
+            || user.user_metadata?.full_name?.trim()
+            || ''
+
+        let baseCode = slugifyForReferral(rawName)
+        if (baseCode.length < 3) {
+            baseCode = 'user' + Math.floor(Math.random() * 100000).toString().padStart(5, '0')
         }
 
-        let newCode = generateCode()
-        let attempts = 0
-        const maxAttempts = 10
-
-        // Ensure code is unique
-        while (attempts < maxAttempts) {
+        // Ensure uniqueness: try baseCode, baseCode2, baseCode3, ...
+        let newCode = baseCode
+        let suffix = 0
+        while (true) {
             const { data: existing } = await supabase
                 .from('users')
                 .select('id')
@@ -261,13 +282,8 @@ export async function regenerateReferralCode(userId: string) {
                 .single()
 
             if (!existing) break
-
-            newCode = generateCode()
-            attempts++
-        }
-
-        if (attempts >= maxAttempts) {
-            return { success: false, error: 'Failed to generate unique code' }
+            suffix++
+            newCode = baseCode + suffix
         }
 
         // Update user's referral code
