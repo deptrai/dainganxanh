@@ -654,16 +654,271 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 
 ---
 
-## Summary Statistics
+### Story 4.3: Referral Commission Withdrawal
+
+**As a** user with accumulated commission,
+**I want to** rút hoa hồng về tài khoản ngân hàng,
+**So that** tôi nhận được tiền thực tế từ việc giới thiệu.
+
+**Acceptance Criteria:**
+
+**Given** tôi có hoa hồng chưa rút
+**When** tôi nhập thông tin ngân hàng và submit yêu cầu rút
+**Then** tạo withdrawal request với trạng thái pending
+**And** admin nhận thông báo để xử lý
+
+**Story Points:** 8
+**Dependencies:** Story 4.1
+**FRs:** FR-22
+**Status:** implemented (2026-01-14)
+
+---
+
+### Story 4.4: Admin Settings — Profile
+
+**As a** user,
+**I want to** cập nhật thông tin cá nhân (tên, SĐT, địa chỉ),
+**So that** thông tin trên hợp đồng chính xác.
+
+**Story Points:** 3
+**Status:** implemented (2026-01-14)
+
+---
+
+### Story 4.5: Admin Settings — System
+
+**As an** admin,
+**I want to** cấu hình các thông số hệ thống (giá cây, tỷ lệ hoa hồng...),
+**So that** không cần deploy lại khi thay đổi config.
+
+**Story Points:** 5
+**Status:** implemented (2026-01-14)
+
+---
+
+### Story 4.6: Referral Code Improvements _(2026-03-28)_
+
+**As a** user,
+**I want to** có mã giới thiệu dễ nhớ dựa trên tên tôi,
+**So that** tôi có thể chia sẻ mã mà không cần nhớ dãy số ngẫu nhiên.
+
+**Acceptance Criteria:**
+
+**Given** user mới đăng ký
+**When** account được tạo
+**Then** referral code = tên không dấu viết liền (VD: "Nguyễn Văn A" → `nguyenvana`)
+**And** nếu trùng → thêm số suffix (`nguyenvana2`)
+
+**Given** user đăng ký không có referral link
+**When** hoàn thành đăng ký
+**Then** mã `DNG895075` được dùng làm referrer mặc định
+**And** ô nhập mã giới thiệu hiển thị trên trang đăng ký (optional)
+
+**Story Points:** 3
+**Status:** implemented (2026-03-28)
+**Migration:** `20260328_name_based_referral_code.sql`
+
+---
+
+## Epic 5: Payment Integration (Casso)
+
+**Goal:** Tự động xác nhận thanh toán qua Casso webhook, giảm thời gian xử lý thủ công.
+
+**Added:** 2026-01-14 → 2026-03-28
+
+**Success Metrics:**
+- Auto-verify ≥ 95% transactions trong 5 phút
+- 0 duplicate orders
+
+### Story 5.1: Pre-create Pending Order tại Checkout
+
+**As a** buyer,
+**I want to** đơn hàng được tạo ngay khi tôi bắt đầu checkout,
+**So that** hệ thống có thể match payment với đúng đơn hàng của tôi.
+
+**Acceptance Criteria:**
+
+**Given** tôi submit thông tin checkout
+**When** click "Tôi đã chuyển khoản"
+**Then** tạo order với status `pending` ngay lập tức
+**And** order code được hiển thị làm nội dung chuyển khoản
+
+**Story Points:** 5
+**Status:** implemented
+
+---
+
+### Story 5.2: Casso Webhook — Auto Payment Verification
+
+**As an** operator,
+**I want to** thanh toán được xác nhận tự động qua Casso webhook,
+**So that** không cần approve thủ công từng giao dịch.
+
+**Acceptance Criteria:**
+
+**Given** MB Bank nhận được chuyển khoản
+**When** Casso gửi webhook POST đến `/api/webhooks/casso`
+**Then** match transaction với order code
+**And** gọi `process-payment` Edge Function để update order status
+**And** gửi Telegram notification thanh toán thành công
+
+**Security:** Verify `Secure-Token` header từ Casso
+
+**Story Points:** 8
+**Status:** implemented (partially — Casso config cần kiểm tra lại dashboard)
+
+---
+
+### Story 5.3: Casso Admin Transaction Log
+
+**As an** admin,
+**I want to** xem log tất cả giao dịch Casso nhận được,
+**So that** debug khi payment không match tự động.
+
+**Story Points:** 3
+**Status:** implemented
+
+---
+
+## Epic 6: SEO
+
+**Goal:** Tối ưu SEO để tăng organic traffic.
+
+**Added:** 2026-03
+
+### Story 6.1: SEO Core Setup
+
+**As a** product owner,
+**I want to** các trang có đầy đủ meta tags, sitemap, robots.txt,
+**So that** Google index đúng các trang quan trọng.
+
+**Story Points:** 5
+**Status:** implemented
+
+---
+
+### Story 6.2: SEO Structured Data
+
+**As a** product owner,
+**I want to** thêm JSON-LD structured data cho các trang sản phẩm,
+**So that** xuất hiện rich snippets trên Google Search.
+
+**Story Points:** 3
+**Status:** implemented
+
+---
+
+## Epic 7: Blog
+
+**Goal:** Xây dựng blog để tăng organic SEO và giáo dục khách hàng về trầm hương.
+
+**Added:** 2026-03
+
+### Story 7.1: Blog — Supabase Schema + Public Pages
+
+**As a** visitor,
+**I want to** đọc bài viết về dự án và trầm hương tại `/blog`,
+**So that** tôi hiểu hơn về sản phẩm trước khi mua.
+
+**Routes (public, không cần đăng nhập):**
+- `/blog` — danh sách bài viết (trong `(marketing)` layout)
+- `/blog/[slug]` — chi tiết bài viết
+
+**Story Points:** 8
+**Status:** implemented
+
+---
+
+### Story 7.2: Blog — Admin CMS
+
+**As an** admin,
+**I want to** viết và publish bài blog từ `/crm/admin/blog`,
+**So that** không cần kỹ thuật để cập nhật nội dung.
+
+**Routes (admin-only):**
+- `/crm/admin/blog` — danh sách + delete
+- `/crm/admin/blog/new` — tạo bài mới
+- `/crm/admin/blog/[id]/edit` — chỉnh sửa bài
+
+**Story Points:** 5
+**Status:** implemented
+
+---
+
+## Epic 8: Notifications & Alerts
+
+**Goal:** Cung cấp thông báo real-time cho admin khi có hoạt động quan trọng.
+
+**Added:** 2026-03-28
+
+### Story 8.1: Telegram Group Notifications
+
+**As an** admin,
+**I want to** nhận Telegram notification khi có đơn mới, thanh toán thành công, hoặc admin gán mã giới thiệu,
+**So that** tôi biết ngay không cần phải F5 dashboard.
+
+**Acceptance Criteria:**
+
+**Given** user submit đơn mua cây → notify đơn mới
+**Given** Casso webhook xác nhận thanh toán → notify thành công
+**Given** admin gán mã giới thiệu → notify với thông tin hồi tố
+
+**And** nếu thiếu `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → skip silently
+
+**Story Points:** 3
+**Status:** implemented (2026-03-28)
+**File:** `src/lib/utils/telegram.ts`
+
+---
+
+## Epic 9: Admin Operations (Extended)
+
+_Stories bổ sung vào Epic 3 sau MVP_
+
+### Story 3.8: Admin User Management _(2026-03-28)_
+
+**As an** admin,
+**I want to** xem và quản lý tất cả user accounts tại `/crm/admin/users`,
+**So that** phân quyền và gán mã giới thiệu cho user khi cần.
+
+**Acceptance Criteria:**
+
+**Given** admin truy cập `/crm/admin/users`
+**When** trang load
+**Then** hiển thị danh sách user với search, role filter, pagination 20/trang
+**And** có thể thay đổi role (user/admin/super_admin) với confirm modal
+**And** có thể gán mã giới thiệu + tính hoa hồng hồi tố cho đơn cũ
+
+**Story Points:** 8
+**Status:** implemented (2026-03-28)
+
+---
+
+## Summary Statistics (Updated 2026-03-28)
 
 | Metric | Value |
 |--------|-------|
-| Total Epics | 4 |
-| Total Stories | 25 |
-| Total Story Points | ~157 |
+| Total Epics | 9 |
+| Total Stories | 40 |
+| Total Story Points | ~227 |
 | P0 Stories | 10 |
-| P1 Stories | 10 |
-| P2 Stories | 5 |
+| P1 Stories | 15 |
+| P2 Stories | 15 |
 
 **MVP Phase 1 (Month 1-3):** Epic 1 + Epic 2 (Stories 2.1-2.4) + Epic 3 (Stories 3.1-3.2, 3.5-3.7)
 **Phase 2 (Month 4-6):** Epic 2 (Stories 2.5-2.8) + Epic 3 (Stories 3.3-3.4) + Epic 4
+**Phase 3 (Month 7+):** Epic 5 (Casso) + Epic 6 (SEO) + Epic 7 (Blog) + Epic 8 (Telegram) + Epic 9 (Admin Extended)
+
+### Epic Completion Status
+
+| Epic | Stories | Status |
+|------|---------|--------|
+| Epic 1: User Acquisition | 8 | ✅ Complete |
+| Epic 2: Tree Tracking | 8 | ✅ Complete |
+| Epic 3: Admin Operations | 7 (+1) | ✅ Complete (3.8 added 2026-03-28) |
+| Epic 4: Viral & Growth | 2 (+4) | ✅ Complete (4.3-4.6 added) |
+| Epic 5: Casso Payment | 3 | ✅ Implemented (Casso config TBD) |
+| Epic 6: SEO | 2 | ✅ Complete |
+| Epic 7: Blog | 2 | ✅ Complete |
+| Epic 8: Notifications | 1 | ✅ Complete |
+| Epic 9: Admin Extended | 1 | ✅ Complete |

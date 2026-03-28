@@ -25,8 +25,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             <span className="text-2xl font-serif font-bold text-brand-500">Đại Ngàn Xanh</span>
                         </div>
                         <div className="hidden md:flex space-x-8">
-                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Câu Chuyện Đại Ngàn Dó Đen Việt</a>
+                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Câu Chuyện</a>
+                            <a href="#product" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Dó Đen Việt</a>
                             <a href="#how-it-works" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Cách Tham Gia</a>
+                            <Link href="/blog" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Blog</Link>
                             <AuthNavLink />
                         </div>
                         <ScaleHover>

@@ -61,6 +61,19 @@ Example: `20260115_add_role_column_to_users.sql`
 ### User Management (2026-01-15)
 - `20260115_add_role_column_to_users.sql` - Role-based access control
 
+### Blog & Payment Integration (2026-03-26)
+- `20260326_create_posts_table.sql` - Blog posts table
+- `20260326_create_blog_images_bucket.sql` - Storage bucket cho blog images
+- `20260326_create_casso_transactions.sql` - Casso payment transaction log
+- `20260326_add_user_info_to_orders.sql` - Thêm customer info vào orders
+
+### Referral Code Improvements (2026-03-28)
+- `20260328_name_based_referral_code.sql` - Đổi referral code generation từ random `DNG######` sang tên user không dấu (VD: `nguyenvana`). Bao gồm:
+  - `CREATE EXTENSION unaccent` cho diacritic removal
+  - `slugify_for_referral()` PostgreSQL function
+  - Updated `handle_new_user()` trigger với uniqueness loop
+  - Recreate `on_auth_user_created` trigger
+
 ## 🚀 How to Apply Migrations
 
 ### Using Supabase CLI

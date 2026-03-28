@@ -291,6 +291,66 @@
     - Link: Landing page + ref code
 - **Dependencies:** Web Share API, OG tags
 
+**FR-22: Referral Commission Withdrawal**
+- **Priority:** P2
+- **Description:** User rút hoa hồng tích lũy về tài khoản ngân hàng
+- **Added:** 2026-01-14
+- **Dependencies:** FR-20, Banking info
+
+**FR-23: Casso Webhook Auto Payment Verification**
+- **Priority:** P0
+- **Description:** Tự động xác nhận thanh toán qua MB Bank khi Casso gửi webhook
+- **Added:** 2026-01-14
+- **Acceptance Criteria:**
+  - Verify Secure-Token header
+  - Match transaction description với order code
+  - Update order status tự động trong 5 phút
+- **Dependencies:** Casso account, MB Bank `771368999999`
+
+**FR-24: Pre-create Pending Order at Checkout**
+- **Priority:** P0
+- **Description:** Tạo order pending ngay khi user xác nhận chuyển khoản để match với Casso webhook
+- **Added:** 2026-01-14
+
+**FR-25: Admin User Management**
+- **Priority:** P1
+- **Description:** Admin xem/quản lý tất cả user: search, filter role, thay đổi role, gán mã giới thiệu
+- **Added:** 2026-03-28
+- **Route:** `/crm/admin/users`
+
+**FR-26: Admin Referral Assignment (Retroactive)**
+- **Priority:** P1
+- **Description:** Admin gán mã giới thiệu cho user, hoa hồng hồi tố tự động tính cho các đơn cũ
+- **Added:** 2026-03-28
+
+**FR-27: Name-based Referral Codes**
+- **Priority:** P2
+- **Description:** Mã giới thiệu sinh từ tên user không dấu thay vì random DNG######
+- **Added:** 2026-03-28
+- **Example:** "Nguyễn Văn A" → `nguyenvana`
+
+**FR-28: Default Referral Fallback**
+- **Priority:** P2
+- **Description:** User đăng ký không qua referral link → tự động dùng mã DNG895075 làm người giới thiệu mặc định
+- **Added:** 2026-03-28
+
+**FR-29: Telegram Admin Notifications**
+- **Priority:** P1
+- **Description:** Gửi thông báo Telegram group khi: đơn mới, thanh toán thành công, admin gán mã giới thiệu
+- **Added:** 2026-03-28
+- **Dependencies:** Telegram Bot Token + Group Chat ID
+
+**FR-30: SEO Core Setup**
+- **Priority:** P1
+- **Description:** Meta tags, sitemap.xml, robots.txt, OG image, JSON-LD structured data
+- **Added:** 2026-03
+
+**FR-31: Blog CMS**
+- **Priority:** P2
+- **Description:** Admin viết/publish blog, public đọc bài viết tại `/blog`
+- **Added:** 2026-03
+- **Dependencies:** Supabase posts table, image storage
+
 ***
 
 ## ⚙️ NON-FUNCTIONAL REQUIREMENTS (NFRs)

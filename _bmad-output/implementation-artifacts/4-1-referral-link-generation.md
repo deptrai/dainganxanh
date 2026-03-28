@@ -180,6 +180,67 @@ The `process-payment` Edge Function was updated to:
 - 2026-01-14: **CODE REVIEW:** Completed adversarial code review, identified 10 issues, fixed 9 (1 deferred)
 - 2026-01-14: **ROUTING FIX 2:** Restored referral page to `/crm/referrals` and implemented full CRM navigation header/layout
 - 2026-01-14: **ROUTING FIX 1:** Moved referral page from `/crm/referrals` to `/referrals` and added navigation button (deprecated)
+- 2026-03-28: **NAME-BASED REFERRAL CODES:** Đổi format từ `DNG######` sang tên user không dấu (VD: `nguyenvana`). Xem chi tiết bên dưới.
+- 2026-03-28: **DEFAULT REF CODE:** Thêm fallback `DNG895075` cho user không có referrer
+- 2026-03-28: **REGISTRATION REF INPUT:** Thêm ô nhập mã giới thiệu trên trang đăng ký (chỉ hiển thị khi không có cookie `ref`)
+- 2026-03-28: **ADMIN ASSIGN REFERRAL:** Admin có thể gán mã giới thiệu cho user với hoa hồng hồi tố (xem Story 3-8)
+
+---
+
+## 2026-03-28 Updates
+
+### Name-Based Referral Code Generation
+
+Thay đổi từ random `DNG######` sang slug từ tên user:
+
+**TypeScript (`src/actions/referrals.ts`):**
+```typescript
+function slugifyForReferral(input: string): string {
+  return input
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // bỏ dấu
+    .replace(/[đĐ]/g, 'd')            // Vietnamese đ
+    .replace(/[^a-zA-Z0-9]/g, '')     // chỉ giữ alphanumeric
+    .toLowerCase()
+    .slice(0, 20)
+}
+// "Nguyễn Văn A" → "nguyenvana"
+// "john.doe@gmail.com" → "johndoe"
+```
+
+**PostgreSQL migration (`supabase/migrations/20260328_name_based_referral_code.sql`):**
+```sql
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
+CREATE OR REPLACE FUNCTION slugify_for_referral(input_text TEXT)
+RETURNS TEXT AS $$
+  -- unaccent → lower → remove non-alphanumeric → left(20)
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Updated handle_new_user() trigger sử dụng slugify_for_referral()
+-- Uniqueness: thử base_code, base_code2, base_code3, ...
+```
+
+**Fallback nếu slug < 3 ký tự:** `user` + 5-digit random number
+
+### Default Referral Code
+
+```typescript
+// src/app/(marketing)/register/page.tsx
+const DEFAULT_REF = "DNG895075"
+
+// src/components/checkout/BankingPayment.tsx
+const DEFAULT_REF_CODE = "DNG895075"
+const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE
+```
+
+### Registration Referral Input
+
+Trên trang đăng ký (`/register`):
+- Kiểm tra cookie `ref` khi mount
+- Nếu **không có cookie**: hiển thị ô nhập mã giới thiệu (optional)
+- Nếu **có cookie**: bỏ qua (user đã đến qua referral link)
+- Trước khi verify OTP: `Cookies.set("ref", refInput || DEFAULT_REF, { expires: 30 })`
 
 ## Code Review & Fixes (2026-01-14)
 
