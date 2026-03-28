@@ -203,30 +203,27 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 
 ---
 
-### Story 1.6: Payment Gateway (Banking + USDT)
+### Story 1.6: Payment Gateway (Banking Only via Casso)
 
 **As a** buyer,
-**I want to** thanh toán qua chuyển khoản hoặc USDT,
-**So that** tôi dùng được phương thức thanh toán ưa thích.
+**I want to** thanh toán qua chuyển khoản ngân hàng MB Bank,
+**So that** đơn hàng được xác nhận tự động.
 
 **Acceptance Criteria:**
 
 **Given** tôi ở màn hình thanh toán
-**When** tôi chọn "Chuyển khoản ngân hàng"
-**Then** hiển thị thông tin tài khoản + QR code
+**When** trang hiển thị
+**Then** hiển thị QR code VietQR với thông tin MB Bank
 **And** nội dung CK: [order-code]
 **When** hoàn thành chuyển khoản
-**Then** hệ thống detect trong 5 phút (webhook)
+**Then** Casso webhook xác nhận trong 5 phút
 **And** order status = "Đã thanh toán"
-
-**Given** tôi chọn "USDT"
-**When** tôi scan wallet address và gửi đúng số tiền
-**Then** blockchain transaction confirm trong 10 phút
-**And** order status = "Đã thanh toán"
+**And** UI polling hiện trạng thái thành công
 
 **Story Points:** 13
-**Dependencies:** Banking API, USDT wallet
-**FRs:** FR-05
+**Dependencies:** Casso API, MB Bank
+**FRs:** FR-05, FR-38
+**Note:** USDT/MoMo đã loại bỏ (refactored 2026-03-28)
 
 ---
 
@@ -443,6 +440,31 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 **Story Points:** 8
 **Dependencies:** Fulfillment, Shipping
 **FRs:** FR-12D
+
+---
+
+### Story 2.9: Farm Camera Live Stream _(2026-03-28)_
+
+**As a** tree owner,
+**I want to** xem live camera stream từ vườn trồng cây,
+**So that** tôi thấy cây của mình đang được chăm sóc.
+
+**Acceptance Criteria:**
+
+**Given** tôi ở trang chi tiết package
+**When** camera stream available
+**Then** hiển thị iframe live video (go2rtc MSE mode)
+**And** indicator xanh "Live"
+**When** stream offline
+**Then** hiển thị trạng thái "Offline"
+**And** auto-check status mỗi 30 giây
+
+**Story Points:** 5
+**Status:** implemented (2026-03-28)
+**Component:** `src/components/crm/FarmCamera.tsx`
+**API:** `src/app/api/camera/status/route.ts`
+**Dependencies:** go2rtc server at `stream.dainganxanh.com.vn`
+**FRs:** FR-34
 
 ---
 
@@ -667,10 +689,12 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 **Then** tạo withdrawal request với trạng thái pending
 **And** admin nhận thông báo để xử lý
 
+**Technical Note:** Commission rate = 10% (`COMMISSION_RATE = 0.10` in `src/actions/referrals.ts`). Hardcoded, chưa có admin config.
+
 **Story Points:** 8
 **Dependencies:** Story 4.1
-**FRs:** FR-22
-**Status:** implemented (2026-01-14)
+**FRs:** FR-22, FR-37
+**Status:** implemented (2026-01-14, commission rate updated to 10% on 2026-03-28)
 
 ---
 
@@ -730,6 +754,12 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 - Auto-verify ≥ 95% transactions trong 5 phút
 - 0 duplicate orders
 
+**Technical Notes (Updated 2026-03-28):**
+- Webhook signature: HMAC-SHA512 với sorted JSON keys (Casso V2)
+- Header: `x-casso-signature: t=<timestamp>,v1=<hmac>`
+- Amount tolerance: ±1,000 VND
+- Payment method: Banking only (USDT/MoMo removed)
+
 ### Story 5.1: Pre-create Pending Order tại Checkout
 
 **As a** buyer,
@@ -777,6 +807,70 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 
 **Story Points:** 3
 **Status:** implemented
+
+---
+
+### Story 5.4: Casso Transaction Sync (Manual) _(2026-03-28)_
+
+**As an** admin,
+**I want to** đồng bộ thủ công giao dịch Casso 24h gần nhất,
+**So that** xử lý được các payment bị miss webhook.
+
+**Acceptance Criteria:**
+
+**Given** admin ở trang Casso admin
+**When** click "Đồng bộ giao dịch"
+**Then** fetch transactions từ Casso API (last 24h, paginated 100/page)
+**And** auto-match với pending orders (order code regex + amount ±1,000đ)
+**And** hiển thị kết quả: matched, no_match, amount_mismatch
+**And** admin có thể retry thủ công cho giao dịch lỗi
+
+**Story Points:** 5
+**Status:** implemented (2026-03-28)
+**File:** `src/actions/casso.ts`
+**FRs:** FR-36
+
+---
+
+### Story 5.5: Order Cancellation _(2026-03-28)_
+
+**As a** buyer,
+**I want to** hủy đơn hàng pending trước khi thanh toán,
+**So that** tôi có thể thay đổi số lượng hoặc hủy giao dịch.
+
+**Acceptance Criteria:**
+
+**Given** đơn hàng status = pending
+**When** user click "Hủy đơn hàng" tại checkout
+**Then** status chuyển sang cancelled
+**And** QR code bị ẩn
+
+**Story Points:** 2
+**Status:** implemented (2026-03-28)
+**Route:** `POST /api/orders/cancel`
+**FRs:** FR-35
+
+---
+
+### Story 5.6: Casso HMAC V2 Signature Verification _(2026-03-28)_
+
+**As a** system,
+**I want to** verify webhook signature bằng HMAC-SHA512 với sorted keys,
+**So that** chỉ nhận webhook hợp lệ từ Casso.
+
+**Acceptance Criteria:**
+
+**Given** Casso gửi webhook POST
+**When** header `x-casso-signature` có format `t=<timestamp>,v1=<hmac>`
+**Then** sort JSON payload keys alphabetically (recursive)
+**And** tạo signing string: `{timestamp}.{sorted_json}`
+**And** compute HMAC-SHA512 với `CASSO_SECURE_TOKEN`
+**And** compare với `v1` value
+**And** reject nếu không khớp (401)
+
+**Story Points:** 3
+**Status:** implemented (2026-03-28)
+**FRs:** FR-23
 
 ---
 
@@ -894,16 +988,117 @@ _Stories bổ sung vào Epic 3 sau MVP_
 
 ---
 
+## Epic 10: Auto Contract Generation
+
+**Goal:** Tự động tạo hợp đồng PDF từ template DOCX với thông tin khách hàng, chữ ký công ty, và gửi email — thay thế PDF generation cơ bản hiện tại.
+
+**Added:** 2026-03-28
+
+**Success Metrics:**
+- 100% đơn hàng thanh toán thành công có contract PDF trong 5 phút
+- Contract đúng format hợp đồng mẫu công ty
+- 0 lỗi thông tin khách hàng trên hợp đồng
+
+**Background:**
+- Hiện tại Story 1.8 dùng `pdf-lib` tạo PDF cơ bản trong Edge Function `generate-contract`
+- Yêu cầu mới: dùng đúng hợp đồng mẫu DOCX của công ty (`HỢP ĐỒNG ĐẠI NGÀN XANH (MẪU).docx`)
+- Hợp đồng cần thông tin pháp lý: CCCD, ngày sinh, địa chỉ, quốc tịch — hiện checkout không thu thập
+- Cần overlay chữ ký + con dấu Bên B (Công ty CP TM DV Biocare)
+
+### Story 10.1: Customer Identity Data Collection at Checkout
+
+**As a** buyer,
+**I want to** điền thông tin pháp lý (CCCD, ngày sinh, địa chỉ) tại bước checkout,
+**So that** hợp đồng được tạo tự động với đầy đủ thông tin chính xác.
+
+**Acceptance Criteria:**
+
+**Given** tôi ở trang checkout sau khi chọn số lượng cây
+**When** tôi điền form thông tin cá nhân
+**Then** validate: Họ tên (required), Ngày sinh (date), Quốc tịch (default "Việt Nam"), Số CCCD (12 chữ số), Ngày cấp + Nơi cấp CCCD, Địa chỉ thường trú, SĐT
+**And** chỉ hiển thị QR thanh toán sau khi form hợp lệ
+**And** lưu thông tin vào orders table
+
+**Technical Notes:**
+- DB migration: thêm columns `dob`, `nationality`, `id_number`, `id_issue_date`, `id_issue_place`, `address`, `phone` vào orders table
+- Update `/api/orders/pending` POST để nhận thêm fields
+- Form validation với Zod (đã có trong project)
+- UX: thêm step giữa quantity selection và banking QR
+
+**Story Points:** 5
+**Dependencies:** None
+**FRs:** FR-32
+
+---
+
+### Story 10.2: DOCX Template Preparation & Contract Generation Pipeline
+
+**As a** system,
+**I want to** tự động điền thông tin khách hàng vào hợp đồng mẫu DOCX và convert sang PDF,
+**So that** hợp đồng có đúng format pháp lý của công ty.
+
+**Acceptance Criteria:**
+
+**Given** đơn hàng có đầy đủ thông tin khách hàng
+**When** hệ thống trigger contract generation
+**Then** fill template DOCX với placeholders: `{ho_ten}`, `{ngay_sinh}`, `{so_cccd}`, `{ngay_cap}`, `{noi_cap}`, `{dia_chi}`, `{dien_thoai}`, `{so_luong_cay}`, `{tong_gia_tri}`, `{so_hop_dong}`, `{ngay_ky}`
+**And** convert DOCX → PDF thành công
+**And** overlay ảnh chữ ký + con dấu Bên B lên trang cuối
+**And** upload PDF lên Supabase Storage bucket `contracts/`
+**And** lưu URL vào `orders.contract_url`
+
+**Technical Notes:**
+- Chuẩn bị template: thay dấu `. . . . .` bằng `{placeholder}` trong DOCX
+- npm packages: `docx-templates` (fill template), `pdf-lib` (overlay signature)
+- DOCX → PDF: ConvertAPI (250 free conversions/month) hoặc CloudConvert
+- Ảnh chữ ký + con dấu: scan → PNG, lưu trong Supabase Storage
+- API route: `/api/contracts/generate` hoặc Supabase Edge Function upgrade
+- Thay thế logic PDF generation cơ bản hiện tại trong `generate-contract` Edge Function
+
+**Story Points:** 8
+**Dependencies:** Story 10.1 (customer data), DOCX template chuẩn bị sẵn
+**FRs:** FR-33
+
+---
+
+### Story 10.3: Auto-send Signed Contract Email after Payment
+
+**As a** buyer vừa thanh toán xong,
+**I want to** nhận email kèm hợp đồng PDF đã ký trong 5 phút,
+**So that** tôi có tài liệu pháp lý ngay sau khi thanh toán.
+
+**Acceptance Criteria:**
+
+**Given** Casso webhook xác nhận thanh toán thành công
+**When** `process-payment` Edge Function chạy
+**Then** trigger contract generation pipeline (Story 10.2)
+**And** gửi email kèm PDF attachment qua Resend (reuse `send-email` Edge Function)
+**And** email subject: "Hợp đồng dịch vụ nông lâm nghiệp - {order_code}"
+**And** nếu generation fail → log error, gửi email thông báo không kèm contract, admin nhận Telegram alert
+
+**Technical Notes:**
+- Hook vào flow hiện tại: Casso webhook → `process-payment` → generate contract → send email
+- Reuse `send-email` Edge Function (đã có attachment support)
+- Fallback: nếu contract generation fail, payment vẫn thành công, contract gửi sau
+- Admin có thể resend contract qua `resendContract()` (Story 3.3 đã có)
+- Telegram notification cho admin khi contract generation fail
+
+**Story Points:** 5
+**Dependencies:** Story 10.2, Story 5.2 (Casso webhook), Story 1.8 (email flow)
+**FRs:** FR-33
+
+---
+
 ## Summary Statistics (Updated 2026-03-28)
 
 | Metric | Value |
 |--------|-------|
-| Total Epics | 9 |
-| Total Stories | 40 |
-| Total Story Points | ~227 |
-| P0 Stories | 10 |
-| P1 Stories | 15 |
-| P2 Stories | 15 |
+| Total Epics | 10 |
+| Total Stories | 47 |
+| Total Story Points | ~263 |
+| P0 Stories | 13 |
+| P1 Stories | 17 |
+| P2 Stories | 17 |
 
 **MVP Phase 1 (Month 1-3):** Epic 1 + Epic 2 (Stories 2.1-2.4) + Epic 3 (Stories 3.1-3.2, 3.5-3.7)
 **Phase 2 (Month 4-6):** Epic 2 (Stories 2.5-2.8) + Epic 3 (Stories 3.3-3.4) + Epic 4
@@ -914,11 +1109,12 @@ _Stories bổ sung vào Epic 3 sau MVP_
 | Epic | Stories | Status |
 |------|---------|--------|
 | Epic 1: User Acquisition | 8 | ✅ Complete |
-| Epic 2: Tree Tracking | 8 | ✅ Complete |
+| Epic 2: Tree Tracking | 9 | ✅ Complete (2.9 FarmCamera added 2026-03-28) |
 | Epic 3: Admin Operations | 7 (+1) | ✅ Complete (3.8 added 2026-03-28) |
 | Epic 4: Viral & Growth | 2 (+4) | ✅ Complete (4.3-4.6 added) |
-| Epic 5: Casso Payment | 3 | ✅ Implemented (Casso config TBD) |
+| Epic 5: Casso Payment | 6 | ✅ Complete (5.4-5.6 added 2026-03-28) |
 | Epic 6: SEO | 2 | ✅ Complete |
 | Epic 7: Blog | 2 | ✅ Complete |
 | Epic 8: Notifications | 1 | ✅ Complete |
 | Epic 9: Admin Extended | 1 | ✅ Complete |
+| Epic 10: Auto Contract | 3 | 🆕 New (2026-03-28) |

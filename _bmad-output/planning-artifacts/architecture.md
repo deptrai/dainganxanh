@@ -115,8 +115,13 @@ dainganxanh/
 │   │   │
 │   │   ├── api/                      # API Routes
 │   │   │   ├── webhooks/
-│   │   │   │   ├── payment/route.ts  # Payment webhook
-│   │   │   │   └── supabase/route.ts # Supabase webhook
+│   │   │   │   └── casso/route.ts    # Casso payment webhook (HMAC-SHA512)
+│   │   │   ├── orders/
+│   │   │   │   ├── pending/route.ts  # Create/get pending order
+│   │   │   │   ├── status/route.ts   # Poll order payment status
+│   │   │   │   └── cancel/route.ts   # Cancel pending order
+│   │   │   ├── camera/
+│   │   │   │   └── status/route.ts   # Farm camera stream status
 │   │   │   ├── share-card/route.ts   # Generate share card
 │   │   │   └── health/route.ts       # Health check
 │   │   │
@@ -195,7 +200,10 @@ dainganxanh/
 | `/about` | About | Story của dự án |
 | `/pricing` | Pricing | Package 260k |
 | `/login` | Login | Email/Phone + OTP |
-| `/register` | Register | Quick registration |
+| `/register` | Register | Quick registration + referral code input |
+| `/blog` | Blog List | Danh sách bài viết |
+| `/blog/[slug]` | Blog Detail | Chi tiết bài viết |
+| `/checkout` | Checkout | Quantity → Customer Info → Banking QR |
 
 ### User Routes (Authenticated)
 | Route | Page | Permission |
@@ -215,8 +223,12 @@ dainganxanh/
 | `/crm/admin/orders` | Order Management | admin+ |
 | `/crm/admin/trees` | Tree Management | admin+ |
 | `/crm/admin/lots` | Lot Management | admin+ |
-| `/crm/admin/users` | User Management | super_admin |
+| `/crm/admin/users` | User Management | admin+ |
 | `/crm/admin/analytics` | Analytics | admin+ |
+| `/crm/admin/casso` | Casso Transaction Log | admin+ |
+| `/crm/admin/referrals` | Referral Management | admin+ |
+| `/crm/admin/print-queue` | Contract Print Queue | admin+ |
+| `/crm/admin/blog` | Blog CMS | admin+ |
 
 ---
 
