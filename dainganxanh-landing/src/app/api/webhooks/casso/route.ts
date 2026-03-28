@@ -6,35 +6,35 @@ import { createHmac } from 'crypto'
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
 
 // Verify Casso Webhook V2 HMAC signature
-// Header format: x-casso-signature: t=<timestamp>,v1=<hmac-sha256>
-// Signed payload: `${timestamp}.${rawBody}`
-async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{ rawBody: string; ok: boolean }> {
+// Header: x-casso-signature: t=<timestamp>,v1=<hmac-sha512>
+// Signed payload: `${timestamp}.${JSON.stringify(sortedByKey(body))}`
+// Ref: https://github.com/CassoHQ/casso-webhook-v2-verify-signature
+function sortObjByKey(obj: unknown): unknown {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj
+  const sorted: Record<string, unknown> = {}
+  Object.keys(obj as Record<string, unknown>).sort().forEach(k => {
+    sorted[k] = sortObjByKey((obj as Record<string, unknown>)[k])
+  })
+  return sorted
+}
+
+async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{ body: unknown; ok: boolean }> {
   const sig = req.headers.get('x-casso-signature') ?? ''
   const rawBody = await req.text()
 
-  const tMatch = sig.match(/t=(\d+)/)
-  const v1Match = sig.match(/v1=([a-f0-9]+)/)
-  console.log('[casso-webhook] sig header:', sig.slice(0, 60))
-  if (!tMatch || !v1Match) {
-    console.log('[casso-webhook] missing t or v1 in signature')
-    return { rawBody, ok: false }
-  }
+  const match = sig.match(/t=(\d+),v1=([a-f0-9]+)/)
+  if (!match) return { body: null, ok: false }
 
-  const timestamp = tMatch[1]
-  const received = v1Match[1]
+  const [, timestampStr, received] = match
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let parsed: any
+  try { parsed = JSON.parse(rawBody) } catch { return { body: null, ok: false } }
 
-  const variants: Record<string, string> = {
-    'ts.body':    createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex'),
-    'body_only':  createHmac('sha256', secret).update(rawBody).digest('hex'),
-    'ts_body':    createHmac('sha256', secret).update(`${timestamp}${rawBody}`).digest('hex'),
-    'ts\nbody':   createHmac('sha256', secret).update(`${timestamp}\n${rawBody}`).digest('hex'),
-  }
-  for (const [name, val] of Object.entries(variants)) {
-    console.log(`[casso-webhook] try ${name}:`, val.slice(0, 16), received === val ? '✅ MATCH' : '')
-  }
+  const sorted = sortObjByKey(parsed)
+  const message = `${timestampStr}.${JSON.stringify(sorted)}`
+  const expected = createHmac('sha512', secret).update(message).digest('hex')
 
-  const ok = Object.values(variants).some(v => v === received)
-  return { rawBody, ok }
+  return { body: parsed, ok: expected === received }
 }
 
 export async function POST(req: NextRequest) {
@@ -45,16 +45,11 @@ export async function POST(req: NextRequest) {
   }
 
   // AC1 — Verify Casso Webhook V2 HMAC signature
-  const { rawBody, ok } = await verifyCassoSignature(req, process.env.CASSO_SECURE_TOKEN)
+  const { body, ok } = await verifyCassoSignature(req, process.env.CASSO_SECURE_TOKEN)
   if (!ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let body: any
-  try {
-    body = JSON.parse(rawBody)
-  } catch {
+  if (!body) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
   const tx = body?.data
