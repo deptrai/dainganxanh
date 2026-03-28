@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyPaymentSuccess } from '@/lib/utils/telegram'
+import { createHmac } from 'crypto'
 
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
+
+// Verify Casso Webhook V2 HMAC signature
+// Header format: x-casso-signature: t=<timestamp>,v1=<hmac-sha256>
+// Signed payload: `${timestamp}.${rawBody}`
+async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{ rawBody: string; ok: boolean }> {
+  const sig = req.headers.get('x-casso-signature') ?? ''
+  const rawBody = await req.text()
+
+  const tMatch = sig.match(/t=(\d+)/)
+  const v1Match = sig.match(/v1=([a-f0-9]+)/)
+  if (!tMatch || !v1Match) return { rawBody, ok: false }
+
+  const timestamp = tMatch[1]
+  const expected = createHmac('sha256', secret)
+    .update(`${timestamp}.${rawBody}`)
+    .digest('hex')
+
+  return { rawBody, ok: expected === v1Match[1] }
+}
 
 export async function POST(req: NextRequest) {
   // Guard: env var must be configured
@@ -11,22 +31,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
-  // DEBUG: log all headers to diagnose Casso Webhook V2 auth
-  const allHeaders: Record<string, string> = {}
-  req.headers.forEach((value, key) => { allHeaders[key] = value })
-  console.log('[casso-webhook] headers:', JSON.stringify(allHeaders))
-
-  // AC1 — Verify secure-token header
-  const token = req.headers.get('secure-token')
-  if (token !== process.env.CASSO_SECURE_TOKEN) {
-    console.log('[casso-webhook] token mismatch. received:', token, '| expected:', process.env.CASSO_SECURE_TOKEN?.slice(0, 8) + '...')
+  // AC1 — Verify Casso Webhook V2 HMAC signature
+  const { rawBody, ok } = await verifyCassoSignature(req, process.env.CASSO_SECURE_TOKEN)
+  if (!ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let body: any
   try {
-    body = await req.json()
+    body = JSON.parse(rawBody)
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
