@@ -21,12 +21,20 @@ async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{
   }
 
   const timestamp = tMatch[1]
-  const expected = createHmac('sha256', secret)
-    .update(`${timestamp}.${rawBody}`)
-    .digest('hex')
+  const received = v1Match[1]
 
-  console.log('[casso-webhook] expected:', expected.slice(0, 16), '| received:', v1Match[1].slice(0, 16))
-  return { rawBody, ok: expected === v1Match[1] }
+  const variants: Record<string, string> = {
+    'ts.body':    createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex'),
+    'body_only':  createHmac('sha256', secret).update(rawBody).digest('hex'),
+    'ts_body':    createHmac('sha256', secret).update(`${timestamp}${rawBody}`).digest('hex'),
+    'ts\nbody':   createHmac('sha256', secret).update(`${timestamp}\n${rawBody}`).digest('hex'),
+  }
+  for (const [name, val] of Object.entries(variants)) {
+    console.log(`[casso-webhook] try ${name}:`, val.slice(0, 16), received === val ? '✅ MATCH' : '')
+  }
+
+  const ok = Object.values(variants).some(v => v === received)
+  return { rawBody, ok }
 }
 
 export async function POST(req: NextRequest) {
