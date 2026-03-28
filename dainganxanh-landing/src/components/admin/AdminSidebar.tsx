@@ -11,10 +11,12 @@ import {
     RectangleGroupIcon,
     ArrowPathIcon,
     DocumentTextIcon,
+    UsersIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
     { name: 'Orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
+    { name: 'Người dùng', href: '/crm/admin/users', icon: UsersIcon },
     { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
     { name: 'Withdrawals', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
     { name: 'Casso Logs', href: '/crm/admin/casso', icon: ArrowPathIcon },

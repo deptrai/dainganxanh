@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { notifyNewOrder } from '@/lib/utils/telegram'
 
 interface PendingOrderRequest {
   code: string
@@ -70,6 +71,15 @@ export async function POST(req: NextRequest) {
       console.error('Failed to fetch order after upsert:', fetchError)
       return NextResponse.json({ error: 'Không thể lấy thông tin đơn hàng' }, { status: 500 })
     }
+
+    // Gửi thông báo Telegram khi có đơn hàng mới (non-blocking)
+    notifyNewOrder({
+      orderCode: data.code,
+      userName: body.user_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Khách hàng',
+      userEmail: body.user_email ?? user.email ?? '',
+      quantity: body.quantity,
+      totalAmount: body.total_amount,
+    }).catch((err) => console.error('[Telegram] notifyNewOrder failed:', err))
 
     return NextResponse.json({ orderId: data.id, orderCode: data.code })
   } catch (err) {

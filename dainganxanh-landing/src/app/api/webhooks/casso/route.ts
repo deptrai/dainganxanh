@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { notifyPaymentSuccess } from '@/lib/utils/telegram'
 
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
 
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
   }
 
   // AC6 — Invoke Edge Function process-payment
-  const { error: fnError } = await supabase.functions.invoke('process-payment', {
+  const { data: fnData, error: fnError } = await supabase.functions.invoke('process-payment', {
     body: {
       userId:        order.user_id,
       userEmail:     order.user_email,
@@ -136,6 +137,18 @@ export async function POST(req: NextRequest) {
       order_id: order.id,
     })
     .eq('casso_tid', String(tx.tid))
+
+  // Gửi thông báo Telegram khi thanh toán thành công (non-blocking)
+  if (!fnError) {
+    notifyPaymentSuccess({
+      orderCode:   order.code,
+      userName:    order.user_name,
+      userEmail:   order.user_email,
+      quantity:    order.quantity,
+      totalAmount: order.total_amount,
+      treeCodes:   fnData?.treeCodes,
+    }).catch((err) => console.error('[Telegram] notifyPaymentSuccess failed:', err))
+  }
 
   // AC7 — Luôn trả 200 (kể cả function_error) để Casso không retry
   return NextResponse.json({ ok: true })
