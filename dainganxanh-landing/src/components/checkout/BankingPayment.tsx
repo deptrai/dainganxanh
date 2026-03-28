@@ -44,17 +44,16 @@ export function BankingPayment({ orderCode, amount }: BankingPaymentProps) {
                 if (!user) return;
 
                 const userName = user.user_metadata?.full_name || user.email?.split("@")[0];
-                const refCookie = Cookies.get("ref");
+                const DEFAULT_REF_CODE = "DNG895075";
+                const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
                 let referredBy = null;
 
-                if (refCookie) {
-                    const { data: referrer } = await supabase
-                        .from("users")
-                        .select("id")
-                        .eq("referral_code", refCookie)
-                        .single();
-                    if (referrer) referredBy = referrer.id;
-                }
+                const { data: referrer } = await supabase
+                    .from("users")
+                    .select("id")
+                    .eq("referral_code", refCookie)
+                    .single();
+                if (referrer) referredBy = referrer.id;
 
                 await fetch("/api/orders/pending", {
                     method: "POST",

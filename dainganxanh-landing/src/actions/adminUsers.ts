@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { notifyReferralAssigned } from '@/lib/utils/telegram'
 
 export interface AdminUser {
     id: string
@@ -136,3 +137,113 @@ export async function updateUserRole(
     if (error) return { error: error.message }
     return {}
 }
+
+export interface AssignReferralResult {
+    error?: string
+    retroOrders?: number
+    retroCommission?: number
+}
+
+/**
+ * Admin: Gán mã giới thiệu cho user chưa có, đồng thời cộng hoa hồng hồi tố
+ * cho tất cả đơn hàng completed/assigned trước đây chưa có referred_by.
+ */
+export async function assignUserReferral(
+    targetUserId: string,
+    refCode: string
+): Promise<AssignReferralResult> {
+    const supabase = await createServerClient()
+    const serviceSupabase = createServiceRoleClient()
+
+    // Auth + role check
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) return { error: 'Unauthorized' }
+
+    const { data: adminProfile } = await supabase
+        .from('users')
+        .select('role, email, full_name')
+        .eq('id', user.id)
+        .single()
+
+    if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
+        return { error: 'Unauthorized: admin role required' }
+    }
+
+    // Find referrer by refCode
+    const { data: referrer, error: referrerError } = await serviceSupabase
+        .from('users')
+        .select('id, email, full_name, referral_code')
+        .eq('referral_code', refCode.trim().toUpperCase())
+        .single()
+
+    if (referrerError || !referrer) {
+        return { error: `Không tìm thấy mã giới thiệu: ${refCode}` }
+    }
+
+    // Prevent self-referral
+    if (referrer.id === targetUserId) {
+        return { error: 'Không thể tự giới thiệu bản thân' }
+    }
+
+    // Get target user info
+    const { data: targetUser } = await serviceSupabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', targetUserId)
+        .single()
+
+    // Find all past orders without referred_by
+    const { data: pastOrders, error: ordersError } = await serviceSupabase
+        .from('orders')
+        .select('id, code, total_amount, status')
+        .eq('user_id', targetUserId)
+        .is('referred_by', null)
+        .in('status', ['completed', 'assigned'])
+
+    if (ordersError) return { error: ordersError.message }
+
+    const retroOrders = pastOrders?.length || 0
+    let retroCommission = 0
+
+    // Retroactively update all past orders + create referral_clicks records
+    if (retroOrders > 0) {
+        // Update orders.referred_by
+        const { error: updateOrdersError } = await serviceSupabase
+            .from('orders')
+            .update({ referred_by: referrer.id })
+            .in('id', pastOrders!.map((o) => o.id))
+
+        if (updateOrdersError) return { error: updateOrdersError.message }
+
+        // Calculate retroactive commission (10%)
+        retroCommission = pastOrders!.reduce((sum, o) => {
+            return sum + Math.round(Number(o.total_amount) * 0.1)
+        }, 0)
+
+        // Create referral_clicks records for each converted order
+        const clickRecords = pastOrders!.map((o) => ({
+            referrer_id: referrer.id,
+            ip_hash: `retro-admin-${o.id}`,
+            user_agent: `[Admin retroactive] assigned by ${adminProfile.email || user.id}`,
+            converted: true,
+            order_id: o.id,
+        }))
+
+        await serviceSupabase.from('referral_clicks').insert(clickRecords)
+    }
+
+    // Send Telegram notification (non-blocking)
+    notifyReferralAssigned({
+        targetEmail: targetUser?.email || targetUserId,
+        targetName: targetUser?.full_name,
+        referrerEmail: referrer.email,
+        referrerName: referrer.full_name,
+        refCode: referrer.referral_code,
+        retroOrders,
+        retroCommission,
+        adminEmail: adminProfile.email || user.id,
+    }).catch((err) => console.error('[Telegram] notifyReferralAssigned failed:', err))
+
+    return { retroOrders, retroCommission }
+}
+

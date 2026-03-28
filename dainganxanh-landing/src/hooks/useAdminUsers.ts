@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { fetchAdminUsers, updateUserRole, AdminUser, UserFilters } from '@/actions/adminUsers'
+import { fetchAdminUsers, updateUserRole, assignUserReferral, AdminUser, UserFilters } from '@/actions/adminUsers'
 
 const PAGE_SIZE = 20
 
@@ -52,7 +52,16 @@ export function useAdminUsers() {
         return {}
     }
 
+    const assignReferral = async (userId: string, refCode: string) => {
+        const result = await assignUserReferral(userId, refCode)
+        if (!result.error) {
+            // Refresh to reflect any changes
+            loadUsers(filters, pagination.page)
+        }
+        return result
+    }
+
     const refetch = () => loadUsers(filters, pagination.page)
 
-    return { users, loading, error, filters, setFilters, pagination, setPage, changeRole, updatingId, refetch }
+    return { users, loading, error, filters, setFilters, pagination, setPage, changeRole, updatingId, assignReferral, refetch }
 }

@@ -78,3 +78,29 @@ export async function notifyPaymentSuccess(params: {
 
   await sendTelegramMessage(message)
 }
+
+export async function notifyReferralAssigned(params: {
+  targetEmail: string
+  targetName?: string | null
+  referrerEmail: string | null
+  referrerName?: string | null
+  refCode: string
+  retroOrders: number
+  retroCommission: number
+  adminEmail: string
+}): Promise<void> {
+  const retroInfo = params.retroOrders > 0
+    ? `\n💸 Hoa hồng hồi tố: <b>${formatVND(params.retroCommission)}</b> (${params.retroOrders} đơn cũ)`
+    : `\n📭 Không có đơn hàng cũ nào`
+
+  const message =
+    `🤝 <b>Admin gán mã giới thiệu!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 User: ${params.targetName || params.targetEmail}\n` +
+    `📧 Email: ${params.targetEmail}\n` +
+    `🎁 Người giới thiệu: ${params.referrerName || params.referrerEmail}\n` +
+    `🔑 Mã: <code>${params.refCode}</code>${retroInfo}\n` +
+    `👨‍💼 Admin thực hiện: ${params.adminEmail}`
+
+  await sendTelegramMessage(message)
+}

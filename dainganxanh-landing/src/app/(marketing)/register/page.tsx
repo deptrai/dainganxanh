@@ -1,19 +1,24 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Shield } from "lucide-react";
+import { ArrowLeft, Shield, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
+import Cookies from "js-cookie";
+
+const DEFAULT_REF = "DNG895075";
 
 function RegisterContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
+    const [refInput, setRefInput] = useState("");
+    const [hasRefCookie, setHasRefCookie] = useState(false);
 
     const {
         mode,
@@ -30,6 +35,12 @@ function RegisterContent() {
         resendOTP,
     } = useAuth();
 
+    // Check if ref cookie already exists (from visiting via referral link)
+    useEffect(() => {
+        const existing = Cookies.get("ref");
+        if (existing) setHasRefCookie(true);
+    }, []);
+
     // Auto-redirect if already logged in
     useEffect(() => {
         const checkSession = async () => {
@@ -44,11 +55,18 @@ function RegisterContent() {
 
     const handleVerifyComplete = async (code: string) => {
         try {
+            // Save referral code as cookie before verifying (will be used at checkout)
+            const refToUse = refInput.trim().toUpperCase() || DEFAULT_REF;
+            Cookies.set("ref", refToUse, {
+                expires: 30,
+                path: "/",
+                sameSite: "lax",
+                secure: window.location.protocol === "https:",
+            });
+
             await verifyOTP(code);
-            // Redirect to checkout with quantity
             router.push(`/checkout?quantity=${quantity}`);
         } catch (err) {
-            // Error handled by useAuth
             console.error("Verification failed:", err);
         }
     };
@@ -95,15 +113,42 @@ function RegisterContent() {
                     className="bg-white rounded-2xl p-8 shadow-xl border border-emerald-100"
                 >
                     {step === "input" ? (
-                        <PhoneEmailInput
-                            mode={mode}
-                            value={identifier}
-                            onChange={setIdentifier}
-                            onModeChange={setMode}
-                            onSubmit={sendOTP}
-                            loading={loading}
-                            error={error}
-                        />
+                        <>
+                            <PhoneEmailInput
+                                mode={mode}
+                                value={identifier}
+                                onChange={setIdentifier}
+                                onModeChange={setMode}
+                                onSubmit={sendOTP}
+                                loading={loading}
+                                error={error}
+                            />
+
+                            {/* Referral code input - only show if no ref cookie yet */}
+                            {!hasRefCookie && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    className="mt-4 pt-4 border-t border-gray-100"
+                                >
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <Gift className="inline w-4 h-4 mr-1 text-emerald-500" />
+                                        Mã giới thiệu <span className="text-gray-400 font-normal">(không bắt buộc)</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={refInput}
+                                        onChange={(e) => setRefInput(e.target.value.toUpperCase())}
+                                        placeholder="VD: DNG895075"
+                                        maxLength={12}
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Nhập mã nếu bạn được ai đó giới thiệu
+                                    </p>
+                                </motion.div>
+                            )}
+                        </>
                     ) : (
                         <OTPInput
                             onComplete={handleVerifyComplete}
