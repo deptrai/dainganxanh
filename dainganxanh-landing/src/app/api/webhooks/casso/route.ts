@@ -11,9 +11,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
+  // DEBUG: log all headers to diagnose Casso Webhook V2 auth
+  const allHeaders: Record<string, string> = {}
+  req.headers.forEach((value, key) => { allHeaders[key] = value })
+  console.log('[casso-webhook] headers:', JSON.stringify(allHeaders))
+
   // AC1 — Verify secure-token header
   const token = req.headers.get('secure-token')
   if (token !== process.env.CASSO_SECURE_TOKEN) {
+    console.log('[casso-webhook] token mismatch. received:', token, '| expected:', process.env.CASSO_SECURE_TOKEN?.slice(0, 8) + '...')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
