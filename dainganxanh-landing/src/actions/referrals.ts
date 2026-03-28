@@ -108,19 +108,7 @@ export async function getReferralStats(userId: string) {
             return null
         }
 
-        // Get conversions count
-        const { count: conversions, error: conversionsError } = await supabase
-            .from('referral_clicks')
-            .select('*', { count: 'exact', head: true })
-            .eq('referrer_id', userId)
-            .eq('converted', true)
-
-        if (conversionsError) {
-            console.error('Error getting conversions count:', conversionsError)
-            return null
-        }
-
-        // Get total commission from converted orders
+        // Get conversions + commission from orders directly (source of truth)
         const { data: convertedOrders, error: ordersError } = await supabase
             .from('orders')
             .select('total_amount')
@@ -132,6 +120,8 @@ export async function getReferralStats(userId: string) {
             return null
         }
 
+        const conversions = convertedOrders?.length || 0
+
         // Calculate total commission
         const totalCommission = await convertedOrders?.reduce(async (sumPromise, order) => {
             const sum = await sumPromise
@@ -140,12 +130,12 @@ export async function getReferralStats(userId: string) {
 
         // Calculate conversion rate
         const conversionRate = totalClicks && totalClicks > 0
-            ? Math.round((conversions || 0) / totalClicks * 100)
+            ? Math.round(conversions / totalClicks * 100)
             : 0
 
         return {
             totalClicks: totalClicks || 0,
-            conversions: conversions || 0,
+            conversions,
             commission: totalCommission,
             conversionRate,
         }
@@ -170,20 +160,12 @@ export async function getReferralConversions(userId: string) {
             return []
         }
 
-        const { data: conversions, error } = await supabase
-            .from('referral_clicks')
-            .select(`
-                id,
-                created_at,
-                order_id,
-                orders!inner (
-                    code,
-                    total_amount,
-                    created_at
-                )
-            `)
-            .eq('referrer_id', userId)
-            .eq('converted', true)
+        // Query orders directly using referred_by (works regardless of referral_clicks)
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select('id, code, total_amount, created_at, user_id, user_email, user_name')
+            .eq('referred_by', userId)
+            .eq('status', 'completed')
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -191,32 +173,17 @@ export async function getReferralConversions(userId: string) {
             return []
         }
 
-        interface ConversionRecord {
-            id: string
-            created_at: string
-            order_id: string | null
-            orders: {
-                code: string
-                total_amount: number
-                created_at: string
-                users: {
-                    email: string
-                    full_name: string
-                } | null
-            } | null
-        }
-
-        // Calculate commission for each conversion
-        return await Promise.all((conversions as ConversionRecord[])?.map(async (conv) => ({
-            id: conv.id,
-            clickedAt: conv.created_at,
-            orderCode: conv.orders?.code,
-            orderAmount: Number(conv.orders?.total_amount || 0),
-            commission: await calculateCommission(Number(conv.orders?.total_amount || 0)),
-            orderDate: conv.orders?.created_at,
-            customerEmail: conv.orders?.users?.email,
-            customerName: conv.orders?.users?.full_name,
-        })) || [])
+        // Calculate commission for each order
+        return await Promise.all((orders || []).map(async (order) => ({
+            id: order.id,
+            clickedAt: order.created_at,
+            orderCode: order.code,
+            orderAmount: Number(order.total_amount || 0),
+            commission: await calculateCommission(Number(order.total_amount || 0)),
+            orderDate: order.created_at,
+            customerEmail: order.user_email,
+            customerName: order.user_name,
+        })))
     } catch (error) {
         console.error('Error in getReferralConversions:', error)
         return []

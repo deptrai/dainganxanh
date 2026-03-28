@@ -20,7 +20,6 @@ export async function fetchAdminOrders(
     page: number,
     pageSize: number
 ): Promise<FetchOrdersResult> {
-    const supabase = await createServerClient()
     const serviceSupabase = createServiceRoleClient()
 
     try {
@@ -37,8 +36,8 @@ export async function fetchAdminOrders(
             }
         }
 
-        // Count query
-        let countQuery = supabase
+        // Count query — use service role to bypass RLS (admin sees all orders)
+        let countQuery = serviceSupabase
             .from('orders')
             .select('id', { count: 'exact', head: true })
 
@@ -65,8 +64,8 @@ export async function fetchAdminOrders(
         const { count } = await countQuery
         const totalCount = count || 0
 
-        // Data query
-        let query = supabase
+        // Data query — use service role to bypass RLS (admin sees all orders)
+        let query = serviceSupabase
             .from('orders')
             .select('*')
             .order('created_at', { ascending: false })

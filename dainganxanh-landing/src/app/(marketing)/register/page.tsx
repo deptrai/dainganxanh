@@ -56,7 +56,9 @@ function RegisterContent() {
     const handleVerifyComplete = async (code: string) => {
         try {
             // Save referral code as cookie before verifying (will be used at checkout)
-            const refToUse = refInput.trim().toUpperCase() || DEFAULT_REF;
+            // Preserve existing cookie (set by referral link) — only fallback to input or default if none
+            const existingRef = Cookies.get("ref");
+            const refToUse = existingRef || refInput.trim().toUpperCase() || DEFAULT_REF;
             Cookies.set("ref", refToUse, {
                 expires: 30,
                 path: "/",
