@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import { manualProcessTransaction } from '@/actions/casso'
+import { manualProcessTransaction, syncCassoTransactions, type SyncResult } from '@/actions/casso'
 import type { CassoTransaction } from './page'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -116,6 +116,46 @@ function ManualProcessForm({
     )
 }
 
+function SyncButton({ onDone }: { onDone: () => void }) {
+    const [isPending, startTransition] = useTransition()
+    const [result, setResult] = useState<SyncResult | null>(null)
+
+    const handleSync = () => {
+        setResult(null)
+        startTransition(async () => {
+            const res = await syncCassoTransactions()
+            setResult(res)
+            if (res.success) onDone()
+        })
+    }
+
+    return (
+        <div className="flex flex-col items-end gap-1">
+            <button
+                onClick={handleSync}
+                disabled={isPending}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+                <svg
+                    className={`w-4 h-4 ${isPending ? 'animate-spin' : ''}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {isPending ? 'Đang đồng bộ...' : 'Đồng bộ 1 ngày qua'}
+            </button>
+            {result && (
+                <p className={`text-xs ${result.success ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {result.success
+                        ? `✓ Import: ${result.imported} | Khớp: ${result.matched} | Bỏ qua: ${result.skipped}`
+                        : `✗ ${result.error}`}
+                </p>
+            )}
+        </div>
+    )
+}
+
 interface Props {
     transactions: CassoTransaction[]
     totalCount: number
@@ -167,8 +207,8 @@ export default function CassoTransactionTable({
 
     return (
         <div className="space-y-4">
-            {/* Filters */}
-            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-4 items-end">
+            {/* Filters + Sync */}
+            <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-4 items-end justify-between">
                 <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                         Trạng thái
@@ -225,6 +265,8 @@ export default function CassoTransactionTable({
                         Xóa bộ lọc
                     </button>
                 )}
+
+                <SyncButton onDone={() => router.refresh()} />
             </div>
 
             {/* Table */}
