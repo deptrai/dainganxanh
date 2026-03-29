@@ -365,6 +365,25 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Disable JWT verification for local edge functions (ES256 JWTs not supported by CLI 2.75 runtime)
+[functions.process-payment]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.send-tree-assignment-email]
+verify_jwt = false
+
+[functions.send-withdrawal-email]
+verify_jwt = false
+
+[functions.send-quarterly-update]
+verify_jwt = false
+
+[functions.cleanup-pending-orders]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54337

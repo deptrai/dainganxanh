@@ -1,20 +1,123 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, LogIn } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowLeft, LogIn, Gift } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
+import Cookies from "js-cookie";
+
+const DEFAULT_REF = "DNG895075";
+const DEFAULT_REF_OWNER = "Nguyễn Phương Hoàng";
+
+function RefCodeModal({ onDone }: { onDone: () => void }) {
+    const [refInput, setRefInput] = useState("");
+    const [refError, setRefError] = useState("");
+
+    const handleSubmit = () => {
+        const code = refInput.trim().toUpperCase();
+        if (!code) {
+            setRefError("Vui lòng nhập mã giới thiệu");
+            return;
+        }
+        Cookies.set("ref", code, {
+            expires: 30,
+            path: "/",
+            sameSite: "lax",
+            secure: window.location.protocol === "https:",
+        });
+        onDone();
+    };
+
+    const handleSkip = () => {
+        // Use default if skipped
+        Cookies.set("ref", DEFAULT_REF, {
+            expires: 30,
+            path: "/",
+            sameSite: "lax",
+            secure: window.location.protocol === "https:",
+        });
+        onDone();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6"
+            >
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <Gift className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-900">Nhập mã giới thiệu</h2>
+                        <p className="text-xs text-gray-500">Ai đã giới thiệu bạn đến Đại Ngàn Xanh?</p>
+                    </div>
+                </div>
+
+                <input
+                    type="text"
+                    value={refInput}
+                    onChange={(e) => {
+                        setRefInput(e.target.value.toUpperCase());
+                        if (refError) setRefError("");
+                    }}
+                    placeholder="VD: DNG895075"
+                    maxLength={12}
+                    autoFocus
+                    className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                        refError ? "border-red-400 bg-red-50" : "border-gray-300"
+                    }`}
+                />
+                {refError && <p className="mt-1 text-xs text-red-600">{refError}</p>}
+
+                {/* Hint */}
+                <p className="mt-2 text-xs text-gray-500">
+                    Chưa có mã? Dùng mã của{" "}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setRefInput(DEFAULT_REF);
+                            setRefError("");
+                        }}
+                        className="text-emerald-600 font-semibold hover:underline focus:outline-none"
+                    >
+                        {DEFAULT_REF_OWNER} ({DEFAULT_REF})
+                    </button>
+                </p>
+
+                <div className="mt-5 flex gap-3">
+                    <button
+                        onClick={handleSkip}
+                        className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                        Bỏ qua
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                    >
+                        Xác nhận
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
 
 function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
     const redirectTo = searchParams.get("redirect") || `/checkout?quantity=${quantity}`;
+    const [showRefModal, setShowRefModal] = useState(false);
 
     const {
         mode,
@@ -31,13 +134,17 @@ function LoginContent() {
         resendOTP,
     } = useAuth();
 
-    // Auto-redirect if already logged in
+    // Auto-redirect if already logged in — but check ref cookie first
     useEffect(() => {
         const checkSession = async () => {
             const supabase = createBrowserClient();
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                window.location.href = redirectTo;
+                if (!Cookies.get("ref")) {
+                    setShowRefModal(true);
+                } else {
+                    window.location.href = redirectTo;
+                }
             }
         };
         checkSession();
@@ -46,17 +153,27 @@ function LoginContent() {
     const handleVerifyComplete = async (code: string) => {
         try {
             await verifyOTP(code);
-            // Use window.location.href instead of router.push() to force hard redirect
-            // This ensures cookies are properly synced for server-side session validation
-            window.location.href = redirectTo;
+            // After login, check if ref cookie exists
+            if (!Cookies.get("ref")) {
+                setShowRefModal(true);
+            } else {
+                window.location.href = redirectTo;
+            }
         } catch (err) {
-            // Error handled by useAuth
             console.error("Verification failed:", err);
         }
     };
 
+    const handleRefDone = () => {
+        setShowRefModal(false);
+        window.location.href = redirectTo;
+    };
+
     return (
         <div>
+            <AnimatePresence>
+                {showRefModal && <RefCodeModal onDone={handleRefDone} />}
+            </AnimatePresence>
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-8 max-w-md">
@@ -128,7 +245,6 @@ function LoginContent() {
                     transition={{ delay: 0.2 }}
                     className="mt-8 space-y-4"
                 >
-                    {/* Security Note */}
                     <div className="text-center text-sm text-gray-600">
                         <p>🔒 Thông tin của bạn được bảo mật tuyệt đối</p>
                         <p className="mt-1">Mã OTP có hiệu lực trong 5 phút</p>
