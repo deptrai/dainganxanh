@@ -1,16 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { Resend } from 'npm:resend@2.0.0'
+import { sendEmail } from '../_shared/mailer.ts'
 
 // Environment validation
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@dainganxanh.com.vn'
 const BASE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://dainganxanh.com.vn'
-
-if (!RESEND_API_KEY) {
-  console.error('RESEND_API_KEY is not configured')
-}
-
-const resend = new Resend(RESEND_API_KEY)
 
 interface QuarterlyUpdateRequest {
   userEmail: string
@@ -89,22 +81,15 @@ serve(async (req) => {
 </body>
 </html>`
 
-    // Send email via Resend
-    const { data, error } = await resend.emails.send({
-      from: `Đại Ngàn Xanh <${RESEND_FROM_EMAIL}>`,
-      to: [payload.userEmail],
+    await sendEmail({
+      to: payload.userEmail,
       subject: `🌳 Cây của bạn có ảnh mới tại lô ${payload.lotName}!`,
       html: emailTemplate,
     })
 
-    if (error) {
-      throw new Error(`Resend error: ${error.message}`)
-    }
-
     return new Response(
       JSON.stringify({
         success: true,
-        emailId: data?.id,
         message: 'Quarterly update email sent successfully',
       }),
       {

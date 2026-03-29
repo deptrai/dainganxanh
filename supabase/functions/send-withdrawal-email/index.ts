@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { Resend } from 'npm:resend@2.0.0'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+import { sendEmail } from '../_shared/mailer.ts'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -164,35 +162,23 @@ serve(async (req) => {
                 break
         }
 
-        const { data, error } = await resend.emails.send({
-            from: `Đại Ngàn Xanh <${Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@dainganxanh.com'}>`,
-            to: [payload.to],
+        await sendEmail({
+            to: payload.to,
             subject: subject,
             html: htmlContent,
         })
 
-        if (error) {
-            throw new Error(`Resend error: ${error.message}`)
-        }
-
-        // Log to email_logs table just like the other function
-        // Note: Using 'withdrawal_status' as email_type or generic 'notification'
-        // We'll trust the existing schema allows flexible types or we use a standard one.
-        // Let's assume 'system_notification' or similar if strictly typed, but for now 'withdrawal_notification'
         await supabase.from('email_logs').insert({
-            // order_id is required (NOT NULL) but has no FK, so we store withdrawalId there
             order_id: payload.withdrawalId,
             email_type: 'withdrawal_notification',
             recipient: payload.to,
             status: 'sent',
-            resend_id: data?.id,
             sent_at: new Date().toISOString()
         })
 
         return new Response(
             JSON.stringify({
                 success: true,
-                emailId: data?.id
             }),
             {
                 headers: {

@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { Resend } from 'npm:resend@2.0.0'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+import { sendEmail } from '../_shared/mailer.ts'
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -117,21 +115,16 @@ serve(async (req) => {
         const pdfBuffer = await pdfData.arrayBuffer()
         const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)))
 
-        // Send email via Resend
-        const { data, error } = await resend.emails.send({
-            from: `Đại Ngàn Xanh <${Deno.env.get('RESEND_FROM_EMAIL')}>`,
-            to: [payload.userEmail],
+        await sendEmail({
+            to: payload.userEmail,
             subject: `🌳 Xác nhận đơn hàng ${payload.orderCode}`,
             html: emailHtml,
             attachments: [{
                 filename: `contract-${payload.orderCode}.pdf`,
                 content: pdfBase64,
+                contentType: 'application/pdf',
             }],
         })
-
-        if (error) {
-            throw new Error(`Resend error: ${error.message}`)
-        }
 
         // Log email status
         await supabase.from('email_logs').insert({
@@ -139,14 +132,12 @@ serve(async (req) => {
             email_type: 'order_confirmation',
             recipient: payload.userEmail,
             status: 'sent',
-            resend_id: data?.id,
             sent_at: new Date().toISOString(),
         })
 
         return new Response(
             JSON.stringify({
                 success: true,
-                emailId: data?.id,
                 message: 'Email sent successfully'
             }),
             {

@@ -1,20 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend@2.0.0'
+import { sendEmail } from '../_shared/mailer.ts'
 
 // Environment validation
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@dainganxanh.com.vn'
 const BASE_URL = Deno.env.get('NEXT_PUBLIC_BASE_URL') || 'https://dainganxanh.com.vn'
 
-if (!RESEND_API_KEY) {
-    console.error('RESEND_API_KEY is not configured')
-}
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-const resend = new Resend(RESEND_API_KEY)
 
 interface ChecklistItem {
     id: string
@@ -194,20 +187,13 @@ serve(async (req) => {
             // Send email to all admins
             for (const admin of admins) {
                 try {
-                    const { data, error } = await resend.emails.send({
-                        from: `Đại Ngàn Xanh <${RESEND_FROM_EMAIL}>`,
-                        to: [admin.email],
+                    await sendEmail({
+                        to: admin.email,
                         subject: `🔔 Nhắc nhở: Checklist lô ${lot.name} sắp đến hạn (${checklist.quarter})`,
                         html: emailHtml,
                     })
-
-                    if (error) {
-                        console.error(`❌ Failed to send email to ${admin.email}:`, error)
-                        results.push({ admin: admin.email, success: false, error: error.message })
-                    } else {
-                        console.log(`✅ Email sent to ${admin.email}`)
-                        results.push({ admin: admin.email, success: true, emailId: data?.id })
-                    }
+                    console.log(`✅ Email sent to ${admin.email}`)
+                    results.push({ admin: admin.email, success: true })
                 } catch (error) {
                     console.error(`❌ Error sending email to ${admin.email}:`, error)
                     results.push({

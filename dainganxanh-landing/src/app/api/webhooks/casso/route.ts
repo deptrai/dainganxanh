@@ -45,8 +45,25 @@ export async function POST(req: NextRequest) {
   }
 
   // AC1 — Verify Casso Webhook V2 HMAC signature
+  const sig = req.headers.get('x-casso-signature') ?? '(none)'
   const { body, ok } = await verifyCassoSignature(req, process.env.CASSO_SECURE_TOKEN)
   if (!ok) {
+    console.error('[Casso] HMAC verification failed', {
+      sig,
+      contentType: req.headers.get('content-type'),
+      bodyPreview: typeof body === 'object' ? JSON.stringify(body)?.slice(0, 200) : body,
+    })
+    // Log failed attempt to DB for visibility
+    try {
+      const supabase = createServiceRoleClient()
+      await supabase.from('casso_transactions').insert({
+        casso_tid: `hmac_fail_${Date.now()}`,
+        amount: 0,
+        description: `HMAC fail — sig: ${sig.slice(0, 80)}`,
+        status: 'hmac_failed',
+        raw_payload: { sig, body },
+      })
+    } catch { /* best-effort */ }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!body) {
