@@ -98,13 +98,18 @@ flowchart TD
     ValidateAmt -->|Lech nhieu| Mismatch[Update: amount_mismatch]
     Mismatch --> Return200
 
-    ValidateAmt -->|Khop| InvokeFn[Invoke Edge Function<br>process-payment]
+    ValidateAmt -->|Khop| InvokeFn[Invoke Edge Function<br>process-payment<br>timeout: 55s]
     InvokeFn --> GenTrees[Insert trees vao DB<br>Update order: completed]
-    GenTrees --> GenContract[generate-contract PDF]
-    GenContract --> SendEmail[send-email<br>Xac nhan don + PDF]
+    GenTrees --> GenContract[EF generate-contract timeout 50s<br>→ POST /api/contracts/generate<br>LibreOffice headless DOCX to PDF<br>timeout 45s SIGKILL]
+
+    GenContract -->|Thanh cong| SendEmail[send-email<br>Xac nhan don + PDF dinh kem]
     SendEmail --> UpdateLog[Update casso_transactions<br>status: processed]
-    UpdateLog --> TelegramNotify[notifyPaymentSuccess<br>Telegram admin group]
-    TelegramNotify --> Return200[Return 200 OK]
+    UpdateLog --> TelegramSuccess[notifyPaymentSuccess<br>Telegram admin group]
+    TelegramSuccess --> Return200[Return 200 OK]
+
+    GenContract -->|Loi hoac timeout| ContractFail[notifyContractFailure<br>Telegram admin group<br>Admin xu ly thu cong]
+    ContractFail --> ThrowErr[Throw error<br>Payment fail - Update: function_error]
+    ThrowErr --> Return200
 
     InvokeFn -->|Error| FnError[Update: function_error]
     FnError --> Return200
@@ -331,6 +336,8 @@ flowchart LR
     EV7 --> T5([Telegram<br>notifyReferralAssigned<br>Admin gan ma gioi thieu])
 
     EV8 --> E6([Email to User<br>send-quarterly-update<br>Bao cao quy: anh + so lieu])
+
+    EV9[9 - Tao hop dong PDF that bai] --> T6([Telegram<br>notifyContractFailure<br>Admin xu ly thu cong + gui lai])
 ```
 
 **Tóm tắt:**
@@ -345,6 +352,7 @@ flowchart LR
 | Admin từ chối rút tiền | — | ✅ send-withdrawal-email | — |
 | Admin gán mã giới thiệu | ✅ notifyReferralAssigned | — | — |
 | Upload ảnh quý | — | ✅ send-quarterly-update | — |
+| Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — |
 
 ---
 
@@ -366,14 +374,17 @@ flowchart LR
 
 **Impersonation:** Admin có thể impersonate user để hỗ trợ trực tiếp (xem qua `getImpersonationContext()`).
 
+**Contract Generation:** DOCX template → LibreOffice headless DOCX→PDF (Alpine: `font-noto font-noto-extra`). Timeout chain: LibreOffice 45s SIGKILL < EF generate-contract 50s < EF process-payment 55s. Nếu thất bại → Telegram admin alert + payment fail (admin xử lý thủ công và gửi lại hợp đồng).
+
 **Scheduled Jobs:**
 - `cleanup-pending-orders` — hourly, xóa pending orders quá 24h
 - `checklist-reminder` — quarterly, nhắc đội field
 - `send-quarterly-update` — quarterly, gửi báo cáo cho users
+- `profile-backfill` — hourly, tạo profiles cho auth users bị thiếu (pg_cron)
 
 **Environment Variables:**
 - `CASSO_SECURE_TOKEN` — verify Casso webhook HMAC-SHA512
 - `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — admin notifications
 - `RESEND_API_KEY` — email production (Mailpit khi `SMTP_HOST=inbucket`)
 - `SUPABASE_SERVICE_ROLE_KEY` — bypass RLS
-- `CONTRACT_API_SECRET` — bảo vệ contract generation endpoint
+- `CONTRACT_API_SECRET` — bảo vệ contract generation endpoint (`/api/contracts/generate`)

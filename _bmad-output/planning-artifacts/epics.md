@@ -1104,13 +1104,17 @@ _Stories bổ sung vào Epic 3 sau MVP_
 **And** lưu URL vào `orders.contract_url`
 
 **Technical Notes:**
-- Chuẩn bị template: thay dấu `. . . . .` bằng `{placeholder}` trong DOCX
+- Chuẩn bị template: thay dấu `. . . . .` bằng `{{placeholder}}` trong DOCX
 - npm packages: `docx-templates` (fill template), `pdf-lib` (overlay signature)
-- DOCX → PDF: ConvertAPI (250 free conversions/month) hoặc CloudConvert
-- Ảnh chữ ký + con dấu: scan → PNG, lưu trong Supabase Storage
-- API route: `/api/contracts/generate` hoặc Supabase Edge Function upgrade
-- Thay thế logic PDF generation cơ bản hiện tại trong `generate-contract` Edge Function
+- DOCX → PDF: **LibreOffice headless** (`soffice --headless --convert-to pdf`) — free, offline, no API key
+  - macOS: `/Applications/LibreOffice.app/Contents/MacOS/soffice`
+  - Linux/Docker: `apk add libreoffice font-noto font-noto-extra` (Alpine)
+  - Override via env: `SOFFICE_BIN`
+- Ảnh chữ ký + con dấu: scan → PNG, lưu trong `/templates/` folder
+- API route: `/api/contracts/generate` (Next.js, Node.js trên Dokploy)
+- `generate-contract` Edge Function delegate sang API route — không tự xử lý PDF
 
+**Status:** ✅ Done (2026-03-29, review complete)
 **Story Points:** 8
 **Dependencies:** Story 10.1 (customer data), DOCX template chuẩn bị sẵn
 **FRs:** FR-33
@@ -1127,25 +1131,28 @@ _Stories bổ sung vào Epic 3 sau MVP_
 
 **Given** Casso webhook xác nhận thanh toán thành công
 **When** `process-payment` Edge Function chạy
-**Then** trigger contract generation pipeline (Story 10.2)
-**And** gửi email kèm PDF attachment qua Resend (reuse `send-email` Edge Function)
+**Then** trigger `generate-contract` Edge Function (delegate sang `/api/contracts/generate`)
+**And** `generate-contract` fill DOCX → LibreOffice → PDF → upload Storage → update DB
+**And** gửi email kèm PDF attachment qua Resend (`send-email` Edge Function)
 **And** email subject: "Hợp đồng dịch vụ nông lâm nghiệp - {order_code}"
-**And** nếu generation fail → log error, gửi email thông báo không kèm contract, admin nhận Telegram alert
+**And** nếu generation fail → payment fail + gửi Telegram alert cho admin để xử lý thủ công
 
 **Technical Notes:**
-- Hook vào flow hiện tại: Casso webhook → `process-payment` → generate contract → send email
-- Reuse `send-email` Edge Function (đã có attachment support)
-- Fallback: nếu contract generation fail, payment vẫn thành công, contract gửi sau
-- Admin có thể resend contract qua `resendContract()` (Story 3.3 đã có)
-- Telegram notification cho admin khi contract generation fail
+- Flow: Casso → `/api/webhooks/casso` → `process-payment` EF → `generate-contract` EF → `/api/contracts/generate` (Next.js) → `send-email` EF
+- Contract là bắt buộc — nếu fail thì payment fail (không có fallback)
+- Admin nhận Telegram alert với orderCode + lỗi để xử lý thủ công và resend
+- Timeout chain (giảm dần từ ngoài vào): process-payment 55s → generate-contract EF 50s → LibreOffice 45s
+- LibreOffice profile isolation: `-env:UserInstallation=file://tmpDir` per request
+- Supabase secrets cần: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `CONTRACT_API_SECRET`, `NEXT_PUBLIC_BASE_URL`
 
+**Status:** ✅ Done (2026-03-29, review complete)
 **Story Points:** 5
 **Dependencies:** Story 10.2, Story 5.2 (Casso webhook), Story 1.8 (email flow)
 **FRs:** FR-33
 
 ---
 
-## Summary Statistics (Updated 2026-03-28)
+## Summary Statistics (Updated 2026-03-29)
 
 | Metric | Value |
 |--------|-------|
@@ -1173,4 +1180,4 @@ _Stories bổ sung vào Epic 3 sau MVP_
 | Epic 7: Blog | 2 | ✅ Complete |
 | Epic 8: Notifications | 1 | ✅ Complete |
 | Epic 9: Admin Extended | 1 | ✅ Complete |
-| Epic 10: Auto Contract | 3 | 🆕 New (2026-03-28) |
+| Epic 10: Auto Contract | 3 | ✅ Complete (2026-03-29) |

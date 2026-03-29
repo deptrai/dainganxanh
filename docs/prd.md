@@ -441,7 +441,7 @@
   - And upload PDF lên Supabase Storage
   - And lưu contract_url vào orders
   - And gửi email kèm PDF attachment cho khách
-- **Dependencies:** FR-32, docx-templates, ConvertAPI, pdf-lib
+- **Dependencies:** FR-32, docx-templates, LibreOffice headless, pdf-lib
 - **Replaces:** Phần PDF generation cơ bản trong FR-07 (giữ nguyên email flow)
 
 **FR-30: SEO Core Setup**
@@ -588,25 +588,24 @@
        │
        ↓
 ┌──────────────────┐
-│   Next.js App    │  (Vercel)
+│   Next.js App    │  (Dokploy — self-hosted)
 │   - SSR Pages    │
 │   - API Routes   │
+│   - LibreOffice  │  ← contract DOCX→PDF
 └────────┬─────────┘
          │
          ↓
 ┌─────────────────────┐
-│   Backend API       │  (Railway)
-│   - Auth            │
-│   - Order Mgmt      │
-│   - Payment Webhook │
-│   - Photo Upload    │
+│  Supabase           │
+│   - Auth (OTP)      │
+│   - PostgreSQL DB   │
+│   - Storage         │
+│   - Edge Functions  │
 └──────┬──────────────┘
        │
-       ├─────→ PostgreSQL (Primary DB)
-       ├─────→ Redis (Session + Cache)
-       ├─────→ S3 (File Storage)
-       ├─────→ Twilio (OTP)
-       ├─────→ SendGrid (Email)
+       ├─────→ Resend (Email)
+       ├─────→ Telegram Bot (Admin alerts)
+       ├─────→ Casso (Banking webhook)
        └─────→ Polygon (Wallet creation)
 ```
 
