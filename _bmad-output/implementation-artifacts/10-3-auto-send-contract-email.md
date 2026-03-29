@@ -1,6 +1,6 @@
 # Story 10.3: Thay thế PDF contract cơ bản bằng DOCX template
 
-Status: review
+Status: done
 
 ## Story
 
@@ -65,32 +65,26 @@ Story này **chỉ thay thế bước generate-contract** — không thay đổi
 
 `generate-contract` là Deno Edge Function. API route `/api/contracts/generate` là Node.js trên Dokploy.
 
-```typescript
-// generate-contract/index.ts — thay thế toàn bộ logic pdf-lib bằng:
-const res = await fetch(
-  `${Deno.env.get('NEXT_PUBLIC_BASE_URL')}/api/contracts/generate`,
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('CONTRACT_API_SECRET')}`,
-    },
-    body: JSON.stringify({
-      orderId: payload.orderId,
-      orderCode: payload.orderCode,
-      // pass các fields cần cho DOCX template
-    }),
-    signal: AbortSignal.timeout(45000),
-  }
-)
-// res trả về PDF bytes hoặc { contractUrl } đã upload sẵn
-```
+Auth header dùng `x-api-key` (không phải `Authorization: Bearer`).
 
-### Environment Variables Cần Thêm (Supabase secrets)
+### DOCX→PDF Conversion
+
+**Trước:** ConvertAPI (external, cần API key, có rate limit)
+**Sau:** LibreOffice headless (`soffice --headless --convert-to pdf`) — free, offline, không rate limit.
+
+- macOS: `/Applications/LibreOffice.app/Contents/MacOS/soffice` (install via `brew install --cask libreoffice`)
+- Linux/Docker: `soffice` via PATH (install via `apk add libreoffice` — đã thêm vào Dockerfile)
+- Override: env var `SOFFICE_BIN`
+
+### Environment Variables (đã set)
 
 ```bash
-supabase secrets set CONTRACT_API_SECRET=<random-secret>
-supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com.vn
+# Supabase Edge Function secrets (đã set via supabase secrets set)
+NEXT_PUBLIC_BASE_URL=https://dainganxanh.com.vn
+CONTRACT_API_SECRET=<random-hex-64>
+
+# Dokploy Next.js env (cần add thủ công trên Dokploy dashboard)
+CONTRACT_API_SECRET=<same-value-as-above>
 ```
 
 ### References
@@ -114,7 +108,13 @@ claude-sonnet-4-6
 - Replaced toàn bộ `pdf-lib` logic (180+ lines) trong `generate-contract/index.ts` bằng HTTP delegation đến `/api/contracts/generate`
 - EF chỉ còn ~70 lines: parse payload → call API → map response → return
 - `filePath: fileName` where `fileName = {orderCode}.pdf` — đúng với storage path `send-email` expect
-- Environment variables cần set trên Supabase: `NEXT_PUBLIC_BASE_URL`, `CONTRACT_API_SECRET`
+- Environment variables đã set trên Supabase remote (2026-03-29)
+- Refactored DOCX→PDF: ConvertAPI → LibreOffice headless (zero cost, no API key)
+- Dockerfile updated: `apk add libreoffice` in runner stage, `HOME=/tmp` for non-root user profile
+- Local test passed: `POST /api/contracts/generate` → PDF tạo thành công, upload Storage OK
 
 ### File List
-- supabase/functions/generate-contract/index.ts (MODIFIED)
+- supabase/functions/generate-contract/index.ts (MODIFIED — HTTP delegation)
+- dainganxanh-landing/src/app/api/contracts/generate/route.ts (MODIFIED — LibreOffice thay ConvertAPI)
+- dainganxanh-landing/Dockerfile (MODIFIED — thêm LibreOffice)
+- dainganxanh-landing/.env.example (MODIFIED — xóa CONVERTAPI_SECRET, thêm SOFFICE_BIN)
