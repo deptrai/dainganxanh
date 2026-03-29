@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs/promises'
+import os from 'os'
 import path from 'path'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import { PDFDocument } from 'pdf-lib'
 import createReport from 'docx-templates'
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -12,11 +15,14 @@ import {
   formatContractNumber,
 } from '@/lib/utils/contract-helpers'
 
-// ─────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────
+const execFileAsync = promisify(execFile)
 
-const CONVERTAPI_TIMEOUT_MS = 30_000
+// LibreOffice binary — macOS app bundle or system PATH (Linux/Docker)
+const SOFFICE_BIN =
+  process.env.SOFFICE_BIN ??
+  (process.platform === 'darwin'
+    ? '/Applications/LibreOffice.app/Contents/MacOS/soffice'
+    : 'soffice')
 
 // Signature overlay positions (Bên B — right side, bottom of last page)
 // Adjust after testing with real PDF output
@@ -103,45 +109,27 @@ async function fillDocxTemplate(order: OrderRow): Promise<Buffer> {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Step 4: Convert DOCX → PDF via ConvertAPI
+// Step 4: Convert DOCX → PDF via LibreOffice (headless)
 // ─────────────────────────────────────────────────────────────────
 
 async function convertDocxToPdf(docxBuffer: Buffer): Promise<Buffer> {
-  const apiSecret = process.env.CONVERTAPI_SECRET
-  if (!apiSecret) {
-    throw new Error('CONVERTAPI_SECRET is not configured')
-  }
-
-  const formData = new FormData()
-  formData.append('File', new Blob([new Uint8Array(docxBuffer)], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  }), 'contract.docx')
-
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), CONVERTAPI_TIMEOUT_MS)
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'contract-'))
+  const docxPath = path.join(tmpDir, 'contract.docx')
 
   try {
-    const res = await fetch('https://v2.convertapi.com/convert/docx/to/pdf', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiSecret}` },
-      body: formData,
-      signal: controller.signal,
-    })
+    await fs.writeFile(docxPath, docxBuffer)
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => res.statusText)
-      throw new Error(`ConvertAPI failed (${res.status}): ${errText}`)
-    }
+    await execFileAsync(SOFFICE_BIN, [
+      '--headless',
+      '--convert-to', 'pdf',
+      '--outdir', tmpDir,
+      docxPath,
+    ], { timeout: 60_000 })
 
-    const json = await res.json() as { Files?: { FileData: string }[] }
-    const fileData = json.Files?.[0]?.FileData
-    if (!fileData) {
-      throw new Error('ConvertAPI returned no file data')
-    }
-
-    return Buffer.from(fileData, 'base64')
+    const pdfPath = path.join(tmpDir, 'contract.pdf')
+    return await fs.readFile(pdfPath)
   } finally {
-    clearTimeout(timeout)
+    await fs.rm(tmpDir, { recursive: true, force: true })
   }
 }
 
