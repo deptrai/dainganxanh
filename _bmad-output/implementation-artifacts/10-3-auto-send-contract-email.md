@@ -1,6 +1,6 @@
 # Story 10.3: Thay thế PDF contract cơ bản bằng DOCX template
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,17 +37,17 @@ Story này **chỉ thay thế bước generate-contract** — không thay đổi
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Hoàn thành Story 10.2 trước (prerequisite)
-  - [ ] 1.1 API route `/api/contracts/generate` đã hoạt động với DOCX template
+- [x] Task 1: Hoàn thành Story 10.2 trước (prerequisite)
+  - [x] 1.1 API route `/api/contracts/generate` đã hoạt động với DOCX template
 
-- [ ] Task 2: Update `generate-contract` Edge Function để gọi API route mới (AC: 1, 2)
-  - [ ] 2.1 Trong `supabase/functions/generate-contract/index.ts`, thay logic `pdf-lib` tự render bằng HTTP call đến `/api/contracts/generate`
-  - [ ] 2.2 Nhận PDF bytes từ API route → upload lên Supabase Storage như cũ
-  - [ ] 2.3 Giữ nguyên response format `{ success, fileName, filePath }` để không break `process-payment`
+- [x] Task 2: Update `generate-contract` Edge Function để gọi API route mới (AC: 1, 2)
+  - [x] 2.1 Trong `supabase/functions/generate-contract/index.ts`, thay logic `pdf-lib` tự render bằng HTTP call đến `/api/contracts/generate`
+  - [x] 2.2 API route tự upload lên Storage (không cần EF upload lại); EF nhận `{ contractUrl, success }` và map sang `filePath`
+  - [x] 2.3 Giữ nguyên response format `{ success, fileName, filePath }` để không break `process-payment`
 
-- [ ] Task 3: Fallback handling (AC: 3)
-  - [ ] 3.1 Nếu API route fail → log error + giữ nguyên file PDF cũ (pdf-lib) làm fallback
-  - [ ] 3.2 Hoặc đơn giản hơn: throw error, `process-payment` đã có try/catch riêng
+- [x] Task 3: Fallback handling (AC: 3)
+  - [x] 3.1 Không implement pdf-lib fallback — dùng Task 3.2
+  - [x] 3.2 Throw error khi API route fail; `process-payment` có try/catch riêng ở outer level
 
 ## Dev Notes
 
@@ -103,6 +103,18 @@ supabase secrets set NEXT_PUBLIC_BASE_URL=https://dainganxanh.com.vn
 ## Dev Agent Record
 
 ### Agent Model Used
+claude-sonnet-4-6
+
 ### Debug Log References
+- `send-email` EF dùng `contractPdfUrl` làm Supabase Storage path (không phải full URL) để `.download()` — nên `filePath` phải là `{orderCode}.pdf`, không phải public URL
+- `process-payment` throw error nếu `generate-contract` fail (line 258) — payload không bị block theo nghĩa EF, nhưng payment flow sẽ fail. Đây là behavior cũ giữ nguyên.
+- Auth header: `x-api-key` (theo implementation Story 10.2), không phải `Authorization: Bearer` như dev notes gốc
+
 ### Completion Notes List
+- Replaced toàn bộ `pdf-lib` logic (180+ lines) trong `generate-contract/index.ts` bằng HTTP delegation đến `/api/contracts/generate`
+- EF chỉ còn ~70 lines: parse payload → call API → map response → return
+- `filePath: fileName` where `fileName = {orderCode}.pdf` — đúng với storage path `send-email` expect
+- Environment variables cần set trên Supabase: `NEXT_PUBLIC_BASE_URL`, `CONTRACT_API_SECRET`
+
 ### File List
+- supabase/functions/generate-contract/index.ts (MODIFIED)

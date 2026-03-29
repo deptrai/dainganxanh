@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyNewOrder } from '@/lib/utils/telegram'
+
+const identityFieldsSchema = z.object({
+  dob: z.string().min(1).optional().nullable(),
+  nationality: z.string().optional().nullable(),
+  id_number: z.string().regex(/^\d{12}$/, 'Số CCCD phải có 12 chữ số').optional().nullable(),
+  id_issue_date: z.string().min(1).optional().nullable(),
+  id_issue_place: z.string().min(1).optional().nullable(),
+  address: z.string().min(1).optional().nullable(),
+  phone: z.string().regex(/^0\d{9}$/, 'Số điện thoại không hợp lệ').optional().nullable(),
+})
 
 interface PendingOrderRequest {
   code: string
@@ -10,6 +21,14 @@ interface PendingOrderRequest {
   total_amount: number
   payment_method: 'banking'
   referred_by?: string | null
+  // Customer identity fields (optional, for contract generation)
+  dob?: string | null
+  nationality?: string | null
+  id_number?: string | null
+  id_issue_date?: string | null
+  id_issue_place?: string | null
+  address?: string | null
+  phone?: string | null
 }
 
 export async function GET() {
@@ -25,7 +44,7 @@ export async function GET() {
     const serviceSupabase = createServiceRoleClient()
     const { data } = await serviceSupabase
       .from('orders')
-      .select('id, code, quantity, total_amount, created_at')
+      .select('id, code, quantity, total_amount, created_at, dob, nationality, id_number, id_issue_date, id_issue_place, address, phone')
       .eq('user_id', user.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
@@ -70,8 +89,7 @@ export async function POST(req: NextRequest) {
     // Use service role to bypass RLS (user authenticated above)
     const serviceSupabase = createServiceRoleClient()
 
-    // Upsert with onConflict: 'code' for idempotency
-    // If the same orderCode already exists (e.g. user F5'd the page), return existing record
+    // Step 1: Upsert base order fields (ignoreDuplicates: true preserves existing order intact)
     const { error: upsertError } = await serviceSupabase
       .from('orders')
       .upsert(
@@ -92,6 +110,45 @@ export async function POST(req: NextRequest) {
     if (upsertError) {
       console.error('Failed to upsert pending order:', upsertError)
       return NextResponse.json({ error: 'Không thể tạo đơn hàng' }, { status: 500 })
+    }
+
+    // Step 2: If identity fields provided, validate and update them separately (only while order is still pending)
+    const hasIdentityFields = body.id_number || body.dob || body.address
+    if (hasIdentityFields) {
+      const identityResult = identityFieldsSchema.safeParse({
+        dob: body.dob, nationality: body.nationality, id_number: body.id_number,
+        id_issue_date: body.id_issue_date, id_issue_place: body.id_issue_place,
+        address: body.address, phone: body.phone,
+      })
+      if (!identityResult.success) {
+        const firstIssue = identityResult.error.issues[0]
+        return NextResponse.json(
+          { error: firstIssue?.message || 'Thông tin cá nhân không hợp lệ' },
+          { status: 400 }
+        )
+      }
+      const { error: updateError } = await serviceSupabase
+        .from('orders')
+        .update({
+          dob: body.dob ?? null,
+          nationality: body.nationality ?? 'Việt Nam',
+          id_number: body.id_number ?? null,
+          id_issue_date: body.id_issue_date ?? null,
+          id_issue_place: body.id_issue_place ?? null,
+          address: body.address ?? null,
+          phone: body.phone ?? null,
+        })
+        .eq('code', body.code)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+
+      if (updateError) {
+        console.error('Failed to update identity fields:', updateError)
+        return NextResponse.json(
+          { error: 'Không thể lưu thông tin cá nhân. Vui lòng thử lại.' },
+          { status: 500 }
+        )
+      }
     }
 
     // Fetch the order (works for both new inserts and existing records)

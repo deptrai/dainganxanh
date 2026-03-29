@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Copy, Check, Loader2, CheckCircle2, Clock, XCircle } from "lucide-react";
-import Cookies from "js-cookie";
 import { createBrowserClient } from "@/lib/supabase/client";
 
 interface BankingPaymentProps {
@@ -29,59 +28,11 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [paymentStatus, setPaymentStatus] = useState<"waiting" | "confirmed" | "error">("waiting");
-    const [pendingCreated, setPendingCreated] = useState(false);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startTimeRef = useRef<number>(Date.now());
 
-    // Pre-create pending order
-    useEffect(() => {
-        if (!orderCode || !amount) return;
-
-        const createPendingOrder = async () => {
-            try {
-                const supabase = createBrowserClient();
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                const userName = user.user_metadata?.full_name || user.email?.split("@")[0];
-                const DEFAULT_REF_CODE = "DNG895075";
-                const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
-                let referredBy = null;
-
-                const { data: referrer } = await supabase
-                    .from("users")
-                    .select("id")
-                    .eq("referral_code", refCookie)
-                    .single();
-                if (referrer) referredBy = referrer.id;
-
-                const res = await fetch("/api/orders/pending", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        code: orderCode,
-                        user_email: user.email,
-                        user_name: userName,
-                        quantity: Math.round(amount / 260000),
-                        total_amount: amount,
-                        payment_method: "banking",
-                        referred_by: referredBy,
-                    }),
-                });
-                if (!res.ok && process.env.NODE_ENV === "development") {
-                    const errData = await res.json().catch(() => ({}));
-                    console.error("[pending-order] POST failed:", res.status, errData);
-                }
-                setPendingCreated(true);
-            } catch {
-                setPendingCreated(true);
-            }
-        };
-
-        createPendingOrder();
-    }, [orderCode, amount]);
 
     // Poll order status
     const pollStatus = useCallback(async () => {
@@ -111,7 +62,7 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
     }, [orderCode, amount, router]);
 
     useEffect(() => {
-        if (!pendingCreated || !orderCode) return;
+        if (!orderCode) return;
         startTimeRef.current = Date.now();
 
         pollRef.current = setInterval(() => {
@@ -132,7 +83,7 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [pendingCreated, orderCode, pollStatus]);
+    }, [orderCode, pollStatus]);
 
     useEffect(() => {
         if (orderCode && amount) {

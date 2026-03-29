@@ -1,6 +1,6 @@
 # Story 10.1: Thu thập thông tin pháp lý khách hàng tại Checkout
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -31,27 +31,27 @@ so that **hợp đồng được tạo tự động với đầy đủ thông ti
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: DB Migration (AC: 3)
-  - [ ] 1.1 Thêm columns vào orders table: `dob` (date), `nationality` (text, default 'Việt Nam'), `id_number` (text), `id_issue_date` (date), `id_issue_place` (text), `address` (text), `phone` (text)
-  - [ ] 1.2 Apply migration via Supabase dashboard hoặc migration file
+- [x] Task 1: DB Migration (AC: 3)
+  - [x] 1.1 Thêm columns vào orders table: `dob` (date), `nationality` (text, default 'Việt Nam'), `id_number` (text), `id_issue_date` (date), `id_issue_place` (text), `address` (text), `phone` (text)
+  - [x] 1.2 Apply migration via Supabase dashboard hoặc migration file
 
-- [ ] Task 2: Update API `/api/orders/pending` POST (AC: 3)
-  - [ ] 2.1 Thêm new fields vào request body validation (Zod)
-  - [ ] 2.2 Thêm new fields vào Supabase upsert call
-  - [ ] 2.3 Ensure backward compatibility — new fields optional nếu order tạo không qua contract flow
+- [x] Task 2: Update API `/api/orders/pending` POST (AC: 3)
+  - [x] 2.1 Thêm new fields vào request body validation (Zod)
+  - [x] 2.2 Thêm new fields vào Supabase upsert call (2-step: upsert base + UPDATE identity)
+  - [x] 2.3 Ensure backward compatibility — new fields optional nếu order tạo không qua contract flow
 
-- [ ] Task 3: Customer Identity Form Component (AC: 1, 2, 4)
-  - [ ] 3.1 Tạo `src/components/checkout/CustomerIdentityForm.tsx`
-  - [ ] 3.2 Fields: Họ tên (text), Ngày sinh (date input), Quốc tịch (text, default "Việt Nam"), Số CCCD (text, 12 digits), Ngày cấp (date), Nơi cấp (text), Địa chỉ (textarea), SĐT (tel)
-  - [ ] 3.3 Zod validation schema cho form
-  - [ ] 3.4 Inline error messages tiếng Việt
-  - [ ] 3.5 Pre-fill từ user metadata nếu có (full_name, phone)
+- [x] Task 3: Customer Identity Form Component (AC: 1, 2, 4)
+  - [x] 3.1 Tạo `src/components/checkout/CustomerIdentityForm.tsx`
+  - [x] 3.2 Fields: Họ tên (text), Ngày sinh (date input), Quốc tịch (text, default "Việt Nam"), Số CCCD (text, 12 digits), Ngày cấp (date), Nơi cấp (text), Địa chỉ (textarea), SĐT (tel)
+  - [x] 3.3 Zod validation schema cho form (Zod v4 với `.issues` API)
+  - [x] 3.4 Inline error messages tiếng Việt
+  - [x] 3.5 Pre-fill từ user metadata nếu có (full_name, phone)
 
-- [ ] Task 4: Checkout Flow Integration (AC: 1, 3)
-  - [ ] 4.1 Thêm step "Thông tin hợp đồng" vào checkout page
-  - [ ] 4.2 Flow: Quantity → **Customer Identity Form** → Banking QR
-  - [ ] 4.3 Pass customer data khi gọi `/api/orders/pending` POST
-  - [ ] 4.4 QR chỉ hiện sau khi form submit thành công
+- [x] Task 4: Checkout Flow Integration (AC: 1, 3)
+  - [x] 4.1 Thêm step "Thông tin hợp đồng" vào checkout page
+  - [x] 4.2 Flow: Quantity → **Customer Identity Form** → Banking QR
+  - [x] 4.3 Pass customer data khi gọi `/api/orders/pending` POST (với referral cookie lookup)
+  - [x] 4.4 QR chỉ hiện sau khi form submit thành công
 
 ## Dev Notes
 
@@ -126,9 +126,37 @@ const customerIdentitySchema = z.object({
 - [Source: src/app/api/orders/pending/route.ts — POST handler lines 75-89]
 - [Source: src/components/checkout/BankingPayment.tsx — order creation lines 39-84]
 
+### Review Findings
+
+- [x] [Review][Patch] Silent identity update failure — API returns success even when identity data fails to save, causing data loss [route.ts:122-125]
+- [x] [Review][Patch] JSX duplication — Order Summary ~50 lines copy-pasted between identity and payment steps [checkout/page.tsx:223-271,293-341]
+- [x] [Review][Patch] Missing server-side identity validation — API does not validate identity fields (id_number format, required fields) with Zod [route.ts:59-76]
+- [x] [Review][Patch] No back navigation from payment step — User cannot go back to edit identity info after submitting form [checkout/page.tsx:275]
+- [x] [Review][Defer] Hardcoded referral code `DNG895075` [checkout/page.tsx:81] — deferred, pre-existing
+- [x] [Review][Defer] No DB indexes on identity columns [migration SQL] — deferred, pre-existing
+- [x] [Review][Defer] No uniqueness constraint on `id_number` — deferred, business decision needed
+
 ## Dev Agent Record
 
 ### Agent Model Used
+claude-sonnet-4-6
+
 ### Debug Log References
+- Zod v4 dùng `.issues` thay vì `.errors` — fixed validation error extraction
+- Pre-fill useEffect async gây double name trong test — fixed bằng cách wait cho pre-fill trước
+- Date inputs jsdom không hỗ trợ `userEvent.type` — fixed bằng `fireEvent.change`
+- `BankingPayment` removed order creation useEffect — polling starts immediately khi nhận `orderCode`
+
 ### Completion Notes List
+- Task 1: Tạo migration SQL `20260328_add_customer_identity_to_orders.sql` với 7 columns
+- Task 2: API updated với 2-step approach: upsert base order (ignoreDuplicates=true) + UPDATE identity fields (chỉ khi status='pending'). GET endpoint cũng trả về identity fields để checkout page skip form nếu đã có data.
+- Task 3: `CustomerIdentityForm.tsx` với Zod v4 schema, 8 fields, inline Vietnamese errors, pre-fill from user metadata. 7/7 tests pass.
+- Task 4: Checkout page refactored với `CheckoutStep` state ('loading' | 'identity' | 'payment'). BankingPayment order creation removed — checkout page handles it. Skip identity form nếu existing order already has `id_number`.
+
 ### File List
+- supabase/migrations/20260328_add_customer_identity_to_orders.sql (NEW)
+- dainganxanh-landing/src/app/api/orders/pending/route.ts (MODIFIED)
+- dainganxanh-landing/src/components/checkout/CustomerIdentityForm.tsx (NEW)
+- dainganxanh-landing/src/components/checkout/__tests__/CustomerIdentityForm.test.tsx (NEW)
+- dainganxanh-landing/src/app/(marketing)/checkout/page.tsx (MODIFIED)
+- dainganxanh-landing/src/components/checkout/BankingPayment.tsx (MODIFIED)
