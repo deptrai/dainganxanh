@@ -69,10 +69,14 @@ export async function POST(req: NextRequest) {
   if (!body) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
+  // Casso Webhook V2 payload: { error: 0, data: { id, reference, description, amount,
+  //   runningBalance, transactionDateTime, accountNumber, bankName, bankAbbreviation } }
+  // V1 compat: { data: { tid, amount, type, description, bank_sub_acc_id, when } }
   const tx = body?.data
 
   // Casso gửi test ping không có data — acknowledge và return
-  if (!tx?.tid) {
+  const txId = tx?.id ?? tx?.tid
+  if (!txId) {
     return NextResponse.json({ ok: true })
   }
 
@@ -83,7 +87,7 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabase
     .from('casso_transactions')
     .select('id, status')
-    .eq('casso_tid', String(tx.tid))
+    .eq('casso_tid', String(txId))
     .single()
 
   if (existing) {
@@ -93,22 +97,22 @@ export async function POST(req: NextRequest) {
 
   // AC3 — Log transaction ngay lập tức với status 'processing'
   await supabase.from('casso_transactions').insert({
-    casso_id:       tx.id,
-    casso_tid:      String(tx.tid),
+    casso_id:       String(txId),
+    casso_tid:      String(txId),
     amount:         tx.amount,
     description:    tx.description,
-    bank_account:   tx.bank_sub_acc_id,
-    transaction_at: tx.when,
+    bank_account:   tx.accountNumber ?? tx.bank_sub_acc_id,
+    transaction_at: tx.transactionDateTime ?? tx.when,
     raw_payload:    tx,
     status:         'processing',
   })
 
-  // Chỉ xử lý tiền vào (type=1 hoặc amount > 0)
-  if (tx.type === 2 || tx.amount <= 0) {
+  // Chỉ xử lý tiền vào (V2: amount > 0, V1: type !== 2)
+  if (tx.amount <= 0) {
     await supabase
       .from('casso_transactions')
       .update({ status: 'no_match', note: 'Outgoing transaction ignored' })
-      .eq('casso_tid', String(tx.tid))
+      .eq('casso_tid', String(txId))
     // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
@@ -119,7 +123,7 @@ export async function POST(req: NextRequest) {
     await supabase
       .from('casso_transactions')
       .update({ status: 'no_match', note: 'orderCode not found in description' })
-      .eq('casso_tid', String(tx.tid))
+      .eq('casso_tid', String(txId))
     // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
@@ -140,7 +144,7 @@ export async function POST(req: NextRequest) {
         status: 'order_not_found',
         note:   `Order ${orderCode} not found or not pending`,
       })
-      .eq('casso_tid', String(tx.tid))
+      .eq('casso_tid', String(txId))
     // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
@@ -155,7 +159,7 @@ export async function POST(req: NextRequest) {
         note:     `Expected ${order.total_amount}, got ${tx.amount} (diff: ${diff})`,
         order_id: order.id,
       })
-      .eq('casso_tid', String(tx.tid))
+      .eq('casso_tid', String(txId))
     // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
@@ -181,7 +185,7 @@ export async function POST(req: NextRequest) {
       note:     fnError?.message ?? null,
       order_id: order.id,
     })
-    .eq('casso_tid', String(tx.tid))
+    .eq('casso_tid', String(txId))
 
   // Gửi thông báo Telegram khi thanh toán thành công (non-blocking)
   if (!fnError) {
