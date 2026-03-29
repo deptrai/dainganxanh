@@ -1,6 +1,6 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
 import { headers } from 'next/headers'
 
@@ -99,8 +99,11 @@ export async function getReferralStats(userId: string) {
             return null
         }
 
+        // Use service role to bypass RLS — referral queries read OTHER users' orders
+        const serviceSupabase = createServiceRoleClient()
+
         // Get total clicks
-        const { count: totalClicks, error: clicksError } = await supabase
+        const { count: totalClicks, error: clicksError } = await serviceSupabase
             .from('referral_clicks')
             .select('*', { count: 'exact', head: true })
             .eq('referrer_id', userId)
@@ -111,7 +114,7 @@ export async function getReferralStats(userId: string) {
         }
 
         // Get conversions + commission from orders directly (source of truth)
-        const { data: convertedOrders, error: ordersError } = await supabase
+        const { data: convertedOrders, error: ordersError } = await serviceSupabase
             .from('orders')
             .select('total_amount')
             .eq('referred_by', userId)
@@ -162,8 +165,11 @@ export async function getReferralConversions(userId: string) {
             return []
         }
 
+        // Use service role to bypass RLS — referral queries read OTHER users' orders
+        const serviceSupabase = createServiceRoleClient()
+
         // Query orders directly using referred_by (works regardless of referral_clicks)
-        const { data: orders, error } = await supabase
+        const { data: orders, error } = await serviceSupabase
             .from('orders')
             .select('id, code, total_amount, created_at, user_id, user_email, user_name')
             .eq('referred_by', userId)

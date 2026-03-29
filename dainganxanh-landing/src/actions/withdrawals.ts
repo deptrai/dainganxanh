@@ -15,13 +15,11 @@ function normalizeVietnamese(text: string): string {
 
 // Calculate available balance
 export async function getAvailableBalance(userId: string) {
-    const supabase = await createServerClient()
+    // Use service role to bypass RLS — orders with referred_by are OTHER users' orders
+    const serviceSupabase = createServiceRoleClient()
 
     // Total commission earned — query directly from orders.referred_by
-    // to stay consistent with getReferralStats and avoid missing commissions
-    // when referral_clicks were not created (e.g. direct code entry) or
-    // when the click was older than the 7-day conversion window.
-    const { data: orders } = await supabase
+    const { data: orders } = await serviceSupabase
         .from('orders')
         .select('total_amount')
         .eq('referred_by', userId)
@@ -29,8 +27,8 @@ export async function getAvailableBalance(userId: string) {
 
     const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.10), 0) || 0
 
-    // Total withdrawn (approved only)
-    const { data: withdrawals } = await supabase
+    // Total withdrawn (approved only) — user's own withdrawals, service role for consistency
+    const { data: withdrawals } = await serviceSupabase
         .from('withdrawals')
         .select('amount')
         .eq('user_id', userId)
