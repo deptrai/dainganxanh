@@ -157,16 +157,17 @@ export async function getAnalyticsKPIs(dateRange?: { start: string; end: string 
             return d >= previousStart && d < previousEnd
         }).reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0
 
-        // Carbon offset (sum from trees)
+        // Carbon offset (sum from orders)
         const { data: carbonData, error: carbonError } = await supabase
-            .from('trees')
+            .from('orders')
             .select('co2_absorbed')
+            .eq('status', 'completed')
 
         if (carbonError) {
             console.error('Error fetching carbon offset:', carbonError)
         }
 
-        const carbonOffset = carbonData?.reduce((sum, tree) => sum + (tree.co2_absorbed || 0), 0) || 0
+        const carbonOffset = carbonData?.reduce((sum, order) => sum + (order.co2_absorbed || 0), 0) || 0
 
         // Calculate trends
         const calcTrend = (current: number, previous: number) => {
