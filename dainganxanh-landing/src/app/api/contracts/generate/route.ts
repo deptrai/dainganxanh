@@ -120,13 +120,20 @@ async function convertDocxToPdf(docxBuffer: Buffer): Promise<Buffer> {
     await fs.writeFile(docxPath, docxBuffer)
 
     await execFileAsync(SOFFICE_BIN, [
+      `-env:UserInstallation=file://${tmpDir}`,
       '--headless',
+      '--norestore',
       '--convert-to', 'pdf',
       '--outdir', tmpDir,
       docxPath,
-    ], { timeout: 60_000 })
+    ], { timeout: 45_000, killSignal: 'SIGKILL' })
 
     const pdfPath = path.join(tmpDir, 'contract.pdf')
+    try {
+      await fs.access(pdfPath)
+    } catch {
+      throw new Error('LibreOffice conversion produced no PDF output')
+    }
     return await fs.readFile(pdfPath)
   } finally {
     await fs.rm(tmpDir, { recursive: true, force: true })
@@ -229,7 +236,7 @@ export async function POST(req: NextRequest) {
     // Step 3: Fill DOCX template
     const filledDocx = await fillDocxTemplate(order as OrderRow)
 
-    // Step 4: Convert DOCX → PDF via ConvertAPI
+    // Step 4: Convert DOCX → PDF via LibreOffice
     const pdfBytes = await convertDocxToPdf(filledDocx)
 
     // Step 5: Overlay signature + stamp

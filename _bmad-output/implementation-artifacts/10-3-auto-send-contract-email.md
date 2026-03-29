@@ -33,7 +33,7 @@ Story này **chỉ thay thế bước generate-contract** — không thay đổi
 
 3. **Given** DOCX generation fail
    **When** xảy ra lỗi
-   **Then** fallback về pdf-lib cũ (hoặc báo lỗi) — payment vẫn không bị block
+   **Then** payment fail (contract là bắt buộc) — gửi thông báo Telegram cho admin để xử lý thủ công
 
 ## Tasks / Subtasks
 
@@ -113,8 +113,23 @@ claude-sonnet-4-6
 - Dockerfile updated: `apk add libreoffice` in runner stage, `HOME=/tmp` for non-root user profile
 - Local test passed: `POST /api/contracts/generate` → PDF tạo thành công, upload Storage OK
 
+### Review Findings
+
+- [x] [Review][Decision] #7 Contract failure blocks payment — RESOLVED: giữ nguyên, contract bắt buộc, AC3 updated. Thêm Telegram notify admin khi fail.
+- [x] [Review][Patch] #1 `templates/` không được COPY vào Docker runner stage → FIXED [Dockerfile:68]
+- [x] [Review][Patch] #2 Vietnamese fonts thiếu trên Alpine → FIXED: `font-noto font-noto-extra` [Dockerfile:58]
+- [x] [Review][Patch] #3 LibreOffice profile lock → FIXED: `-env:UserInstallation` per tmpDir [route.ts:123]
+- [x] [Review][Patch] #4 Timeout aligned: LibreOffice 45s < EF 50s < process-payment 55s
+- [x] [Review][Patch] #5 PDF existence check added before readFile [route.ts:132]
+- [x] [Review][Patch] #8 Error text sanitized — internal details logged, not returned [generate-contract:44]
+- [x] [Review][Patch] #15 SIGKILL + --norestore flags added [route.ts:128]
+- [x] [Review][Defer] #6 Base64 stack overflow trong send-email khi PDF > 100KB [send-email:116] — deferred, pre-existing
+- [x] [Review][Defer] #10 XSS qua userName trong send-email HTML [send-email:90] — deferred, pre-existing
+- [x] [Review][Defer] #11 btoa/fromCharCode locale issue trong send-email [send-email:116] — deferred, pre-existing
+
 ### File List
-- supabase/functions/generate-contract/index.ts (MODIFIED — HTTP delegation)
-- dainganxanh-landing/src/app/api/contracts/generate/route.ts (MODIFIED — LibreOffice thay ConvertAPI)
-- dainganxanh-landing/Dockerfile (MODIFIED — thêm LibreOffice)
+- supabase/functions/generate-contract/index.ts (MODIFIED — HTTP delegation, timeout 50s, sanitized errors)
+- supabase/functions/process-payment/index.ts (MODIFIED — timeout 55s, Telegram notify on contract failure)
+- dainganxanh-landing/src/app/api/contracts/generate/route.ts (MODIFIED — LibreOffice with UserInstallation, SIGKILL, PDF check)
+- dainganxanh-landing/Dockerfile (MODIFIED — templates COPY, LibreOffice + Vietnamese fonts)
 - dainganxanh-landing/.env.example (MODIFIED — xóa CONVERTAPI_SECRET, thêm SOFFICE_BIN)

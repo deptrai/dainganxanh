@@ -94,10 +94,10 @@ development_status:
   epic-9: done
 
   # Epic 10: Auto Contract Generation (2026-03-28)
-  epic-10: in-progress
+  epic-10: done
   10-1-customer-identity-checkout: done  # ✅ Review complete 2026-03-29
   10-2-docx-contract-generation: done  # ✅ Review complete 2026-03-29
-  10-3-auto-send-contract-email: review
+  10-3-auto-send-contract-email: done  # ✅ Review complete + patches applied 2026-03-29
   epic-10-retrospective: backlog
 
 # Summary
@@ -106,7 +106,7 @@ summary:
   total_stories: 47
   stories_ready: 0
   stories_in_progress: 0
-  stories_review: 1
-  stories_done: 46
+  stories_review: 0
+  stories_done: 47
   current_velocity: 11
-  last_updated: "2026-03-29"  # Story 10.2 review complete
+  last_updated: "2026-03-29"  # Epic 10 complete — all stories done

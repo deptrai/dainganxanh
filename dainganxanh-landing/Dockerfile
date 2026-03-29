@@ -54,8 +54,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# LibreOffice for DOCX→PDF conversion (headless, no GUI)
-RUN apk add --no-cache libreoffice
+# LibreOffice for DOCX→PDF conversion (headless, no GUI) + Vietnamese fonts
+RUN apk add --no-cache libreoffice font-noto font-noto-extra
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -65,6 +65,7 @@ ENV HOME=/tmp
 
 # Copy built files
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/templates ./templates
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 

@@ -15,6 +15,35 @@ interface PaymentRequest {
     referredBy?: string // Optional: User ID of referrer
 }
 
+async function notifyContractFailure(orderCode: string, userName: string, error: unknown): Promise<void> {
+    const token = Deno.env.get('TELEGRAM_BOT_TOKEN')
+    const chatId = Deno.env.get('TELEGRAM_CHAT_ID')
+    if (!token || !chatId) return
+
+    const errMsg = error instanceof Error ? error.message : String(error)
+    const message =
+        `🚨 <b>Contract generation thất bại!</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `📋 Mã đơn: <code>${orderCode}</code>\n` +
+        `👤 Khách hàng: ${userName}\n` +
+        `❌ Lỗi: ${errMsg}\n` +
+        `⚠️ Admin cần xử lý thủ công và gửi lại hợp đồng.`
+
+    try {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: Number(chatId),
+                text: message,
+                parse_mode: 'HTML',
+            }),
+        })
+    } catch (telegramErr) {
+        console.error('Telegram notify failed:', telegramErr)
+    }
+}
+
 serve(async (req) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
@@ -219,7 +248,7 @@ serve(async (req) => {
             throw new Error(`Trees insertion failed: ${treesError.message}`)
         }
 
-        // 4. Generate PDF contract with 30s timeout
+        // 4. Generate PDF contract with 55s timeout
         const contractPayload = {
             orderId: order.id,
             userId: payload.userId,
@@ -232,32 +261,40 @@ serve(async (req) => {
         }
 
         const contractController = new AbortController()
-        const contractTimeout = setTimeout(() => contractController.abort(), 30000)
+        const contractTimeout = setTimeout(() => contractController.abort(), 55000)
 
-        const contractResponse = await fetch(
-            `${supabaseUrl}/functions/v1/generate-contract`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseServiceKey}`,
-                },
-                body: JSON.stringify(contractPayload),
-                signal: contractController.signal,
+        let contractData: { filePath?: string; success?: boolean }
+        try {
+            const contractResponse = await fetch(
+                `${supabaseUrl}/functions/v1/generate-contract`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabaseServiceKey}`,
+                    },
+                    body: JSON.stringify(contractPayload),
+                    signal: contractController.signal,
+                }
+            )
+            clearTimeout(contractTimeout)
+
+            console.log('Contract response status:', contractResponse.status)
+
+            if (!contractResponse.ok) {
+                const errorBody = await contractResponse.text()
+                console.error('Contract generation failed. Status:', contractResponse.status)
+                console.error('Error body:', errorBody)
+                throw new Error(`Contract generation failed: ${contractResponse.status}`)
             }
-        )
-        clearTimeout(contractTimeout)
 
-        console.log('Contract response status:', contractResponse.status)
-
-        if (!contractResponse.ok) {
-            const errorBody = await contractResponse.text()
-            console.error('Contract generation failed. Status:', contractResponse.status)
-            console.error('Error body:', errorBody)
-            throw new Error(`Contract generation failed: ${contractResponse.status} - ${errorBody}`)
+            contractData = await contractResponse.json()
+        } catch (contractError) {
+            clearTimeout(contractTimeout)
+            // Notify admin via Telegram before re-throwing
+            await notifyContractFailure(payload.orderCode, payload.userName, contractError)
+            throw contractError
         }
-
-        const contractData = await contractResponse.json()
 
         // 5. Send confirmation email with 30s timeout (non-blocking)
         const emailController = new AbortController()

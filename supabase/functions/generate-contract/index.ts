@@ -36,13 +36,14 @@ serve(async (req) => {
                     'x-api-key': contractApiSecret,
                 },
                 body: JSON.stringify({ orderId: payload.orderId }),
-                signal: AbortSignal.timeout(45000),
+                signal: AbortSignal.timeout(50000),
             }
         )
 
         if (!res.ok) {
             const errText = await res.text().catch(() => res.statusText)
-            throw new Error(`Contract API failed (${res.status}): ${errText}`)
+            console.error(`Contract API failed (${res.status}):`, errText)
+            throw new Error(`Contract API failed (${res.status})`)
         }
 
         const data = await res.json() as { contractUrl?: string; success: boolean; error?: string }
