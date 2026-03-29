@@ -173,7 +173,7 @@ export async function assignUserReferral(
     const { data: referrer, error: referrerError } = await serviceSupabase
         .from('users')
         .select('id, email, full_name, referral_code')
-        .eq('referral_code', refCode.trim().toUpperCase())
+        .ilike('referral_code', refCode.trim())
         .single()
 
     if (referrerError || !referrer) {

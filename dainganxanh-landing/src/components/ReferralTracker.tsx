@@ -12,10 +12,10 @@ export function ReferralTracker({ refCode }: { refCode?: string }) {
     useEffect(() => {
         if (!refCode) return;
 
-        // Only set if no existing ref cookie (first referrer wins)
+        // Only set if no existing ref cookie (first referrer wins), normalize to lowercase
         const existing = Cookies.get('ref');
         if (!existing) {
-            Cookies.set('ref', refCode, {
+            Cookies.set('ref', refCode.toLowerCase(), {
                 expires: 30,
                 path: '/',
                 sameSite: 'lax',

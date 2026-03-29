@@ -218,10 +218,10 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
                             <input
                                 type="text"
                                 value={refInput}
-                                onChange={(e) => setRefInput(e.target.value.toUpperCase())}
-                                placeholder="VD: DNG895075"
+                                onChange={(e) => setRefInput(e.target.value.toLowerCase())}
+                                placeholder="VD: dainganxanh"
                                 maxLength={12}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-green-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-green-500"
                                 autoFocus
                             />
                         </div>

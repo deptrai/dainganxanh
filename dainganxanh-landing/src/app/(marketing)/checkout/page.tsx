@@ -154,11 +154,11 @@ function CheckoutContent() {
             const supabase = createBrowserClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const DEFAULT_REF_CODE = "DNG895075";
+                const DEFAULT_REF_CODE = "dainganxanh";
                 const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
                 let referredBy: string | null = null;
                 const { data: referrer } = await supabase
-                    .from("users").select("id").eq("referral_code", refCookie).single();
+                    .from("users").select("id").ilike("referral_code", refCookie).single();
                 if (referrer) referredBy = referrer.id;
 
                 await fetch("/api/orders/pending", {

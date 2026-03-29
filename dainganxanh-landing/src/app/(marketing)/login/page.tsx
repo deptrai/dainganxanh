@@ -11,15 +11,14 @@ import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
 import Cookies from "js-cookie";
 
-const DEFAULT_REF = "DNG895075";
-const DEFAULT_REF_OWNER = "Nguyễn Phương Hoàng";
+const DEFAULT_REF = "dainganxanh";
 
 function RefCodeModal({ onDone }: { onDone: () => void }) {
     const [refInput, setRefInput] = useState("");
     const [refError, setRefError] = useState("");
 
     const handleSubmit = () => {
-        const code = refInput.trim().toUpperCase();
+        const code = refInput.trim().toLowerCase();
         if (!code) {
             setRefError("Vui lòng nhập mã giới thiệu");
             return;
@@ -34,8 +33,8 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
     };
 
     const handleSkip = () => {
-        // Use default if skipped
-        Cookies.set("ref", DEFAULT_REF, {
+        // Use default if skipped (always lowercase)
+        Cookies.set("ref", DEFAULT_REF.toLowerCase(), {
             expires: 30,
             path: "/",
             sameSite: "lax",
@@ -66,13 +65,13 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
                     type="text"
                     value={refInput}
                     onChange={(e) => {
-                        setRefInput(e.target.value.toUpperCase());
+                        setRefInput(e.target.value.toLowerCase());
                         if (refError) setRefError("");
                     }}
-                    placeholder="VD: DNG895075"
-                    maxLength={12}
+                    placeholder="VD: dainganxanh"
+                    maxLength={20}
                     autoFocus
-                    className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                         refError ? "border-red-400 bg-red-50" : "border-gray-300"
                     }`}
                 />
@@ -80,16 +79,16 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
 
                 {/* Hint */}
                 <p className="mt-2 text-xs text-gray-500">
-                    Chưa có mã? Dùng mã của{" "}
+                    Chưa có mã?{" "}
                     <button
                         type="button"
                         onClick={() => {
-                            setRefInput(DEFAULT_REF);
+                            setRefInput(DEFAULT_REF.toLowerCase());
                             setRefError("");
                         }}
                         className="text-emerald-600 font-semibold hover:underline focus:outline-none"
                     >
-                        {DEFAULT_REF_OWNER} ({DEFAULT_REF})
+                        Bấm vào đây để dùng mã {DEFAULT_REF}
                     </button>
                 </p>
 
@@ -150,9 +149,9 @@ function LoginContent() {
         checkSession();
     }, [redirectTo]);
 
-    const handleVerifyComplete = async (code: string) => {
+    const handleVerifyComplete = async (otpCode: string) => {
         try {
-            await verifyOTP(code);
+            await verifyOTP(otpCode);
             // After login, check if ref cookie exists
             if (!Cookies.get("ref")) {
                 setShowRefModal(true);

@@ -29,11 +29,11 @@ export async function trackReferralClick(refCode: string) {
     try {
         const supabase = await createServerClient()
 
-        // Find referrer by referral code
+        // Find referrer by referral code (case-insensitive)
         const { data: referrer, error: referrerError } = await supabase
             .from('users')
             .select('id')
-            .eq('referral_code', refCode)
+            .ilike('referral_code', refCode)
             .single()
 
         if (referrerError || !referrer) {

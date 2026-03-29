@@ -11,8 +11,7 @@ import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
 import Cookies from "js-cookie";
 
-const DEFAULT_REF = "DNG895075";
-const DEFAULT_REF_OWNER = "Nguyễn Phương Hoàng";
+const DEFAULT_REF = "dainganxanh";
 
 function RegisterContent() {
     const router = useRouter();
@@ -39,7 +38,7 @@ function RegisterContent() {
     // Pre-fill from cookie if exists (from referral link)
     useEffect(() => {
         const existing = Cookies.get("ref");
-        if (existing) setRefInput(existing);
+        if (existing) setRefInput(existing.toLowerCase());
     }, []);
 
     // Auto-redirect if already logged in
@@ -56,7 +55,7 @@ function RegisterContent() {
 
     const handleSendOTP = () => {
         // Validate referral code is entered
-        const code = refInput.trim().toUpperCase();
+        const code = refInput.trim().toLowerCase();
         if (!code) {
             setRefError("Vui lòng nhập mã giới thiệu");
             return;
@@ -65,10 +64,10 @@ function RegisterContent() {
         sendOTP();
     };
 
-    const handleVerifyComplete = async (code: string) => {
+    const handleVerifyComplete = async (otpCode: string) => {
         try {
             // Save referral code as cookie — required field, always set
-            const refToUse = refInput.trim().toUpperCase() || DEFAULT_REF;
+            const refToUse = refInput.trim().toLowerCase() || DEFAULT_REF.toLowerCase();
             Cookies.set("ref", refToUse, {
                 expires: 30,
                 path: "/",
@@ -76,7 +75,7 @@ function RegisterContent() {
                 secure: window.location.protocol === "https:",
             });
 
-            await verifyOTP(code);
+            await verifyOTP(otpCode);
             router.push(`/checkout?quantity=${quantity}`);
         } catch (err) {
             console.error("Verification failed:", err);
@@ -150,12 +149,12 @@ function RegisterContent() {
                                     type="text"
                                     value={refInput}
                                     onChange={(e) => {
-                                        setRefInput(e.target.value.toUpperCase());
+                                        setRefInput(e.target.value.toLowerCase());
                                         if (refError) setRefError("");
                                     }}
-                                    placeholder="VD: DNG895075"
-                                    maxLength={12}
-                                    className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
+                                    placeholder="VD: dainganxanh"
+                                    maxLength={20}
+                                    className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
                                         refError ? "border-red-400 bg-red-50" : "border-gray-300"
                                     }`}
                                 />
@@ -164,16 +163,16 @@ function RegisterContent() {
                                 )}
                                 {/* Hint: click to auto-fill default code */}
                                 <p className="mt-1.5 text-xs text-gray-500">
-                                    Chưa có mã? Dùng mã của{" "}
+                                    Chưa có mã?{" "}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setRefInput(DEFAULT_REF);
+                                            setRefInput(DEFAULT_REF.toLowerCase());
                                             setRefError("");
                                         }}
                                         className="text-emerald-600 font-semibold hover:underline focus:outline-none"
                                     >
-                                        {DEFAULT_REF_OWNER} ({DEFAULT_REF})
+                                        Bấm vào đây để dùng mã {DEFAULT_REF}
                                     </button>
                                 </p>
                             </motion.div>
