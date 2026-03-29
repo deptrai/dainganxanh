@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get('code')
-  if (!code || !/^DH[A-Z0-9]{6}$/i.test(code)) {
-    return NextResponse.json({ error: 'Invalid order code' }, { status: 400 })
-  }
-
   // Auth check with user session
   const supabase = await createServerClient()
   const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -14,8 +9,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Use service role to bypass RLS (user authenticated above)
   const serviceSupabase = createServiceRoleClient()
+  const code = req.nextUrl.searchParams.get('code')
+
+  // If no code: return most recent completed order (used by checkout on mount)
+  if (!code) {
+    const { data: order } = await serviceSupabase
+      .from('orders')
+      .select('id, code, status, quantity, user_name')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return NextResponse.json({ order: order ?? null })
+  }
+
+  if (!/^DH[A-Z0-9]{6}$/i.test(code)) {
+    return NextResponse.json({ error: 'Invalid order code' }, { status: 400 })
+  }
+
   const { data: order, error } = await serviceSupabase
     .from('orders')
     .select('id, code, status')

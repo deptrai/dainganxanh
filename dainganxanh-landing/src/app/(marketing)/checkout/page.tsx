@@ -99,7 +99,7 @@ function CheckoutContent() {
     const generateOrderCode = () =>
         `DH${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    // Check for existing pending order on mount
+    // Check for existing pending/completed order on mount
     useEffect(() => {
         const checkPending = async () => {
             try {
@@ -115,10 +115,28 @@ function CheckoutContent() {
                             setCheckoutStep("payment");
                             return;
                         }
+                        setCheckoutStep("identity");
+                        return;
                     }
                 }
             } catch {
-                // fallback to new order code below
+                // fallback below
+            }
+            // No pending order — check if user already has a completed order
+            try {
+                const res = await fetch("/api/orders/status");
+                if (res.ok) {
+                    const { order } = await res.json();
+                    if (order?.status === "completed") {
+                        const name = encodeURIComponent(order.user_name || "");
+                        window.location.replace(
+                            `/checkout/success?orderCode=${order.code}&quantity=${order.quantity}&name=${name}`
+                        );
+                        return;
+                    }
+                }
+            } catch {
+                // fallback to new order
             }
             if (!orderCode) {
                 setOrderCode(generateOrderCode());
