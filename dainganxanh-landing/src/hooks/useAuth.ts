@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { devBypassOTP } from "@/actions/dev-auth";
+import { ensureUserProfile } from "@/actions/ensureUserProfile";
 
 type AuthMode = "phone" | "email";
 type OTPStep = "input" | "verify";
@@ -104,6 +105,11 @@ export function useAuth(): UseAuthReturn {
                         refresh_token: bypassData.session.refresh_token,
                     });
 
+                    // Đảm bảo profile tồn tại trong public.users
+                    if (bypassData.user) {
+                        await ensureUserProfile(bypassData.user.id, bypassData.user.email ?? email, bypassData.user.phone).catch(() => {});
+                    }
+
                     console.log("DEV BYPASS: Session created successfully");
                     return;
                 }
@@ -134,6 +140,11 @@ export function useAuth(): UseAuthReturn {
             const { data: { session: savedSession } } = await supabase.auth.getSession();
             if (!savedSession) {
                 throw new Error("Session không được lưu. Vui lòng thử lại.");
+            }
+
+            // Đảm bảo profile tồn tại trong public.users (lưới an toàn nếu trigger bị miss)
+            if (data.user) {
+                await ensureUserProfile(data.user.id, data.user.email ?? identifier, data.user.phone).catch(() => {});
             }
 
             // Success - session created and persisted
