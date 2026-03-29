@@ -78,12 +78,45 @@ development_status:
   7-2-blog-admin-cms: done  # ✅ Deployed 2026-03-26
   epic-7-retrospective: backlog
 
+  # ─────────────────────────────────────────────────────────
+  # SPRINT 2 — Growth, Admin Productivity & Platform Quality
+  # ─────────────────────────────────────────────────────────
+
+  # Epic 8: Notifications & Engagement
+  epic-8: in-progress
+  8-1-web-push-notifications: ready-for-dev
+  8-2-enhanced-email-templates: ready-for-dev
+  8-3-referral-leaderboard: backlog
+  epic-8-retrospective: backlog
+
+  # Epic 9: Admin Productivity
+  epic-9: backlog
+  9-1-bulk-order-processing: backlog
+  9-2-quarterly-pdf-report-generator: backlog
+  9-3-advanced-analytics-export: backlog
+  9-4-multi-lot-camera-management: backlog
+  epic-9-retrospective: backlog
+
+  # Epic 10: Customer Experience
+  epic-10: backlog
+  10-1-tree-certificate-download: backlog
+  10-2-co2-impact-dashboard: backlog
+  10-3-inapp-customer-support-chat: backlog
+  epic-10-retrospective: backlog
+
+  # Epic 11: Platform Quality
+  epic-11: backlog
+  11-1-e2e-playwright-test-suite: backlog
+  11-2-monitoring-alerting-setup: backlog
+  11-3-core-web-vitals-performance: backlog
+  epic-11-retrospective: backlog
+
 # Summary
 summary:
-  total_epics: 7
-  total_stories: 36
-  stories_ready: 0
+  total_epics: 11
+  total_stories: 49
+  stories_ready: 2
   stories_in_progress: 0
-  stories_done: 36  # All stories complete!
+  stories_done: 36
   current_velocity: 11
-  last_updated: "2026-03-26"  # All 36/36 stories complete
+  last_updated: "2026-03-26"  # Sprint 2 stories added (Epic 8-11, 13 stories)

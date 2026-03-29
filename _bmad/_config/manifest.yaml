@@ -1,12 +1,35 @@
 installation:
-  version: 6.0.0-alpha.22
-  installDate: 2026-01-08T12:12:53.821Z
-  lastUpdated: 2026-01-08T12:12:53.821Z
+  version: 6.2.1
+  installDate: 2026-03-25T16:42:28.950Z
+  lastUpdated: 2026-03-25T16:42:28.950Z
 modules:
-  - core
-  - bmb
-  - bmm
-  - cis
+  - name: core
+    version: 6.2.1
+    installDate: 2026-03-25T16:42:27.698Z
+    lastUpdated: 2026-03-25T16:42:27.698Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.2.1
+    installDate: 2026-03-25T16:42:20.435Z
+    lastUpdated: 2026-03-25T16:42:27.698Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmb
+    version: 1.1.0
+    installDate: 2026-03-25T16:42:22.371Z
+    lastUpdated: 2026-03-25T16:42:28.193Z
+    source: external
+    npmPackage: bmad-builder
+    repoUrl: https://github.com/bmad-code-org/bmad-builder
+  - name: cis
+    version: 0.1.9
+    installDate: 2026-03-25T16:42:24.755Z
+    lastUpdated: 2026-03-25T16:42:28.949Z
+    source: external
+    npmPackage: bmad-creative-intelligence-suite
+    repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
 ides:
-  - antigravity
-  - windsurf
+  - claude-code

@@ -654,16 +654,326 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 
 ---
 
+---
+
+## Epic 8: Notifications & Engagement (Sprint 2)
+
+**Goal:** Tăng engagement và retention thông qua push notifications, email đẹp hơn, và referral leaderboard.
+
+**Success Metrics:**
+- Push notification opt-in rate ≥ 40%
+- Email open rate ≥ 30%
+- Referral conversion rate tăng 20%
+
+### Story 8.1: Web Push Notifications (PWA)
+
+**As a** tree owner,
+**I want to** nhận push notification trên browser khi có ảnh mới hoặc cập nhật về cây,
+**So that** tôi không bỏ lỡ bất kỳ update nào mà không cần check email.
+
+**Acceptance Criteria:**
+
+**Given** tôi đã grant notification permission
+**When** admin upload ảnh mới cho lô của tôi
+**Then** push notification xuất hiện trên browser trong 30 giây
+**And** click notification → navigate đến tree detail page
+**And** user có thể unsubscribe trong Settings
+
+**Story Points:** 8
+**Dependencies:** Web Push API, VAPID keys, Service Worker
+**FRs:** FR-22
+
+---
+
+### Story 8.2: Enhanced Email Templates
+
+**As a** customer,
+**I want to** nhận email đẹp với ảnh nhúng thay vì text đơn giản,
+**So that** email engagement cao hơn và brand impression tốt hơn.
+
+**Acceptance Criteria:**
+
+**Given** bất kỳ triggered email (purchase confirm, quarterly update, harvest notify)
+**When** email gửi đi
+**Then** render HTML đẹp với logo, ảnh cây, màu brand (#2d6a4f)
+**And** mobile-responsive (iOS Mail + Gmail)
+**And** có unsubscribe link
+**And** open rate trackable
+
+**Story Points:** 5
+**Dependencies:** React Email hoặc MJML
+**FRs:** FR-23
+
+---
+
+### Story 8.3: Referral Leaderboard
+
+**As a** referrer,
+**I want to** xem bảng xếp hạng top referrers,
+**So that** tôi có động lực giới thiệu thêm bạn bè.
+
+**Acceptance Criteria:**
+
+**Given** trang /referrals/leaderboard
+**When** load
+**Then** top 10 referrers: avatar, tên rút gọn, số cây giới thiệu, hoa hồng tích lũy
+**And** user thấy vị trí của mình
+**And** refresh mỗi 1 giờ
+
+**Story Points:** 3
+**Dependencies:** FR-20 (Referral system đã có)
+**FRs:** FR-24
+
+---
+
+## Epic 9: Admin Productivity (Sprint 2)
+
+**Goal:** Giảm thời gian xử lý đơn hàng và tăng hiệu quả vận hành cho team admin.
+
+**Success Metrics:**
+- Order processing time giảm 70% (bulk vs single)
+- Quarterly report delivery 100% on time
+- Admin time per order < 2 phút
+
+### Story 9.1: Bulk Order Processing
+
+**As an** admin,
+**I want to** xác minh và gán lô cho nhiều đơn hàng cùng lúc,
+**So that** xử lý đơn nhanh hơn khi có nhiều orders pending.
+
+**Acceptance Criteria:**
+
+**Given** admin ở Order Management
+**When** chọn multiple orders bằng checkbox
+**Then** có nút "Xác minh tất cả" và "Gán lô cây"
+**When** bulk verify
+**Then** tất cả status → verified, send email hàng loạt
+**When** bulk assign lot
+**Then** chọn 1 lot → assign tất cả selected orders và generate tree codes
+
+**Story Points:** 5
+**Dependencies:** FR-13, FR-14
+**FRs:** FR-25
+
+---
+
+### Story 9.2: Quarterly PDF Report Generator
+
+**As an** admin,
+**I want to** tự động tạo và gửi báo cáo PDF hàng quý cho mỗi customer,
+**So that** customers nhận được evidence minh bạch và không cần hỏi thủ công.
+
+**Acceptance Criteria:**
+
+**Given** cuối mỗi quý
+**When** admin click "Gửi báo cáo quý" hoặc cron tự động
+**Then** tạo PDF cho mỗi customer: ảnh mới nhất, CO2 absorbed, health status, growth metrics
+**And** gửi email với PDF attached trong 24 giờ
+**And** admin có thể preview PDF trước khi gửi
+**And** track số email đã gửi / đã mở
+
+**Story Points:** 8
+**Dependencies:** PDF generation, FR-10, FR-17
+**FRs:** FR-26
+
+---
+
+### Story 9.3: Advanced Analytics & Export
+
+**As an** admin,
+**I want to** xem cohort analysis và churn rate, export Excel đầy đủ,
+**So that** có data-driven decisions và báo cáo stakeholders chuyên nghiệp.
+
+**Acceptance Criteria:**
+
+**Given** admin ở Analytics page
+**When** chọn "Cohort Analysis"
+**Then** hiển thị cohort table: cohort tháng vs retention tháng 1/3/6/12
+**When** chọn "Churn"
+**Then** % users không quay lại sau 90 ngày
+**When** export Excel
+**Then** nhiều sheet: Overview, Orders, Users, Trees, Referrals
+
+**Story Points:** 8
+**Dependencies:** FR-19
+**FRs:** FR-27
+
+---
+
+### Story 9.4: Multi-lot Camera Management
+
+**As an** admin,
+**I want to** quản lý nhiều camera stream cho nhiều lô khác nhau,
+**So that** mỗi lô có camera riêng và customer thấy camera của lô mình.
+
+**Acceptance Criteria:**
+
+**Given** admin ở Camera Management page
+**When** load
+**Then** grid tất cả cameras với status (online/offline), linked lot
+**And** admin có thể thêm/xóa/edit camera stream URL per lot
+**When** customer xem tree detail
+**Then** thấy camera của lot mình (nếu configured)
+
+**Story Points:** 5
+**Dependencies:** Story 2-9 (FarmCamera)
+**FRs:** FR-28
+
+---
+
+## Epic 10: Customer Experience (Sprint 2)
+
+**Goal:** Nâng cao trải nghiệm khách hàng với certificate download, CO2 visualization, và support chat.
+
+**Success Metrics:**
+- Certificate download rate ≥ 50% users
+- Support response time < 2 giờ
+- NPS tăng ≥ 10 điểm
+
+### Story 10.1: Tree Certificate Download
+
+**As a** tree owner,
+**I want to** download chứng chỉ sở hữu cây đẹp dưới dạng PDF,
+**So that** tôi có tài liệu để chia sẻ và lưu giữ.
+
+**Acceptance Criteria:**
+
+**Given** user ở tree detail page
+**When** click "Tải chứng chỉ"
+**Then** download PDF: tên user, số cây, lot location, planting date, tree codes, QR verify
+**And** có logo Đại Ngàn Xanh, signed digitally
+**And** shareable image card (OG format)
+
+**Story Points:** 5
+**Dependencies:** PDF generation, FR-09
+**FRs:** FR-29
+
+---
+
+### Story 10.2: CO2 Impact Dashboard
+
+**As a** tree owner,
+**I want to** xem tác động môi trường của tôi theo cách trực quan và cảm xúc,
+**So that** tôi cảm thấy proud và muốn mua thêm cây.
+
+**Acceptance Criteria:**
+
+**Given** user ở dashboard
+**When** xem "Tác động của tôi"
+**Then** tổng CO2 absorbed, tương đương X chuyến bay / Y xe hơi
+**And** biểu đồ CO2 tích lũy animated
+**And** so sánh với average user
+**And** shareable card "Tôi đã offset X kg CO2"
+
+**Story Points:** 5
+**Dependencies:** FR-08, tree age data
+**FRs:** FR-30
+
+---
+
+### Story 10.3: In-app Customer Support Chat
+
+**As a** customer,
+**I want to** chat trực tiếp với support team trong app,
+**So that** tôi giải quyết vấn đề nhanh mà không cần email qua lại.
+
+**Acceptance Criteria:**
+
+**Given** user đăng nhập
+**When** click chat icon
+**Then** mở chat widget với history
+**And** message delivered trong 30 giây (Supabase Realtime)
+**When** admin nhận message
+**Then** notification xuất hiện trong admin panel
+**And** admin thấy order history của user trong chat context
+
+**Story Points:** 8
+**Dependencies:** Supabase Realtime
+**FRs:** FR-31
+
+---
+
+## Epic 11: Platform Quality (Sprint 2)
+
+**Goal:** Đảm bảo platform ổn định, performant, và có đủ safety net để scale.
+
+**Success Metrics:**
+- E2E test pass rate 100% on CI
+- Error detection time < 5 phút
+- Lighthouse score ≥ 90 trên Landing + Dashboard
+
+### Story 11.1: E2E Playwright Test Suite
+
+**As a** developer,
+**I want to** có E2E tests tự động cho critical flows,
+**So that** regression không slip qua production.
+
+**Acceptance Criteria:**
+
+**Given** CI/CD pipeline (GitHub Actions)
+**When** push to main
+**Then** chạy 5 critical E2E tests: landing→purchase flow, login/logout, admin order verify, tree detail view, referral flow
+**And** test results visible trong GitHub Actions
+**And** fail build nếu critical tests fail
+
+**Story Points:** 8
+**Dependencies:** Playwright, GitHub Actions
+**FRs:** FR-32
+
+---
+
+### Story 11.2: Monitoring & Alerting Setup
+
+**As a** developer,
+**I want to** có Sentry error tracking + UptimeRobot alerting trong production,
+**So that** phát hiện và respond to issues trong < 5 phút.
+
+**Acceptance Criteria:**
+
+**Given** production deployment
+**When** unhandled error xảy ra
+**Then** Sentry capture với stack trace + user context trong 1 phút
+**And** Slack/email alert gửi đến dev team
+**When** downtime > 1 phút
+**Then** UptimeRobot alert qua SMS + email
+**And** dashboard uptime history 30 ngày
+
+**Story Points:** 3
+**Dependencies:** Sentry account, UptimeRobot account
+**FRs:** FR-33
+
+---
+
+### Story 11.3: Core Web Vitals Performance
+
+**As a** visitor / user,
+**I want to** trang load nhanh trên mobile,
+**So that** không bỏ đi vì chờ đợi.
+
+**Acceptance Criteria:**
+
+**Given** production pages (Landing + Dashboard)
+**When** measure bằng Lighthouse
+**Then** LCP < 2.5s, INP < 100ms, CLS < 0.1
+**And** bundle size giảm ≥ 20% so với hiện tại (baseline đo trước khi optimize)
+**And** images: WebP format, lazy loading, next/image
+**And** bundle analysis report trong CI
+
+**Story Points:** 5
+**Dependencies:** Next.js optimization
+**FRs:** FR-34
+
+---
+
 ## Summary Statistics
 
-| Metric | Value |
-|--------|-------|
-| Total Epics | 4 |
-| Total Stories | 25 |
-| Total Story Points | ~157 |
-| P0 Stories | 10 |
-| P1 Stories | 10 |
-| P2 Stories | 5 |
+| Metric | Sprint 1 | Sprint 2 | Total |
+|--------|----------|----------|-------|
+| Total Epics | 7 | 4 | 11 |
+| Total Stories | 36 | 13 | 49 |
+| P0 Stories | 10 | 0 | 10 |
+| P1 Stories | 10 | 10 | 20 |
+| P2 Stories | 5 | 3 | 8 |
 
-**MVP Phase 1 (Month 1-3):** Epic 1 + Epic 2 (Stories 2.1-2.4) + Epic 3 (Stories 3.1-3.2, 3.5-3.7)
-**Phase 2 (Month 4-6):** Epic 2 (Stories 2.5-2.8) + Epic 3 (Stories 3.3-3.4) + Epic 4
+**Sprint 1 (Jan–Mar 2026):** Epic 1-7 — Core user journey, admin ops, referral, Casso, SEO, Blog
+**Sprint 2 (Mar 2026+):** Epic 8-11 — Notifications, admin productivity, customer experience, platform quality
