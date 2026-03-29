@@ -92,15 +92,25 @@ export async function getReferralStats(userId: string) {
     try {
         const supabase = await createServerClient()
 
-        // AUTH CHECK: Verify user is querying their own stats
+        // AUTH CHECK: Verify user is querying their own stats, or is an admin (impersonation)
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user || user.id !== userId) {
+        if (authError || !user) {
             console.error('Unauthorized access to getReferralStats')
             return null
         }
 
         // Use service role to bypass RLS — referral queries read OTHER users' orders
         const serviceSupabase = createServiceRoleClient()
+
+        if (user.id !== userId) {
+            // Allow if caller is admin/super_admin (impersonation scenario)
+            const { data: callerProfile } = await serviceSupabase
+                .from('users').select('role').eq('id', user.id).single()
+            if (!callerProfile || !['admin', 'super_admin'].includes(callerProfile.role)) {
+                console.error('Unauthorized access to getReferralStats')
+                return null
+            }
+        }
 
         // Get total clicks
         const { count: totalClicks, error: clicksError } = await serviceSupabase
@@ -158,15 +168,25 @@ export async function getReferralConversions(userId: string) {
     try {
         const supabase = await createServerClient()
 
-        // AUTH CHECK: Verify user is querying their own conversions
+        // AUTH CHECK: Verify user is querying their own conversions, or is an admin (impersonation)
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user || user.id !== userId) {
+        if (authError || !user) {
             console.error('Unauthorized access to getReferralConversions')
             return []
         }
 
         // Use service role to bypass RLS — referral queries read OTHER users' orders
         const serviceSupabase = createServiceRoleClient()
+
+        if (user.id !== userId) {
+            // Allow if caller is admin/super_admin (impersonation scenario)
+            const { data: callerProfile } = await serviceSupabase
+                .from('users').select('role').eq('id', user.id).single()
+            if (!callerProfile || !['admin', 'super_admin'].includes(callerProfile.role)) {
+                console.error('Unauthorized access to getReferralConversions')
+                return []
+            }
+        }
 
         // Query orders directly using referred_by (works regardless of referral_clicks)
         const { data: orders, error } = await serviceSupabase

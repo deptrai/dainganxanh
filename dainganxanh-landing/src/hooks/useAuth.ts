@@ -88,10 +88,12 @@ export function useAuth(): UseAuthReturn {
                     throw new Error(result.error);
                 }
 
-                if (result.tokenHash) {
+                if (result.emailOtp) {
+                    const email = mode === "email" ? identifier : `${identifier.replace(/\+/g, "")}@phone.dev`;
                     const { data: bypassData, error: bypassError } = await supabase.auth.verifyOtp({
-                        token_hash: result.tokenHash,
-                        type: "magiclink",
+                        email,
+                        token: result.emailOtp,
+                        type: "email",
                     });
 
                     if (bypassError) throw bypassError;

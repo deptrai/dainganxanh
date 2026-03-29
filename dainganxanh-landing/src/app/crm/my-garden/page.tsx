@@ -1,23 +1,25 @@
-import { createServerClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import PackageGrid from '@/components/crm/PackageGrid'
 import EmptyGarden from '@/components/crm/EmptyGarden'
 import MyGardenHeader from '@/components/crm/MyGardenHeader'
 
 export default async function MyGardenPage() {
-    const supabase = await createServerClient()
+    const ctx = await getImpersonationContext()
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    if (!ctx) {
         redirect('/login?redirect=/crm/my-garden')
     }
 
+    const { effectiveUserId } = ctx
+
+    // Use service role to bypass RLS when impersonating (or for consistency)
+    const serviceClient = createServiceRoleClient()
+
     // Fetch user's orders (packages) instead of individual trees
     // Each order represents a "package" of trees that are tracked together
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await serviceClient
         .from('orders')
         .select(`
             id,
@@ -31,7 +33,7 @@ export default async function MyGardenPage() {
             created_at,
             total_amount
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .in('status', ['paid', 'verified', 'assigned', 'completed'])
         .order('created_at', { ascending: false })
 

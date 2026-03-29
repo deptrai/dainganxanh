@@ -179,3 +179,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const orderId = req.nextUrl.searchParams.get('orderId')
+    if (!orderId) {
+      return NextResponse.json({ error: 'Missing orderId' }, { status: 400 })
+    }
+
+    const { quantity, total_amount } = await req.json()
+    if (!quantity || !total_amount || quantity <= 0) {
+      return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 })
+    }
+
+    const UNIT_PRICE = 260000
+    if (total_amount !== quantity * UNIT_PRICE) {
+      return NextResponse.json({ error: 'Invalid total_amount' }, { status: 400 })
+    }
+
+    const serviceSupabase = createServiceRoleClient()
+    const { error: updateError } = await serviceSupabase
+      .from('orders')
+      .update({ quantity, total_amount })
+      .eq('id', orderId)
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+
+    if (updateError) {
+      console.error('Failed to update pending order quantity:', updateError)
+      return NextResponse.json({ error: 'Không thể cập nhật đơn hàng' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('Unexpected error in PATCH /api/orders/pending:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

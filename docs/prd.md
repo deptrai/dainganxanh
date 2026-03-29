@@ -266,6 +266,26 @@
   - And export to PDF/Excel
 - **Dependencies:** Analytics backend (BigQuery/Mixpanel), export library
 
+**FR-46: Admin User Impersonation (Vào Tài Khoản User)**
+- **Priority:** P1
+- **Description:** Admin có thể xem tài khoản của bất kỳ user nào từ góc nhìn của họ để hỗ trợ kỹ thuật và kiểm tra trải nghiệm
+- **Status:** Implemented (2026-03-29)
+- **Acceptance Criteria:**
+  - Given admin truy cập `/crm/admin/users`
+  - When click "👁️ Vào tài khoản" của một user
+  - Then set httpOnly cookie `admin_impersonate` (8h TTL) và redirect đến `/crm/my-garden`
+  - And hiển thị banner vàng "Đang xem tài khoản: [tên user]" trên toàn bộ `/crm`
+  - And tất cả trang user-facing (`my-garden`, `referrals`) hiển thị data của user đang được xem
+  - When admin click "Thoát ←" trên banner
+  - Then xóa cookie và redirect về `/crm/admin/users`
+  - And admin không thể vào tài khoản của chính mình
+  - And server re-verify admin role mỗi request (không chỉ khi set cookie)
+- **Security:**
+  - Cookie httpOnly (không đọc được từ JavaScript)
+  - `adminId` trong cookie phải khớp với user đang authenticate
+  - Dùng Supabase service role để bypass RLS khi đọc data user khác
+- **Dependencies:** FR-13 (Admin RBAC), Story 3.8
+
 ***
 
 ### Epic 4: Viral & Growth Features
@@ -396,14 +416,16 @@
 
 **FR-32: Customer Identity Data Collection**
 - **Priority:** P0
-- **Description:** Thu thập thông tin pháp lý khách hàng (CCCD, ngày sinh, địa chỉ, SĐT) tại checkout trước khi thanh toán, phục vụ tạo hợp đồng tự động
+- **Description:** Thu thập thông tin pháp lý khách hàng (CCCD, ngày sinh, địa chỉ, SĐT) SAU KHI thanh toán thành công tại trang success, phục vụ tạo hợp đồng tự động
 - **Added:** 2026-03-28
+- **Updated:** 2026-03-29 — Chuyển từ pre-payment sang post-payment
 - **Acceptance Criteria:**
-  - Given user ở bước checkout
-  - When user điền form thông tin cá nhân
+  - Given user đã thanh toán thành công (trang /checkout/success)
+  - When user điền form thông tin hợp đồng
   - Then validate: CCCD (12 số), ngày sinh, địa chỉ, SĐT bắt buộc
-  - And lưu vào orders table
-  - And chỉ hiện QR thanh toán sau khi điền đủ thông tin
+  - And lưu vào orders table qua POST /api/orders/identity
+  - And trigger contract generation nếu order đã completed
+  - And user có thể bỏ qua, điền sau
 - **Dependencies:** DB migration (thêm columns vào orders)
 
 **FR-33: Auto-generate Contract from DOCX Template**
@@ -533,7 +555,7 @@
 - Framework: Next.js 14 (App Router, SSR for SEO)
 - UI Library: Tailwind CSS + shadcn/ui
 - State: React Context + Zustand
-- Hosting: Vercel
+- Hosting: Dokploy (self-hosted)
 
 **Backend:**
 - Runtime: Node.js 20 + Express

@@ -35,7 +35,7 @@ export async function devBypassOTP(identifier: string, mode: 'phone' | 'email', 
         }
 
         return {
-            tokenHash: data.properties?.hashed_token,
+            emailOtp: data.properties?.email_otp,
         }
     } catch (err) {
         console.error('Dev bypass error:', err)

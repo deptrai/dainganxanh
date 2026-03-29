@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   if (!code) {
     const { data: order } = await serviceSupabase
       .from('orders')
-      .select('id, code, status, quantity, user_name')
+      .select('id, code, status, quantity, user_name, id_number, created_at')
       .eq('user_id', user.id)
       .eq('status', 'completed')
       .order('created_at', { ascending: false })

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import { ReferralLink } from '@/components/crm/ReferralLink'
 import { ReferralQRCode } from '@/components/crm/ReferralQRCode'
 import { ReferralStats } from '@/components/crm/ReferralStats'
@@ -7,19 +8,21 @@ import WithdrawalButton from '@/components/crm/WithdrawalButton'
 import { getReferralStats, getReferralConversions } from '@/actions/referrals'
 
 export default async function ReferralsPage() {
-    const supabase = await createServerClient()
-
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser()
+    const ctx = await getImpersonationContext()
 
     // Layout handles redirect, but we need user for data fetching
-    if (!user) return null
+    if (!ctx) return null
+
+    const { effectiveUserId } = ctx
+
+    // Use service role to bypass RLS when impersonating
+    const serviceClient = createServiceRoleClient()
 
     // Get user's referral code and full name
-    const { data: userData } = await supabase
+    const { data: userData } = await serviceClient
         .from('users')
         .select('referral_code, full_name')
-        .eq('id', user.id)
+        .eq('id', effectiveUserId)
         .single()
 
     if (!userData?.referral_code) {
@@ -35,7 +38,7 @@ export default async function ReferralsPage() {
     }
 
     // Get referral stats
-    const stats = await getReferralStats(user.id) || {
+    const stats = await getReferralStats(effectiveUserId) || {
         totalClicks: 0,
         conversions: 0,
         commission: 0,
@@ -43,7 +46,7 @@ export default async function ReferralsPage() {
     }
 
     // Get conversions list
-    const conversions = await getReferralConversions(user.id)
+    const conversions = await getReferralConversions(effectiveUserId)
 
     const referralUrl = `https://dainganxanh.com.vn/?ref=${userData.referral_code}`
 
@@ -62,7 +65,7 @@ export default async function ReferralsPage() {
                 <ReferralStats stats={stats} />
 
                 {/* Withdrawal Section */}
-                <WithdrawalButton userId={user.id} userFullName={userData.full_name} />
+                <WithdrawalButton userId={effectiveUserId} userFullName={userData.full_name} />
 
                 {/* Referral Link and QR Code */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -1,4 +1,5 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import { redirect, notFound } from 'next/navigation'
 import PackageDetailHeader from '@/components/crm/PackageDetailHeader'
 import LotMap from '@/components/crm/LotMap'
@@ -20,19 +21,19 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
     // Next.js 16: params is a Promise, must await it
     const { orderId } = await params
 
-    const supabase = await createServerClient()
+    const ctx = await getImpersonationContext()
 
-    // Check authentication
-    const {
-        data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
+    if (!ctx) {
         redirect('/login?redirect=/crm/my-garden')
     }
 
-    // Fetch order detail (without lots join to avoid errors if lots table doesn't exist)
-    const { data: order, error } = await supabase
+    const { effectiveUserId } = ctx
+
+    // Use service role to fetch data for the effective user (bypasses RLS when impersonating)
+    const serviceClient = createServiceRoleClient()
+
+    // Fetch order detail
+    const { data: order, error } = await serviceClient
         .from('orders')
         .select(`
             id,
@@ -47,7 +48,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
             lot_id
         `)
         .eq('id', orderId)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .single()
 
     if (error || !order) {
@@ -61,7 +62,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
 
     if (order.lot_id) {
         try {
-            const { data: lot } = await supabase
+            const { data: lot } = await serviceClient
                 .from('lots')
                 .select('id, name, region, gps_lat, gps_lng, gps_polygon')
                 .eq('id', order.lot_id)
@@ -69,7 +70,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
             lotInfo = lot
 
             // Fetch photos for this lot
-            const { data: photos } = await supabase
+            const { data: photos } = await serviceClient
                 .from('tree_photos')
                 .select('id, photo_url, caption, uploaded_at')
                 .eq('lot_id', order.lot_id)
@@ -90,7 +91,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
     const progressToHarvest = Math.min((ageInMonths / 60) * 100, 100)
 
     // Fetch individual trees for this order
-    const { data: trees } = await supabase
+    const { data: trees } = await serviceClient
         .from('trees')
         .select('id, code, order_id, user_id, created_at, status')
         .eq('order_id', orderId)

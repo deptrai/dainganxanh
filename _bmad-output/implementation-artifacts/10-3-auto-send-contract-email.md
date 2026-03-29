@@ -63,7 +63,7 @@ Story này **chỉ thay thế bước generate-contract** — không thay đổi
 
 ### Cross-runtime Call
 
-`generate-contract` là Deno Edge Function. API route `/api/contracts/generate` là Node.js trên Vercel.
+`generate-contract` là Deno Edge Function. API route `/api/contracts/generate` là Node.js trên Dokploy.
 
 ```typescript
 // generate-contract/index.ts — thay thế toàn bộ logic pdf-lib bằng:

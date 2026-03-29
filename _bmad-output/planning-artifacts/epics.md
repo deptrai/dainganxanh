@@ -46,6 +46,7 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 | FR-17 | Photo Upload with GPS Tagging | P1 | Epic 3 |
 | FR-18 | Tree Health Status Update | P1 | Epic 3 |
 | FR-19 | Analytics & Reporting Dashboard | P1 | Epic 3 |
+| FR-46 | Admin User Impersonation (Vào Tài Khoản User) | P1 | Epic 3 |
 | FR-20 | Referral Link Generation | P2 | Epic 4 |
 | FR-21 | Social Share Pre-populated Text | P1 | Epic 4 |
 
@@ -75,7 +76,7 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 |------|-------------|--------------|
 | Epic 1: User Acquisition | FR-01 → FR-07, FR-04B | 8 P0 |
 | Epic 2: Tree Tracking | FR-08 → FR-12D | 1 P0, 3 P1, 4 P2 |
-| Epic 3: Admin Operations | FR-13 → FR-19 | 2 P0, 5 P1 |
+| Epic 3: Admin Operations | FR-13 → FR-19, FR-46 | 2 P0, 6 P1 |
 | Epic 4: Viral & Growth | FR-20, FR-21 | 1 P1, 1 P2 |
 
 ## Epic List
@@ -84,7 +85,7 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 |---|-----------|------|---------|----------|
 | 1 | User Acquisition & Onboarding | Hoàn thành funnel từ Landing → Payment → Confirmation | 8 | P0 - MVP Core |
 | 2 | Tree Tracking & Dashboard | User theo dõi cây và nhận updates | 8 | P0/P1 - MVP Core |
-| 3 | Admin Operations | Quản lý đơn hàng, trồng cây, báo cáo | 7 | P0/P1 - MVP Core |
+| 3 | Admin Operations | Quản lý đơn hàng, trồng cây, báo cáo | 9 | P0/P1 - MVP Core |
 | 4 | Viral & Growth Features | Tăng viral coefficient qua referral & share | 2 | P1/P2 - Growth |
 
 ---
@@ -625,6 +626,61 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 **Story Points:** 13
 **Dependencies:** Analytics backend
 **FRs:** FR-19
+
+---
+
+### Story 3.8: Admin User Management _(2026-03-28)_
+
+**As an** admin,
+**I want to** xem và quản lý tất cả user accounts,
+**So that** tôi có thể phân quyền, theo dõi hoạt động, và gán mã giới thiệu cho user.
+
+**Acceptance Criteria:**
+
+**Given** admin truy cập `/crm/admin/users`
+**When** trang load
+**Then** hiển thị danh sách tất cả user với email, tên, SĐT, mã giới thiệu, số đơn hàng, ngày tạo, role
+**And** search theo email/tên/SĐT
+**And** filter theo role (user/admin/super_admin)
+**When** admin đổi role qua dropdown → confirm modal
+**Then** cập nhật role trong database
+**When** admin click "🤝 Gán mã" → nhập mã giới thiệu
+**Then** gán mã và tính hoa hồng hồi tố cho đơn cũ
+
+**Story Points:** 8
+**Status:** implemented (2026-03-28)
+**Dependencies:** RBAC, Supabase service role
+**FRs:** FR-13 (extended)
+
+---
+
+### Story 3.9: Admin User Impersonation (Vào Tài Khoản User) _(2026-03-29)_
+
+**As an** admin,
+**I want to** xem tài khoản của bất kỳ user nào từ góc nhìn của họ,
+**So that** tôi có thể hỗ trợ kỹ thuật và kiểm tra trải nghiệm user mà không cần user mô tả.
+
+**Acceptance Criteria:**
+
+**Given** admin ở `/crm/admin/users`
+**When** click "👁️ Vào tài khoản" của user X
+**Then** set cookie `admin_impersonate` (httpOnly, 8h) và redirect đến `/crm/my-garden`
+**And** banner vàng hiện: "Đang xem tài khoản: **[tên user]**"
+
+**Given** admin đang impersonating
+**When** truy cập `/crm/my-garden`, `/crm/my-garden/[orderId]`, `/crm/referrals`
+**Then** hiển thị data của user đang được xem (không phải của admin)
+
+**Given** admin click "Thoát ←"
+**Then** xóa cookie và redirect về `/crm/admin/users`
+
+**And** Admin không thể vào tài khoản của chính mình
+**And** Server re-verify admin role mỗi request
+
+**Story Points:** 5
+**Status:** implemented (2026-03-29)
+**Dependencies:** Story 3.8
+**FRs:** FR-46
 
 ---
 

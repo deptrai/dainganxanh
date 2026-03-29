@@ -70,8 +70,8 @@ so that **hợp đồng có đúng format pháp lý của công ty Biocare**.
 
 ### Architecture Compliance
 
-- **API Route** (Next.js): `src/app/api/contracts/generate/route.ts` — serverless function trên Vercel
-- **Vercel timeout:** 60s cho Hobby, 300s cho Pro — ConvertAPI call cần < 30s
+- **API Route** (Next.js): `src/app/api/contracts/generate/route.ts` — server route trên Dokploy
+- **Timeout:** ConvertAPI call được giới hạn 30s bằng AbortController
 - **Storage:** Supabase Storage (đã có bucket `contracts/` từ Story 1.8)
 - **No Edge Function change:** Giữ nguyên `generate-contract` Edge Function cũ làm fallback, API route mới là primary
 

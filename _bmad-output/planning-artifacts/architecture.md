@@ -30,7 +30,7 @@ Kiến trúc đơn giản hóa cho nền tảng Đại Ngàn Xanh - tập trung 
 **Simple Full-Stack Architecture:**
 - **Next.js Only** - Không có backend riêng
 - **Supabase All-in-One** - Database, Auth, Storage, Edge Functions
-- **Single Deployment** - Vercel only
+- **Single Deployment** - Dokploy (self-hosted)
 
 ### ⚡ Design Principles
 
@@ -50,7 +50,7 @@ Kiến trúc đơn giản hóa cho nền tảng Đại Ngàn Xanh - tập trung 
 | **Auth** | Supabase Auth | Magic link, OTP, Social |
 | **Storage** | Supabase Storage | Integrated với RLS |
 | **Edge Functions** | Supabase Edge Functions | Webhooks, Cron jobs |
-| **Hosting** | Vercel | Zero-config deploy |
+| **Hosting** | Dokploy | Self-hosted, full control |
 
 ### 🚫 What We're NOT Using
 
@@ -740,13 +740,13 @@ export async function GET(request: Request) {
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         VERCEL                                   │
+│                         DOKPLOY                                  │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │                    Next.js 16.1.1                          │ │
 │  │   • SSR pages (landing, CRM)                               │ │
 │  │   • API Routes (/api/*)                                    │ │
 │  │   • Edge Middleware (auth)                                 │ │
-│  │   • Static assets → Vercel CDN                             │ │
+│  │   • Static assets served directly                         │ │
 │  └────────────────────────────────────────────────────────────┘ │
 └───────────────────────────┬─────────────────────────────────────┘
                             │

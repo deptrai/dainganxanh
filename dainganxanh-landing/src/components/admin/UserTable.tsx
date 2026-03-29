@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AdminUser } from '@/actions/adminUsers'
+import { startImpersonation } from '@/actions/impersonation'
 
 interface UserTableProps {
     users: AdminUser[]
@@ -31,6 +32,19 @@ function formatDate(iso: string) {
 export default function UserTable({ users, changeRole, updatingId, assignReferral }: UserTableProps) {
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [successMsg, setSuccessMsg] = useState<string | null>(null)
+    const [impersonatingId, setImpersonatingId] = useState<string | null>(null)
+
+    const handleImpersonate = async (user: AdminUser) => {
+        setImpersonatingId(user.id)
+        setErrorMsg(null)
+        const result = await startImpersonation(user.id)
+        if (result.error) {
+            setErrorMsg(result.error)
+            setImpersonatingId(null)
+        } else {
+            window.location.href = '/crm/my-garden'
+        }
+    }
     const [confirmChange, setConfirmChange] = useState<{
         userId: string
         userName: string
@@ -103,6 +117,7 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
                             <th className="px-6 py-3 text-left font-medium text-gray-600">Ngày tạo</th>
                             <th className="px-6 py-3 text-left font-medium text-gray-600">Role</th>
                             <th className="px-6 py-3 text-left font-medium text-gray-600">Giới thiệu</th>
+                            <th className="px-6 py-3 text-left font-medium text-gray-600">Truy cập</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -162,6 +177,25 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
                                             className="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors whitespace-nowrap"
                                         >
                                             🤝 Gán mã
+                                        </button>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <button
+                                            onClick={() => handleImpersonate(user)}
+                                            disabled={impersonatingId === user.id}
+                                            className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                        >
+                                            {impersonatingId === user.id ? (
+                                                <>
+                                                    <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                                    </svg>
+                                                    Đang vào...
+                                                </>
+                                            ) : (
+                                                <>👁️ Vào tài khoản</>
+                                            )}
                                         </button>
                                     </td>
                                 </tr>
