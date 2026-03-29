@@ -54,8 +54,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# LibreOffice for DOCX→PDF conversion (headless, no GUI)
+RUN apk add --no-cache libreoffice
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# LibreOffice writes a user profile on first run — needs writable HOME
+ENV HOME=/tmp
 
 # Copy built files
 COPY --from=builder /app/public ./public
