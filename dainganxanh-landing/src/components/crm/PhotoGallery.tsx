@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { PHOTO_PLACEHOLDER_MONTHS } from '@/lib/constants'
 
 interface PhotoGalleryProps {
     orderId: string
@@ -12,7 +13,7 @@ export default function PhotoGallery({ orderId, latestPhotoUrl, ageInMonths }: P
     // For MVP: Show placeholder or latest photo only
     // TODO: Fetch multiple photos from lot when photo system is implemented
 
-    const showPlaceholder = !latestPhotoUrl || ageInMonths < 9
+    const showPlaceholder = !latestPhotoUrl || ageInMonths < PHOTO_PLACEHOLDER_MONTHS
 
     return (
         <div id="photos" className="bg-white rounded-xl shadow-lg p-6 mb-8">

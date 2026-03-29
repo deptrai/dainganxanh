@@ -1,29 +1,40 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import type { User } from '@supabase/supabase-js'
 
-export async function submitSellBack(orderId: string) {
-    // Verify the user is authenticated and owns this order
-    const supabase = await createServerClient()
+type ServerClient = Awaited<ReturnType<typeof createServerClient>>
+
+// Helper: verify the current user is authenticated and owns the order.
+// Returns order as Record<string, unknown> since the shape varies per call site.
+async function verifyOrderOwnership(
+    supabase: ServerClient,
+    orderId: string,
+    select: string
+): Promise<{ user: User | null; order: Record<string, unknown> | null; error: string | null }> {
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { user: null, order: null, error: 'Bạn chưa đăng nhập.' }
 
-    if (!user) {
-        return { success: false, error: 'Bạn chưa đăng nhập.' }
-    }
-
-    // Verify ownership
     const { data: order, error: orderError } = await supabase
         .from('orders')
-        .select('id, user_id, total_amount, status, code, created_at')
+        .select(select)
         .eq('id', orderId)
         .eq('user_id', user.id)
-        .single()
+        .single() as { data: Record<string, unknown> | null; error: unknown }
 
-    if (orderError || !order) {
-        return { success: false, error: 'Không tìm thấy đơn hàng.' }
-    }
+    if (orderError || !order) return { user, order: null, error: 'Không tìm thấy đơn hàng.' }
 
-    if (['harvested', 'harvested_sellback', 'harvested_receive_product', 'keep_growing'].includes(order.status)) {
+    return { user, order, error: null }
+}
+
+export async function submitSellBack(orderId: string) {
+    const supabase = await createServerClient()
+    const { user, order, error } = await verifyOrderOwnership(
+        supabase, orderId, 'id, user_id, total_amount, status, code, created_at'
+    )
+    if (error || !user || !order) return { success: false, error: error ?? 'Không tìm thấy đơn hàng.' }
+
+    if (['harvested', 'harvested_sellback', 'harvested_receive_product', 'keep_growing'].includes(order.status as string)) {
         return { success: false, error: 'Đơn hàng này đã được thu hoạch hoặc đang tiếp tục nuôi.' }
     }
 
@@ -48,26 +59,6 @@ export async function submitSellBack(orderId: string) {
         return { success: false, error: 'Có lỗi xảy ra khi xử lý yêu cầu. Vui lòng thử lại.' }
     }
 
-    // Create a harvest record in the orders metadata or a separate log
-    // We insert a record into a harvest_requests table if it exists,
-    // otherwise we just rely on the order status change
-    try {
-        await adminSupabase
-            .from('harvest_requests')
-            .insert({
-                order_id: orderId,
-                user_id: user.id,
-                type: 'sell_back',
-                buyback_price: buybackPrice,
-                original_amount: Number(order.total_amount),
-                status: 'pending_payment',
-                created_at: new Date().toISOString(),
-            })
-    } catch {
-        // Table may not exist yet — the order status update is the primary record
-        console.warn('harvest_requests table insert skipped (table may not exist)')
-    }
-
     return {
         success: true,
         buybackPrice,
@@ -79,23 +70,8 @@ export async function submitSellBack(orderId: string) {
 
 export async function submitKeepGrowing(orderId: string) {
     const supabase = await createServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-        return { success: false, error: 'Bạn cần đăng nhập để thực hiện thao tác này.' }
-    }
-
-    // Verify ownership
-    const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .select('id, user_id, status')
-        .eq('id', orderId)
-        .eq('user_id', user.id)
-        .single()
-
-    if (orderError || !order) {
-        return { success: false, error: 'Không tìm thấy đơn hàng.' }
-    }
+    const { user, order, error } = await verifyOrderOwnership(supabase, orderId, 'id, user_id, status')
+    if (error || !user || !order) return { success: false, error: error ?? 'Không tìm thấy đơn hàng.' }
 
     if (order.status === 'keep_growing') {
         return { success: false, error: 'Cây này đã được đăng ký tiếp tục nuôi.' }
@@ -135,22 +111,6 @@ export async function submitKeepGrowing(orderId: string) {
         return { success: false, error: 'Không thể cập nhật đơn hàng. Vui lòng thử lại.' }
     }
 
-    // Create harvest request record
-    try {
-        await adminSupabase
-            .from('harvest_requests')
-            .insert({
-                order_id: orderId,
-                user_id: user.id,
-                type: 'keep_growing',
-                status: 'confirmed',
-                created_at: new Date().toISOString(),
-            })
-    } catch {
-        // Table may not exist yet — the order status update is the primary record
-        console.warn('harvest_requests table insert skipped (table may not exist)')
-    }
-
     return { success: true }
 }
 
@@ -172,26 +132,10 @@ export async function submitReceiveProduct(
     shippingAddress: ShippingAddress
 ) {
     const supabase = await createServerClient()
+    const { user, order, error } = await verifyOrderOwnership(supabase, orderId, 'id, user_id, status, code')
+    if (error || !user || !order) return { success: false, error: error ?? 'Không tìm thấy đơn hàng.' }
 
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        return { success: false, error: 'Bạn cần đăng nhập để thực hiện thao tác này.' }
-    }
-
-    // Verify the order belongs to the user
-    const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .select('id, user_id, status, code')
-        .eq('id', orderId)
-        .eq('user_id', user.id)
-        .single()
-
-    if (orderError || !order) {
-        return { success: false, error: 'Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập.' }
-    }
-
-    if (['harvested', 'harvested_receive_product', 'harvested_sellback', 'keep_growing'].includes(order.status)) {
+    if (['harvested', 'harvested_receive_product', 'harvested_sellback', 'keep_growing'].includes(order.status as string)) {
         return { success: false, error: 'Đơn hàng này đã được thu hoạch hoặc đang tiếp tục nuôi.' }
     }
 
@@ -227,24 +171,6 @@ export async function submitReceiveProduct(
     if (updateError) {
         console.error('Error updating order for receive product:', updateError)
         return { success: false, error: 'Có lỗi xảy ra khi xử lý yêu cầu. Vui lòng thử lại.' }
-    }
-
-    // Create harvest request record
-    try {
-        await adminSupabase
-            .from('harvest_requests')
-            .insert({
-                order_id: orderId,
-                user_id: user.id,
-                type: 'receive_product',
-                product_type: productType,
-                shipping_address: shippingAddress,
-                status: 'pending_fulfillment',
-                created_at: new Date().toISOString(),
-            })
-    } catch {
-        // Table may not exist yet — the order status update is the primary record
-        console.warn('harvest_requests table insert skipped (table may not exist)')
     }
 
     return {

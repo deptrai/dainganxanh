@@ -135,7 +135,7 @@ export async function getChecklistsByQuarter(quarter: string) {
         console.error('Error fetching checklists by quarter:', error)
         return {
             data: null,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Unknown error',
         }
     }
 }
@@ -189,7 +189,7 @@ export async function getChecklistByLotAndQuarter(
         console.error('Error getting checklist by lot and quarter:', error)
         return {
             data: null,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Unknown error',
         }
     }
 }
@@ -260,7 +260,7 @@ export async function updateChecklistItem(
         console.error('Error updating checklist item:', error)
         return {
             data: null,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Unknown error',
         }
     }
 }
@@ -297,7 +297,7 @@ export async function getLotsWithChecklistStatus(quarter: string) {
         const lotsWithChecklists: LotWithChecklist[] = []
 
         for (const lot of lots) {
-            let checklist = checklistMap.get(lot.id)
+            let checklist: FieldChecklist | null = checklistMap.get(lot.id) ?? null
 
             // If no checklist exists, create one
             if (!checklist) {
@@ -341,7 +341,7 @@ export async function getLotsWithChecklistStatus(quarter: string) {
         console.error('Error getting lots with checklist status:', error)
         return {
             data: null,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Unknown error',
         }
     }
 }
@@ -400,7 +400,7 @@ export async function getChecklistProgress(quarter: string) {
         console.error('Error getting checklist progress:', error)
         return {
             data: null,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Unknown error',
         }
     }
 }

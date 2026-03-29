@@ -2,6 +2,22 @@
 
 export const PACKAGE_PRICE = 260000; // VNĐ per tree
 
+// Business logic thresholds
+export const HARVEST_MONTHS = 60; // trees must be 60 months old to harvest
+export const PHOTO_PLACEHOLDER_MONTHS = 9; // show placeholder before 9 months
+export const MIN_WITHDRAWAL = 200_000; // minimum withdrawal amount in VNĐ
+
+// Tree status config — shared across PackageCard, PackageDetailHeader, TreeCard
+export const TREE_STATUS_CONFIG = {
+    pending: { label: 'Chờ xử lý', emoji: '⏳', color: 'bg-gray-100 text-gray-800' },
+    seedling: { label: 'Đang ươm', emoji: '🌱', color: 'bg-green-100 text-green-800' },
+    planted: { label: 'Đã trồng', emoji: '🌿', color: 'bg-emerald-100 text-emerald-800' },
+    growing: { label: 'Đang lớn', emoji: '🌲', color: 'bg-green-600 text-white' },
+    mature: { label: 'Trưởng thành', emoji: '🎋', color: 'bg-yellow-100 text-yellow-800' },
+    harvested: { label: 'Thu hoạch', emoji: '✨', color: 'bg-purple-100 text-purple-800' },
+    dead: { label: 'Chết', emoji: '⚫', color: 'bg-gray-100 text-gray-800' },
+} as const;
+
 export interface CostBreakdown {
     label: string;
     amount: number;

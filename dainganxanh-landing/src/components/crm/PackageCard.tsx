@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { format, isValid } from 'date-fns'
 import { vi } from 'date-fns/locale'
+import { PHOTO_PLACEHOLDER_MONTHS, TREE_STATUS_CONFIG } from '@/lib/constants'
 
 interface PackageCardProps {
     order: {
@@ -18,16 +19,6 @@ interface PackageCardProps {
         created_at: string
         total_amount: number | null
     }
-}
-
-const TREE_STATUS_CONFIG = {
-    pending: { label: 'Chờ xử lý', emoji: '⏳', color: 'bg-gray-100 text-gray-800' },
-    seedling: { label: 'Đang ươm', emoji: '🌱', color: 'bg-green-100 text-green-800' },
-    planted: { label: 'Đã trồng', emoji: '🌿', color: 'bg-emerald-100 text-emerald-800' },
-    growing: { label: 'Đang lớn', emoji: '🌲', color: 'bg-green-600 text-white' },
-    mature: { label: 'Trưởng thành', emoji: '🎋', color: 'bg-yellow-100 text-yellow-800' },
-    harvested: { label: 'Thu hoạch', emoji: '✨', color: 'bg-purple-100 text-purple-800' },
-    dead: { label: 'Chết', emoji: '⚫', color: 'bg-gray-100 text-gray-800' },
 }
 
 function generatePackageCode(orderId: string, orderCode: string | null): string {
@@ -52,7 +43,7 @@ export default function PackageCard({ order }: PackageCardProps) {
     const monthsOld = isValidDisplayDate
         ? (Date.now() - displayDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
         : 0
-    const showPlaceholder = !order.latest_photo_url || monthsOld < 9
+    const showPlaceholder = !order.latest_photo_url || monthsOld < PHOTO_PLACEHOLDER_MONTHS
 
     // Calculate CO2 (default: quantity * 20kg per tree per year)
     const co2Total = order.co2_absorbed ?? (order.quantity * 20)

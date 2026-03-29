@@ -7,28 +7,22 @@ import {
 } from '../fieldChecklist'
 
 // Mock Supabase client
+// eqLeaf is shared so chained .eq().eq() works by including eq in each level
+const eqLeaf = {
+    order: jest.fn(() => ({ data: [], error: null })),
+    single: jest.fn(() => ({ data: null, error: { code: 'PGRST116' } })),
+    eq: jest.fn(() => eqLeaf), // supports multiple chained .eq() calls
+}
+
 jest.mock('@/lib/supabase/server', () => ({
     createServiceRoleClient: jest.fn(() => ({
         from: jest.fn(() => ({
             select: jest.fn(() => ({
-                eq: jest.fn(() => ({
-                    order: jest.fn(() => ({
-                        data: [],
-                        error: null,
-                    })),
-                    single: jest.fn(() => ({
-                        data: null,
-                        error: { code: 'PGRST116' }, // Not found
-                    })),
-                })),
-                order: jest.fn(() => ({
-                    data: [],
-                    error: null,
-                })),
-                neq: jest.fn(() => ({
-                    data: [],
-                    error: null,
-                })),
+                eq: jest.fn(() => eqLeaf),
+                order: jest.fn(() => ({ data: [], error: null })),
+                neq: jest.fn(() => ({ data: [], error: null })),
+                data: [], // for direct await without .eq()
+                error: null,
             })),
             insert: jest.fn(() => ({
                 select: jest.fn(() => ({
@@ -224,30 +218,41 @@ describe('fieldChecklist actions', () => {
     describe('getChecklistProgress', () => {
         it('calculates progress correctly', async () => {
             const { createServiceRoleClient } = require('@/lib/supabase/server')
+            // getChecklistProgress queries 'lots' then 'field_checklists'
             createServiceRoleClient.mockImplementationOnce(() => ({
-                from: jest.fn(() => ({
-                    select: jest.fn(() => ({
-                        eq: jest.fn(() => ({
-                            data: [
-                                {
-                                    checklist_items: [
-                                        { completed: true },
-                                        { completed: true },
-                                        { completed: true },
-                                    ],
-                                },
-                                {
-                                    checklist_items: [
-                                        { completed: true },
-                                        { completed: false },
-                                        { completed: false },
-                                    ],
-                                },
-                            ],
-                            error: null,
+                from: jest.fn((table: string) => {
+                    if (table === 'lots') {
+                        return {
+                            select: jest.fn(() => ({
+                                data: [{ id: 'lot-1' }, { id: 'lot-2' }],
+                                error: null,
+                            })),
+                        }
+                    }
+                    return {
+                        select: jest.fn(() => ({
+                            eq: jest.fn(() => ({
+                                data: [
+                                    {
+                                        checklist_items: [
+                                            { completed: true },
+                                            { completed: true },
+                                            { completed: true },
+                                        ],
+                                    },
+                                    {
+                                        checklist_items: [
+                                            { completed: true },
+                                            { completed: false },
+                                            { completed: false },
+                                        ],
+                                    },
+                                ],
+                                error: null,
+                            })),
                         })),
-                    })),
-                })),
+                    }
+                }),
             }))
 
             const result = await getChecklistProgress('2026-Q1')
@@ -261,14 +266,18 @@ describe('fieldChecklist actions', () => {
         it('handles empty checklists', async () => {
             const { createServiceRoleClient } = require('@/lib/supabase/server')
             createServiceRoleClient.mockImplementationOnce(() => ({
-                from: jest.fn(() => ({
-                    select: jest.fn(() => ({
-                        eq: jest.fn(() => ({
-                            data: [],
-                            error: null,
+                from: jest.fn((table: string) => {
+                    if (table === 'lots') {
+                        return {
+                            select: jest.fn(() => ({ data: [], error: null })),
+                        }
+                    }
+                    return {
+                        select: jest.fn(() => ({
+                            eq: jest.fn(() => ({ data: [], error: null })),
                         })),
-                    })),
-                })),
+                    }
+                }),
             }))
 
             const result = await getChecklistProgress('2026-Q1')

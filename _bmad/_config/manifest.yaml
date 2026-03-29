@@ -1,53 +1,35 @@
 installation:
-  version: 6.2.2
-  installDate: 2026-01-08T12:12:53.821Z
-  lastUpdated: 2026-03-27T02:04:27.188Z
+  version: 6.2.1
+  installDate: 2026-03-25T16:42:28.950Z
+  lastUpdated: 2026-03-25T16:42:28.950Z
 modules:
   - name: core
-    version: 6.2.2
-    installDate: 2026-01-08T12:12:53.821Z
-    lastUpdated: 2026-03-27T02:04:24.703Z
+    version: 6.2.1
+    installDate: 2026-03-25T16:42:27.698Z
+    lastUpdated: 2026-03-25T16:42:27.698Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmm
-    version: 6.2.2
-    installDate: 2026-03-27T02:04:12.564Z
-    lastUpdated: 2026-03-27T02:04:24.703Z
+    version: 6.2.1
+    installDate: 2026-03-25T16:42:20.435Z
+    lastUpdated: 2026-03-25T16:42:27.698Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmb
     version: 1.1.0
-    installDate: 2026-03-27T02:04:14.446Z
-    lastUpdated: 2026-03-27T02:04:25.455Z
+    installDate: 2026-03-25T16:42:22.371Z
+    lastUpdated: 2026-03-25T16:42:28.193Z
     source: external
     npmPackage: bmad-builder
     repoUrl: https://github.com/bmad-code-org/bmad-builder
   - name: cis
     version: 0.1.9
-    installDate: 2026-03-27T02:04:16.043Z
-    lastUpdated: 2026-03-27T02:04:26.058Z
+    installDate: 2026-03-25T16:42:24.755Z
+    lastUpdated: 2026-03-25T16:42:28.949Z
     source: external
     npmPackage: bmad-creative-intelligence-suite
     repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
-  - name: tea
-    version: 1.7.2
-    installDate: 2026-03-27T02:04:17.735Z
-    lastUpdated: 2026-03-27T02:04:26.556Z
-    source: external
-    npmPackage: bmad-method-test-architecture-enterprise
-    repoUrl: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
-  - name: wds
-    version: 0.3.1
-    installDate: 2026-03-27T02:04:20.212Z
-    lastUpdated: 2026-03-27T02:04:27.188Z
-    source: external
-    npmPackage: bmad-method-wds-expansion
-    repoUrl: https://github.com/bmad-code-org/bmad-method-wds-expansion
 ides:
-  - antigravity
-  - windsurf
   - claude-code
-  - cursor
-  - auggie

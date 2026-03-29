@@ -51,7 +51,7 @@ export default function RevenueChart({ data }: RevenueChartProps) {
                             border: '1px solid #e5e7eb',
                             borderRadius: '8px'
                         }}
-                        formatter={(value: number) => [`${value.toLocaleString('vi-VN')} ₫`, 'Doanh thu']}
+                        formatter={((value: number) => [`${value.toLocaleString('vi-VN')} ₫`, 'Doanh thu']) as any}
                     />
                     <Bar
                         dataKey="revenue"
