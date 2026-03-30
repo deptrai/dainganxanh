@@ -91,7 +91,7 @@ test.describe('My Garden Dashboard E2E', () => {
         // Login
         await loginWithOTP(page)
 
-        // Navigate to My Garden
+        // Navigate to My Garden explicitly
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
 
