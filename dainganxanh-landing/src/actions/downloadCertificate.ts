@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function downloadCertificate(orderId: string): Promise<{
     success: boolean
@@ -19,8 +20,20 @@ export async function downloadCertificate(orderId: string): Promise<{
             return { success: false, error: 'Chưa đăng nhập' }
         }
 
-        // Fetch order with auth check (RLS automatic)
-        const { data: order, error: orderError } = await supabase
+        // Create service role client to bypass RLS (auth already verified above)
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false,
+                },
+            }
+        )
+
+        // Fetch order with explicit user_id filter (RLS bypassed but still secure)
+        const { data: order, error: orderError } = await supabaseAdmin
             .from('orders')
             .select(`
                 id,
@@ -84,8 +97,8 @@ export async function downloadCertificate(orderId: string): Promise<{
 
         const { filePath } = await response.json()
 
-        // Generate signed URL (24h expiry)
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        // Generate signed URL (24h expiry) using admin client
+        const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
             .from('certificates')
             .createSignedUrl(filePath, 86400) // 24 hours
 

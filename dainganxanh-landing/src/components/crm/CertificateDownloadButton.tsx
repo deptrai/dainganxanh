@@ -8,7 +8,7 @@ interface CertificateDownloadButtonProps {
     orderId: string
 }
 
-export default function CertificateDownloadButton({
+export function CertificateDownloadButton({
     orderId,
 }: CertificateDownloadButtonProps) {
     const [loading, setLoading] = useState(false)

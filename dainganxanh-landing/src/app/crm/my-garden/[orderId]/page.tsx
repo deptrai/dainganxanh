@@ -9,6 +9,7 @@ import QuarterlyReports from '@/components/crm/QuarterlyReports'
 import GrowthMetrics from '@/components/crm/GrowthMetrics'
 import TreeCard from '@/components/crm/TreeCard'
 import FarmCamera from '@/components/crm/FarmCamera'
+import { CertificateDownloadButton } from '@/components/crm/CertificateDownloadButton'
 import Link from 'next/link'
 
 interface PackageDetailPageProps {
@@ -128,6 +129,13 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                     order={{ ...order, lots: lotInfo }}
                     packageCode={order.order_code || `PKG-${new Date().getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
                 />
+
+                {/* Certificate Download Button */}
+                {order.status === 'completed' && order.lot_id && (
+                    <div className="mt-4">
+                        <CertificateDownloadButton orderId={orderId} />
+                    </div>
+                )}
 
                 {/* Growth Metrics */}
                 <GrowthMetrics

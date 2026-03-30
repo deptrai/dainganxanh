@@ -1,0 +1,82 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "Đại Ngàn Xanh" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e7]
+          - generic [ref=e9]: Đại Ngàn Xanh
+        - link "Đăng nhập" [ref=e10] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e11]
+          - generic [ref=e14]: Đăng nhập
+      - navigation [ref=e15]:
+        - generic [ref=e17]:
+          - link "Trang chủ" [ref=e18] [cursor=pointer]:
+            - /url: /
+            - img [ref=e19]
+            - generic [ref=e22]: Trang chủ
+          - link "Mua cây" [ref=e23] [cursor=pointer]:
+            - /url: /pricing
+            - img [ref=e24]
+            - generic [ref=e28]: Mua cây
+          - link "Blog" [ref=e29] [cursor=pointer]:
+            - /url: /blog
+            - img [ref=e30]
+            - generic [ref=e32]: Blog
+          - link "Vườn của tôi" [ref=e33] [cursor=pointer]:
+            - /url: /crm/my-garden
+            - img [ref=e34]
+            - generic [ref=e36]: Vườn của tôi
+          - link "Giới thiệu" [ref=e37] [cursor=pointer]:
+            - /url: /crm/referrals
+            - img [ref=e38]
+            - generic [ref=e44]: Giới thiệu
+    - main [ref=e45]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - img [ref=e50]
+          - heading "Xác thực OTP" [level=1] [ref=e53]
+          - paragraph [ref=e54]: Mã OTP đã được gửi đến phanquochoipt@gmail.com
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - generic [ref=e58]: Nhập mã OTP (8 chữ số)
+              - generic [ref=e59]:
+                - textbox "Digit 1" [ref=e60]: "7"
+                - textbox "Digit 2" [ref=e61]: "6"
+                - textbox "Digit 3" [ref=e62]: "5"
+                - textbox "Digit 4" [ref=e63]: "3"
+                - textbox "Digit 5" [ref=e64]: "3"
+                - textbox "Digit 6" [ref=e65]: "8"
+                - textbox "Digit 7" [ref=e66]: "5"
+                - textbox "Digit 8" [ref=e67]: "0"
+              - alert [ref=e68]:
+                - generic [ref=e69]: ⚠
+                - generic [ref=e70]: Token has expired or is invalid
+            - paragraph [ref=e72]:
+              - text: Gửi lại mã sau
+              - generic [ref=e73]: 11s
+          - paragraph [ref=e75]:
+            - text: Chưa có tài khoản?
+            - link "Đăng ký ngay" [ref=e76] [cursor=pointer]:
+              - /url: /register?quantity=1
+        - generic [ref=e78]:
+          - paragraph [ref=e79]: 🔒 Thông tin của bạn được bảo mật tuyệt đối
+          - paragraph [ref=e80]: Mã OTP có hiệu lực trong 5 phút
+  - generic [ref=e85] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e86]:
+      - img [ref=e87]
+    - generic [ref=e90]:
+      - button "Open issues overlay" [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]: "0"
+          - generic [ref=e94]: "1"
+        - generic [ref=e95]: Issue
+      - button "Collapse issues badge" [ref=e96]:
+        - img [ref=e97]
+  - alert [ref=e99]
+```
