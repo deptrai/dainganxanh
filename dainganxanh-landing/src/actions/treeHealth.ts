@@ -1,7 +1,6 @@
 'use server'
 
 import { createServerClient } from '@/lib/supabase/server'
-import { notifyTreeOwnerDeadTree } from './notifications'
 
 export interface TreeHealthUpdate {
     treeId: string

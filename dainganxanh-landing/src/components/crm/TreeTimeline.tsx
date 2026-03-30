@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
+import { PHOTO_PLACEHOLDER_MONTHS } from '@/lib/constants'
 
 interface TimelineStage {
     month: number
@@ -13,7 +14,7 @@ interface TimelineStage {
 interface TreePhoto {
     id: string
     photo_url: string
-    caption?: string
+    caption?: string | null
     uploaded_at: string
 }
 
@@ -208,7 +209,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                                             </h3>
 
                                             {/* Placeholder indicator for young trees < 9 months */}
-                                            {stage.placeholder && ageInMonths < 9 && (
+                                            {stage.placeholder && ageInMonths < PHOTO_PLACEHOLDER_MONTHS && (
                                                 <p className="text-sm text-gray-500 mt-1">
                                                     {ageInMonths < stage.month ? (
                                                         <>{T.estimated}: {getEstimatedDate(stage.month)}</>

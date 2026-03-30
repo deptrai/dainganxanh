@@ -1,11 +1,10 @@
 'use server'
 
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase/server'
 import { createHash } from 'crypto'
-import { headers } from 'next/headers'
 
-// Commission rate constant (10% of order value)
-const COMMISSION_RATE = 0.10
+// Commission rate constant (5% of order value)
+const COMMISSION_RATE = 0.05
 
 /**
  * Centralized commission calculation to ensure consistency
@@ -25,23 +24,22 @@ function hashIP(ip: string): string {
 /**
  * Track a referral link click with deduplication
  */
-export async function trackReferralClick(refCode: string) {
+export async function trackReferralClick(refCode: string, requestHeaders: Headers) {
     try {
         const supabase = await createServerClient()
 
-        // Find referrer by referral code (case-insensitive)
+        // Find referrer by referral code
         const { data: referrer, error: referrerError } = await supabase
             .from('users')
             .select('id')
-            .ilike('referral_code', refCode)
+            .eq('referral_code', refCode)
             .single()
 
         if (referrerError || !referrer) {
             return { success: false, error: 'Invalid referral code' }
         }
 
-        // Get IP and user agent from request headers
-        const requestHeaders = await headers()
+        // Get IP and user agent
         const ip = requestHeaders.get('x-forwarded-for') || requestHeaders.get('x-real-ip') || 'unknown'
         const userAgent = requestHeaders.get('user-agent') || 'unknown'
 
@@ -92,28 +90,15 @@ export async function getReferralStats(userId: string) {
     try {
         const supabase = await createServerClient()
 
-        // AUTH CHECK: Verify user is querying their own stats, or is an admin (impersonation)
+        // AUTH CHECK: Verify user is querying their own stats
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
+        if (authError || !user || user.id !== userId) {
             console.error('Unauthorized access to getReferralStats')
             return null
         }
 
-        // Use service role to bypass RLS — referral queries read OTHER users' orders
-        const serviceSupabase = createServiceRoleClient()
-
-        if (user.id !== userId) {
-            // Allow if caller is admin/super_admin (impersonation scenario)
-            const { data: callerProfile } = await serviceSupabase
-                .from('users').select('role').eq('id', user.id).single()
-            if (!callerProfile || !['admin', 'super_admin'].includes(callerProfile.role)) {
-                console.error('Unauthorized access to getReferralStats')
-                return null
-            }
-        }
-
         // Get total clicks
-        const { count: totalClicks, error: clicksError } = await serviceSupabase
+        const { count: totalClicks, error: clicksError } = await supabase
             .from('referral_clicks')
             .select('*', { count: 'exact', head: true })
             .eq('referrer_id', userId)
@@ -123,8 +108,20 @@ export async function getReferralStats(userId: string) {
             return null
         }
 
-        // Get conversions + commission from orders directly (source of truth)
-        const { data: convertedOrders, error: ordersError } = await serviceSupabase
+        // Get conversions count
+        const { count: conversions, error: conversionsError } = await supabase
+            .from('referral_clicks')
+            .select('*', { count: 'exact', head: true })
+            .eq('referrer_id', userId)
+            .eq('converted', true)
+
+        if (conversionsError) {
+            console.error('Error getting conversions count:', conversionsError)
+            return null
+        }
+
+        // Get total commission from converted orders
+        const { data: convertedOrders, error: ordersError } = await supabase
             .from('orders')
             .select('total_amount')
             .eq('referred_by', userId)
@@ -135,8 +132,6 @@ export async function getReferralStats(userId: string) {
             return null
         }
 
-        const conversions = convertedOrders?.length || 0
-
         // Calculate total commission
         const totalCommission = await convertedOrders?.reduce(async (sumPromise, order) => {
             const sum = await sumPromise
@@ -145,12 +140,12 @@ export async function getReferralStats(userId: string) {
 
         // Calculate conversion rate
         const conversionRate = totalClicks && totalClicks > 0
-            ? Math.round(conversions / totalClicks * 100)
+            ? Math.round((conversions || 0) / totalClicks * 100)
             : 0
 
         return {
             totalClicks: totalClicks || 0,
-            conversions,
+            conversions: conversions || 0,
             commission: totalCommission,
             conversionRate,
         }
@@ -168,32 +163,27 @@ export async function getReferralConversions(userId: string) {
     try {
         const supabase = await createServerClient()
 
-        // AUTH CHECK: Verify user is querying their own conversions, or is an admin (impersonation)
+        // AUTH CHECK: Verify user is querying their own conversions
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
+        if (authError || !user || user.id !== userId) {
             console.error('Unauthorized access to getReferralConversions')
             return []
         }
 
-        // Use service role to bypass RLS — referral queries read OTHER users' orders
-        const serviceSupabase = createServiceRoleClient()
-
-        if (user.id !== userId) {
-            // Allow if caller is admin/super_admin (impersonation scenario)
-            const { data: callerProfile } = await serviceSupabase
-                .from('users').select('role').eq('id', user.id).single()
-            if (!callerProfile || !['admin', 'super_admin'].includes(callerProfile.role)) {
-                console.error('Unauthorized access to getReferralConversions')
-                return []
-            }
-        }
-
-        // Query orders directly using referred_by (works regardless of referral_clicks)
-        const { data: orders, error } = await serviceSupabase
-            .from('orders')
-            .select('id, code, total_amount, created_at, user_id, user_email, user_name')
-            .eq('referred_by', userId)
-            .eq('status', 'completed')
+        const { data: conversions, error } = await supabase
+            .from('referral_clicks')
+            .select(`
+                id,
+                created_at,
+                order_id,
+                orders!inner (
+                    code,
+                    total_amount,
+                    created_at
+                )
+            `)
+            .eq('referrer_id', userId)
+            .eq('converted', true)
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -201,17 +191,32 @@ export async function getReferralConversions(userId: string) {
             return []
         }
 
-        // Calculate commission for each order
-        return await Promise.all((orders || []).map(async (order) => ({
-            id: order.id,
-            clickedAt: order.created_at,
-            orderCode: order.code,
-            orderAmount: Number(order.total_amount || 0),
-            commission: await calculateCommission(Number(order.total_amount || 0)),
-            orderDate: order.created_at,
-            customerEmail: order.user_email,
-            customerName: order.user_name,
-        })))
+        interface ConversionRecord {
+            id: string
+            created_at: string
+            order_id: string | null
+            orders: {
+                code: string
+                total_amount: number
+                created_at: string
+                users: {
+                    email: string
+                    full_name: string
+                } | null
+            } | null
+        }
+
+        // Calculate commission for each conversion
+        return await Promise.all((conversions as unknown as ConversionRecord[])?.map(async (conv) => ({
+            id: conv.id,
+            clickedAt: conv.created_at,
+            orderCode: conv.orders?.code,
+            orderAmount: Number(conv.orders?.total_amount || 0),
+            commission: await calculateCommission(Number(conv.orders?.total_amount || 0)),
+            orderDate: conv.orders?.created_at,
+            customerEmail: conv.orders?.users?.email,
+            customerName: conv.orders?.users?.full_name,
+        })) || [])
     } catch (error) {
         console.error('Error in getReferralConversions:', error)
         return []
@@ -222,21 +227,6 @@ export async function getReferralConversions(userId: string) {
  * Regenerate referral code for a user
  * @param userId - Must match authenticated user ID
  */
-/**
- * Convert a display name or email to a clean slug for referral code.
- * Removes Vietnamese diacritics and other special characters.
- * e.g. "Nguyễn Văn A" → "nguyenvana", "john.doe@gmail.com" → "johndoe"
- */
-function slugifyForReferral(input: string): string {
-    return input
-        .normalize('NFD')                        // decompose diacritics
-        .replace(/[\u0300-\u036f]/g, '')         // remove combining marks
-        .replace(/[đĐ]/g, 'd')                   // Vietnamese đ
-        .replace(/[^a-zA-Z0-9]/g, '')            // keep only alphanumeric
-        .toLowerCase()
-        .slice(0, 20)
-}
-
 export async function regenerateReferralCode(userId: string) {
     try {
         const supabase = await createServerClient()
@@ -248,28 +238,22 @@ export async function regenerateReferralCode(userId: string) {
             return { success: false, error: 'Unauthorized' }
         }
 
-        // Get user profile for name
-        const { data: profile } = await supabase
-            .from('users')
-            .select('full_name, email')
-            .eq('id', userId)
-            .single()
-
-        // Generate base slug from full_name → email prefix → fallback
-        const rawName = profile?.full_name?.trim()
-            || profile?.email?.split('@')[0]?.trim()
-            || user.user_metadata?.full_name?.trim()
-            || ''
-
-        let baseCode = slugifyForReferral(rawName)
-        if (baseCode.length < 3) {
-            baseCode = 'user' + Math.floor(Math.random() * 100000).toString().padStart(5, '0')
+        // Generate new unique code (8 characters alphanumeric)
+        const generateCode = () => {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Exclude similar chars
+            let code = ''
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length))
+            }
+            return code
         }
 
-        // Ensure uniqueness: try baseCode, baseCode2, baseCode3, ...
-        let newCode = baseCode
-        let suffix = 0
-        while (true) {
+        let newCode = generateCode()
+        let attempts = 0
+        const maxAttempts = 10
+
+        // Ensure code is unique
+        while (attempts < maxAttempts) {
             const { data: existing } = await supabase
                 .from('users')
                 .select('id')
@@ -277,8 +261,13 @@ export async function regenerateReferralCode(userId: string) {
                 .single()
 
             if (!existing) break
-            suffix++
-            newCode = baseCode + suffix
+
+            newCode = generateCode()
+            attempts++
+        }
+
+        if (attempts >= maxAttempts) {
+            return { success: false, error: 'Failed to generate unique code' }
         }
 
         // Update user's referral code

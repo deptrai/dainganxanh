@@ -1,46 +1,53 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { notifyWithdrawalRequest } from '@/lib/utils/telegram'
+import { MIN_WITHDRAWAL } from '@/lib/constants'
 
+// Helper: send email via send-withdrawal-email Edge Function
+async function sendWithdrawalEmail(type: string, to: string, payload: Record<string, unknown>) {
+    const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-withdrawal-email`
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ type, to, ...payload }),
+    })
+}
 
 // Normalize Vietnamese text for comparison
 function normalizeVietnamese(text: string): string {
     return text
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[đĐ]/g, 'D')
         .toUpperCase()
         .trim()
 }
 
-// Calculate available balance (auth-checked)
+// Calculate available balance
 export async function getAvailableBalance(userId: string) {
-    // AUTH CHECK: Verify caller is querying their own balance
     const supabase = await createServerClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user || user.id !== userId) {
-        return 0
-    }
-
-    // Use service role to bypass RLS — orders with referred_by are OTHER users' orders
-    const serviceSupabase = createServiceRoleClient()
 
     // Total commission earned — query directly from orders.referred_by
-    const { data: orders } = await serviceSupabase
+    // to stay consistent with getReferralStats and avoid missing commissions
+    // when referral_clicks were not created (e.g. direct code entry) or
+    // when the click was older than the 7-day conversion window.
+    const { data: orders } = await supabase
         .from('orders')
         .select('total_amount')
         .eq('referred_by', userId)
         .eq('status', 'completed')
 
-    const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.10), 0) || 0
+    const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.05), 0) || 0
 
-    // Total withdrawn (approved + pending) — pending must be reserved to prevent over-commitment
-    const { data: withdrawals } = await serviceSupabase
+    // Total withdrawn (approved only)
+    const { data: withdrawals } = await supabase
         .from('withdrawals')
         .select('amount')
         .eq('user_id', userId)
-        .in('status', ['approved', 'pending'])
+        .eq('status', 'approved')
 
     const totalWithdrawn = withdrawals?.reduce((sum, w) => sum + Number(w.amount), 0) || 0
 
@@ -90,10 +97,11 @@ export async function requestWithdrawal(data: {
         return { success: false, error: 'Số dư không đủ' }
     }
 
-    if (data.amount < 200000) {
+    if (data.amount < MIN_WITHDRAWAL) {
         return { success: false, error: 'Số tiền rút tối thiểu là 200,000 VNĐ' }
     }
 
+    // Create withdrawal record
     // Create withdrawal record
     const { data: newWithdrawal, error: insertError } = await supabase
         .from('withdrawals')
@@ -113,52 +121,34 @@ export async function requestWithdrawal(data: {
         return { success: false, error: 'Không thể tạo yêu cầu rút tiền' }
     }
 
-    // Send email to admins (non-blocking — withdrawal is already committed)
-    const supabaseAdmin = createServiceRoleClient()
-    try {
-        const { data: admins } = await supabaseAdmin
-            .from('users')
-            .select('id')
-            .in('role', ['admin', 'super_admin'])
+    // Send email to admins
+    const { data: admins } = await supabase
+        .from('users')
+        .select('id')
+        .in('role', ['admin', 'super_admin'])
 
-        const adminIds = admins?.map(a => a.id) || []
+    const adminIds = admins?.map(a => a.id) || []
 
-        if (adminIds.length > 0) {
-            const { data: adminUsers } = await supabaseAdmin.auth.admin.listUsers()
-            const adminEmails = adminUsers.users
-                .filter(u => adminIds.includes(u.id))
-                .map(u => u.email)
-                .filter(Boolean)
+    if (adminIds.length > 0) {
+        const supabaseAdmin = createServiceRoleClient()
+        const { data: adminUsers } = await supabaseAdmin.auth.admin.listUsers()
+        const adminEmails = adminUsers.users
+            .filter(u => adminIds.includes(u.id))
+            .map(u => u.email)
+            .filter(Boolean)
 
-            // Fire all emails concurrently, catch individual failures
-            await Promise.allSettled(adminEmails.map(email =>
-                supabaseAdmin.functions.invoke('send-withdrawal-email', {
-                    body: {
-                        type: 'request_created',
-                        to: email,
-                        userEmail: profile.email,
-                        fullName: profile.full_name,
-                        amount: data.amount,
-                        bankName: data.bankName,
-                        bankAccountNumber: data.bankAccountNumber,
-                        bankAccountName: data.bankAccountName,
-                        withdrawalId: newWithdrawal.id
-                    },
-                })
-            ))
+        for (const email of adminEmails) {
+            await sendWithdrawalEmail('request_created', email as string, {
+                userEmail: profile.email,
+                fullName: profile.full_name,
+                amount: data.amount,
+                bankName: data.bankName,
+                bankAccountNumber: data.bankAccountNumber,
+                bankAccountName: data.bankAccountName,
+                withdrawalId: newWithdrawal.id,
+            })
         }
-    } catch (err) {
-        console.error('Error sending admin withdrawal emails:', err)
     }
-
-    // Gửi Telegram cho admin (non-blocking)
-    notifyWithdrawalRequest({
-        userName: profile.full_name,
-        userEmail: profile.email,
-        amount: data.amount,
-        bankName: data.bankName,
-        bankAccountNumber: data.bankAccountNumber,
-    }).catch((err) => console.error('[Telegram] notifyWithdrawalRequest failed:', err))
 
     return { success: true }
 }
@@ -173,10 +163,7 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
         return { success: false, error: 'Unauthorized' }
     }
 
-    // Use service role for admin role check and update (bypasses RLS)
-    const supabaseAdmin = createServiceRoleClient()
-
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabase
         .from('users')
         .select('role')
         .eq('id', user.id)
@@ -186,8 +173,8 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
         return { success: false, error: 'Unauthorized' }
     }
 
-    // Update withdrawal — must be pending to approve (prevent double-approve)
-    const { data: withdrawal, error: updateError } = await supabaseAdmin
+    // Update withdrawal
+    const { data: withdrawal, error: updateError } = await supabase
         .from('withdrawals')
         .update({
             status: 'approved',
@@ -196,36 +183,28 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
             approved_at: new Date().toISOString()
         })
         .eq('id', withdrawalId)
-        .eq('status', 'pending')
         .select('user_id, amount, bank_name, bank_account_number, bank_account_name')
         .single()
 
-    if (updateError || !withdrawal) {
+    if (updateError) {
         console.error('Error approving withdrawal:', updateError)
-        return { success: false, error: 'Không thể duyệt yêu cầu (có thể đã được xử lý)' }
+        return { success: false, error: 'Không thể duyệt yêu cầu' }
     }
 
-    // Send email to user (non-blocking)
-    try {
-        const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
+    // Send email to user
+    const supabaseAdmin = createServiceRoleClient()
+    const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
 
-        if (withdrawalUser?.email) {
-            await supabaseAdmin.functions.invoke('send-withdrawal-email', {
-                body: {
-                    type: 'request_approved',
-                    to: withdrawalUser.email,
-                    fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
-                    amount: withdrawal.amount,
-                    bankName: withdrawal.bank_name,
-                    bankAccountNumber: withdrawal.bank_account_number,
-                    bankAccountName: withdrawal.bank_account_name,
-                    withdrawalId: withdrawalId,
-                    proofImageUrl: proofImageUrl
-                },
-            })
-        }
-    } catch (err) {
-        console.error('Error sending approval email:', err)
+    if (withdrawalUser?.email) {
+        await sendWithdrawalEmail('request_approved', withdrawalUser.email, {
+            fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
+            amount: withdrawal.amount,
+            bankName: withdrawal.bank_name,
+            bankAccountNumber: withdrawal.bank_account_number,
+            bankAccountName: withdrawal.bank_account_name,
+            withdrawalId,
+            proofImageUrl,
+        })
     }
 
     return { success: true }
@@ -233,10 +212,6 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
 
 // Admin: Reject withdrawal
 export async function rejectWithdrawal(withdrawalId: string, reason: string) {
-    if (!reason?.trim()) {
-        return { success: false, error: 'Vui lòng nhập lý do từ chối' }
-    }
-
     const supabase = await createServerClient()
 
     // Auth check - must be admin
@@ -245,10 +220,7 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
         return { success: false, error: 'Unauthorized' }
     }
 
-    // Use service role for admin role check and update (bypasses RLS)
-    const supabaseAdmin = createServiceRoleClient()
-
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabase
         .from('users')
         .select('role')
         .eq('id', user.id)
@@ -258,8 +230,8 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
         return { success: false, error: 'Unauthorized' }
     }
 
-    // Update withdrawal — must be pending to reject (prevent double-processing)
-    const { data: withdrawal, error: updateError } = await supabaseAdmin
+    // Update withdrawal
+    const { data: withdrawal, error: updateError } = await supabase
         .from('withdrawals')
         .update({
             status: 'rejected',
@@ -268,36 +240,28 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
             approved_at: new Date().toISOString()
         })
         .eq('id', withdrawalId)
-        .eq('status', 'pending')
         .select('user_id, amount, bank_name, bank_account_number, bank_account_name')
         .single()
 
-    if (updateError || !withdrawal) {
+    if (updateError) {
         console.error('Error rejecting withdrawal:', updateError)
-        return { success: false, error: 'Không thể từ chối yêu cầu (có thể đã được xử lý)' }
+        return { success: false, error: 'Không thể từ chối yêu cầu' }
     }
 
-    // Send email to user (non-blocking)
-    try {
-        const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
+    // Send email to user
+    const supabaseAdmin = createServiceRoleClient()
+    const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
 
-        if (withdrawalUser?.email) {
-            await supabaseAdmin.functions.invoke('send-withdrawal-email', {
-                body: {
-                    type: 'request_rejected',
-                    to: withdrawalUser.email,
-                    fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
-                    amount: withdrawal.amount,
-                    bankName: withdrawal.bank_name,
-                    bankAccountNumber: withdrawal.bank_account_number,
-                    bankAccountName: withdrawal.bank_account_name,
-                    withdrawalId: withdrawalId,
-                    rejectionReason: reason
-                },
-            })
-        }
-    } catch (err) {
-        console.error('Error sending rejection email:', err)
+    if (withdrawalUser?.email) {
+        await sendWithdrawalEmail('request_rejected', withdrawalUser.email, {
+            fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
+            amount: withdrawal.amount,
+            bankName: withdrawal.bank_name,
+            bankAccountNumber: withdrawal.bank_account_number,
+            bankAccountName: withdrawal.bank_account_name,
+            withdrawalId,
+            rejectionReason: reason,
+        })
     }
 
     return { success: true }

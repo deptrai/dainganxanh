@@ -1,5 +1,7 @@
 'use client'
 
+import { PACKAGE_PRICE, HARVEST_MONTHS } from '@/lib/constants'
+
 interface GrowthMetricsProps {
     co2Total: number
     ageInMonths: number
@@ -9,7 +11,7 @@ interface GrowthMetricsProps {
 
 export default function GrowthMetrics({ co2Total, ageInMonths, quantity, progressToHarvest }: GrowthMetricsProps) {
     // Estimate value (simple calculation: 260k initial + growth over time)
-    const estimatedValue = quantity * 260000 * (1 + (ageInMonths / 60) * 0.5)
+    const estimatedValue = quantity * PACKAGE_PRICE * (1 + (ageInMonths / HARVEST_MONTHS) * 0.5)
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -72,8 +74,8 @@ export default function GrowthMetrics({ co2Total, ageInMonths, quantity, progres
                 </div>
 
                 <p className="text-sm text-gray-500 mt-2">
-                    {ageInMonths < 60
-                        ? `Còn ${60 - ageInMonths} tháng nữa đến năm thứ 5`
+                    {ageInMonths < HARVEST_MONTHS
+                        ? `Còn ${HARVEST_MONTHS - ageInMonths} tháng nữa đến năm thứ 5`
                         : 'Đã đến thời điểm thu hoạch!'}
                 </p>
             </div>

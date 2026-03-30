@@ -1,10 +1,10 @@
 # 🎯 PRODUCT REQUIREMENTS DOCUMENT (PRD)
 ## Dự án: Đại Ngàn Xanh - Nền tảng Trồng Cây & Carbon Credit
 
-**Version:** 1.0  
-**Date:** January 7, 2026  
-**Author:** Product Manager Agent (BMAD Method)  
-**Status:** Draft for Review  
+**Version:** 2.0
+**Date:** January 7, 2026 (Updated: March 26, 2026)
+**Author:** Product Manager Agent (BMAD Method)
+**Status:** Sprint 2 Active  
 
 ***
 
@@ -457,6 +457,182 @@
 
 ***
 
+### Epic 8: Notifications & Engagement (Sprint 2)
+
+**FR-22: Web Push Notifications (PWA)**
+- **Priority:** P1
+- **Description:** Gửi push notification trực tiếp trên browser khi có quarterly update, tree news
+- **Acceptance Criteria:**
+  - Given user đã grant notification permission
+  - When admin upload ảnh mới cho lô của user
+  - Then push notification xuất hiện trên browser (desktop + mobile) trong 30 giây
+  - And click notification → navigate đến tree detail page
+  - And user có thể unsubscribe trong Settings
+- **Dependencies:** Web Push API, VAPID keys, service worker
+
+**FR-23: Enhanced Email Templates**
+- **Priority:** P1
+- **Description:** Nâng cấp tất cả email lên HTML template đẹp, có ảnh nhúng, responsive
+- **Acceptance Criteria:**
+  - Given bất kỳ triggered email nào (purchase confirm, quarterly update, harvest notify)
+  - When email gửi đi
+  - Then render HTML đẹp với logo, ảnh cây, màu brand (#2d6a4f)
+  - And mobile-responsive (tested on iOS Mail + Gmail)
+  - And có unsubscribe link (compliance)
+  - And open rate trackable qua pixel/link tracking
+- **Dependencies:** React Email hoặc MJML template engine
+
+**FR-24: Referral Leaderboard**
+- **Priority:** P2
+- **Description:** Bảng xếp hạng top referrer public → tăng viral coefficient
+- **Acceptance Criteria:**
+  - Given trang /referrals/leaderboard
+  - When load
+  - Then hiển thị top 10 referrers: avatar, tên rút gọn, số cây giới thiệu được, hoa hồng tích lũy
+  - And user thấy vị trí của mình trong bảng
+  - And refresh mỗi 1 giờ
+- **Dependencies:** FR-20 (Referral system)
+
+***
+
+### Epic 9: Admin Productivity (Sprint 2)
+
+**FR-25: Bulk Order Processing**
+- **Priority:** P1
+- **Description:** Admin xác minh / gán lô cho nhiều đơn hàng cùng một lúc
+- **Acceptance Criteria:**
+  - Given admin ở Order Management
+  - When chọn multiple orders bằng checkbox
+  - Then có nút "Xác minh tất cả" và "Gán lô cây"
+  - When bulk verify
+  - Then tất cả status → verified, send email hàng loạt
+  - When bulk assign lot
+  - Then chọn 1 lot → assign tất cả selected orders
+  - And generate tree codes cho tất cả
+- **Dependencies:** FR-13, FR-14
+
+**FR-26: Quarterly PDF Report Generator**
+- **Priority:** P1
+- **Description:** Tự động tạo và gửi báo cáo PDF hàng quý cho từng customer
+- **Acceptance Criteria:**
+  - Given cuối mỗi quý (Q1/Q2/Q3/Q4)
+  - When admin click "Gửi báo cáo quý" hoặc cron tự động
+  - Then tạo PDF cho mỗi customer gồm: ảnh mới nhất của lô, số liệu tăng trưởng, CO2 absorbed, health status
+  - And gửi email với PDF attached trong 24 giờ
+  - And admin có thể preview PDF trước khi gửi
+  - And track số email đã gửi / đã mở
+- **Dependencies:** PDF generation, FR-10, FR-17
+
+**FR-27: Advanced Analytics & Export**
+- **Priority:** P1
+- **Description:** Mở rộng analytics: cohort analysis, churn rate, export Excel cải tiến
+- **Acceptance Criteria:**
+  - Given admin ở Analytics page
+  - When chọn tab "Cohort Analysis"
+  - Then hiển thị cohort table: user signup month vs retention by month 1/3/6/12
+  - When chọn "Churn"
+  - Then hiển thị % users không quay lại sau 90 ngày
+  - When export
+  - Then Excel có nhiều sheet: Overview, Orders, Users, Trees, Referrals
+  - And PDF export có branding đẹp để gửi cho stakeholders
+- **Dependencies:** FR-19
+
+**FR-28: Multi-lot Camera Management**
+- **Priority:** P2
+- **Description:** Quản lý nhiều stream camera cho nhiều lô khác nhau
+- **Acceptance Criteria:**
+  - Given admin ở trang camera management
+  - When load
+  - Then hiển thị grid tất cả cameras với status (online/offline)
+  - And mỗi camera linked đến 1 lot
+  - When customer xem tree detail
+  - Then thấy camera của lot mình (nếu có)
+  - And admin có thể thêm/xóa camera stream URL
+- **Dependencies:** Story 2-9 (FarmCamera component)
+
+***
+
+### Epic 10: Customer Experience (Sprint 2)
+
+**FR-29: Tree Certificate Download**
+- **Priority:** P1
+- **Description:** Khách hàng download chứng chỉ sở hữu cây dưới dạng PDF đẹp
+- **Acceptance Criteria:**
+  - Given user ở tree detail page
+  - When click "Tải chứng chỉ"
+  - Then download PDF với: tên user, số cây, lot location, planting date, tree codes, QR code verify
+  - And có logo Đại Ngàn Xanh, signed digitally
+  - And shareable trên social (ảnh cover đẹp)
+- **Dependencies:** PDF generation, FR-09
+
+**FR-30: CO2 Impact Dashboard**
+- **Priority:** P1
+- **Description:** Visualize tác động môi trường của user theo cách trực quan và cảm xúc
+- **Acceptance Criteria:**
+  - Given user ở dashboard
+  - When xem "Tác động của tôi" section
+  - Then hiển thị: tổng CO2 absorbed (kg/tấn), tương đương X chuyến bay HAN-SGN, Y xe hơi chạy 1 năm
+  - And biểu đồ CO2 tích lũy theo thời gian (animated)
+  - And so sánh với average user
+  - And shareable card "Tôi đã offset X kg CO2"
+- **Dependencies:** FR-08, tree age data
+
+**FR-31: In-app Customer Support Chat**
+- **Priority:** P2
+- **Description:** Chat trực tiếp với admin/support team ngay trong app
+- **Acceptance Criteria:**
+  - Given user đăng nhập
+  - When click chat icon
+  - Then mở chat widget với history
+  - And message delivered trong 30 giây
+  - And admin nhận notification khi có message mới
+  - And support có thể xem order history của user trong chat context
+- **Dependencies:** Realtime messaging (Supabase Realtime hoặc tích hợp thứ 3)
+
+***
+
+### Epic 11: Platform Quality (Sprint 2)
+
+**FR-32: E2E Playwright Test Suite**
+- **Priority:** P1
+- **Description:** Tự động hóa critical user flows bằng Playwright để prevent regression
+- **Acceptance Criteria:**
+  - Given CI/CD pipeline
+  - When push to main
+  - Then chạy E2E tests tự động: landing → purchase flow, login/logout, admin order management
+  - And test results visible trong GitHub Actions
+  - And fail build nếu critical tests fail
+  - And test coverage cho: 5 critical user journeys
+- **Dependencies:** Playwright, GitHub Actions
+
+**FR-33: Monitoring & Alerting Setup**
+- **Priority:** P1
+- **Description:** Thiết lập Sentry (error tracking) + UptimeRobot (uptime) + alerting
+- **Acceptance Criteria:**
+  - Given production deployment
+  - When unhandled error xảy ra
+  - Then Sentry capture với stack trace + user context trong 1 phút
+  - And Slack/email alert gửi đến dev team
+  - When downtime > 1 phút
+  - Then UptimeRobot alert qua SMS + email
+  - And dashboard hiển thị uptime history 30 ngày
+  - And response time P95 tracking
+- **Dependencies:** Sentry account, UptimeRobot account
+
+**FR-34: Core Web Vitals Performance**
+- **Priority:** P1
+- **Description:** Tối ưu performance để đạt Core Web Vitals "Good" trên tất cả pages
+- **Acceptance Criteria:**
+  - Given production pages
+  - When measure với Lighthouse / CrUX
+  - Then LCP < 2.5s, FID/INP < 100ms, CLS < 0.1 trên Landing + Dashboard
+  - And bundle size giảm ≥ 20% so với hiện tại
+  - And image optimization: WebP format, lazy loading, proper sizing
+  - And Next.js bundle analysis báo cáo trong CI
+- **Dependencies:** Next.js optimization, image CDN
+
+***
+
 ## ⚙️ NON-FUNCTIONAL REQUIREMENTS (NFRs)
 
 **NFR-01: Performance**[4][3]
@@ -531,19 +707,42 @@
 - [x] Social share
 - [x] Email system
 
-### ❌ OUT OF SCOPE (Phase 2+)
+### ✅ IN SCOPE Sprint 2 (March 2026+)
+
+**Notifications & Engagement:**
+- [x] Web Push Notifications (PWA) — FR-22
+- [x] Enhanced Email Templates — FR-23
+- [x] Referral Leaderboard — FR-24
+
+**Admin Productivity:**
+- [x] Bulk Order Processing — FR-25
+- [x] Quarterly PDF Report Generator — FR-26
+- [x] Advanced Analytics & Export — FR-27
+- [x] Multi-lot Camera Management — FR-28
+
+**Customer Experience:**
+- [x] Tree Certificate Download — FR-29
+- [x] CO2 Impact Dashboard — FR-30
+- [x] In-app Customer Support Chat — FR-31
+
+**Platform Quality:**
+- [x] E2E Playwright Test Suite — FR-32
+- [x] Monitoring & Alerting — FR-33
+- [x] Core Web Vitals Performance — FR-34
+
+### ❌ OUT OF SCOPE (Phase 3+)
 
 **Deferred Features:**
 - [ ] Multiple pricing tiers (Gói Cộng đồng 49k, Gói Doanh nghiệp)
-- [ ] Affiliate dashboard & withdrawal
-- [ ] NFT integration for tree certificates
+- [ ] NFT integration for tree certificates (blockchain)
 - [ ] API for corporate integration
 - [ ] AR tree planting
 - [ ] Virtual 3D forest
-- [ ] Gamification (badges, leaderboard)
+- [ ] Gamification (badges, full leaderboard system)
 - [ ] Mobile app (iOS/Android native)
 - [ ] Offline event booking
 - [ ] Carbon credit marketplace
+- [ ] USDT / crypto payment
 
 ***
 
@@ -990,12 +1189,16 @@
 - Week 9-12: Admin tools (Photo upload, Status update)
 - **Success Criteria:** 1,000 trees sold, 100 active users
 
-### Phase 2: Growth (Month 4-6) - Viral & Retention
-**Goal:** Increase user acquisition and engagement
-- Affiliate program + referral dashboard
-- Enhanced tree tracking (video updates, AR preview)
-- Email automation (quarterly reminders)
-- **Success Criteria:** 10,000 trees sold, 30% viral coefficient
+### Phase 2: Growth (March 2026+) - Sprint 2
+**Goal:** Increase engagement, admin productivity, platform quality
+- Web Push Notifications (PWA) + Enhanced Email Templates
+- Referral Leaderboard + CO2 Impact Dashboard
+- Bulk Order Processing + Quarterly PDF Report Generator
+- Advanced Analytics (cohort, churn, Excel export)
+- Multi-lot Camera Management
+- Tree Certificate Download + Customer Support Chat
+- E2E Test Suite + Monitoring/Alerting + Performance Optimization
+- **Success Criteria:** NPS ≥ 50, 30% viral coefficient, Lighthouse score ≥ 90
 
 ### Phase 3: Scale (Month 7-12) - Enterprise & Blockchain
 **Goal:** Onboard B2B customers and tokenize assets

@@ -14,7 +14,7 @@ describe('Withdrawal Actions', () => {
     beforeEach(() => {
         jest.clearAllMocks()
 
-        // Mock service role client (for DB operations)
+        // Mock service role client (for DB operations + auth.admin)
         mockServiceClient = {
             from: jest.fn().mockReturnThis(),
             select: jest.fn().mockReturnThis(),
@@ -22,6 +22,23 @@ describe('Withdrawal Actions', () => {
             update: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             single: jest.fn().mockReturnThis(),
+            auth: {
+                admin: {
+                    listUsers: jest.fn().mockResolvedValue({
+                        data: { users: [{ id: 'admin-1', email: 'admin@example.com' }] },
+                        error: null,
+                    }),
+                    getUserById: jest.fn().mockResolvedValue({
+                        data: {
+                            user: {
+                                email: 'user@example.com',
+                                user_metadata: { full_name: 'User A' },
+                            },
+                        },
+                        error: null,
+                    }),
+                },
+            },
         }
             ; (createServiceRoleClient as jest.Mock).mockReturnValue(mockServiceClient)
 
@@ -97,15 +114,15 @@ describe('Withdrawal Actions', () => {
                     return usersChain
                 }
                 // Orders mock: returns high balance
+                // getAvailableBalance uses .eq().eq() chain (awaited via .then)
                 if (table === 'orders') {
                     const ordersChain = {
                         select: jest.fn().mockReturnThis(),
                         eq: jest.fn().mockReturnThis(),
                         in: jest.fn().mockImplementation(() => {
-                            // console.log('Orders IN called, returning 10M')
                             return Promise.resolve({ data: [{ total_amount: 10000000 }] })
                         }),
-                        then: (resolve: any) => resolve({ data: [] })
+                        then: (resolve: any) => resolve({ data: [{ total_amount: 10000000 }] })
                     }
                     return ordersChain
                 }

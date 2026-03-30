@@ -129,7 +129,7 @@ export async function updateSystemConfig(config: SystemConfig) {
         return {
             success: false,
             error: 'Validation failed',
-            details: validation.error.errors
+            details: validation.error.issues
         }
     }
 

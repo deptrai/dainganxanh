@@ -100,7 +100,8 @@ describe('Realtime Notification Helpers', () => {
                 },
             ]
 
-            mockSupabase.select.mockResolvedValue({
+            // chain: .from().select().eq().order().limit() — limit is terminal
+            mockSupabase.limit.mockResolvedValue({
                 data: mockNotifications,
                 error: null,
             })
@@ -116,7 +117,7 @@ describe('Realtime Notification Helpers', () => {
         })
 
         it('returns empty array on error', async () => {
-            mockSupabase.select.mockResolvedValue({
+            mockSupabase.limit.mockResolvedValue({
                 data: null,
                 error: { message: 'Database error' },
             })
@@ -127,7 +128,7 @@ describe('Realtime Notification Helpers', () => {
         })
 
         it('respects custom limit parameter', async () => {
-            mockSupabase.select.mockResolvedValue({
+            mockSupabase.limit.mockResolvedValue({
                 data: [],
                 error: null,
             })
@@ -142,7 +143,8 @@ describe('Realtime Notification Helpers', () => {
         it('updates notification read status', async () => {
             const notificationId = 'notif-1'
 
-            mockSupabase.update.mockResolvedValue({
+            // chain: .from().update().eq() — eq is terminal
+            mockSupabase.eq.mockResolvedValue({
                 error: null,
             })
 
@@ -156,7 +158,7 @@ describe('Realtime Notification Helpers', () => {
         it('handles errors gracefully', async () => {
             const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
 
-            mockSupabase.update.mockResolvedValue({
+            mockSupabase.eq.mockResolvedValue({
                 error: { message: 'Update failed' },
             })
 
@@ -171,10 +173,10 @@ describe('Realtime Notification Helpers', () => {
         it('returns unread notification count', async () => {
             const userId = 'user-123'
 
-            mockSupabase.select.mockResolvedValue({
-                count: 5,
-                error: null,
-            })
+            // chain: .from().select().eq('user_id').eq('read') — second eq is terminal
+            mockSupabase.eq
+                .mockReturnValueOnce(mockSupabase) // first .eq('user_id', userId)
+                .mockResolvedValueOnce({ count: 5, error: null }) // second .eq('read', false)
 
             const count = await getUnreadCount(userId)
 
@@ -186,10 +188,9 @@ describe('Realtime Notification Helpers', () => {
         })
 
         it('returns 0 on error', async () => {
-            mockSupabase.select.mockResolvedValue({
-                count: null,
-                error: { message: 'Count failed' },
-            })
+            mockSupabase.eq
+                .mockReturnValueOnce(mockSupabase)
+                .mockResolvedValueOnce({ count: null, error: { message: 'Count failed' } })
 
             const count = await getUnreadCount('user-123')
 
@@ -197,10 +198,9 @@ describe('Realtime Notification Helpers', () => {
         })
 
         it('returns 0 when count is null', async () => {
-            mockSupabase.select.mockResolvedValue({
-                count: null,
-                error: null,
-            })
+            mockSupabase.eq
+                .mockReturnValueOnce(mockSupabase)
+                .mockResolvedValueOnce({ count: null, error: null })
 
             const count = await getUnreadCount('user-123')
 
