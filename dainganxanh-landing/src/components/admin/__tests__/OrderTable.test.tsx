@@ -21,6 +21,11 @@ const mockOrders: Order[] = [
         verified_at: null,
         created_at: '2026-01-12T10:00:00Z',
         user_email: 'test@example.com',
+        referred_by: 'referrer-1',
+        referrer: {
+            email: 'referrer@example.com',
+            referral_code: 'REF123',
+        },
     },
     {
         id: '223e4567-e89b-12d3-a456-426614174001',
@@ -32,6 +37,8 @@ const mockOrders: Order[] = [
         verified_at: '2026-01-12T11:00:00Z',
         created_at: '2026-01-12T09:00:00Z',
         user_email: 'test2@example.com',
+        referred_by: null,
+        referrer: null,
     },
 ]
 
@@ -47,6 +54,7 @@ describe('OrderTable', () => {
 
         expect(screen.getByText('Order ID')).toBeInTheDocument()
         expect(screen.getByText('User')).toBeInTheDocument()
+        expect(screen.getByText('Người Giới Thiệu')).toBeInTheDocument()
         expect(screen.getByText(/Số lượng/)).toBeInTheDocument()
         expect(screen.getByText(/Tổng tiền/)).toBeInTheDocument()
         expect(screen.getByText('Thanh toán')).toBeInTheDocument()
@@ -85,5 +93,39 @@ describe('OrderTable', () => {
 
         expect(screen.getByText(/5\.000\.000/)).toBeInTheDocument()
         expect(screen.getByText(/10\.000\.000/)).toBeInTheDocument()
+    })
+
+    describe('Referrer Column', () => {
+        it('should display referral_code and email when referrer exists', () => {
+            render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+
+            // First order has referrer
+            expect(screen.getByText('REF123')).toBeInTheDocument()
+            expect(screen.getByText('referrer@example.com')).toBeInTheDocument()
+        })
+
+        it('should display "Không có" when referrer is null', () => {
+            render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+
+            // Second order has no referrer
+            const noReferrerTexts = screen.getAllByText('Không có')
+            expect(noReferrerTexts.length).toBeGreaterThan(0)
+        })
+
+        it('should use correct colSpan in expanded rows', async () => {
+            const { container } = render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+
+            // Click to expand first row using user-event or fireEvent
+            const { fireEvent } = await import('@testing-library/react')
+            const firstRow = container.querySelector('tbody tr')
+
+            if (firstRow) {
+                await fireEvent.click(firstRow)
+            }
+
+            // Check that expanded row has colSpan=9 (8 columns + 1 for referrer)
+            const expandedCell = container.querySelector('td[colspan="9"]')
+            expect(expandedCell).toBeInTheDocument()
+        })
     })
 })
