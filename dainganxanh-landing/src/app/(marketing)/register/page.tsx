@@ -69,7 +69,7 @@ function RegisterContent() {
             // Save referral code as cookie — required field, always set
             const refToUse = refInput.trim().toLowerCase() || DEFAULT_REF.toLowerCase();
             Cookies.set("ref", refToUse, {
-                expires: 30,
+                expires: 90,
                 path: "/",
                 sameSite: "lax",
                 secure: window.location.protocol === "https:",

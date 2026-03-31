@@ -1,0 +1,16 @@
+Tasks 2-5 Ready for Implementation
+
+Task specs created at:
+- .task-specs/task2-fix-login-modal.md
+- .task-specs/task3-error-logging.md
+- .task-specs/task4-validate-referrer.md
+- .task-specs/task5-cookie-lifetime.md
+
+Each spec includes:
+- Goal & scope
+- File locations
+- Detailed code changes
+- Definition of done
+- Verification steps
+
+Ready to implement sequentially.

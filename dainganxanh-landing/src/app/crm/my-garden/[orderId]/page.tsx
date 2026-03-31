@@ -54,7 +54,25 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
 
     if (error || !order) {
         console.error('Error fetching order:', error?.message)
-        notFound()
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
+                <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
+                    <div className="text-6xl mb-4">🚫</div>
+                    <h1 className="text-2xl font-bold text-red-600 mb-2">
+                        Truy cập bị từ chối
+                    </h1>
+                    <p className="text-gray-600 mb-6">
+                        Bạn không có quyền xem đơn hàng này hoặc đơn hàng không tồn tại.
+                    </p>
+                    <a
+                        href="/crm/my-garden"
+                        className="inline-block bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    >
+                        Quay lại Vườn Cây
+                    </a>
+                </div>
+            </div>
+        )
     }
 
     // Try to fetch lot info separately (if lot_id exists and lots table exists)

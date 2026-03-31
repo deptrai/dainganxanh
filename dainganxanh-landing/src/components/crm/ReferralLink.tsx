@@ -73,7 +73,7 @@ export function ReferralLink({ referralCode, onRegenerate }: ReferralLinkProps) 
                         onClick={handleCopy}
                         className={`p-3 rounded-lg transition-all ${copied
                             ? 'bg-green-500 text-white'
-                            : 'bg-brand-500 hover:bg-brand-600 text-white'
+                            : 'bg-brand-600 hover:bg-brand-600 text-white'
                             }`}
                         title="Sao chép link"
                     >
