@@ -6,6 +6,8 @@ import { ReferralQRCode } from '@/components/crm/ReferralQRCode'
 import { ReferralStats } from '@/components/crm/ReferralStats'
 import WithdrawalButton from '@/components/crm/WithdrawalButton'
 import { getReferralStats, getReferralConversions } from '@/actions/referrals'
+import { ensureUserProfile } from '@/actions/ensureUserProfile'
+import { createServerClient } from '@/lib/supabase/server'
 
 export default async function ReferralsPage() {
     const ctx = await getImpersonationContext()
@@ -19,22 +21,29 @@ export default async function ReferralsPage() {
     const serviceClient = createServiceRoleClient()
 
     // Get user's referral code and full name
-    const { data: userData } = await serviceClient
+    let { data: userData } = await serviceClient
         .from('users')
         .select('referral_code, full_name')
         .eq('id', effectiveUserId)
         .single()
 
     if (!userData?.referral_code) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-4xl mx-auto">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                        <p className="text-red-600">Không tìm thấy mã giới thiệu. Vui lòng liên hệ hỗ trợ.</p>
-                    </div>
-                </div>
-            </div>
-        )
+        // Profile chưa tồn tại — tự động tạo rồi load lại
+        const supabase = await createServerClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            await ensureUserProfile(user.id, user.email ?? '', user.phone)
+            const { data: refreshed } = await serviceClient
+                .from('users')
+                .select('referral_code, full_name')
+                .eq('id', effectiveUserId)
+                .single()
+            userData = refreshed
+        }
+    }
+
+    if (!userData?.referral_code) {
+        redirect('/crm')
     }
 
     // Get referral stats
