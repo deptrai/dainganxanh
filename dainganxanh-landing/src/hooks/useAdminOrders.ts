@@ -17,6 +17,11 @@ export interface Order {
     user_phone?: string
     contract_url?: string | null
     order_code?: string
+    referred_by?: string | null
+    referrer?: {
+        email?: string
+        referral_code?: string
+    } | null
 }
 
 export interface OrderFilters {

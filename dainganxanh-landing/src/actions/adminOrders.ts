@@ -96,16 +96,24 @@ export async function fetchAdminOrders(
 
         // Fetch user details using service role to bypass RLS on users table
         const userIds = [...new Set((ordersData || []).map((o: any) => o.user_id).filter(Boolean))]
-        let usersMap: Record<string, { email?: string; phone?: string }> = {}
+        // Fetch referrer IDs as well
+        const referrerIds = [...new Set((ordersData || []).map((o: any) => o.referred_by).filter(Boolean))]
+        const allUserIds = [...new Set([...userIds, ...referrerIds])]
 
-        if (userIds.length > 0) {
+        let usersMap: Record<string, { email?: string; phone?: string; referral_code?: string }> = {}
+
+        if (allUserIds.length > 0) {
             const { data: usersData } = await serviceSupabase
                 .from('users')
-                .select('id, email, phone')
-                .in('id', userIds)
+                .select('id, email, phone, referral_code')
+                .in('id', allUserIds)
 
             usersMap = (usersData || []).reduce((acc: any, user: any) => {
-                acc[user.id] = { email: user.email, phone: user.phone }
+                acc[user.id] = {
+                    email: user.email,
+                    phone: user.phone,
+                    referral_code: user.referral_code
+                }
                 return acc
             }, {})
         }
@@ -114,6 +122,10 @@ export async function fetchAdminOrders(
             ...order,
             user_email: usersMap[order.user_id]?.email,
             user_phone: usersMap[order.user_id]?.phone,
+            referrer: order.referred_by ? {
+                email: usersMap[order.referred_by]?.email,
+                referral_code: usersMap[order.referred_by]?.referral_code
+            } : null,
         }))
 
         return { orders, totalCount }
