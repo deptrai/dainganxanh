@@ -121,7 +121,7 @@ export async function syncCassoTransactions(): Promise<SyncResult> {
     // Find pending order
     const { data: order } = await adminSupabase
       .from('orders')
-      .select('id, code, user_id, user_email, user_name, quantity, total_amount')
+      .select('id, code, user_id, user_email, user_name, quantity, total_amount, referred_by')
       .eq('code', orderCode)
       .eq('status', 'pending')
       .single()
@@ -156,6 +156,7 @@ export async function syncCassoTransactions(): Promise<SyncResult> {
         quantity:      order.quantity,
         totalAmount:   order.total_amount,
         paymentMethod: 'banking',
+        referredBy:    order.referred_by || null,
       },
     })
 
@@ -235,7 +236,7 @@ export async function manualProcessTransaction(
     // 3. Lookup order by orderCode (must be 'pending')
     const { data: order, error: orderError } = await adminSupabase
         .from('orders')
-        .select('id, code, user_id, user_email, user_name, quantity, total_amount')
+        .select('id, code, user_id, user_email, user_name, quantity, total_amount, referred_by')
         .eq('code', normalizedCode)
         .eq('status', 'pending')
         .single()
@@ -257,6 +258,7 @@ export async function manualProcessTransaction(
             quantity: order.quantity,
             totalAmount: order.total_amount,
             paymentMethod: 'banking',
+            referredBy: order.referred_by || null,
         },
     })
 
