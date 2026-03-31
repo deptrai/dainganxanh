@@ -18,13 +18,9 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
     const [refError, setRefError] = useState("");
 
     const handleSubmit = () => {
-        const code = refInput.trim().toLowerCase();
-        if (!code) {
-            setRefError("Vui lòng nhập mã giới thiệu");
-            return;
-        }
+        const code = refInput.trim().toLowerCase() || DEFAULT_REF.toLowerCase();
         Cookies.set("ref", code, {
-            expires: 30,
+            expires: 90,
             path: "/",
             sameSite: "lax",
             secure: window.location.protocol === "https:",
@@ -32,16 +28,6 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
         onDone();
     };
 
-    const handleSkip = () => {
-        // Use default if skipped (always lowercase)
-        Cookies.set("ref", DEFAULT_REF.toLowerCase(), {
-            expires: 30,
-            path: "/",
-            sameSite: "lax",
-            secure: window.location.protocol === "https:",
-        });
-        onDone();
-    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -49,6 +35,7 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
+                onClick={(e) => e.stopPropagation()}
                 className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6"
             >
                 <div className="flex items-center gap-3 mb-4">
@@ -92,16 +79,10 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
                     </button>
                 </p>
 
-                <div className="mt-5 flex gap-3">
-                    <button
-                        onClick={handleSkip}
-                        className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                        Bỏ qua
-                    </button>
+                <div className="mt-5">
                     <button
                         onClick={handleSubmit}
-                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors"
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors"
                     >
                         Xác nhận
                     </button>
