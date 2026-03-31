@@ -19,6 +19,39 @@ interface PendingOrder {
 
 type CheckoutStep = "loading" | "payment";
 
+async function validateReferralCode(
+    code: string,
+    supabase: any
+): Promise<string | null> {
+    try {
+        const { data: referrer, error } = await supabase
+            .from("users")
+            .select("id")
+            .ilike("referral_code", code)
+            .single();
+
+        if (error || !referrer) {
+            console.warn('[CHECKOUT] Referral code validation failed:', {
+                code,
+                error: error?.message,
+                timestamp: new Date().toISOString(),
+            });
+            return null;
+        }
+
+        console.log('[CHECKOUT] Referral code validated:', {
+            code,
+            referrerId: referrer.id,
+            timestamp: new Date().toISOString(),
+        });
+
+        return referrer.id;
+    } catch (err) {
+        console.error('[CHECKOUT] Validation exception:', err);
+        return null;
+    }
+}
+
 function OrderSummary({ quantity, unitPrice, orderCode, orderAmount }: {
     quantity: number;
     unitPrice: number;
@@ -157,9 +190,33 @@ function CheckoutContent() {
                 const DEFAULT_REF_CODE = "dainganxanh";
                 const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
                 let referredBy: string | null = null;
-                const { data: referrer } = await supabase
-                    .from("users").select("id").ilike("referral_code", refCookie).single();
-                if (referrer) referredBy = referrer.id;
+
+                console.log('[CHECKOUT] Validating referral code:', { refCookie });
+                referredBy = await validateReferralCode(refCookie, supabase);
+
+                if (!referredBy && refCookie.toLowerCase() !== DEFAULT_REF_CODE.toLowerCase()) {
+                    console.warn('[CHECKOUT] Fallback to default referral code:', {
+                        originalCode: refCookie,
+                        defaultCode: DEFAULT_REF_CODE,
+                        timestamp: new Date().toISOString(),
+                    });
+                    referredBy = await validateReferralCode(DEFAULT_REF_CODE, supabase);
+                }
+
+                if (!referredBy) {
+                    console.error('[CHECKOUT] CRITICAL: Both referral codes failed validation:', {
+                        inputCode: refCookie,
+                        defaultCode: DEFAULT_REF_CODE,
+                        timestamp: new Date().toISOString(),
+                        userId: user?.id || 'anonymous',
+                    });
+                }
+
+                console.log('[CHECKOUT] Final referrer assignment:', {
+                    referredBy,
+                    refCookie,
+                    timestamp: new Date().toISOString(),
+                });
 
                 await fetch("/api/orders/pending", {
                     method: "POST",
