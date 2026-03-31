@@ -1,7 +1,6 @@
 Bộ **User Flow Diagrams** dạng Mermaid cho dự án Đại Ngàn Xanh.
-> Cập nhật lần cuối: 2026-03-29 — đồng bộ với code thực tế trong repo.
 
----
+> Cập nhật lần cuối: 2026-03-29 — đồng bộ với code thực tế trong repo.
 
 ## 1️⃣ FIRST-TIME BUYER JOURNEY
 
@@ -59,8 +58,6 @@ flowchart TD
     NextStep -->|Mua them| Quantity
 ```
 
----
-
 ## 2️⃣ PAYMENT PROCESSING (Backend Webhook)
 
 **Services:** Casso Bank → Webhook → Edge Function → Supabase → Email + Telegram
@@ -115,8 +112,6 @@ flowchart TD
     FnError --> Return200
 ```
 
----
-
 ## 3️⃣ REFERRAL & VIRAL FLOW
 
 **Routes:** `/crm/referrals` → `/?ref=CODE` → `/register`
@@ -149,8 +144,6 @@ flowchart TD
     WithdrawCheck -->|Chua du| WaitMore[Cho them hoa hong]
 ```
 
----
-
 ## 4️⃣ TREE TRACKING JOURNEY (User CRM)
 
 **Routes:** `/crm/my-garden` → `/crm/my-garden/[orderId]` → `/crm/my-garden/[orderId]/harvest`
@@ -181,8 +174,6 @@ flowchart TD
     HarvestChoice -->|Giu cay| KeepGrow[Tiep tuc cham soc<br>Ky hop dong gia han]
     HarvestChoice -->|Nhan san pham| GetProduct[Nhan tram huong<br>Tinh dau / Go tho]
 ```
-
----
 
 ## 5️⃣ WITHDRAWAL FLOW
 
@@ -218,8 +209,6 @@ flowchart TD
     EnterReason --> RejectAction[rejectWithdrawal<br>service role update<br>status: pending to rejected<br>Luu rejection_reason]
     RejectAction --> EmailRejected[send-withdrawal-email<br>type: request_rejected<br>Gui cho user]
 ```
-
----
 
 ## 6️⃣ ADMIN OPERATIONS FLOW
 
@@ -272,8 +261,6 @@ flowchart TD
     CreatePost --> PublishPost[Xuat ban / Luu nhap / Hen gio]
 ```
 
----
-
 ## 7️⃣ AUTH FLOW
 
 **Routes:** `/register` → `/login` → `/auth/callback`
@@ -302,8 +289,6 @@ flowchart TD
     SessionOK -->|Co| RedirectHome[Redirect trang chu]
     SessionOK -->|Khong| LoginError[Redirect /login<br>error: auth_failed]
 ```
-
----
 
 ## 8️⃣ NOTIFICATION MAP
 
@@ -343,7 +328,7 @@ flowchart LR
 **Tóm tắt:**
 
 | Sự kiện | Telegram Admin | Email User | Email Admin |
-|---------|---------------|-----------|-------------|
+| --- | --- | --- | --- |
 | Tạo pending order | ✅ notifyNewOrder | — | — |
 | Thanh toán thành công | ✅ notifyPaymentSuccess | ✅ send-email | — |
 | Admin gán lô cây | ✅ notifyTreeAssigned | ✅ send-tree-assignment-email | — |
@@ -353,8 +338,6 @@ flowchart LR
 | Admin gán mã giới thiệu | ✅ notifyReferralAssigned | — | — |
 | Upload ảnh quý | — | ✅ send-quarterly-update | — |
 | Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — |
-
----
 
 ## 📌 Ghi chú kỹ thuật
 
@@ -377,12 +360,14 @@ flowchart LR
 **Contract Generation:** DOCX template → LibreOffice headless DOCX→PDF (Alpine: `font-noto font-noto-extra`). Timeout chain: LibreOffice 45s SIGKILL < EF generate-contract 50s < EF process-payment 55s. Nếu thất bại → Telegram admin alert + payment fail (admin xử lý thủ công và gửi lại hợp đồng).
 
 **Scheduled Jobs:**
+
 - `cleanup-pending-orders` — hourly, xóa pending orders quá 24h
 - `checklist-reminder` — quarterly, nhắc đội field
 - `send-quarterly-update` — quarterly, gửi báo cáo cho users
 - `profile-backfill` — hourly, tạo profiles cho auth users bị thiếu (pg_cron)
 
 **Environment Variables:**
+
 - `CASSO_SECURE_TOKEN` — verify Casso webhook HMAC-SHA512
 - `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` — admin notifications
 - `RESEND_API_KEY` — email production (Mailpit khi `SMTP_HOST=inbucket`)
