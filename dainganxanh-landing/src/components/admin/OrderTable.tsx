@@ -118,6 +118,9 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             User
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Người Giới Thiệu
+                        </th>
                         <th
                             className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort('quantity')}
@@ -161,6 +164,17 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                     <div>{order.user_email || order.user_phone || 'N/A'}</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.referrer ? (
+                                        <div>
+                                            <span className="font-medium">{order.referrer.referral_code}</span>
+                                            <br />
+                                            <span className="text-xs text-gray-500">{order.referrer.email}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400">Không có</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {order.quantity} cây
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -199,7 +213,7 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                             </tr>
                             {expandedRow === order.id && (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-4 bg-gray-50">
+                                    <td colSpan={9} className="px-6 py-4 bg-gray-50">
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div><strong>Full Order ID:</strong> {order.id}</div>
