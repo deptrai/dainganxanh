@@ -43,7 +43,7 @@ export default async function ReferralsPage() {
     }
 
     if (!userData?.referral_code) {
-        redirect('/crm')
+        redirect('/crm/dashboard')
     }
 
     // Get referral stats
