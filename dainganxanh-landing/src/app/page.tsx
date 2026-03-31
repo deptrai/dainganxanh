@@ -33,7 +33,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                         </div>
                         <ScaleHover>
                             <Link href="/pricing">
-                                <button className="bg-brand-500 hover:bg-brand-600 text-white px-6 py-2 rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
+                                <button className="bg-brand-600 hover:bg-brand-600 text-white px-6 py-2 rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
                                     Trồng Ngay
                                 </button>
                             </Link>
@@ -158,7 +158,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                                 description: 'Bình an khi biết rằng đâu đó có một mầm sống đang lớn lên nhờ tình yêu của bạn.'
                             }
                         ].map((benefit, index) => (
-                            <StaggerItem key={index} className="group p-8 rounded-3xl bg-brand-50 hover:bg-brand-500 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl cursor-default">
+                            <StaggerItem key={index} className="group p-8 rounded-3xl bg-brand-50 hover:bg-brand-600 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl cursor-default">
                                 <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-md text-brand-500 group-hover:text-brand-500 group-hover:scale-110 transition-transform duration-300">
                                     {benefit.icon}
                                 </div>
@@ -204,7 +204,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                                 'Chỉ số CO2 hấp thụ & sự phát triển của cây'
                             ].map((item, index) => (
                                 <StaggerItem key={index} className="flex items-center gap-4">
-                                    <span className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/50">✓</span>
+                                    <span className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/50">✓</span>
                                     <span className="text-lg">{item}</span>
                                 </StaggerItem>
                             ))}
@@ -238,7 +238,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             { number: 4, title: 'Nhận Di Sản', description: 'Nhận Hợp đồng và Mã cây. Bắt đầu theo dõi quá trình phát triển.' }
                         ].map((step) => (
                             <StaggerItem key={step.number} className="relative text-center group cursor-default">
-                                <div className="w-16 h-16 mx-auto bg-brand-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6 shadow-lg z-10 relative border-4 border-brand-50 group-hover:scale-110 group-hover:bg-accent-gold group-hover:text-brand-900 transition-all duration-300">
+                                <div className="w-16 h-16 mx-auto bg-brand-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6 shadow-lg z-10 relative border-4 border-brand-50 group-hover:scale-110 group-hover:bg-accent-gold group-hover:text-brand-900 transition-all duration-300">
                                     {step.number}
                                 </div>
                                 {step.number < 4 && (
