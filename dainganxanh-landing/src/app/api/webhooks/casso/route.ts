@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
   // AC5 — Tìm order pending theo orderCode
   const { data: order } = await supabase
     .from('orders')
-    .select('id, code, user_id, user_email, user_name, quantity, total_amount')
+    .select('id, code, user_id, user_email, user_name, quantity, total_amount, referred_by')
     .eq('code', orderCode)
     .eq('status', 'pending')
     .single()
@@ -174,6 +174,7 @@ export async function POST(req: NextRequest) {
       quantity:      order.quantity,
       totalAmount:   order.total_amount,
       paymentMethod: 'banking',
+      referredBy:    order.referred_by || null,
     },
   })
 
