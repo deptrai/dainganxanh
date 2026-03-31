@@ -9,6 +9,15 @@ import { getReferralStats, getReferralConversions } from '@/actions/referrals'
 import { ensureUserProfile } from '@/actions/ensureUserProfile'
 import { createServerClient } from '@/lib/supabase/server'
 
+function maskEmail(email: string): string {
+    const atIndex = email.indexOf('@')
+    if (atIndex <= 0) return email
+    const local = email.slice(0, atIndex)
+    const domain = email.slice(atIndex)
+    const visible = local.slice(0, 2)
+    return `${visible}***${domain}`
+}
+
 export default async function ReferralsPage() {
     const ctx = await getImpersonationContext()
 
@@ -20,10 +29,10 @@ export default async function ReferralsPage() {
     // Use service role to bypass RLS when impersonating
     const serviceClient = createServiceRoleClient()
 
-    // Get user's referral code and full name
+    // Get user's referral code, full name and referred_by_user_id
     let { data: userData } = await serviceClient
         .from('users')
-        .select('referral_code, full_name')
+        .select('referral_code, full_name, referred_by_user_id')
         .eq('id', effectiveUserId)
         .single()
 
@@ -35,11 +44,21 @@ export default async function ReferralsPage() {
             await ensureUserProfile(user.id, user.email ?? '', user.phone)
             const { data: refreshed } = await serviceClient
                 .from('users')
-                .select('referral_code, full_name')
+                .select('referral_code, full_name, referred_by_user_id')
                 .eq('id', effectiveUserId)
                 .single()
             userData = refreshed
         }
+    }
+
+    let referrerEmail: string | null = null
+    if (userData?.referred_by_user_id) {
+        const { data: referrer } = await serviceClient
+            .from('users')
+            .select('email')
+            .eq('id', userData.referred_by_user_id)
+            .single()
+        referrerEmail = referrer?.email ?? null
     }
 
     if (!userData?.referral_code) {
@@ -69,6 +88,21 @@ export default async function ReferralsPage() {
                         Chia sẻ link giới thiệu và nhận hoa hồng 10% khi bạn bè mua cây
                     </p>
                 </div>
+
+                {/* Referrer info */}
+                {referrerEmail && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-xs text-emerald-600 font-medium">Người giới thiệu bạn</p>
+                            <p className="text-sm font-semibold text-gray-800">{maskEmail(referrerEmail)}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Stats Cards */}
                 <ReferralStats stats={stats} />

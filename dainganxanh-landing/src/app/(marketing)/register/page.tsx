@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
 import Cookies from "js-cookie";
+import { checkUserExists } from "@/actions/checkUserExists";
 
 const DEFAULT_REF = "dainganxanh";
 
@@ -19,6 +20,7 @@ function RegisterContent() {
     const quantity = searchParams.get("quantity") || "1";
     const [refInput, setRefInput] = useState("");
     const [refError, setRefError] = useState("");
+    const [accountExists, setAccountExists] = useState(false);
 
     const {
         mode,
@@ -53,7 +55,7 @@ function RegisterContent() {
         checkSession();
     }, [router, quantity]);
 
-    const handleSendOTP = () => {
+    const handleSendOTP = async () => {
         // Validate referral code is entered
         const code = refInput.trim().toLowerCase();
         if (!code) {
@@ -61,6 +63,15 @@ function RegisterContent() {
             return;
         }
         setRefError("");
+
+        // Check duplicate user before sending OTP
+        const exists = await checkUserExists(identifier, mode);
+        if (exists) {
+            setAccountExists(true);
+            return;
+        }
+        setAccountExists(false);
+
         sendOTP();
     };
 
@@ -128,12 +139,32 @@ function RegisterContent() {
                             <PhoneEmailInput
                                 mode={mode}
                                 value={identifier}
-                                onChange={setIdentifier}
-                                onModeChange={setMode}
+                                onChange={(val) => {
+                                    setIdentifier(val);
+                                    if (accountExists) setAccountExists(false);
+                                }}
+                                onModeChange={(m) => {
+                                    setMode(m);
+                                    if (accountExists) setAccountExists(false);
+                                }}
                                 onSubmit={handleSendOTP}
                                 loading={loading}
                                 error={error}
                             />
+
+                            {/* Account already exists warning */}
+                            {accountExists && (
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                                    Tài khoản này đã được đăng ký. Vui lòng{" "}
+                                    <Link
+                                        href={`/login?quantity=${quantity}`}
+                                        className="font-semibold text-amber-900 underline hover:text-amber-700"
+                                    >
+                                        đăng nhập
+                                    </Link>
+                                    .
+                                </div>
+                            )}
 
                             {/* Referral code — REQUIRED */}
                             <motion.div
