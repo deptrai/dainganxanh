@@ -68,7 +68,7 @@ export function ReferralQRCode({ url }: ReferralQRCodeProps) {
                 {/* Download Button */}
                 <button
                     onClick={handleDownload}
-                    className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                    className="flex items-center gap-2 bg-brand-600 hover:bg-brand-600 text-white px-6 py-3 rounded-lg transition-colors font-medium"
                 >
                     <ArrowDownTrayIcon className="h-5 w-5" />
                     Tải QR Code
