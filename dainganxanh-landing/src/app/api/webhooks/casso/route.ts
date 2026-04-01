@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyPaymentSuccess } from '@/lib/utils/telegram'
+import { createReferralClick } from '@/actions/createReferralClick'
 import { createHmac } from 'crypto'
 
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
@@ -187,6 +188,12 @@ export async function POST(req: NextRequest) {
       order_id: order.id,
     })
     .eq('casso_tid', String(txId))
+
+  // Create referral_click for commission tracking (non-blocking)
+  if (!fnError && order.referred_by) {
+    createReferralClick(order.id, order.referred_by, 'casso-webhook')
+      .catch((err) => console.error('[Casso] createReferralClick failed:', err))
+  }
 
   // Gửi thông báo Telegram khi thanh toán thành công (non-blocking)
   if (!fnError) {

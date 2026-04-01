@@ -163,7 +163,7 @@ function CheckoutContent() {
                 let referredBy: string | null = null;
 
                 console.log('[CHECKOUT] Validating referral code:', { refCookie });
-                referredBy = await validateReferralCode(refCookie, supabase);
+                referredBy = await validateReferralCode(refCookie);
 
                 if (!referredBy && refCookie.toLowerCase() !== DEFAULT_REF_CODE.toLowerCase()) {
                     console.warn('[CHECKOUT] Fallback to default referral code:', {
@@ -171,7 +171,7 @@ function CheckoutContent() {
                         defaultCode: DEFAULT_REF_CODE,
                         timestamp: new Date().toISOString(),
                     });
-                    referredBy = await validateReferralCode(DEFAULT_REF_CODE, supabase);
+                    referredBy = await validateReferralCode(DEFAULT_REF_CODE);
                 }
 
                 if (!referredBy) {

@@ -11,6 +11,7 @@ import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 interface OrderTableProps {
     orders: Order[]
     verifyOrder: (orderId: string) => Promise<void>
+    approveOrder?: (orderId: string) => Promise<void>
 }
 
 type SortField = 'created_at' | 'total_amount' | 'quantity'
@@ -36,12 +37,14 @@ const statusLabels = {
     cancelled: 'Đã hủy',
 }
 
-export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
+export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderTableProps) {
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
     const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
     const [assignError, setAssignError] = useState<string | null>(null)
+    const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null)
+    const [approveConfirmId, setApproveConfirmId] = useState<string | null>(null)
 
     const handleAssignToLot = async (lotId: string) => {
         if (!assigningOrder) return
@@ -195,7 +198,56 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex gap-2">
-                                        {order.status === 'pending' || order.status === 'paid' || order.status === 'manual_payment_claimed' ? (
+                                        {order.status === 'pending' ? (
+                                            <>
+                                                {approveOrder && (
+                                                    approveConfirmId === order.id ? (
+                                                        <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                                                            <span className="text-xs text-red-600 font-medium">Xác nhận?</span>
+                                                            <button
+                                                                disabled={approvingOrderId === order.id}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation()
+                                                                    setApprovingOrderId(order.id)
+                                                                    try {
+                                                                        await approveOrder(order.id)
+                                                                        window.location.reload()
+                                                                    } catch {
+                                                                        setAssignError('Duyệt thanh toán thất bại')
+                                                                    } finally {
+                                                                        setApprovingOrderId(null)
+                                                                        setApproveConfirmId(null)
+                                                                    }
+                                                                }}
+                                                                className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs disabled:opacity-50"
+                                                            >
+                                                                {approvingOrderId === order.id ? '...' : 'Duyệt'}
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setApproveConfirmId(null)
+                                                                }}
+                                                                className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                                            >
+                                                                Hủy
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setApproveConfirmId(order.id)
+                                                            }}
+                                                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                                                        >
+                                                            Duyệt thanh toán
+                                                        </button>
+                                                    )
+                                                )}
+                                                <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
+                                            </>
+                                        ) : order.status === 'paid' || order.status === 'manual_payment_claimed' ? (
                                             <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                                         ) : order.status === 'verified' || order.status === 'completed' ? (
                                             <button

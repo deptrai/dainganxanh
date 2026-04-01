@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from 'react'
-import { fetchAdminOrders, verifyAdminOrder } from '@/actions/adminOrders'
+import { fetchAdminOrders, verifyAdminOrder, approveAdminOrder } from '@/actions/adminOrders'
 
 export interface Order {
     id: string
@@ -48,6 +48,7 @@ interface UseAdminOrdersReturn {
     pagination: PaginationInfo
     setPage: (page: number) => void
     verifyOrder: (orderId: string) => Promise<void>
+    approveOrder: (orderId: string) => Promise<void>
     refetch: () => Promise<void>
 }
 
@@ -123,6 +124,23 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         )
     }, [])
 
+    const approveOrder = useCallback(async (orderId: string) => {
+        const result = await approveAdminOrder(orderId)
+
+        if (result.error) {
+            throw new Error(result.error)
+        }
+
+        // Optimistic update
+        setOrders((prev) =>
+            prev.map((order) =>
+                order.id === orderId
+                    ? { ...order, status: 'completed' as const }
+                    : order
+            )
+        )
+    }, [])
+
     const refetch = useCallback(async () => {
         await fetchOrders()
     }, [fetchOrders])
@@ -141,6 +159,7 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         pagination,
         setPage,
         verifyOrder,
+        approveOrder,
         refetch,
     }
 }

@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createReferralClick } from '@/actions/createReferralClick'
 
 export interface OrderFilters {
     status?: string
@@ -173,6 +174,86 @@ export async function verifyAdminOrder(orderId: string): Promise<{ error?: strin
             headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET || '' },
             body: JSON.stringify({ orderId }),
         }).catch((err) => console.error('[Contract] generation trigger failed:', err))
+    }
+
+    return {}
+}
+
+/**
+ * Admin approve payment — marks a pending order as completed and triggers
+ * the same post-payment flow as Casso webhook (referral commission, telegram, etc.)
+ */
+export async function approveAdminOrder(orderId: string): Promise<{ error?: string }> {
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return { error: 'Unauthorized' }
+    }
+
+    const serviceSupabase = createServiceRoleClient()
+
+    // Check admin role
+    const { data: adminUser } = await serviceSupabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (!adminUser || !['admin', 'super_admin'].includes(adminUser.role)) {
+        return { error: 'Forbidden: admin role required' }
+    }
+
+    // Get order details
+    const { data: order, error: orderError } = await serviceSupabase
+        .from('orders')
+        .select('id, code, user_id, user_email, user_name, quantity, total_amount, status, referred_by')
+        .eq('id', orderId)
+        .single()
+
+    if (orderError || !order) {
+        return { error: 'Đơn hàng không tồn tại' }
+    }
+
+    if (order.status !== 'pending') {
+        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending"` }
+    }
+
+    // Safety net: if referred_by is null, look up from users.referred_by_user_id
+    let referredBy = order.referred_by
+    if (!referredBy) {
+        const { data: profile } = await serviceSupabase
+            .from('users')
+            .select('referred_by_user_id')
+            .eq('id', order.user_id)
+            .single()
+        referredBy = profile?.referred_by_user_id ?? null
+
+        // Update order with correct referred_by
+        if (referredBy) {
+            await serviceSupabase
+                .from('orders')
+                .update({ referred_by: referredBy })
+                .eq('id', orderId)
+        }
+    }
+
+    // Update order status to completed
+    const { error: updateError } = await serviceSupabase
+        .from('orders')
+        .update({
+            status: 'completed',
+            updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId)
+
+    if (updateError) {
+        console.error('approveAdminOrder update error:', updateError)
+        return { error: updateError.message }
+    }
+
+    // Create referral_click for commission tracking
+    if (referredBy) {
+        await createReferralClick(orderId, referredBy, 'admin-approve')
     }
 
     return {}

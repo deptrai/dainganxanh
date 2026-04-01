@@ -89,6 +89,17 @@ export async function POST(req: NextRequest) {
     // Use service role to bypass RLS (user authenticated above)
     const serviceSupabase = createServiceRoleClient()
 
+    // Safety net: if client didn't resolve referred_by, look up from users.referred_by_user_id
+    let referredBy = body.referred_by ?? null
+    if (!referredBy) {
+      const { data: profile } = await serviceSupabase
+        .from('users')
+        .select('referred_by_user_id')
+        .eq('id', user.id)
+        .single()
+      referredBy = profile?.referred_by_user_id ?? null
+    }
+
     // Step 1: Upsert base order fields (ignoreDuplicates: true preserves existing order intact)
     const { error: upsertError } = await serviceSupabase
       .from('orders')
@@ -101,7 +112,7 @@ export async function POST(req: NextRequest) {
           quantity: body.quantity,
           total_amount: body.total_amount,
           payment_method: body.payment_method,
-          referred_by: body.referred_by ?? null,
+          referred_by: referredBy,
           status: 'pending',
         },
         { onConflict: 'code', ignoreDuplicates: true }

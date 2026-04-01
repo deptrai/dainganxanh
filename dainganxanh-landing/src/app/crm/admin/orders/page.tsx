@@ -5,7 +5,7 @@ import OrderTable from '@/components/admin/OrderTable'
 import OrderFilters from '@/components/admin/OrderFilters'
 
 export default function OrdersPage() {
-    const { orders, loading, error, filters, setFilters, pagination, setPage, verifyOrder, refetch } = useAdminOrders()
+    const { orders, loading, error, filters, setFilters, pagination, setPage, verifyOrder, approveOrder, refetch } = useAdminOrders()
 
     if (error) {
         return (
@@ -46,7 +46,7 @@ export default function OrdersPage() {
                 </div>
             ) : (
                 <>
-                    <OrderTable orders={orders} verifyOrder={verifyOrder} />
+                    <OrderTable orders={orders} verifyOrder={verifyOrder} approveOrder={approveOrder} />
 
                     {/* Pagination Controls */}
                     <div className="flex items-center justify-between bg-white rounded-lg shadow px-6 py-4">
