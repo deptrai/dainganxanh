@@ -29,6 +29,8 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [paymentStatus, setPaymentStatus] = useState<"waiting" | "confirmed" | "error">("waiting");
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const [claimingPayment, setClaimingPayment] = useState(false);
+    const [claimError, setClaimError] = useState("");
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startTimeRef = useRef<number>(Date.now());
@@ -98,6 +100,43 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
             setCopiedField(field);
             setTimeout(() => setCopiedField(null), 2000);
         } catch { /* */ }
+    };
+
+    const handleClaimPayment = async () => {
+        setClaimingPayment(true);
+        setClaimError("");
+        try {
+            const res = await fetch("/api/orders/claim-manual-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderCode }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Có lỗi xảy ra");
+            }
+
+            // Stop polling
+            if (pollRef.current) clearInterval(pollRef.current);
+            if (timerRef.current) clearInterval(timerRef.current);
+
+            // Redirect to success page
+            const supabase = createBrowserClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            const quantity = Math.round(amount / 260000);
+            const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
+
+            setTimeout(() => {
+                router.push(
+                    `/checkout/success?orderCode=${orderCode}&quantity=${quantity}&name=${encodeURIComponent(userName)}`
+                );
+            }, 1000);
+        } catch (err) {
+            setClaimError(err instanceof Error ? err.message : "Có lỗi xảy ra");
+        } finally {
+            setClaimingPayment(false);
+        }
     };
 
     const CopyBtn = ({ text, field, label }: { text: string; field: string; label: string }) => (
@@ -203,16 +242,40 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
                 </div>
             </div>
 
-            {/* Cancel button */}
-            {onCancel && (
-                <div className="px-4 pb-4">
-                    {cancelError && (
-                        <p className="text-sm text-red-600 text-center mb-2">{cancelError}</p>
+            {/* Claim Payment + Cancel buttons */}
+            <div className="px-4 pb-4 space-y-2">
+                {claimError && (
+                    <p className="text-sm text-red-600 text-center">{claimError}</p>
+                )}
+                {cancelError && (
+                    <p className="text-sm text-red-600 text-center">{cancelError}</p>
+                )}
+
+                {/* Claim Payment Button */}
+                <button
+                    onClick={handleClaimPayment}
+                    disabled={claimingPayment || cancelling}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                    {claimingPayment ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Đang xử lý...
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Đã chuyển tiền thành công
+                        </>
                     )}
+                </button>
+
+                {/* Cancel Button */}
+                {onCancel && (
                     <button
                         onClick={onCancel}
-                        disabled={cancelling}
-                        className="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                        disabled={cancelling || claimingPayment}
+                        className="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {cancelling
                             ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -220,8 +283,8 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
                         }
                         Hủy đơn hàng
                     </button>
-                </div>
-            )}
+                )}
+            </div>
         </motion.div>
     );
 }

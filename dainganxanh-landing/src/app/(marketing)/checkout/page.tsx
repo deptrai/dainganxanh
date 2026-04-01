@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { BankingPayment } from "@/components/checkout/BankingPayment";
 import { createBrowserClient } from "@/lib/supabase/client";
 import Cookies from "js-cookie";
+import { validateReferralCode } from "@/actions/validateReferralCode";
 
 interface PendingOrder {
     id: string;
@@ -19,38 +20,8 @@ interface PendingOrder {
 
 type CheckoutStep = "loading" | "payment";
 
-async function validateReferralCode(
-    code: string,
-    supabase: any
-): Promise<string | null> {
-    try {
-        const { data: referrer, error } = await supabase
-            .from("users")
-            .select("id")
-            .ilike("referral_code", code)
-            .single();
-
-        if (error || !referrer) {
-            console.warn('[CHECKOUT] Referral code validation failed:', {
-                code,
-                error: error?.message,
-                timestamp: new Date().toISOString(),
-            });
-            return null;
-        }
-
-        console.log('[CHECKOUT] Referral code validated:', {
-            code,
-            referrerId: referrer.id,
-            timestamp: new Date().toISOString(),
-        });
-
-        return referrer.id;
-    } catch (err) {
-        console.error('[CHECKOUT] Validation exception:', err);
-        return null;
-    }
-}
+// validateReferralCode moved to server action (src/actions/validateReferralCode.ts)
+// to bypass RLS on users table — browser client can only read own row
 
 function OrderSummary({ quantity, unitPrice, orderCode, orderAmount }: {
     quantity: number;

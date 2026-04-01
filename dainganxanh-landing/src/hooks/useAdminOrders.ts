@@ -9,8 +9,9 @@ export interface Order {
     quantity: number
     total_amount: number
     payment_method: string
-    status: 'pending' | 'paid' | 'verified' | 'assigned' | 'completed' | 'cancelled'
+    status: 'pending' | 'paid' | 'manual_payment_claimed' | 'verified' | 'assigned' | 'completed' | 'cancelled'
     verified_at: string | null
+    claimed_at?: string | null
     created_at: string
     // Joined from users table
     user_email?: string

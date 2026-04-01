@@ -141,6 +141,16 @@ export async function fetchAdminOrders(
 
 export async function verifyAdminOrder(orderId: string): Promise<{ error?: string }> {
     const supabase = await createServerClient()
+    const serviceSupabase = createServiceRoleClient()
+
+    // Get current order status before updating
+    const { data: order } = await serviceSupabase
+        .from('orders')
+        .select('id, status')
+        .eq('id', orderId)
+        .single()
+
+    const wasManualPaymentClaimed = order?.status === 'manual_payment_claimed'
 
     const { error } = await supabase
         .from('orders')
@@ -153,6 +163,16 @@ export async function verifyAdminOrder(orderId: string): Promise<{ error?: strin
     if (error) {
         console.error('verifyAdminOrder error:', error)
         return { error: error.message }
+    }
+
+    // Trigger contract generation for manual payment claimed orders
+    if (wasManualPaymentClaimed) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
+        fetch(`${baseUrl}/api/contracts/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET || '' },
+            body: JSON.stringify({ orderId }),
+        }).catch((err) => console.error('[Contract] generation trigger failed:', err))
     }
 
     return {}

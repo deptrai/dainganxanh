@@ -19,6 +19,7 @@ type SortDirection = 'asc' | 'desc'
 const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
     paid: 'bg-blue-100 text-blue-800',
+    manual_payment_claimed: 'bg-orange-100 text-orange-800',
     verified: 'bg-green-100 text-green-800',
     assigned: 'bg-purple-100 text-purple-800',
     completed: 'bg-green-100 text-green-800',
@@ -28,6 +29,7 @@ const statusColors = {
 const statusLabels = {
     pending: 'Chờ xác minh',
     paid: 'Đã thanh toán',
+    manual_payment_claimed: 'Chờ duyệt thanh toán thủ công',
     verified: 'Đã xác minh',
     assigned: 'Đã gán cây',
     completed: 'Hoàn thành',
@@ -193,7 +195,7 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex gap-2">
-                                        {order.status === 'pending' || order.status === 'paid' ? (
+                                        {order.status === 'pending' || order.status === 'paid' || order.status === 'manual_payment_claimed' ? (
                                             <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                                         ) : order.status === 'verified' || order.status === 'completed' ? (
                                             <button
@@ -220,6 +222,9 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                                 <div><strong>User ID:</strong> {order.user_id}</div>
                                                 {order.verified_at && (
                                                     <div><strong>Verified At:</strong> {formatDate(order.verified_at)}</div>
+                                                )}
+                                                {(order as any).claimed_at && (
+                                                    <div><strong>Claimed At:</strong> {formatDate((order as any).claimed_at)}</div>
                                                 )}
                                                 <div><strong>Contract:</strong> {order.contract_url ? 'Yes' : 'No'}</div>
                                             </div>

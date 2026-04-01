@@ -14,8 +14,20 @@ export default defineConfig({
 
     projects: [
         {
+            name: 'setup',
+            testMatch: /.*\.setup\.ts/,
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: 'http://localhost:3001',
+            }
+        },
+        {
             name: 'chromium',
-            use: { ...devices['Desktop Chrome'] },
+            use: { 
+                ...devices['Desktop Chrome'],
+                // storageState: 'e2e/storagestate/admin.json', // Có thể bật global ở đây hoặc từng file
+            },
+            dependencies: ['setup'],
         },
     ],
 

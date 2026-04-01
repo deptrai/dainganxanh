@@ -33,14 +33,18 @@ function SuccessContent() {
         }
     }, [searchParams, router]);
 
-    // Check if order already has identity data
+    // Check if order already has identity data, auto-fill from user profile if available
     useEffect(() => {
         if (!orderCode) return;
-        fetch(`/api/orders/status`)
+        fetch(`/api/orders/auto-fill-identity?orderCode=${orderCode}`)
             .then((r) => r.ok ? r.json() : null)
             .then((data) => {
-                if (data?.order?.id_number) {
+                if (data?.hasIdentity) {
                     setIdentityDone(true);
+                    // If auto-filled from saved profile, show success message
+                    if (data?.autoFilled) {
+                        setIdentitySuccess(true);
+                    }
                 } else {
                     setIdentityDone(false);
                 }

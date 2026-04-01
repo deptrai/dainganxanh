@@ -44,7 +44,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Không tìm thấy đơn hàng' }, { status: 404 })
     }
 
-    // Update identity fields + user_name on the order
+    // Parse DOB to Date format for users table
+    const dobDate = new Date(identityFields.dob)
+
+    // 1. Update identity fields on the order
     const { error: updateError } = await serviceSupabase
       .from('orders')
       .update({
@@ -60,11 +63,27 @@ export async function POST(req: NextRequest) {
       .eq('id', order.id)
 
     if (updateError) {
-      console.error('Failed to update identity fields:', updateError)
+      console.error('Failed to update identity fields on order:', updateError)
       return NextResponse.json({ error: 'Không thể lưu thông tin. Vui lòng thử lại.' }, { status: 500 })
     }
 
-    // Trigger contract generation in background (non-blocking) for completed orders
+    // 2. ALSO save identity to users profile for future reuse
+    const { error: userUpdateError } = await serviceSupabase
+      .from('users')
+      .update({
+        full_name: full_name,
+        id_number: identityFields.id_number,
+        date_of_birth: dobDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        phone: identityFields.phone,
+      })
+      .eq('id', user.id)
+
+    if (userUpdateError) {
+      console.error('Warning: Failed to update user profile:', userUpdateError)
+      // Continue anyway - order was saved successfully
+    }
+
+    // 3. Trigger contract generation in background (non-blocking) for completed orders
     if (order.status === 'completed') {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
       fetch(`${baseUrl}/api/contracts/generate`, {
@@ -74,7 +93,7 @@ export async function POST(req: NextRequest) {
       }).catch((err) => console.error('[Contract] generation trigger failed:', err))
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, message: 'Đã lưu thông tin hợp đồng. Các lần mua tiếp theo sẽ tự động điền.' })
   } catch (err) {
     console.error('Unexpected error in POST /api/orders/identity:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

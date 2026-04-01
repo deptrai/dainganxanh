@@ -41,23 +41,34 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [submitting, setSubmitting] = useState(false);
 
-    // Pre-fill full_name and phone from user metadata
+    // Pre-fill from user profile (saved from previous purchases)
     useEffect(() => {
-        const loadUser = async () => {
+        const loadUserProfile = async () => {
             try {
                 const supabase = createBrowserClient();
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
+
+                // Try to load from users table first (saved identity data)
+                const { data: userProfile } = await supabase
+                    .from('users')
+                    .select('full_name, phone, id_number, date_of_birth')
+                    .eq('id', user.id)
+                    .single();
+
                 setValues((prev) => ({
                     ...prev,
-                    full_name: prev.full_name || user.user_metadata?.full_name || "",
-                    phone: prev.phone || user.user_metadata?.phone || "",
+                    // Use saved profile data, fallback to auth metadata, then to prop values
+                    full_name: prev.full_name || userProfile?.full_name || user.user_metadata?.full_name || "",
+                    phone: prev.phone || userProfile?.phone || user.user_metadata?.phone || "",
+                    id_number: prev.id_number || userProfile?.id_number || "",
+                    dob: prev.dob || (userProfile?.date_of_birth ? userProfile.date_of_birth : ""),
                 }));
             } catch {
                 // Silent fail — user just won't get pre-fill
             }
         };
-        loadUser();
+        loadUserProfile();
     }, []);
 
     const validateField = (name: keyof CustomerIdentityData, value: string) => {
