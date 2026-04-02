@@ -1,6 +1,7 @@
 'use server'
 
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import { createHash } from 'crypto'
 
 // Commission rate constant (10% of order value)
@@ -88,13 +89,18 @@ export async function trackReferralClick(refCode: string, requestHeaders: Header
  */
 export async function getReferralStats(userId: string) {
     try {
-        const supabase = await createServerClient()
+        // Check if admin is impersonating — use service role to bypass RLS
+        const ctx = await getImpersonationContext()
+        const isImpersonating = ctx?.isImpersonating && ctx.effectiveUserId === userId
+        const supabase = isImpersonating ? createServiceRoleClient() : await createServerClient()
 
-        // AUTH CHECK: Verify user is querying their own stats
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user || user.id !== userId) {
-            console.error('Unauthorized access to getReferralStats')
-            return null
+        if (!isImpersonating) {
+            // AUTH CHECK: Verify user is querying their own stats
+            const { data: { user }, error: authError } = await supabase.auth.getUser()
+            if (authError || !user || user.id !== userId) {
+                console.error('Unauthorized access to getReferralStats')
+                return null
+            }
         }
 
         // Get total clicks
@@ -161,13 +167,18 @@ export async function getReferralStats(userId: string) {
  */
 export async function getReferralConversions(userId: string) {
     try {
-        const supabase = await createServerClient()
+        // Check if admin is impersonating — use service role to bypass RLS
+        const ctx = await getImpersonationContext()
+        const isImpersonating = ctx?.isImpersonating && ctx.effectiveUserId === userId
+        const supabase = isImpersonating ? createServiceRoleClient() : await createServerClient()
 
-        // AUTH CHECK: Verify user is querying their own conversions
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user || user.id !== userId) {
-            console.error('Unauthorized access to getReferralConversions')
-            return []
+        if (!isImpersonating) {
+            // AUTH CHECK: Verify user is querying their own conversions
+            const { data: { user }, error: authError } = await supabase.auth.getUser()
+            if (authError || !user || user.id !== userId) {
+                console.error('Unauthorized access to getReferralConversions')
+                return []
+            }
         }
 
         const { data: conversions, error } = await supabase
