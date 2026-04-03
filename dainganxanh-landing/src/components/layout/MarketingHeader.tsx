@@ -9,21 +9,26 @@ import { UserHeader } from "./UserHeader";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-const guestNavItems = [
+const baseNavItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
     { name: 'Mua cây', href: '/pricing', icon: Package },
+]
+
+const guestOnlyItems = [
     { name: 'Blog', href: '/blog', icon: BookOpen },
+]
+
+const sharedNavItems = [
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
 ]
 
-const authNavItems = [
-    { name: 'Trang chủ', href: '/', icon: Home },
-    { name: 'Mua cây', href: '/pricing', icon: Package },
-    { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
-    { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
+const authOnlyItems = [
     { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
 ]
+
+const guestNavItems = [...baseNavItems, ...guestOnlyItems, ...sharedNavItems]
+const authNavItems = [...baseNavItems, ...sharedNavItems, ...authOnlyItems]
 
 export function MarketingHeader() {
     const pathname = usePathname();

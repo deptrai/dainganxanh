@@ -42,28 +42,20 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if user already has identity info saved
-    // 1. Try users table (if identity columns exist)
+    // Check if user already has identity info saved (single query)
+    let identitySource: { full_name?: string; phone?: string; id_number?: string; dob?: string } | null = null
     const { data: userProfile } = await serviceSupabase
       .from('users')
-      .select('full_name, email, phone')
+      .select('full_name, email, phone, id_number, date_of_birth')
       .eq('id', effectiveUser.userId)
       .single()
 
-    // 2. Check for identity from users table (with fallback for missing columns)
-    let identitySource: { full_name?: string; phone?: string; id_number?: string; dob?: string } | null = null
-    const { data: profileIdentity, error: profileIdErr } = await serviceSupabase
-      .from('users')
-      .select('full_name, phone, id_number, date_of_birth')
-      .eq('id', effectiveUser.userId)
-      .single()
-
-    if (!profileIdErr && profileIdentity?.id_number) {
+    if (userProfile?.id_number) {
       identitySource = {
-        full_name: profileIdentity.full_name,
-        phone: profileIdentity.phone,
-        id_number: profileIdentity.id_number,
-        dob: profileIdentity.date_of_birth,
+        full_name: userProfile.full_name,
+        phone: userProfile.phone,
+        id_number: userProfile.id_number,
+        dob: userProfile.date_of_birth,
       }
     }
 

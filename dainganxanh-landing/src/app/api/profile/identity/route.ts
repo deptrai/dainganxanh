@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest) {
     const { full_name, ...identityFields } = result.data
     const serviceSupabase = createServiceRoleClient()
 
-    // 1. Update all orders of this user that have identity data (or all non-cancelled)
+    // 1. Only update orders that don't have a signed contract yet
     const { error: orderError } = await serviceSupabase
       .from('orders')
       .update({
@@ -94,6 +94,7 @@ export async function PUT(req: NextRequest) {
       })
       .eq('user_id', effectiveUser.userId)
       .not('status', 'eq', 'cancelled')
+      .is('contract_url', null)
 
     if (orderError) {
       console.error('Failed to update orders identity:', orderError)

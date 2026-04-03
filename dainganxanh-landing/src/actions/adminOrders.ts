@@ -3,6 +3,24 @@
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createReferralClick } from '@/actions/createReferralClick'
 
+async function triggerContractGeneration(orderId: string, retries = 2) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(`${baseUrl}/api/contracts/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET || '' },
+                body: JSON.stringify({ orderId }),
+            })
+            if (res.ok) return
+            console.error(`[Contract] attempt ${attempt + 1} failed: ${res.status}`)
+        } catch (err) {
+            console.error(`[Contract] attempt ${attempt + 1} error:`, err)
+        }
+        if (attempt < retries) await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+    }
+}
+
 export interface OrderFilters {
     status?: string
     search?: string
@@ -166,14 +184,9 @@ export async function verifyAdminOrder(orderId: string): Promise<{ error?: strin
         return { error: error.message }
     }
 
-    // Trigger contract generation for manual payment claimed orders
+    // Trigger contract generation for manual payment claimed orders (with retry)
     if (wasManualPaymentClaimed) {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
-        fetch(`${baseUrl}/api/contracts/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET || '' },
-            body: JSON.stringify({ orderId }),
-        }).catch((err) => console.error('[Contract] generation trigger failed:', err))
+        triggerContractGeneration(orderId).catch(() => {})
     }
 
     return {}
@@ -256,14 +269,9 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
         await createReferralClick(orderId, referredBy, 'admin-approve')
     }
 
-    // Trigger contract generation in background if order has identity info
+    // Trigger contract generation in background if order has identity info (with retry)
     if (order.user_name || order.user_email) {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
-        fetch(`${baseUrl}/api/contracts/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET || '' },
-            body: JSON.stringify({ orderId }),
-        }).catch((err) => console.error('[Contract] generation trigger failed:', err))
+        triggerContractGeneration(orderId).catch(() => {})
     }
 
     return {}
