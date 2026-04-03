@@ -12,6 +12,7 @@ interface OrderFiltersProps {
 const statusOptions = [
     { value: 'all', label: 'Tất cả' },
     { value: 'pending', label: 'Chờ xác minh' },
+    { value: 'manual_payment_claimed', label: 'Chờ admin duyệt' },
     { value: 'paid', label: 'Đã thanh toán' },
     { value: 'verified', label: 'Đã xác minh' },
     { value: 'assigned', label: 'Đã gán cây' },

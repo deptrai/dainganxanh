@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, TreePine, Share2, Package } from 'lucide-react'
+import { Home, TreePine, Share2, Package, UserCircle } from 'lucide-react'
 import { UserHeader } from './UserHeader'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
     { name: 'Mua cây', href: '/pricing', icon: Package },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
+    { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
 ]
 
 export function CRMHeader() {
