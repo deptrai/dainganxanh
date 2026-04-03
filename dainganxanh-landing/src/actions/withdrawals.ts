@@ -28,7 +28,9 @@ function normalizeVietnamese(text: string): string {
 
 // Calculate available balance
 export async function getAvailableBalance(userId: string) {
-    const supabase = await createServerClient()
+    // Use service role for data queries — orders.referred_by references
+    // OTHER users' rows, so RLS would block them with the anon client
+    const supabase = createServiceRoleClient()
 
     // Total commission earned — query directly from orders.referred_by
     // to stay consistent with getReferralStats and avoid missing commissions
