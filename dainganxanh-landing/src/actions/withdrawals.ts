@@ -3,6 +3,7 @@
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { MIN_WITHDRAWAL } from '@/lib/constants'
 import { notifyWithdrawalRequest } from '@/lib/utils/telegram'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 // Helper: send email via send-withdrawal-email Edge Function
 async function sendWithdrawalEmail(type: string, to: string, payload: Record<string, unknown>) {
@@ -85,19 +86,20 @@ export async function requestWithdrawal(data: {
     bankAccountNumber: string
     bankAccountName: string
 }) {
-    const supabase = await createServerClient()
-
-    // Auth check
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Auth check — support impersonation
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
         return { success: false, error: 'Unauthorized' }
     }
 
-    // Get user profile
-    const { data: profile } = await supabase
+    const userId = effectiveUser.userId
+
+    // Get user profile using service client (impersonated user may not be the auth user)
+    const serviceSupabase = createServiceRoleClient()
+    const { data: profile } = await serviceSupabase
         .from('users')
         .select('full_name, email')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
     if (!profile) {
@@ -116,7 +118,7 @@ export async function requestWithdrawal(data: {
     }
 
     // Check available balance
-    const balance = await getAvailableBalance(user.id)
+    const balance = await getAvailableBalance(userId)
     if (balance < data.amount) {
         return { success: false, error: 'Số dư không đủ' }
     }
@@ -125,12 +127,11 @@ export async function requestWithdrawal(data: {
         return { success: false, error: 'Số tiền rút tối thiểu là 200,000 VNĐ' }
     }
 
-    // Create withdrawal record
-    // Create withdrawal record
-    const { data: newWithdrawal, error: insertError } = await supabase
+    // Create withdrawal record (use service client to bypass RLS for impersonated users)
+    const { data: newWithdrawal, error: insertError } = await serviceSupabase
         .from('withdrawals')
         .insert({
-            user_id: user.id,
+            user_id: userId,
             amount: data.amount,
             bank_name: data.bankName,
             bank_account_number: data.bankAccountNumber,
@@ -155,7 +156,7 @@ export async function requestWithdrawal(data: {
     }).catch((err) => console.error('[Telegram] withdrawal notification failed:', err))
 
     // Send email to admins
-    const { data: admins } = await supabase
+    const { data: admins } = await serviceSupabase
         .from('users')
         .select('id')
         .in('role', ['admin', 'super_admin'])
