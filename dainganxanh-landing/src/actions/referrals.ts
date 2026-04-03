@@ -89,19 +89,22 @@ export async function trackReferralClick(refCode: string, requestHeaders: Header
  */
 export async function getReferralStats(userId: string) {
     try {
-        // Check if admin is impersonating — use service role to bypass RLS
+        // Auth check: verify user is querying their own stats (or admin impersonating)
         const ctx = await getImpersonationContext()
         const isImpersonating = ctx?.isImpersonating && ctx.effectiveUserId === userId
-        const supabase = isImpersonating ? createServiceRoleClient() : await createServerClient()
 
         if (!isImpersonating) {
-            // AUTH CHECK: Verify user is querying their own stats
-            const { data: { user }, error: authError } = await supabase.auth.getUser()
+            const authClient = await createServerClient()
+            const { data: { user }, error: authError } = await authClient.auth.getUser()
             if (authError || !user || user.id !== userId) {
                 console.error('Unauthorized access to getReferralStats')
                 return null
             }
         }
+
+        // Use service role for data queries — referral_clicks and orders reference
+        // OTHER users' rows, so RLS would block them with the anon client
+        const supabase = createServiceRoleClient()
 
         // Get total clicks
         const { count: totalClicks, error: clicksError } = await supabase
@@ -167,19 +170,22 @@ export async function getReferralStats(userId: string) {
  */
 export async function getReferralConversions(userId: string) {
     try {
-        // Check if admin is impersonating — use service role to bypass RLS
+        // Auth check: verify user is querying their own conversions (or admin impersonating)
         const ctx = await getImpersonationContext()
         const isImpersonating = ctx?.isImpersonating && ctx.effectiveUserId === userId
-        const supabase = isImpersonating ? createServiceRoleClient() : await createServerClient()
 
         if (!isImpersonating) {
-            // AUTH CHECK: Verify user is querying their own conversions
-            const { data: { user }, error: authError } = await supabase.auth.getUser()
+            const authClient = await createServerClient()
+            const { data: { user }, error: authError } = await authClient.auth.getUser()
             if (authError || !user || user.id !== userId) {
                 console.error('Unauthorized access to getReferralConversions')
                 return []
             }
         }
+
+        // Use service role for data queries — referral_clicks and orders reference
+        // OTHER users' rows, so RLS would block them with the anon client
+        const supabase = createServiceRoleClient()
 
         const { data: conversions, error } = await supabase
             .from('referral_clicks')
