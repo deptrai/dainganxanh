@@ -2,7 +2,7 @@
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { MIN_WITHDRAWAL } from '@/lib/constants'
-import { notifyWithdrawalRequest } from '@/lib/utils/telegram'
+import { notifyWithdrawalRequest, notifyWithdrawalApproved, notifyWithdrawalRejected } from '@/lib/utils/telegram'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 // Helper: send email via send-withdrawal-email Edge Function
@@ -273,6 +273,28 @@ export async function approveWithdrawal(formData: FormData) {
         })
     }
 
+    // Send Telegram notification to admin group
+    const userName = withdrawalUser?.user_metadata?.full_name || 'N/A'
+    const userEmail = withdrawalUser?.email || ''
+    notifyWithdrawalApproved({
+        userName,
+        userEmail,
+        amount: Number(withdrawal.amount),
+        bankName: withdrawal.bank_name,
+        bankAccountNumber: withdrawal.bank_account_number,
+        adminEmail: user.email || '',
+    }).catch((err) => console.error('[Telegram] withdrawal approved notification failed:', err))
+
+    // Create in-app notification for user
+    await serviceSupabase.from('notifications').insert({
+        user_id: withdrawal.user_id,
+        type: 'withdrawal_approved',
+        title: 'Yêu cầu rút tiền đã được duyệt',
+        body: `Yêu cầu rút ${new Intl.NumberFormat('vi-VN').format(Number(withdrawal.amount))}đ đã được duyệt và chuyển khoản thành công.`,
+        data: { withdrawalId },
+        read: false,
+    })
+
     return { success: true }
 }
 
@@ -330,6 +352,27 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
             rejectionReason: reason,
         })
     }
+
+    // Send Telegram notification to admin group
+    const rejUserName = withdrawalUser?.user_metadata?.full_name || 'N/A'
+    const rejUserEmail = withdrawalUser?.email || ''
+    notifyWithdrawalRejected({
+        userName: rejUserName,
+        userEmail: rejUserEmail,
+        amount: Number(withdrawal.amount),
+        reason,
+        adminEmail: user.email || '',
+    }).catch((err) => console.error('[Telegram] withdrawal rejected notification failed:', err))
+
+    // Create in-app notification for user
+    await serviceSupabase.from('notifications').insert({
+        user_id: withdrawal.user_id,
+        type: 'withdrawal_rejected',
+        title: 'Yêu cầu rút tiền bị từ chối',
+        body: `Yêu cầu rút ${new Intl.NumberFormat('vi-VN').format(Number(withdrawal.amount))}đ đã bị từ chối. Lý do: ${reason}`,
+        data: { withdrawalId },
+        read: false,
+    })
 
     return { success: true }
 }

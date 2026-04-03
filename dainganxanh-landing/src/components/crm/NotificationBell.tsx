@@ -202,7 +202,7 @@ export default function NotificationBell() {
                                             {/* Icon */}
                                             <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                                                 <span className="text-xl">
-                                                    {notification.type === 'harvest_ready' ? '🌟' : notification.type === 'tree_update' ? '🌳' : '📦'}
+                                                    {notification.type === 'harvest_ready' ? '🌟' : notification.type === 'tree_update' ? '🌳' : notification.type === 'withdrawal_approved' ? '✅' : notification.type === 'withdrawal_rejected' ? '❌' : '📦'}
                                                 </span>
                                             </div>
 

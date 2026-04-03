@@ -166,6 +166,47 @@ export async function notifyAdminApproval(params: {
   await sendTelegramMessage(message)
 }
 
+export async function notifyWithdrawalApproved(params: {
+  userName: string
+  userEmail: string
+  amount: number
+  bankName: string
+  bankAccountNumber: string
+  adminEmail: string
+}): Promise<void> {
+  const message =
+    `✅ <b>Duyệt rút tiền thành công!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 Người dùng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `💰 Số tiền: <b>${formatVND(params.amount)}</b>\n` +
+    `🏦 Ngân hàng: ${params.bankName}\n` +
+    `💳 STK: <code>${params.bankAccountNumber}</code>\n` +
+    `👨‍💼 Admin duyệt: ${params.adminEmail}\n` +
+    `🎉 Đã chuyển khoản thành công!`
+
+  await sendTelegramMessage(message)
+}
+
+export async function notifyWithdrawalRejected(params: {
+  userName: string
+  userEmail: string
+  amount: number
+  reason: string
+  adminEmail: string
+}): Promise<void> {
+  const message =
+    `❌ <b>Từ chối yêu cầu rút tiền!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `👤 Người dùng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `💰 Số tiền: <b>${formatVND(params.amount)}</b>\n` +
+    `📝 Lý do: ${params.reason}\n` +
+    `👨‍💼 Admin: ${params.adminEmail}`
+
+  await sendTelegramMessage(message)
+}
+
 export async function notifyReferralAssigned(params: {
   targetEmail: string
   targetName?: string | null
