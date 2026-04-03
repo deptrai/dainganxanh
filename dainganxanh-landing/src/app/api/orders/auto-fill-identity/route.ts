@@ -42,12 +42,25 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // If no identity data, try to auto-fill from user profile
-    const { data: userProfile } = await serviceSupabase
+    // Try to auto-fill from user profile (if columns exist)
+    let userProfile: { full_name?: string; phone?: string; id_number?: string; date_of_birth?: string } | null = null
+    const { data: profileData, error: profileError } = await serviceSupabase
       .from('users')
       .select('full_name, phone, id_number, date_of_birth')
       .eq('id', user.id)
       .single()
+
+    if (!profileError) {
+      userProfile = profileData
+    } else {
+      // Columns may not exist yet — fallback to basic fields
+      const { data: basicProfile } = await serviceSupabase
+        .from('users')
+        .select('full_name, phone')
+        .eq('id', user.id)
+        .single()
+      userProfile = basicProfile
+    }
 
     if (userProfile?.id_number) {
       // Auto-save user profile data to this order
@@ -74,6 +87,51 @@ export async function GET(req: NextRequest) {
           id_issue_place: '',
           address: '',
           phone: userProfile.phone || '',
+        }
+      })
+    }
+
+    // Fallback: check OTHER orders of the same user for identity data
+    const { data: otherOrder } = await serviceSupabase
+      .from('orders')
+      .select('user_name, dob, nationality, id_number, id_issue_date, id_issue_place, address, phone')
+      .eq('user_id', user.id)
+      .not('id_number', 'is', null)
+      .neq('code', orderCode)
+      .limit(1)
+      .single()
+
+    if (otherOrder?.id_number) {
+      // Auto-save to current order
+      if (order?.id) {
+        await serviceSupabase
+          .from('orders')
+          .update({
+            user_name: otherOrder.user_name,
+            id_number: otherOrder.id_number,
+            phone: otherOrder.phone,
+            dob: otherOrder.dob,
+            nationality: otherOrder.nationality,
+            id_issue_date: otherOrder.id_issue_date,
+            id_issue_place: otherOrder.id_issue_place,
+            address: otherOrder.address,
+          })
+          .eq('id', order.id)
+      }
+
+      return NextResponse.json({
+        hasIdentity: true,
+        autoFilled: true,
+        message: 'Thông tin được điền tự động từ đơn hàng trước',
+        order: {
+          full_name: otherOrder.user_name || '',
+          dob: otherOrder.dob || '',
+          nationality: otherOrder.nationality || 'Việt Nam',
+          id_number: otherOrder.id_number || '',
+          id_issue_date: otherOrder.id_issue_date || '',
+          id_issue_place: otherOrder.id_issue_place || '',
+          address: otherOrder.address || '',
+          phone: otherOrder.phone || '',
         }
       })
     }

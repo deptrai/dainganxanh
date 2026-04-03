@@ -214,8 +214,8 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
         return { error: 'Đơn hàng không tồn tại' }
     }
 
-    if (order.status !== 'pending') {
-        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending"` }
+    if (!['pending', 'manual_payment_claimed'].includes(order.status)) {
+        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending" hoặc "manual_payment_claimed"` }
     }
 
     // Safety net: if referred_by is null, look up from users.referred_by_user_id
@@ -254,6 +254,16 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
     // Create referral_click for commission tracking
     if (referredBy) {
         await createReferralClick(orderId, referredBy, 'admin-approve')
+    }
+
+    // Trigger contract generation in background if order has identity info
+    if (order.user_name || order.user_email) {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
+        fetch(`${baseUrl}/api/contracts/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET || '' },
+            body: JSON.stringify({ orderId }),
+        }).catch((err) => console.error('[Contract] generation trigger failed:', err))
     }
 
     return {}

@@ -67,20 +67,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Không thể lưu thông tin. Vui lòng thử lại.' }, { status: 500 })
     }
 
-    // 2. ALSO save identity to users profile for future reuse
-    const { error: userUpdateError } = await serviceSupabase
+    // 2. ALSO save identity to users profile for future reuse (best-effort)
+    const userProfileData: Record<string, string> = {
+      full_name: full_name,
+      phone: identityFields.phone,
+    }
+    // Try saving all identity fields; gracefully handle missing columns
+    const fullProfileData = {
+      ...userProfileData,
+      id_number: identityFields.id_number,
+      date_of_birth: dobDate.toISOString().split('T')[0],
+    }
+    let { error: userUpdateError } = await serviceSupabase
       .from('users')
-      .update({
-        full_name: full_name,
-        id_number: identityFields.id_number,
-        date_of_birth: dobDate.toISOString().split('T')[0], // YYYY-MM-DD format
-        phone: identityFields.phone,
-      })
+      .update(fullProfileData)
       .eq('id', user.id)
 
     if (userUpdateError) {
-      console.error('Warning: Failed to update user profile:', userUpdateError)
-      // Continue anyway - order was saved successfully
+      // Columns may not exist yet — fallback to basic fields only
+      console.warn('Warning: Failed to update full user profile:', userUpdateError.message)
+      await serviceSupabase
+        .from('users')
+        .update(userProfileData)
+        .eq('id', user.id)
+        .then(({ error }) => {
+          if (error) console.warn('Warning: Failed to update basic user profile:', error.message)
+        })
     }
 
     // 3. Trigger contract generation in background (non-blocking) for completed orders

@@ -124,6 +124,26 @@ export async function notifyTreeAssigned(params: {
   await sendTelegramMessage(message)
 }
 
+export async function notifyManualPaymentClaim(params: {
+  orderCode: string
+  userName: string
+  userEmail: string
+  quantity: number
+  totalAmount: number
+}): Promise<void> {
+  const message =
+    `📢 <b>User báo đã chuyển tiền!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${params.orderCode}</code>\n` +
+    `👤 Khách hàng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `🌳 Số cây: <b>${params.quantity} cây</b>\n` +
+    `💰 Số tiền: <b>${formatVND(params.totalAmount)}</b>\n` +
+    `⚠️ Vui lòng kiểm tra và duyệt đơn hàng`
+
+  await sendTelegramMessage(message)
+}
+
 export async function notifyReferralAssigned(params: {
   targetEmail: string
   targetName?: string | null
