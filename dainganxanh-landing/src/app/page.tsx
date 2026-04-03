@@ -9,6 +9,8 @@ import { HeroVideo } from '@/components/marketing/HeroVideo'
 import { TreeCounter } from '@/components/marketing/TreeCounter'
 import { CTAButton } from '@/components/marketing/CTAButton'
 
+export const revalidate = 60; // Cache trang này 60 giây (ISR) để chịu tải tốt hơn khi bị đột biến traffic
+
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
     const params = await searchParams
     const refCode = params.ref

@@ -44,7 +44,10 @@ export async function syncCassoTransactions(): Promise<SyncResult> {
     return { success: false, error: 'CASSO_API_KEY chưa được cấu hình', imported: 0, skipped: 0, matched: 0 }
   }
 
-  // 2. Build date range: today and yesterday
+  return executeCassoSync(apiKey);
+}
+
+export async function executeCassoSync(apiKey: string): Promise<SyncResult> {
   const now = new Date()
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   const fmt = (d: Date) => d.toISOString().slice(0, 10) // YYYY-MM-DD
