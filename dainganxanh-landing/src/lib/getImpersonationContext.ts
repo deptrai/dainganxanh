@@ -5,6 +5,7 @@ export interface ImpersonationContext {
     effectiveUserId: string
     isImpersonating: boolean
     impersonatedUserName?: string | null
+    adminRole?: string | null
 }
 
 /**
@@ -61,6 +62,7 @@ export async function getImpersonationContext(): Promise<ImpersonationContext | 
             effectiveUserId: targetUserId,
             isImpersonating: true,
             impersonatedUserName: displayName,
+            adminRole: profile.role,
         }
     } catch {
         return { effectiveUserId: user.id, isImpersonating: false }

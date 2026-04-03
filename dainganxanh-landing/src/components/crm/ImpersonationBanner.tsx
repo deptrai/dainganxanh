@@ -4,9 +4,11 @@ import { stopImpersonation } from '@/actions/impersonation'
 
 interface ImpersonationBannerProps {
     userName: string | null | undefined
+    adminRole?: string | null
 }
 
-export default function ImpersonationBanner({ userName }: ImpersonationBannerProps) {
+export default function ImpersonationBanner({ userName, adminRole }: ImpersonationBannerProps) {
+    const isSuperAdmin = adminRole === 'super_admin'
     const handleStop = async () => {
         await stopImpersonation()
         window.location.href = '/crm/admin/users'
@@ -19,7 +21,9 @@ export default function ImpersonationBanner({ userName }: ImpersonationBannerPro
                 <span>
                     Đang xem tài khoản: <strong>{userName || 'Unknown'}</strong>
                 </span>
-                <span className="text-amber-200 text-xs">(Chế độ xem — không thể thực hiện thao tác)</span>
+                <span className="text-amber-200 text-xs">
+                    {isSuperAdmin ? '(Đang thao tác thay cho user)' : '(Chế độ xem — không thể thực hiện thao tác)'}
+                </span>
             </div>
             <button
                 onClick={handleStop}
