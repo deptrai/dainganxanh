@@ -116,8 +116,8 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
                                         try {
                                             await approveOrder(order.id)
                                             window.location.reload()
-                                        } catch {
-                                            setAssignError('Duyệt thanh toán thất bại')
+                                        } catch (err) {
+                                            setAssignError(err instanceof Error ? err.message : 'Duyệt thanh toán thất bại')
                                         } finally {
                                             setApprovingOrderId(null)
                                             setApproveConfirmId(null)

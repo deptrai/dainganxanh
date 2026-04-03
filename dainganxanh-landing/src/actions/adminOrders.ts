@@ -227,8 +227,8 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
         return { error: 'Đơn hàng không tồn tại' }
     }
 
-    if (!['pending', 'manual_payment_claimed', 'verified'].includes(order.status)) {
-        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending", "manual_payment_claimed" hoặc "verified"` }
+    if (!['pending', 'paid', 'manual_payment_claimed', 'verified'].includes(order.status)) {
+        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending", "paid", "manual_payment_claimed" hoặc "verified"` }
     }
 
     // Safety net: if referred_by is null, look up from users.referred_by_user_id
