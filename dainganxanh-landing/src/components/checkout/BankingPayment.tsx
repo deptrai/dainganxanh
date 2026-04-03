@@ -112,8 +112,8 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
                 body: JSON.stringify({ orderCode }),
             });
 
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
                 throw new Error(data.error || "Có lỗi xảy ra");
             }
 
@@ -121,17 +121,14 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
             if (pollRef.current) clearInterval(pollRef.current);
             if (timerRef.current) clearInterval(timerRef.current);
 
-            // Redirect to success page
-            const supabase = createBrowserClient();
-            const { data: { user } } = await supabase.auth.getUser();
+            // Redirect to waiting page
             const quantity = Math.round(amount / 260000);
-            const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
 
             setTimeout(() => {
                 router.push(
-                    `/checkout/success?orderCode=${orderCode}&quantity=${quantity}&name=${encodeURIComponent(userName)}`
+                    `/checkout/waiting?orderCode=${orderCode}&quantity=${quantity}`
                 );
-            }, 1000);
+            }, 500);
         } catch (err) {
             setClaimError(err instanceof Error ? err.message : "Có lỗi xảy ra");
         } finally {

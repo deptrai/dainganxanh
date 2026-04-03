@@ -1,6 +1,6 @@
 Bộ **User Flow Diagrams** dạng Mermaid cho dự án Đại Ngàn Xanh.
 
-> Cập nhật lần cuối: 2026-03-29 — đồng bộ với code thực tế trong repo.
+> Cập nhật lần cuối: 2026-04-03 — đồng bộ với code thực tế trong repo.
 
 ## 1️⃣ FIRST-TIME BUYER JOURNEY
 
@@ -44,15 +44,22 @@ flowchart TD
     PollStatus -->|status = completed| RedirectSuccess
     PollStatus -->|Chua xong| PollStatus
 
+    WaitOrCancel -->|Bam Da chuyen tien| ClaimPayment[POST /api/orders/claim-manual-payment<br>status: manual_payment_claimed<br>Telegram: notifyManualPaymentClaim]
+
+    ClaimPayment --> IdentityCheck{User da co id_number<br>trong bang users?}
+    IdentityCheck -->|Chua| IdentityForm[Form thong tin hop dong<br>Ho ten, CCCD, Ngay sinh<br>Dia chi, SĐT, Quoc tich<br>Noi cap, Ngay cap<br>POST /api/orders/identity<br>Luu vao users table 1 lan]
+    IdentityCheck -->|Roi| AutoFill[Tu dong dien vao order<br>tu users profile]
+    IdentityForm --> WaitAdmin
+    AutoFill --> WaitAdmin
+
+    WaitAdmin[Man hinh cho admin xac nhan<br>Route /checkout/waiting<br>Hien thi trang thai don hang<br>Poll status moi 5 giay<br>User co the mua them don khac]
+
+    WaitAdmin -->|Admin approve| RedirectSuccess
+    WaitAdmin -->|Mua them| Quantity
+
     RedirectSuccess --> SuccessPage[Trang thanh cong<br>Route /checkout/success<br>Animation + Ma don + CO2<br>Share Card Preview]
 
-    SuccessPage --> IdentityCheck{Co id_number?}
-    IdentityCheck -->|Chua| IdentityForm[Form thong tin hop dong<br>Ho ten, CCCD, Ngay sinh<br>Dia chi, SĐT, Quoc tich<br>Noi cap, Ngay cap<br>POST /api/orders/identity<br>Trigger generate-contract]
-    IdentityCheck -->|Roi| SkipForm[Da co thong tin<br>Hien thi xac nhan]
-    IdentityForm --> NextStep{Tiep theo?}
-    IdentityForm -.->|Bo qua| NextStep
-    SkipForm --> NextStep
-
+    SuccessPage --> NextStep{Tiep theo?}
     NextStep -->|Xem vuon| Garden[Route /crm/my-garden]
     NextStep -->|Ve trang chu| Start
     NextStep -->|Mua them| Quantity
@@ -110,6 +117,28 @@ flowchart TD
 
     InvokeFn -->|Error| FnError[Update: function_error]
     FnError --> Return200
+```
+
+### Manual Payment Claim (User tu bao da chuyen tien)
+
+```mermaid
+flowchart TD
+    UserClaim[User bam Da chuyen tien thanh cong] --> ClaimAPI[POST /api/orders/claim-manual-payment]
+    ClaimAPI --> UpdateStatus[Update order status<br>pending to manual_payment_claimed]
+    UpdateStatus --> AutoFillIdentity{User da co id_number?}
+
+    AutoFillIdentity -->|Co| CopyToOrder[Tu dong copy identity<br>tu users sang order]
+    CopyToOrder --> TelegramNotify
+    AutoFillIdentity -->|Chua| ShowForm[Hien form nhap identity<br>Luu vao users table 1 lan<br>Copy sang order]
+    ShowForm --> TelegramNotify
+
+    TelegramNotify[Telegram: notifyManualPaymentClaim<br>Thong bao admin kiem tra]
+
+    TelegramNotify --> WaitingScreen[Man hinh cho admin xac nhan<br>Poll status moi 5 giay]
+
+    WaitingScreen --> AdminApprove[Admin vao /crm/admin/orders<br>Bam Approve]
+    AdminApprove --> CompleteOrder[approveAdminOrder<br>status: completed<br>Tao referral commission<br>Trigger contract generation]
+    CompleteOrder --> RedirectSuccess[Redirect /checkout/success]
 ```
 
 ## 3️⃣ REFERRAL & VIRAL FLOW
@@ -323,6 +352,8 @@ flowchart LR
     EV8 --> E6([Email to User<br>send-quarterly-update<br>Bao cao quy: anh + so lieu])
 
     EV9[9 - Tao hop dong PDF that bai] --> T6([Telegram<br>notifyContractFailure<br>Admin xu ly thu cong + gui lai])
+
+    EV10[10 - User bao da chuyen tien] --> T7([Telegram<br>notifyManualPaymentClaim<br>Admin kiem tra va duyet])
 ```
 
 **Tóm tắt:**
@@ -338,12 +369,13 @@ flowchart LR
 | Admin gán mã giới thiệu | ✅ notifyReferralAssigned | — | — |
 | Upload ảnh quý | — | ✅ send-quarterly-update | — |
 | Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — |
+| User báo đã chuyển tiền | ✅ notifyManualPaymentClaim | — | — |
 
 ## 📌 Ghi chú kỹ thuật
 
 **Auth:** OTP only (email hoặc phone), không có password. Session dùng Supabase cookie.
 
-**Payment:** Chuyển khoản ngân hàng thủ công, Casso webhook phát hiện và xử lý tự động.
+**Payment:** Chuyển khoản ngân hàng thủ công, Casso webhook phát hiện và xử lý tự động. Nếu không auto-detect, user bấm "Đã chuyển tiền" → status `manual_payment_claimed` → admin approve thủ công.
 
 **Commission:** 10% của `orders.total_amount` khi order `status = completed`. Trừ cả `pending + approved` withdrawals khỏi balance để tránh over-commit.
 

@@ -248,7 +248,54 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
                                                 <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                                             </>
                                         ) : order.status === 'paid' || order.status === 'manual_payment_claimed' ? (
-                                            <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
+                                            <>
+                                                {approveOrder && (
+                                                    approveConfirmId === order.id ? (
+                                                        <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                                                            <span className="text-xs text-red-600 font-medium">Xác nhận?</span>
+                                                            <button
+                                                                disabled={approvingOrderId === order.id}
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation()
+                                                                    setApprovingOrderId(order.id)
+                                                                    try {
+                                                                        await approveOrder(order.id)
+                                                                        window.location.reload()
+                                                                    } catch {
+                                                                        setAssignError('Duyệt thanh toán thất bại')
+                                                                    } finally {
+                                                                        setApprovingOrderId(null)
+                                                                        setApproveConfirmId(null)
+                                                                    }
+                                                                }}
+                                                                className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs disabled:opacity-50"
+                                                            >
+                                                                {approvingOrderId === order.id ? '...' : 'Duyệt'}
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setApproveConfirmId(null)
+                                                                }}
+                                                                className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
+                                                            >
+                                                                Hủy
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setApproveConfirmId(order.id)
+                                                            }}
+                                                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                                                        >
+                                                            Duyệt thanh toán
+                                                        </button>
+                                                    )
+                                                )}
+                                                <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
+                                            </>
                                         ) : order.status === 'verified' || order.status === 'completed' ? (
                                             <button
                                                 onClick={(e) => {

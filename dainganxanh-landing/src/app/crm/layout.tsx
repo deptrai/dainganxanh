@@ -23,7 +23,7 @@ export default async function CRMLayout({
     return (
         <div className="min-h-screen bg-gray-50">
             {impersonation?.isImpersonating && (
-                <ImpersonationBanner userName={impersonation.impersonatedUserName} />
+                <ImpersonationBanner userName={impersonation.impersonatedUserName} adminRole={impersonation.adminRole} />
             )}
             <CRMHeader />
             <main>{children}</main>

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check with user session
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
     let query = serviceSupabase
       .from('orders')
       .update({ status: 'cancelled' })
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .eq('status', 'pending')
 
     if (orderId) query = query.eq('id', orderId)

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyNewOrder } from '@/lib/utils/telegram'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 const identityFieldsSchema = z.object({
   dob: z.string().min(1).optional().nullable(),
@@ -33,19 +34,16 @@ interface PendingOrderRequest {
 
 export async function GET() {
   try {
-    // Auth check with user session
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use service role to bypass RLS (user authenticated above)
     const serviceSupabase = createServiceRoleClient()
     const { data } = await serviceSupabase
       .from('orders')
       .select('id, code, quantity, total_amount, created_at, dob, nationality, id_number, id_issue_date, id_issue_place, address, phone')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1)
@@ -60,10 +58,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    // Auth check with user session
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -86,7 +82,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid total_amount' }, { status: 400 })
     }
 
-    // Use service role to bypass RLS (user authenticated above)
     const serviceSupabase = createServiceRoleClient()
 
     // Safety net: if client didn't resolve referred_by, look up from users.referred_by_user_id
@@ -95,7 +90,7 @@ export async function POST(req: NextRequest) {
       const { data: profile } = await serviceSupabase
         .from('users')
         .select('referred_by_user_id')
-        .eq('id', user.id)
+        .eq('id', effectiveUser.userId)
         .single()
       referredBy = profile?.referred_by_user_id ?? null
     }
@@ -106,9 +101,9 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           code: body.code,
-          user_id: user.id,
-          user_email: body.user_email ?? user.email,
-          user_name: body.user_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0],
+          user_id: effectiveUser.userId,
+          user_email: body.user_email ?? effectiveUser.email,
+          user_name: body.user_name ?? effectiveUser.name,
           quantity: body.quantity,
           total_amount: body.total_amount,
           payment_method: body.payment_method,
@@ -150,7 +145,7 @@ export async function POST(req: NextRequest) {
           phone: body.phone ?? null,
         })
         .eq('code', body.code)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUser.userId)
         .eq('status', 'pending')
 
       if (updateError) {
@@ -167,7 +162,7 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .select('id, code')
       .eq('code', body.code)
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .single()
 
     if (fetchError || !data) {
@@ -178,8 +173,8 @@ export async function POST(req: NextRequest) {
     // Gửi thông báo Telegram khi có đơn hàng mới (non-blocking)
     notifyNewOrder({
       orderCode: data.code,
-      userName: body.user_name ?? user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Khách hàng',
-      userEmail: body.user_email ?? user.email ?? '',
+      userName: body.user_name ?? effectiveUser.name ?? 'Khách hàng',
+      userEmail: body.user_email ?? effectiveUser.email ?? '',
       quantity: body.quantity,
       totalAmount: body.total_amount,
     }).catch((err) => console.error('[Telegram] notifyNewOrder failed:', err))
@@ -193,9 +188,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -219,7 +213,7 @@ export async function PATCH(req: NextRequest) {
       .from('orders')
       .update({ quantity, total_amount })
       .eq('id', orderId)
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .eq('status', 'pending')
 
     if (updateError) {
