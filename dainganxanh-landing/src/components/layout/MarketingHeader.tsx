@@ -4,17 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { Home, TreePine, Share2, Package, User, LogIn, BookOpen } from "lucide-react";
+import { Home, TreePine, Share2, Package, User, LogIn, BookOpen, UserCircle } from "lucide-react";
 import { UserHeader } from "./UserHeader";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-const navItems = [
+const guestNavItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
     { name: 'Mua cây', href: '/pricing', icon: Package },
     { name: 'Blog', href: '/blog', icon: BookOpen },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
+]
+
+const authNavItems = [
+    { name: 'Trang chủ', href: '/', icon: Home },
+    { name: 'Mua cây', href: '/pricing', icon: Package },
+    { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
+    { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
+    { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
 ]
 
 export function MarketingHeader() {
@@ -81,7 +89,7 @@ export function MarketingHeader() {
             <nav className="border-t border-gray-100 bg-white overflow-x-auto">
                 <div className="flex justify-center w-full">
                     <div className="flex w-full max-w-md">
-                        {navItems.map((item) => {
+                        {(user ? authNavItems : guestNavItems).map((item) => {
                             const active = isActive(item.href);
                             return (
                                 <Link

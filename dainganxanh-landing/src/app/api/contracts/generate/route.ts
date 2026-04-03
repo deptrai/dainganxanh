@@ -69,10 +69,17 @@ async function readTemplateAsset(filename: string): Promise<Buffer> {
 // ─────────────────────────────────────────────────────────────────
 
 function verifyApiKey(req: NextRequest): boolean {
-  const secret = process.env.CONTRACT_API_SECRET
-  if (!secret) return false
-  const provided = req.headers.get('x-api-key')
-  return provided === secret
+  // Support both x-api-key (external) and x-internal-secret (internal callers)
+  const contractSecret = process.env.CONTRACT_API_SECRET
+  const internalSecret = process.env.INTERNAL_API_SECRET
+
+  const providedApiKey = req.headers.get('x-api-key')
+  const providedInternal = req.headers.get('x-internal-secret')
+
+  if (contractSecret && providedApiKey === contractSecret) return true
+  if (internalSecret && providedInternal === internalSecret) return true
+
+  return false
 }
 
 // ─────────────────────────────────────────────────────────────────
