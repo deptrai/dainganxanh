@@ -1,6 +1,6 @@
 Bộ **User Flow Diagrams** dạng Mermaid cho dự án Đại Ngàn Xanh.
 
-> Cập nhật lần cuối: 2026-04-03 — đồng bộ với code thực tế trong repo.
+> Cập nhật lần cuối: 2026-04-03 — đồng bộ với code thực tế trong repo (withdrawal notifications, bank auto-fill, impersonation, admin approve paid orders).
 
 ## 1️⃣ FIRST-TIME BUYER JOURNEY
 
@@ -136,8 +136,8 @@ flowchart TD
 
     TelegramNotify --> WaitingScreen[Man hinh cho admin xac nhan<br>Poll status moi 5 giay]
 
-    WaitingScreen --> AdminApprove[Admin vao /crm/admin/orders<br>Bam Approve]
-    AdminApprove --> CompleteOrder[approveAdminOrder<br>status: completed<br>Tao referral commission<br>Trigger contract generation]
+    WaitingScreen --> AdminApprove[Admin vao /crm/admin/orders<br>Bam Approve<br>Chap nhan status paid hoac manual_payment_claimed]
+    AdminApprove --> CompleteOrder[approveAdminOrder<br>status: completed<br>Tao referral commission<br>Trigger contract generation<br>Telegram: notifyAdminApproval]
     CompleteOrder --> RedirectSuccess[Redirect /checkout/success]
 ```
 
@@ -216,11 +216,11 @@ flowchart TD
     BalanceCheck -->|Chua| Disabled[Nut rut tien bi tat<br>Hien thi so du thieu]
     BalanceCheck -->|Du| WithdrawBtn[Bam nut Rut tien]
 
-    WithdrawBtn --> WithdrawForm[Form rut tien<br>Chon ngan hang<br>Nhap STK so<br>Nhap ten chu TK<br>Nhap so tien rut]
+    WithdrawBtn --> WithdrawForm[Form rut tien<br>Chon ngan hang<br>Nhap STK so<br>Nhap ten chu TK<br>Nhap so tien rut<br>Auto-fill tu lan rut truoc<br>getSavedBankInfo]
 
     WithdrawForm --> Validate{Hop le?<br>Ten khop he thong?<br>So tien du?}
     Validate -->|Khong| ShowError[Hien loi cu the]
-    Validate -->|Co| Submit[requestWithdrawal<br>Server Action]
+    Validate -->|Co| Submit[requestWithdrawal<br>Server Action<br>getEffectiveUser - ho tro impersonation]
 
     Submit --> CreateRecord[Tao withdrawal record<br>status: pending<br>Tru vao so du ngay]
     CreateRecord --> NotifyAdmin[Telegram: notifyWithdrawalRequest<br>Email: gui cho tat ca admin]
@@ -230,13 +230,13 @@ flowchart TD
     AdminReview --> ReviewDetail[Xem chi tiet:<br>Ten user + STK + Ngan hang<br>So tien + Ngay tao]
     ReviewDetail --> AdminDecision{Quyet dinh?}
 
-    AdminDecision -->|Duyet| UploadProof[Upload anh chuyen khoan<br>Supabase Storage withdrawals bucket]
+    AdminDecision -->|Duyet| UploadProof[Upload anh chuyen khoan<br>Server Action approveWithdrawal FormData<br>serviceRoleClient upload to Storage]
     UploadProof --> ApproveAction[approveWithdrawal<br>service role update<br>status: pending to approved<br>Luu proof_image_url]
-    ApproveAction --> EmailApproved[send-withdrawal-email<br>type: request_approved<br>Gui cho user]
+    ApproveAction --> NotifyApproved[Telegram: notifyWithdrawalApproved<br>Email: send-withdrawal-email<br>type: request_approved<br>In-app: withdrawal_approved<br>vao notifications table]
 
     AdminDecision -->|Tu choi| EnterReason[Nhap ly do tu choi]
     EnterReason --> RejectAction[rejectWithdrawal<br>service role update<br>status: pending to rejected<br>Luu rejection_reason]
-    RejectAction --> EmailRejected[send-withdrawal-email<br>type: request_rejected<br>Gui cho user]
+    RejectAction --> NotifyRejected[Telegram: notifyWithdrawalRejected<br>Email: send-withdrawal-email<br>type: request_rejected<br>In-app: withdrawal_rejected<br>vao notifications table]
 ```
 
 ## 6️⃣ ADMIN OPERATIONS FLOW
@@ -343,39 +343,48 @@ flowchart LR
     EV4 --> T4([Telegram<br>notifyWithdrawalRequest<br>Yeu cau rut tien moi])
     EV4 --> E3([Email to Admin<br>send-withdrawal-email<br>type: request_created])
 
+    EV5 --> T5([Telegram<br>notifyWithdrawalApproved<br>Admin da duyet rut tien])
     EV5 --> E4([Email to User<br>send-withdrawal-email<br>type: request_approved + anh CK])
+    EV5 --> N1([In-app Notification<br>withdrawal_approved<br>NotificationBell cho user])
 
+    EV6 --> T6([Telegram<br>notifyWithdrawalRejected<br>Admin tu choi rut tien])
     EV6 --> E5([Email to User<br>send-withdrawal-email<br>type: request_rejected + ly do])
+    EV6 --> N2([In-app Notification<br>withdrawal_rejected<br>NotificationBell cho user])
 
-    EV7 --> T5([Telegram<br>notifyReferralAssigned<br>Admin gan ma gioi thieu])
+    EV7 --> T7([Telegram<br>notifyReferralAssigned<br>Admin gan ma gioi thieu])
 
     EV8 --> E6([Email to User<br>send-quarterly-update<br>Bao cao quy: anh + so lieu])
 
-    EV9[9 - Tao hop dong PDF that bai] --> T6([Telegram<br>notifyContractFailure<br>Admin xu ly thu cong + gui lai])
+    EV9[9 - Tao hop dong PDF that bai] --> T8([Telegram<br>notifyContractFailure<br>Admin xu ly thu cong + gui lai])
 
-    EV10[10 - User bao da chuyen tien] --> T7([Telegram<br>notifyManualPaymentClaim<br>Admin kiem tra va duyet])
+    EV10[10 - User bao da chuyen tien] --> T9([Telegram<br>notifyManualPaymentClaim<br>Admin kiem tra va duyet])
+
+    EV11[11 - Admin approve don hang thu cong] --> T10([Telegram<br>notifyAdminApproval<br>Admin da duyet don hang])
 ```
 
 **Tóm tắt:**
 
-| Sự kiện | Telegram Admin | Email User | Email Admin |
-| --- | --- | --- | --- |
-| Tạo pending order | ✅ notifyNewOrder | — | — |
-| Thanh toán thành công | ✅ notifyPaymentSuccess | ✅ send-email | — |
-| Admin gán lô cây | ✅ notifyTreeAssigned | ✅ send-tree-assignment-email | — |
-| User yêu cầu rút tiền | ✅ notifyWithdrawalRequest | — | ✅ send-withdrawal-email |
-| Admin duyệt rút tiền | — | ✅ send-withdrawal-email | — |
-| Admin từ chối rút tiền | — | ✅ send-withdrawal-email | — |
-| Admin gán mã giới thiệu | ✅ notifyReferralAssigned | — | — |
-| Upload ảnh quý | — | ✅ send-quarterly-update | — |
-| Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — |
-| User báo đã chuyển tiền | ✅ notifyManualPaymentClaim | — | — |
+| Sự kiện | Telegram Admin | Email User | Email Admin | In-app User |
+| --- | --- | --- | --- | --- |
+| Tạo pending order | ✅ notifyNewOrder | — | — | — |
+| Thanh toán thành công | ✅ notifyPaymentSuccess | ✅ send-email | — | — |
+| Admin gán lô cây | ✅ notifyTreeAssigned | ✅ send-tree-assignment-email | — | — |
+| User yêu cầu rút tiền | ✅ notifyWithdrawalRequest | — | ✅ send-withdrawal-email | — |
+| Admin duyệt rút tiền | ✅ notifyWithdrawalApproved | ✅ send-withdrawal-email | — | ✅ withdrawal_approved |
+| Admin từ chối rút tiền | ✅ notifyWithdrawalRejected | ✅ send-withdrawal-email | — | ✅ withdrawal_rejected |
+| Admin gán mã giới thiệu | ✅ notifyReferralAssigned | — | — | — |
+| Upload ảnh quý | — | ✅ send-quarterly-update | — | — |
+| Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — | — |
+| User báo đã chuyển tiền | ✅ notifyManualPaymentClaim | — | — | — |
+| Admin approve đơn hàng | ✅ notifyAdminApproval | — | — | — |
 
 ## 📌 Ghi chú kỹ thuật
 
 **Auth:** OTP only (email hoặc phone), không có password. Session dùng Supabase cookie.
 
 **Payment:** Chuyển khoản ngân hàng thủ công, Casso webhook phát hiện và xử lý tự động. Nếu không auto-detect, user bấm "Đã chuyển tiền" → status `manual_payment_claimed` → admin approve thủ công.
+
+**Admin approve order:** `approveAdminOrder` chấp nhận cả đơn hàng có status `paid` (ngoài `manual_payment_claimed`), cho phép admin duyệt đơn đã thanh toán qua Casso nhưng chưa tự động hoàn tất. Gửi Telegram `notifyAdminApproval` khi duyệt.
 
 **Commission:** 10% của `orders.total_amount` khi order `status = completed`. Trừ cả `pending + approved` withdrawals khỏi balance để tránh over-commit.
 
@@ -385,9 +394,17 @@ flowchart LR
 
 **Order code format:** `DH` + 6 ký tự alphanumeric ngẫu nhiên (ví dụ: `DH1U90XP`).
 
-**Withdrawal bucket:** Supabase Storage `withdrawals` (public, ảnh JPEG/PNG/WebP/GIF, tối đa 5MB). Chỉ admin mới upload được.
+**Withdrawal proof upload:** Server action `approveWithdrawal(formData: FormData)` sử dụng `serviceRoleClient` để upload ảnh chuyển khoản lên Supabase Storage `withdrawals` bucket (public, JPEG/PNG/WebP/GIF, tối đa 5MB) và approve trong cùng một request. Thay thế cách upload client-side cũ qua `createBrowserClient()`.
 
-**Impersonation:** Admin có thể impersonate user để hỗ trợ trực tiếp (xem qua `getImpersonationContext()`).
+**Withdrawal bank auto-fill:** `getSavedBankInfo()` tự động điền thông tin ngân hàng (tên ngân hàng, STK, tên chủ TK) từ lần rút tiền trước đó, giảm nhập liệu lặp lại cho user.
+
+**Withdrawal notifications:** Khi admin duyệt/từ chối rút tiền, hệ thống gửi đồng thời 3 kênh: Telegram (`notifyWithdrawalApproved`/`notifyWithdrawalRejected`), Email (`send-withdrawal-email`), và In-app notification (insert vào bảng `notifications` → hiển thị trên `NotificationBell`).
+
+**Withdrawal impersonation:** `requestWithdrawal` sử dụng `getEffectiveUser()` thay vì `supabase.auth.getUser()` để hỗ trợ admin impersonate user khi tạo yêu cầu rút tiền.
+
+**Admin withdrawals page:** FK `withdrawals_user_id_public_users_fkey` → `public.users` (thay thế FK cũ trỏ tới `auth.users`). Page sử dụng `force-dynamic` để tránh Server Component caching.
+
+**Impersonation:** Admin có thể impersonate user để hỗ trợ trực tiếp (xem qua `getImpersonationContext()` và `getEffectiveUser()`).
 
 **Contract Generation:** DOCX template → LibreOffice headless DOCX→PDF (Alpine: `font-noto font-noto-extra`). Timeout chain: LibreOffice 45s SIGKILL < EF generate-contract 50s < EF process-payment 55s. Nếu thất bại → Telegram admin alert + payment fail (admin xử lý thủ công và gửi lại hợp đồng).
 
