@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 export async function GET(req: NextRequest) {
-  // Auth check with user session
-  const supabase = await createServerClient()
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  if (userError || !user) {
+  const effectiveUser = await getEffectiveUser()
+  if (!effectiveUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -17,7 +16,7 @@ export async function GET(req: NextRequest) {
     const { data: order } = await serviceSupabase
       .from('orders')
       .select('id, code, status, quantity, user_name, id_number, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .eq('status', 'completed')
       .order('created_at', { ascending: false })
       .limit(1)
@@ -33,7 +32,7 @@ export async function GET(req: NextRequest) {
     .from('orders')
     .select('id, code, status')
     .eq('code', code)
-    .eq('user_id', user.id)
+    .eq('user_id', effectiveUser.userId)
     .single()
 
   if (error || !order) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyManualPaymentClaim } from '@/lib/utils/telegram'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 /**
  * User claims they already transferred money but payment wasn't auto-detected.
@@ -10,9 +11,8 @@ import { notifyManualPaymentClaim } from '@/lib/utils/telegram'
  */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .select('id, code, user_id, status, quantity, total_amount')
       .eq('code', orderCode)
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .single()
 
     if (fetchError || !order) {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const { data: userProfile } = await serviceSupabase
       .from('users')
       .select('full_name, email, phone')
-      .eq('id', user.id)
+      .eq('id', effectiveUser.userId)
       .single()
 
     // 2. Check for identity from users table (with fallback for missing columns)
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const { data: profileIdentity, error: profileIdErr } = await serviceSupabase
       .from('users')
       .select('full_name, phone, id_number, date_of_birth')
-      .eq('id', user.id)
+      .eq('id', effectiveUser.userId)
       .single()
 
     if (!profileIdErr && profileIdentity?.id_number) {
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       const { data: otherOrder } = await serviceSupabase
         .from('orders')
         .select('user_name, phone, id_number, dob')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUser.userId)
         .not('id_number', 'is', null)
         .limit(1)
         .single()
@@ -117,8 +117,8 @@ export async function POST(req: NextRequest) {
     // Send Telegram notification to admin
     notifyManualPaymentClaim({
       orderCode: order.code,
-      userName: userProfile?.full_name || user.email?.split('@')[0] || '',
-      userEmail: userProfile?.email || user.email || '',
+      userName: userProfile?.full_name || effectiveUser.name || '',
+      userEmail: userProfile?.email || effectiveUser.email || '',
       quantity: order.quantity,
       totalAmount: Number(order.total_amount),
     }).catch((err) => console.error('[Telegram] notification failed:', err))

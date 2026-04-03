@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 /**
  * Get all pending/manual_payment_claimed orders for the current user
  */
 export async function GET() {
   try {
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -17,7 +17,7 @@ export async function GET() {
     const { data: orders, error } = await serviceSupabase
       .from('orders')
       .select('code, quantity, total_amount, status, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .in('status', ['pending', 'manual_payment_claimed'])
       .order('created_at', { ascending: false })
 

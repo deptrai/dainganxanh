@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       .from('orders')
       .select('*')
       .eq('code', orderCode)
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .single()
 
     // If order already has identity data, return it
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     const { data: profileData, error: profileError } = await serviceSupabase
       .from('users')
       .select('full_name, phone, id_number, date_of_birth')
-      .eq('id', user.id)
+      .eq('id', effectiveUser.userId)
       .single()
 
     if (!profileError) {
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       const { data: basicProfile } = await serviceSupabase
         .from('users')
         .select('full_name, phone')
-        .eq('id', user.id)
+        .eq('id', effectiveUser.userId)
         .single()
       userProfile = basicProfile
     }
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     const { data: otherOrder } = await serviceSupabase
       .from('orders')
       .select('user_name, dob, nationality, id_number, id_issue_date, id_issue_place, address, phone')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .not('id_number', 'is', null)
       .neq('code', orderCode)
       .limit(1)

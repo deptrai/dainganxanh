@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 
 const identitySchema = z.object({
   orderCode: z.string().min(1),
@@ -16,9 +17,8 @@ const identitySchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const effectiveUser = await getEffectiveUser()
+    if (!effectiveUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .select('id, code, user_id, status')
       .eq('code', orderCode)
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUser.userId)
       .single()
 
     if (fetchError || !order) {
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     let { error: userUpdateError } = await serviceSupabase
       .from('users')
       .update(fullProfileData)
-      .eq('id', user.id)
+      .eq('id', effectiveUser.userId)
 
     if (userUpdateError) {
       // Columns may not exist yet — fallback to basic fields only
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       await serviceSupabase
         .from('users')
         .update(userProfileData)
-        .eq('id', user.id)
+        .eq('id', effectiveUser.userId)
         .then(({ error }) => {
           if (error) console.warn('Warning: Failed to update basic user profile:', error.message)
         })
