@@ -56,6 +56,27 @@ export async function getAvailableBalance(userId: string) {
     return totalCommission - totalWithdrawn
 }
 
+// Get saved bank info from the most recent withdrawal
+export async function getSavedBankInfo(userId: string) {
+    const supabase = createServiceRoleClient()
+
+    const { data } = await supabase
+        .from('withdrawals')
+        .select('bank_name, bank_account_number, bank_account_name')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+    if (!data) return null
+
+    return {
+        bankName: data.bank_name,
+        bankAccountNumber: data.bank_account_number,
+        bankAccountName: data.bank_account_name,
+    }
+}
+
 // Submit withdrawal request
 export async function requestWithdrawal(data: {
     amount: number

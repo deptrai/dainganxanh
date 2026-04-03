@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { requestWithdrawal } from '@/actions/withdrawals'
 import { MIN_WITHDRAWAL } from '@/lib/constants'
+import type { SavedBankInfo } from './WithdrawalButton'
 
 interface WithdrawalFormProps {
     availableBalance: number
     userFullName: string
+    savedBankInfo?: SavedBankInfo | null
     onSuccess: () => void
     onCancel: () => void
 }
@@ -27,13 +29,14 @@ const BANKS = [
 export default function WithdrawalForm({
     availableBalance,
     userFullName,
+    savedBankInfo,
     onSuccess,
     onCancel
 }: WithdrawalFormProps) {
     const [formData, setFormData] = useState({
-        bankName: '',
-        bankAccountNumber: '',
-        bankAccountName: '',
+        bankName: savedBankInfo?.bankName || '',
+        bankAccountNumber: savedBankInfo?.bankAccountNumber || '',
+        bankAccountName: savedBankInfo?.bankAccountName || '',
         amount: ''
     })
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -111,6 +114,12 @@ export default function WithdrawalForm({
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(availableBalance)}
                     </p>
                 </div>
+
+                {savedBankInfo && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700">
+                        Thông tin ngân hàng đã được điền từ lần rút trước. Bạn có thể chỉnh sửa nếu cần.
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Bank Selection */}

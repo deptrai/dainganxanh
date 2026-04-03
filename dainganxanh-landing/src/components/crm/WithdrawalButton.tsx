@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getAvailableBalance } from '@/actions/withdrawals'
+import { getAvailableBalance, getSavedBankInfo } from '@/actions/withdrawals'
 import WithdrawalForm from '@/components/crm/WithdrawalForm'
 
 interface WithdrawalButtonProps {
@@ -9,10 +9,17 @@ interface WithdrawalButtonProps {
     userFullName: string
 }
 
+export interface SavedBankInfo {
+    bankName: string
+    bankAccountNumber: string
+    bankAccountName: string
+}
+
 export default function WithdrawalButton({ userId, userFullName }: WithdrawalButtonProps) {
     const [balance, setBalance] = useState<number>(0)
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
+    const [savedBankInfo, setSavedBankInfo] = useState<SavedBankInfo | null>(null)
 
     useEffect(() => {
         loadBalance()
@@ -21,8 +28,12 @@ export default function WithdrawalButton({ userId, userFullName }: WithdrawalBut
     const loadBalance = async () => {
         setLoading(true)
         try {
-            const availableBalance = await getAvailableBalance(userId)
+            const [availableBalance, bankInfo] = await Promise.all([
+                getAvailableBalance(userId),
+                getSavedBankInfo(userId),
+            ])
             setBalance(availableBalance)
+            setSavedBankInfo(bankInfo)
         } catch (error) {
             console.error('Error loading balance:', error)
         } finally {
@@ -78,6 +89,7 @@ export default function WithdrawalButton({ userId, userFullName }: WithdrawalBut
                 <WithdrawalForm
                     availableBalance={balance}
                     userFullName={userFullName}
+                    savedBankInfo={savedBankInfo}
                     onSuccess={handleSuccess}
                     onCancel={() => setShowForm(false)}
                 />
