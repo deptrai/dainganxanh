@@ -187,8 +187,15 @@ export async function requestWithdrawal(data: {
     return { success: true }
 }
 
-// Admin: Approve withdrawal
-export async function approveWithdrawal(withdrawalId: string, proofImageUrl: string) {
+// Admin: Approve withdrawal (with proof image upload via FormData)
+export async function approveWithdrawal(formData: FormData) {
+    const withdrawalId = formData.get('withdrawalId') as string
+    const proofImage = formData.get('proofImage') as File
+
+    if (!withdrawalId || !proofImage) {
+        return { success: false, error: 'Thiếu thông tin' }
+    }
+
     const supabase = await createServerClient()
 
     // Auth check - must be admin
@@ -197,7 +204,9 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
         return { success: false, error: 'Unauthorized' }
     }
 
-    const { data: profile } = await supabase
+    const serviceSupabase = createServiceRoleClient()
+
+    const { data: profile } = await serviceSupabase
         .from('users')
         .select('role')
         .eq('id', user.id)
@@ -207,12 +216,36 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
         return { success: false, error: 'Unauthorized' }
     }
 
+    // Upload proof image using service role (bypasses RLS)
+    const fileExt = proofImage.name.split('.').pop()
+    const fileName = `${withdrawalId}/proof.${fileExt}`
+    const arrayBuffer = await proofImage.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    const { error: uploadError } = await serviceSupabase.storage
+        .from('withdrawals')
+        .upload(fileName, buffer, {
+            contentType: proofImage.type,
+            cacheControl: '3600',
+            upsert: true
+        })
+
+    if (uploadError) {
+        console.error('Upload error:', uploadError)
+        return { success: false, error: 'Không thể upload ảnh chuyển khoản' }
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = serviceSupabase.storage
+        .from('withdrawals')
+        .getPublicUrl(fileName)
+
     // Update withdrawal
-    const { data: withdrawal, error: updateError } = await supabase
+    const { data: withdrawal, error: updateError } = await serviceSupabase
         .from('withdrawals')
         .update({
             status: 'approved',
-            proof_image_url: proofImageUrl,
+            proof_image_url: publicUrl,
             approved_by: user.id,
             approved_at: new Date().toISOString()
         })
@@ -226,8 +259,7 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
     }
 
     // Send email to user
-    const supabaseAdmin = createServiceRoleClient()
-    const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
+    const { data: { user: withdrawalUser } } = await serviceSupabase.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
         await sendWithdrawalEmail('request_approved', withdrawalUser.email, {
@@ -237,7 +269,7 @@ export async function approveWithdrawal(withdrawalId: string, proofImageUrl: str
             bankAccountNumber: withdrawal.bank_account_number,
             bankAccountName: withdrawal.bank_account_name,
             withdrawalId,
-            proofImageUrl,
+            proofImageUrl: publicUrl,
         })
     }
 
@@ -254,7 +286,9 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
         return { success: false, error: 'Unauthorized' }
     }
 
-    const { data: profile } = await supabase
+    const serviceSupabase = createServiceRoleClient()
+
+    const { data: profile } = await serviceSupabase
         .from('users')
         .select('role')
         .eq('id', user.id)
@@ -264,8 +298,8 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
         return { success: false, error: 'Unauthorized' }
     }
 
-    // Update withdrawal
-    const { data: withdrawal, error: updateError } = await supabase
+    // Update withdrawal using service role
+    const { data: withdrawal, error: updateError } = await serviceSupabase
         .from('withdrawals')
         .update({
             status: 'rejected',
@@ -283,8 +317,7 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
     }
 
     // Send email to user
-    const supabaseAdmin = createServiceRoleClient()
-    const { data: { user: withdrawalUser } } = await supabaseAdmin.auth.admin.getUserById(withdrawal.user_id)
+    const { data: { user: withdrawalUser } } = await serviceSupabase.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
         await sendWithdrawalEmail('request_rejected', withdrawalUser.email, {

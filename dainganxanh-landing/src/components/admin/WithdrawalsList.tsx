@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { approveWithdrawal, rejectWithdrawal } from '@/actions/withdrawals'
-import { createBrowserClient } from '@/lib/supabase/client'
 
 interface Withdrawal {
     id: string
@@ -48,37 +47,18 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
         setIsProcessing(true)
 
         try {
-            // Upload image to Supabase Storage
-            const supabase = createBrowserClient()
-            const fileExt = proofImage.name.split('.').pop()
-            const fileName = `${selectedWithdrawal.id}/proof.${fileExt}`
+            // Upload + approve via server action (service role bypasses RLS)
+            const formData = new FormData()
+            formData.append('withdrawalId', selectedWithdrawal.id)
+            formData.append('proofImage', proofImage)
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('withdrawals')
-                .upload(fileName, proofImage, {
-                    cacheControl: '3600',
-                    upsert: true
-                })
-
-            if (uploadError) {
-                console.error('Upload error:', uploadError)
-                alert('Không thể upload ảnh')
-                return
-            }
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('withdrawals')
-                .getPublicUrl(fileName)
-
-            // Approve withdrawal
-            const result = await approveWithdrawal(selectedWithdrawal.id, publicUrl)
+            const result = await approveWithdrawal(formData)
 
             if (result.success) {
                 // Update local state
                 setWithdrawals(prev => prev.map(w =>
                     w.id === selectedWithdrawal.id
-                        ? { ...w, status: 'approved', proof_image_url: publicUrl }
+                        ? { ...w, status: 'approved' }
                         : w
                 ))
                 alert('Đã duyệt yêu cầu rút tiền')
