@@ -144,6 +144,28 @@ export async function notifyManualPaymentClaim(params: {
   await sendTelegramMessage(message)
 }
 
+export async function notifyAdminApproval(params: {
+  orderCode: string
+  userName: string
+  userEmail: string
+  quantity: number
+  totalAmount: number
+  adminEmail: string
+}): Promise<void> {
+  const message =
+    `✅ <b>Admin duyệt thanh toán!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${params.orderCode}</code>\n` +
+    `👤 Khách hàng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `🌳 Số cây: <b>${params.quantity} cây</b>\n` +
+    `💰 Số tiền: <b>${formatVND(params.totalAmount)}</b>\n` +
+    `👨‍💼 Admin: ${params.adminEmail}\n` +
+    `🎉 Đơn hàng đã hoàn tất!`
+
+  await sendTelegramMessage(message)
+}
+
 export async function notifyReferralAssigned(params: {
   targetEmail: string
   targetName?: string | null

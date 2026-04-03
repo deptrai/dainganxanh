@@ -2,6 +2,7 @@
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createReferralClick } from '@/actions/createReferralClick'
+import { notifyAdminApproval } from '@/lib/utils/telegram'
 
 async function triggerContractGeneration(orderId: string, retries = 2) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
@@ -268,6 +269,16 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
     if (referredBy) {
         await createReferralClick(orderId, referredBy, 'admin-approve')
     }
+
+    // Send Telegram notification to admin group
+    notifyAdminApproval({
+        orderCode: order.code || orderId.substring(0, 8),
+        userName: order.user_name || 'N/A',
+        userEmail: order.user_email || '',
+        quantity: order.quantity,
+        totalAmount: Number(order.total_amount),
+        adminEmail: user.email || '',
+    }).catch((err) => console.error('[Telegram] admin approval notification failed:', err))
 
     // Trigger contract generation in background if order has identity info (with retry)
     if (order.user_name || order.user_email) {
