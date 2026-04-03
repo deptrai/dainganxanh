@@ -2,6 +2,7 @@
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { MIN_WITHDRAWAL } from '@/lib/constants'
+import { notifyWithdrawalRequest } from '@/lib/utils/telegram'
 
 // Helper: send email via send-withdrawal-email Edge Function
 async function sendWithdrawalEmail(type: string, to: string, payload: Record<string, unknown>) {
@@ -143,6 +144,15 @@ export async function requestWithdrawal(data: {
         console.error('Error creating withdrawal:', insertError)
         return { success: false, error: 'Không thể tạo yêu cầu rút tiền' }
     }
+
+    // Send Telegram notification to admin group
+    notifyWithdrawalRequest({
+        userName: profile.full_name || 'N/A',
+        userEmail: profile.email || '',
+        amount: data.amount,
+        bankName: data.bankName,
+        bankAccountNumber: data.bankAccountNumber,
+    }).catch((err) => console.error('[Telegram] withdrawal notification failed:', err))
 
     // Send email to admins
     const { data: admins } = await supabase
