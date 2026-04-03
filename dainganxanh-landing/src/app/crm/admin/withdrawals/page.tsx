@@ -3,6 +3,8 @@ import { createServerClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import WithdrawalsList from '@/components/admin/WithdrawalsList'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminWithdrawalsPage() {
     const supabase = await createServerClient()
 
@@ -37,7 +39,7 @@ export default async function AdminWithdrawalsPage() {
         .from('withdrawals')
         .select(`
       *,
-      users!withdrawals_user_id_fkey (
+      users!withdrawals_user_id_public_users_fkey (
         full_name,
         email
       )
