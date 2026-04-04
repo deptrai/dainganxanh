@@ -1,6 +1,6 @@
 Bộ **User Flow Diagrams** dạng Mermaid cho dự án Đại Ngàn Xanh.
 
-> Cập nhật lần cuối: 2026-04-03 — đồng bộ với code thực tế trong repo (withdrawal notifications, bank auto-fill, impersonation, admin approve paid orders).
+> Cập nhật lần cuối: 2026-04-04 — thêm harvest flow (check-harvest-ready, process-sellback), verifyAdminOrder, harvest_ready notification, generate-certificate EF.
 
 ## 1️⃣ FIRST-TIME BUYER JOURNEY
 
@@ -137,7 +137,10 @@ flowchart TD
     TelegramNotify --> WaitingScreen[Man hinh cho admin xac nhan<br>Poll status moi 5 giay]
 
     WaitingScreen --> AdminApprove[Admin vao /crm/admin/orders<br>Bam Approve<br>Chap nhan status paid hoac manual_payment_claimed]
-    AdminApprove --> CompleteOrder[approveAdminOrder<br>status: completed<br>Tao referral commission<br>Trigger contract generation<br>Telegram: notifyAdminApproval]
+    AdminApprove --> VerifyOrApprove{Hanh dong}
+    VerifyOrApprove -->|Xac minh| VerifyOrder2[verifyAdminOrder<br>status: manual_payment_claimed<br>to verified<br>Neu manual_payment: trigger contract gen]
+    VerifyOrder2 --> CompleteOrder
+    VerifyOrApprove -->|Duyet thang| CompleteOrder[approveAdminOrder<br>status: paid/manual_payment_claimed/verified<br>to completed<br>Tao referral commission<br>Trigger contract generation<br>Telegram: notifyAdminApproval]
     CompleteOrder --> RedirectSuccess[Redirect /checkout/success]
 ```
 
@@ -199,9 +202,21 @@ flowchart TD
     MonthCheck -->|Roi| Harvest[Thu hoach<br>Route /crm/my-garden/orderId/harvest]
 
     Harvest --> HarvestChoice{Chon phuong an}
-    HarvestChoice -->|Ban lai| SellBack[Ban lai cho Dai Ngan Xanh<br>Nhan gia cam ket]
+    HarvestChoice -->|Ban lai| SellBack[Ban lai cho Dai Ngan Xanh<br>POST process-sellback EF<br>Gia: gia_goc x 1.10^nam<br>Nhap STK + chu ky so<br>Tao harvest_transactions<br>status: pending_approval<br>tree status: sold_back<br>Email xac nhan cho user]
     HarvestChoice -->|Giu cay| KeepGrow[Tiep tuc cham soc<br>Ky hop dong gia han]
     HarvestChoice -->|Nhan san pham| GetProduct[Nhan tram huong<br>Tinh dau / Go tho]
+```
+
+### Harvest Ready Notification (Scheduled)
+
+```mermaid
+flowchart TD
+    Cron([Scheduled Job<br>check-harvest-ready EF]) --> QueryTrees[Query trees<br>PROD: age >= 60 thang<br>DEV: age >= 3 phut]
+    QueryTrees --> CheckNotif{Da gui thong bao<br>harvest_ready?}
+    CheckNotif -->|Roi| Skip[Bo qua cay nay]
+    CheckNotif -->|Chua| InsertNotif[Insert notifications<br>type: harvest_ready<br>data: treeId, treeCode, ageMonths, co2]
+    InsertNotif --> SendEmail[Gui email cho user<br>Chu de: Cay san sang thu hoach<br>3 lua chon: ban lai / giu / nhan SP]
+    SendEmail --> LinkHarvest[Link den<br>/crm/my-garden/orderId/harvest]
 ```
 
 ## 5️⃣ WITHDRAWAL FLOW
@@ -360,6 +375,9 @@ flowchart LR
     EV10[10 - User bao da chuyen tien] --> T9([Telegram<br>notifyManualPaymentClaim<br>Admin kiem tra va duyet])
 
     EV11[11 - Admin approve don hang thu cong] --> T10([Telegram<br>notifyAdminApproval<br>Admin da duyet don hang])
+
+    EV12[12 - Cay dat 60 thang tuoi] --> N3([In-app Notification<br>harvest_ready<br>NotificationBell cho user])
+    EV12 --> E7([Email to User<br>check-harvest-ready EF<br>3 lua chon thu hoach + link])
 ```
 
 **Tóm tắt:**
@@ -377,6 +395,7 @@ flowchart LR
 | Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — | — |
 | User báo đã chuyển tiền | ✅ notifyManualPaymentClaim | — | — | — |
 | Admin approve đơn hàng | ✅ notifyAdminApproval | — | — | — |
+| Cây đạt 60 tháng tuổi | — | ✅ check-harvest-ready EF | — | ✅ harvest_ready |
 
 ## 📌 Ghi chú kỹ thuật
 
@@ -408,12 +427,30 @@ flowchart LR
 
 **Contract Generation:** DOCX template → LibreOffice headless DOCX→PDF (Alpine: `font-noto font-noto-extra`). Timeout chain: LibreOffice 45s SIGKILL < EF generate-contract 50s < EF process-payment 55s. Nếu thất bại → Telegram admin alert + payment fail (admin xử lý thủ công và gửi lại hợp đồng).
 
+**Admin verify vs approve:** Có 2 bước riêng trong admin order flow:
+- `verifyAdminOrder` — chuyển status `manual_payment_claimed` → `verified`, trigger contract gen nếu là manual payment. Dùng để xác minh trước khi approve.
+- `approveAdminOrder` — chuyển status `paid | manual_payment_claimed | verified` → `completed`, tạo referral commission, gửi Telegram `notifyAdminApproval`.
+
+**Harvest Flow:** Khi cây đạt 60 tháng (PROD) hoặc 3 phút (DEV):
+1. `check-harvest-ready` EF chạy scheduled, gửi email + in-app notification `harvest_ready` (idempotent — kiểm tra notification đã tồn tại trước khi gửi)
+2. User vào `/crm/my-garden/[orderId]/harvest`, chọn phương án
+3. Nếu chọn bán lại → POST `process-sellback` EF:
+   - Tính giá: `originalPrice × (1.10)^years` (compound 10%/năm)
+   - Tạo bản ghi `harvest_transactions` (status: `pending_approval`)
+   - Update tree status → `sold_back`
+   - Gửi email xác nhận, thanh toán trong 30 ngày làm việc
+
+**generate-certificate EF:** Edge Function generate certificate PDF (khác với `generate-contract`). Chưa được tích hợp vào main flow, có thể dùng cho harvest certificate.
+
+**resendContract:** Admin có thể resend contract email từ `/crm/admin/print-queue` qua `resendContract()` trong `printQueue.ts` (reuses `send-email` EF).
+
 **Scheduled Jobs:**
 
 - `cleanup-pending-orders` — hourly, xóa pending orders quá 24h
 - `checklist-reminder` — quarterly, nhắc đội field
 - `send-quarterly-update` — quarterly, gửi báo cáo cho users
 - `profile-backfill` — hourly, tạo profiles cho auth users bị thiếu (pg_cron)
+- `check-harvest-ready` — scheduled, kiểm tra cây đủ 60 tháng → email + in-app notification
 
 **Environment Variables:**
 

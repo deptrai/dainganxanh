@@ -2,6 +2,7 @@ import {
   notifyWithdrawalRequest,
   notifyWithdrawalApproved,
   notifyWithdrawalRejected,
+  notifyContractFailure,
 } from '../telegram'
 
 // ---------------------------------------------------------------------------
@@ -196,6 +197,43 @@ describe('Telegram withdrawal notifications', () => {
       const [, options] = calls[0]
       expect(options.method).toBe('POST')
       expect(options.headers['Content-Type']).toBe('application/json')
+    })
+  })
+
+  // =========================================================================
+  // notifyContractFailure
+  // =========================================================================
+  describe('notifyContractFailure', () => {
+    const params = {
+      orderCode: 'DH1A2B3C',
+      userName: 'Nguyen Van A',
+      userEmail: 'user@example.com',
+      errorMessage: 'LibreOffice timeout after 45s',
+    }
+
+    it('sends contract failure message with all details', async () => {
+      await notifyContractFailure(params)
+
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+
+      const body = JSON.parse(getLastFetchBody())
+      expect(body.text).toContain('DH1A2B3C')
+      expect(body.text).toContain('Nguyen Van A')
+      expect(body.text).toContain('user@example.com')
+      expect(body.text).toContain('LibreOffice timeout after 45s')
+    })
+
+    it('includes failure-specific keywords in message', async () => {
+      await notifyContractFailure(params)
+
+      const body = JSON.parse(getLastFetchBody())
+      expect(body.text).toMatch(/thất bại|thủ công/)
+    })
+
+    it('does not throw when fetch fails', async () => {
+      ;(global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+      await expect(notifyContractFailure(params)).resolves.toBeUndefined()
     })
   })
 })

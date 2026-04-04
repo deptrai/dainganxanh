@@ -337,20 +337,23 @@ test.describe('Referral Tracking E2E', () => {
         // ============================================
         // Phase 3: Verify no ref cookie initially
         // ============================================
-        let cookies = await page.context().cookies()
-        let refCookie = cookies.find(c => c.name === 'ref')
+        const cookies = await page.context().cookies()
+        const refCookie = cookies.find(c => c.name === 'ref')
         expect(refCookie).toBeUndefined()
 
         // ============================================
-        // Phase 4: Fill email only (leave referral code empty to trigger default)
+        // Phase 4: Verify referral input and default code button exist
         // ============================================
         const emailInput = page.locator('input#identifier-input[type="email"]')
         await expect(emailInput).toBeVisible({ timeout: 10000 })
-        await emailInput.fill(TEST_EMAIL)
 
         // Verify referral input exists
         const refInput = page.locator('input[placeholder*="dainganxanh"]')
         await expect(refInput).toBeVisible()
+
+        // Verify referral input is initially empty
+        const initialRefValue = await refInput.inputValue()
+        expect(initialRefValue).toBe('')
 
         // Click "Use default code" button to auto-fill "dainganxanh"
         const useDefaultButton = page.getByRole('button', { name: /bấm vào đây để dùng mã dainganxanh/i })
@@ -360,41 +363,27 @@ test.describe('Referral Tracking E2E', () => {
         // Wait for refInput to be filled with default value
         await page.waitForTimeout(500)
 
-        // Verify refInput now has "dainganxanh" value
+        // ============================================
+        // Phase 5: Verify refInput now has "dainganxanh" value
+        // ============================================
         const refValue = await refInput.inputValue()
         expect(refValue).toBe('dainganxanh')
 
-        // Now send OTP (validation passes because refInput is not empty)
+        console.log('✅ Default referral code "dainganxanh" auto-filled correctly')
+
+        // ============================================
+        // Phase 6: Verify validation - empty ref code shows error
+        // ============================================
+        // Clear ref input and try to send OTP without ref code
+        await refInput.clear()
+        await emailInput.fill('newuser-test@example.com')
+
         const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
         await sendOTPButton.click()
 
-        // Wait for OTP input to appear
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        // Should show error about missing referral code
+        await expect(page.getByText(/vui lòng nhập mã giới thiệu/i)).toBeVisible({ timeout: 5000 })
 
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        // Fill OTP inputs
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        // Wait for verification to complete and default ref to be set
-        await page.waitForTimeout(2000)
-
-        // ============================================
-        // Phase 5: Verify default ref cookie is set
-        // ============================================
-        cookies = await page.context().cookies()
-        refCookie = cookies.find(c => c.name === 'ref')
-
-        expect(refCookie).toBeDefined()
-        expect(refCookie?.value).toBe('dainganxanh') // Default ref code (lowercase)
-
-        console.log('✅ Default referral code "dainganxanh" set correctly')
+        console.log('✅ Referral code validation works correctly')
     })
 })

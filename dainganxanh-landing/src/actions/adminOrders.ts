@@ -2,10 +2,11 @@
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createReferralClick } from '@/actions/createReferralClick'
-import { notifyAdminApproval } from '@/lib/utils/telegram'
+import { notifyAdminApproval, notifyContractFailure } from '@/lib/utils/telegram'
 
 async function triggerContractGeneration(orderId: string, retries = 2) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
+    let lastError: string = 'All retries exhausted'
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             const res = await fetch(`${baseUrl}/api/contracts/generate`, {
@@ -14,12 +15,15 @@ async function triggerContractGeneration(orderId: string, retries = 2) {
                 body: JSON.stringify({ orderId }),
             })
             if (res.ok) return
+            lastError = `HTTP ${res.status}`
             console.error(`[Contract] attempt ${attempt + 1} failed: ${res.status}`)
         } catch (err) {
+            lastError = err instanceof Error ? err.message : 'Network error'
             console.error(`[Contract] attempt ${attempt + 1} error:`, err)
         }
         if (attempt < retries) await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
     }
+    throw new Error(`Contract generation failed after ${retries + 1} attempts: ${lastError}`)
 }
 
 export interface OrderFilters {
@@ -282,7 +286,14 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
 
     // Trigger contract generation in background if order has identity info (with retry)
     if (order.user_name || order.user_email) {
-        triggerContractGeneration(orderId).catch(() => {})
+        triggerContractGeneration(orderId).catch((err) => {
+            notifyContractFailure({
+                orderCode: order.code || orderId.substring(0, 8),
+                userName: order.user_name || 'N/A',
+                userEmail: order.user_email || '',
+                errorMessage: err instanceof Error ? err.message : 'Unknown error',
+            }).catch((telegramErr) => console.error('[Telegram] notifyContractFailure failed:', telegramErr))
+        })
     }
 
     return {}

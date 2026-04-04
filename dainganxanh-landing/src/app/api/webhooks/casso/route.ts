@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { notifyPaymentSuccess } from '@/lib/utils/telegram'
+import { notifyPaymentSuccess, notifyContractFailure } from '@/lib/utils/telegram'
 import { createReferralClick } from '@/actions/createReferralClick'
 import { createHmac } from 'crypto'
 
@@ -205,6 +205,16 @@ export async function POST(req: NextRequest) {
       totalAmount: order.total_amount,
       treeCodes:   fnData?.treeCodes,
     }).catch((err) => console.error('[Telegram] notifyPaymentSuccess failed:', err))
+  }
+
+  // Gửi thông báo Telegram khi tạo hợp đồng thất bại (non-blocking)
+  if (fnError) {
+    notifyContractFailure({
+      orderCode:    order.code,
+      userName:     order.user_name,
+      userEmail:    order.user_email,
+      errorMessage: fnError.message || 'Edge Function process-payment failed',
+    }).catch((err) => console.error('[Telegram] notifyContractFailure failed:', err))
   }
 
   // AC7 — Luôn trả 200 (kể cả function_error) để Casso không retry

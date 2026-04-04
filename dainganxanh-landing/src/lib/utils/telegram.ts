@@ -207,6 +207,24 @@ export async function notifyWithdrawalRejected(params: {
   await sendTelegramMessage(message)
 }
 
+export async function notifyContractFailure(params: {
+  orderCode: string
+  userName: string
+  userEmail: string
+  errorMessage: string
+}): Promise<void> {
+  const message =
+    `🚨 <b>Tạo hợp đồng PDF thất bại!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${params.orderCode}</code>\n` +
+    `👤 Khách hàng: ${params.userName}\n` +
+    `📧 Email: ${params.userEmail}\n` +
+    `❌ Lỗi: ${params.errorMessage}\n` +
+    `⚠️ Admin cần xử lý thủ công và gửi lại hợp đồng`
+
+  await sendTelegramMessage(message)
+}
+
 export async function notifyReferralAssigned(params: {
   targetEmail: string
   targetName?: string | null

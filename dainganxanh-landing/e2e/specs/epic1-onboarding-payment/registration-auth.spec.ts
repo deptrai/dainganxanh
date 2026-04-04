@@ -336,8 +336,8 @@ test.describe('Registration & Authentication Flow E2E', () => {
 
     /**
      * Test 7: User completes login flow successfully
-     * Flow: /login → OTP verification → authenticated → home or dashboard
-     * Note: Testing basic login functionality, not return URL (which may vary by implementation)
+     * Flow: /login → OTP verification → referral modal → redirect to /checkout?quantity=1
+     * Note: Login page always redirects to /checkout?quantity={n} after auth
      */
     test('user completes login flow successfully', async ({ page }) => {
         const testEmail = getTestEmail('login-test')
@@ -371,23 +371,53 @@ test.describe('Registration & Authentication Flow E2E', () => {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
-        // Wait for form to auto-submit
-        await page.waitForTimeout(500)
-
-        // Handle referral modal if it appears (after OTP success)
+        // After OTP, referral modal may appear (for new users without ref cookie)
+        // Handle it by entering default ref or clicking skip/submit
+        const refModal = page.getByText(/mã giới thiệu/i).or(page.getByText(/referral/i))
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
+        const useDefaultBtn = page.getByRole('button', { name: /dùng mã mặc định/i })
+            .or(page.getByRole('button', { name: /bấm vào đây/i }))
+        const confirmBtn = page.getByRole('button', { name: /xác nhận/i })
+            .or(page.getByRole('button', { name: /tiếp tục/i }))
+
         try {
-            await skipButton.waitFor({ state: 'visible', timeout: 5000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
+            // Wait for either referral modal or redirect
+            await Promise.race([
+                refModal.first().waitFor({ state: 'visible', timeout: 10000 }),
+                page.waitForURL(/\/checkout/, { timeout: 10000 })
+            ])
+
+            // If still on login page with modal, handle it
+            if (page.url().includes('/login')) {
+                // Try use default button first, then confirm
+                const hasDefault = await useDefaultBtn.count() > 0
+                if (hasDefault) {
+                    await useDefaultBtn.first().click()
+                    await page.waitForTimeout(500)
+                }
+                const hasConfirm = await confirmBtn.count() > 0
+                if (hasConfirm) {
+                    await confirmBtn.first().click()
+                } else {
+                    const hasSkip = await skipButton.count() > 0
+                    if (hasSkip) {
+                        await skipButton.click()
+                    }
+                }
+            }
         } catch {
-            // No referral modal - may have redirected directly
-            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+            // Timeout — try skip button as fallback
+            const hasSkip = await skipButton.count() > 0
+            if (hasSkip) {
+                await skipButton.click()
+            }
         }
 
-        // Verify we're no longer on the login page (authentication succeeded)
+        // Wait for final redirect to /checkout
+        await page.waitForURL(/\/checkout/, { timeout: 15000 })
+
         const currentUrl = page.url()
-        expect(currentUrl).not.toContain('/login')
+        expect(currentUrl).toContain('/checkout')
 
         console.log(`✅ Login completed successfully, redirected to: ${currentUrl}`)
     })
