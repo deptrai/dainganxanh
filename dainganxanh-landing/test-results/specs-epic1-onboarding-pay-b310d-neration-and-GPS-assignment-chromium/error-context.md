@@ -1,0 +1,498 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - img [ref=e7]
+          - generic [ref=e10]:
+            - paragraph [ref=e11]: phanquochoipt
+            - paragraph [ref=e12]: phanquochoipt@gmail.com
+        - button "Đăng xuất" [ref=e13] [cursor=pointer]:
+          - img [ref=e14]
+          - generic [ref=e17]: Đăng xuất
+      - navigation [ref=e18]:
+        - generic [ref=e20]:
+          - link "Trang chủ" [ref=e21] [cursor=pointer]:
+            - /url: /
+            - img [ref=e22]
+            - generic [ref=e25]: Trang chủ
+          - link "Mua cây" [ref=e26] [cursor=pointer]:
+            - /url: /pricing
+            - img [ref=e27]
+            - generic [ref=e31]: Mua cây
+          - link "Vườn của tôi" [ref=e32] [cursor=pointer]:
+            - /url: /crm/my-garden
+            - img [ref=e33]
+            - generic [ref=e35]: Vườn của tôi
+          - link "Giới thiệu" [ref=e36] [cursor=pointer]:
+            - /url: /crm/referrals
+            - img [ref=e37]
+            - generic [ref=e43]: Giới thiệu
+          - link "Hồ sơ" [ref=e44] [cursor=pointer]:
+            - /url: /crm/profile
+            - img [ref=e45]
+            - generic [ref=e49]: Hồ sơ
+    - main [ref=e50]:
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - heading "Đại Ngàn Xanh" [level=1] [ref=e55]
+            - paragraph [ref=e56]: Admin Panel
+          - navigation [ref=e57]:
+            - link "Orders" [ref=e58] [cursor=pointer]:
+              - /url: /crm/admin/orders
+              - img [ref=e59]
+              - generic [ref=e61]: Orders
+            - link "Người dùng" [ref=e62] [cursor=pointer]:
+              - /url: /crm/admin/users
+              - img [ref=e63]
+              - generic [ref=e65]: Người dùng
+            - link "Lô cây" [ref=e66] [cursor=pointer]:
+              - /url: /crm/admin/lots
+              - img [ref=e67]
+              - generic [ref=e69]: Lô cây
+            - link "Hoa hồng" [ref=e70] [cursor=pointer]:
+              - /url: /crm/admin/referrals
+              - img [ref=e71]
+              - generic [ref=e73]: Hoa hồng
+            - link "Withdrawals" [ref=e74] [cursor=pointer]:
+              - /url: /crm/admin/withdrawals
+              - img [ref=e75]
+              - generic [ref=e77]: Withdrawals
+            - link "Casso Logs" [ref=e78] [cursor=pointer]:
+              - /url: /crm/admin/casso
+              - img [ref=e79]
+              - generic [ref=e81]: Casso Logs
+            - link "Blog" [ref=e82] [cursor=pointer]:
+              - /url: /crm/admin/blog
+              - img [ref=e83]
+              - generic [ref=e85]: Blog
+            - link "Analytics" [ref=e86] [cursor=pointer]:
+              - /url: /crm/admin/analytics
+              - img [ref=e87]
+              - generic [ref=e89]: Analytics
+            - link "Settings" [ref=e90] [cursor=pointer]:
+              - /url: /crm/admin/settings
+              - img [ref=e91]
+              - generic [ref=e94]: Settings
+          - link "Back to User Dashboard" [ref=e96] [cursor=pointer]:
+            - /url: /crm/dashboard
+            - img [ref=e97]
+            - generic [ref=e99]: Back to User Dashboard
+        - main [ref=e100]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - heading "Order Management" [level=1] [ref=e104]
+              - paragraph [ref=e105]: Xác minh và quản lý đơn hàng mới
+            - generic [ref=e106]:
+              - generic [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]: Trạng thái
+                  - combobox [ref=e110]:
+                    - option "Tất cả"
+                    - option "Chờ xác minh" [selected]
+                    - option "Chờ admin duyệt"
+                    - option "Đã thanh toán"
+                    - option "Đã xác minh"
+                    - option "Đã gán cây"
+                    - option "Hoàn thành"
+                    - option "Đã hủy"
+                - generic [ref=e111]:
+                  - generic [ref=e112]: Tìm kiếm
+                  - textbox "Order ID hoặc Email" [ref=e113]
+                - generic [ref=e114]:
+                  - generic [ref=e115]: Từ ngày
+                  - textbox [ref=e116]
+                - generic [ref=e117]:
+                  - generic [ref=e118]: Đến ngày
+                  - textbox [ref=e119]
+              - button "Xóa bộ lọc" [ref=e121] [cursor=pointer]
+            - table [ref=e124]:
+              - rowgroup [ref=e125]:
+                - row "Order ID User Người Giới Thiệu Số lượng Tổng tiền Thanh toán Trạng thái Ngày tạo Hành động" [ref=e126]:
+                  - columnheader "Order ID" [ref=e127]
+                  - columnheader "User" [ref=e128]
+                  - columnheader "Người Giới Thiệu" [ref=e129]
+                  - columnheader "Số lượng" [ref=e130] [cursor=pointer]
+                  - columnheader "Tổng tiền" [ref=e131] [cursor=pointer]
+                  - columnheader "Thanh toán" [ref=e132]
+                  - columnheader "Trạng thái" [ref=e133]
+                  - columnheader "Ngày tạo" [ref=e134] [cursor=pointer]:
+                    - text: Ngày tạo
+                    - img [ref=e135]
+                  - columnheader "Hành động" [ref=e137]
+              - rowgroup [ref=e138]:
+                - row "PKG-2026-907400 N/A dainganxanh nguyenphuonghoang888@gmail.com 10 cây 2.600.000 ₫ banking Chờ xác minh 18:59:03 4/4/2026 Duyệt thanh toán Xác minh" [ref=e139] [cursor=pointer]:
+                  - cell "PKG-2026-907400" [ref=e140]
+                  - cell "N/A" [ref=e141]:
+                    - generic [ref=e142]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e143]:
+                    - generic [ref=e144]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "10 cây" [ref=e145]
+                  - cell "2.600.000 ₫" [ref=e146]
+                  - cell "banking" [ref=e147]
+                  - cell "Chờ xác minh" [ref=e148]:
+                    - generic [ref=e149]: Chờ xác minh
+                  - cell "18:59:03 4/4/2026" [ref=e150]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e151]:
+                    - generic [ref=e152]:
+                      - button "Duyệt thanh toán" [ref=e153]
+                      - button "Xác minh" [ref=e154]
+                - row "PKG-2026-6B41C9 N/A dainganxanh nguyenphuonghoang888@gmail.com 10 cây 2.600.000 ₫ banking Chờ xác minh 18:59:02 4/4/2026 Duyệt thanh toán Xác minh" [ref=e155] [cursor=pointer]:
+                  - cell "PKG-2026-6B41C9" [ref=e156]
+                  - cell "N/A" [ref=e157]:
+                    - generic [ref=e158]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e159]:
+                    - generic [ref=e160]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "10 cây" [ref=e161]
+                  - cell "2.600.000 ₫" [ref=e162]
+                  - cell "banking" [ref=e163]
+                  - cell "Chờ xác minh" [ref=e164]:
+                    - generic [ref=e165]: Chờ xác minh
+                  - cell "18:59:02 4/4/2026" [ref=e166]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e167]:
+                    - generic [ref=e168]:
+                      - button "Duyệt thanh toán" [ref=e169]
+                      - button "Xác minh" [ref=e170]
+                - row "PKG-2026-772D05 N/A dainganxanh nguyenphuonghoang888@gmail.com 5 cây 1.300.000 ₫ banking Chờ xác minh 18:58:52 4/4/2026 Duyệt thanh toán Xác minh" [ref=e171] [cursor=pointer]:
+                  - cell "PKG-2026-772D05" [ref=e172]
+                  - cell "N/A" [ref=e173]:
+                    - generic [ref=e174]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e175]:
+                    - generic [ref=e176]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "5 cây" [ref=e177]
+                  - cell "1.300.000 ₫" [ref=e178]
+                  - cell "banking" [ref=e179]
+                  - cell "Chờ xác minh" [ref=e180]:
+                    - generic [ref=e181]: Chờ xác minh
+                  - cell "18:58:52 4/4/2026" [ref=e182]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e183]:
+                    - generic [ref=e184]:
+                      - button "Duyệt thanh toán" [ref=e185]
+                      - button "Xác minh" [ref=e186]
+                - row "PKG-2026-630BC4 N/A dainganxanh nguyenphuonghoang888@gmail.com 5 cây 1.300.000 ₫ banking Chờ xác minh 18:58:51 4/4/2026 Duyệt thanh toán Xác minh" [ref=e187] [cursor=pointer]:
+                  - cell "PKG-2026-630BC4" [ref=e188]
+                  - cell "N/A" [ref=e189]:
+                    - generic [ref=e190]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e191]:
+                    - generic [ref=e192]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "5 cây" [ref=e193]
+                  - cell "1.300.000 ₫" [ref=e194]
+                  - cell "banking" [ref=e195]
+                  - cell "Chờ xác minh" [ref=e196]:
+                    - generic [ref=e197]: Chờ xác minh
+                  - cell "18:58:51 4/4/2026" [ref=e198]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e199]:
+                    - generic [ref=e200]:
+                      - button "Duyệt thanh toán" [ref=e201]
+                      - button "Xác minh" [ref=e202]
+                - row "PKG-2026-A3CD06 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:07:44 4/4/2026 Duyệt thanh toán Xác minh" [ref=e203] [cursor=pointer]:
+                  - cell "PKG-2026-A3CD06" [ref=e204]
+                  - cell "N/A" [ref=e205]:
+                    - generic [ref=e206]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e207]:
+                    - generic [ref=e208]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e209]
+                  - cell "780.000 ₫" [ref=e210]
+                  - cell "banking" [ref=e211]
+                  - cell "Chờ xác minh" [ref=e212]:
+                    - generic [ref=e213]: Chờ xác minh
+                  - cell "16:07:44 4/4/2026" [ref=e214]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e215]:
+                    - generic [ref=e216]:
+                      - button "Duyệt thanh toán" [ref=e217]
+                      - button "Xác minh" [ref=e218]
+                - row "PKG-2026-D46825 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:07:36 4/4/2026 Duyệt thanh toán Xác minh" [ref=e219] [cursor=pointer]:
+                  - cell "PKG-2026-D46825" [ref=e220]
+                  - cell "N/A" [ref=e221]:
+                    - generic [ref=e222]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e223]:
+                    - generic [ref=e224]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e225]
+                  - cell "780.000 ₫" [ref=e226]
+                  - cell "banking" [ref=e227]
+                  - cell "Chờ xác minh" [ref=e228]:
+                    - generic [ref=e229]: Chờ xác minh
+                  - cell "16:07:36 4/4/2026" [ref=e230]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e231]:
+                    - generic [ref=e232]:
+                      - button "Duyệt thanh toán" [ref=e233]
+                      - button "Xác minh" [ref=e234]
+                - row "PKG-2026-67634F N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:07:25 4/4/2026 Duyệt thanh toán Xác minh" [ref=e235] [cursor=pointer]:
+                  - cell "PKG-2026-67634F" [ref=e236]
+                  - cell "N/A" [ref=e237]:
+                    - generic [ref=e238]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e239]:
+                    - generic [ref=e240]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e241]
+                  - cell "780.000 ₫" [ref=e242]
+                  - cell "banking" [ref=e243]
+                  - cell "Chờ xác minh" [ref=e244]:
+                    - generic [ref=e245]: Chờ xác minh
+                  - cell "16:07:25 4/4/2026" [ref=e246]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e247]:
+                    - generic [ref=e248]:
+                      - button "Duyệt thanh toán" [ref=e249]
+                      - button "Xác minh" [ref=e250]
+                - row "PKG-2026-1FCB16 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:07:16 4/4/2026 Duyệt thanh toán Xác minh" [ref=e251] [cursor=pointer]:
+                  - cell "PKG-2026-1FCB16" [ref=e252]
+                  - cell "N/A" [ref=e253]:
+                    - generic [ref=e254]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e255]:
+                    - generic [ref=e256]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e257]
+                  - cell "780.000 ₫" [ref=e258]
+                  - cell "banking" [ref=e259]
+                  - cell "Chờ xác minh" [ref=e260]:
+                    - generic [ref=e261]: Chờ xác minh
+                  - cell "16:07:16 4/4/2026" [ref=e262]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e263]:
+                    - generic [ref=e264]:
+                      - button "Duyệt thanh toán" [ref=e265]
+                      - button "Xác minh" [ref=e266]
+                - row "PKG-2026-E01DE4 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:07:08 4/4/2026 Duyệt thanh toán Xác minh" [ref=e267] [cursor=pointer]:
+                  - cell "PKG-2026-E01DE4" [ref=e268]
+                  - cell "N/A" [ref=e269]:
+                    - generic [ref=e270]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e271]:
+                    - generic [ref=e272]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e273]
+                  - cell "780.000 ₫" [ref=e274]
+                  - cell "banking" [ref=e275]
+                  - cell "Chờ xác minh" [ref=e276]:
+                    - generic [ref=e277]: Chờ xác minh
+                  - cell "16:07:08 4/4/2026" [ref=e278]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e279]:
+                    - generic [ref=e280]:
+                      - button "Duyệt thanh toán" [ref=e281]
+                      - button "Xác minh" [ref=e282]
+                - row "PKG-2026-93C5BB N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:07:08 4/4/2026 Duyệt thanh toán Xác minh" [ref=e283] [cursor=pointer]:
+                  - cell "PKG-2026-93C5BB" [ref=e284]
+                  - cell "N/A" [ref=e285]:
+                    - generic [ref=e286]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e287]:
+                    - generic [ref=e288]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e289]
+                  - cell "780.000 ₫" [ref=e290]
+                  - cell "banking" [ref=e291]
+                  - cell "Chờ xác minh" [ref=e292]:
+                    - generic [ref=e293]: Chờ xác minh
+                  - cell "16:07:08 4/4/2026" [ref=e294]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e295]:
+                    - generic [ref=e296]:
+                      - button "Duyệt thanh toán" [ref=e297]
+                      - button "Xác minh" [ref=e298]
+                - row "PKG-2026-4775EB N/A dainganxanh nguyenphuonghoang888@gmail.com 5 cây 1.300.000 ₫ banking Chờ xác minh 16:06:42 4/4/2026 Duyệt thanh toán Xác minh" [ref=e299] [cursor=pointer]:
+                  - cell "PKG-2026-4775EB" [ref=e300]
+                  - cell "N/A" [ref=e301]:
+                    - generic [ref=e302]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e303]:
+                    - generic [ref=e304]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "5 cây" [ref=e305]
+                  - cell "1.300.000 ₫" [ref=e306]
+                  - cell "banking" [ref=e307]
+                  - cell "Chờ xác minh" [ref=e308]:
+                    - generic [ref=e309]: Chờ xác minh
+                  - cell "16:06:42 4/4/2026" [ref=e310]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e311]:
+                    - generic [ref=e312]:
+                      - button "Duyệt thanh toán" [ref=e313]
+                      - button "Xác minh" [ref=e314]
+                - row "PKG-2026-D93C05 N/A dainganxanh nguyenphuonghoang888@gmail.com 10 cây 2.600.000 ₫ banking Chờ xác minh 16:01:54 4/4/2026 Duyệt thanh toán Xác minh" [ref=e315] [cursor=pointer]:
+                  - cell "PKG-2026-D93C05" [ref=e316]
+                  - cell "N/A" [ref=e317]:
+                    - generic [ref=e318]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e319]:
+                    - generic [ref=e320]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "10 cây" [ref=e321]
+                  - cell "2.600.000 ₫" [ref=e322]
+                  - cell "banking" [ref=e323]
+                  - cell "Chờ xác minh" [ref=e324]:
+                    - generic [ref=e325]: Chờ xác minh
+                  - cell "16:01:54 4/4/2026" [ref=e326]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e327]:
+                    - generic [ref=e328]:
+                      - button "Duyệt thanh toán" [ref=e329]
+                      - button "Xác minh" [ref=e330]
+                - row "PKG-2026-CFF355 N/A dainganxanh nguyenphuonghoang888@gmail.com 5 cây 1.300.000 ₫ banking Chờ xác minh 16:01:47 4/4/2026 Duyệt thanh toán Xác minh" [ref=e331] [cursor=pointer]:
+                  - cell "PKG-2026-CFF355" [ref=e332]
+                  - cell "N/A" [ref=e333]:
+                    - generic [ref=e334]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e335]:
+                    - generic [ref=e336]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "5 cây" [ref=e337]
+                  - cell "1.300.000 ₫" [ref=e338]
+                  - cell "banking" [ref=e339]
+                  - cell "Chờ xác minh" [ref=e340]:
+                    - generic [ref=e341]: Chờ xác minh
+                  - cell "16:01:47 4/4/2026" [ref=e342]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e343]:
+                    - generic [ref=e344]:
+                      - button "Duyệt thanh toán" [ref=e345]
+                      - button "Xác minh" [ref=e346]
+                - row "PKG-2026-40ACA2 N/A dainganxanh nguyenphuonghoang888@gmail.com 5 cây 1.300.000 ₫ banking Chờ xác minh 16:01:47 4/4/2026 Duyệt thanh toán Xác minh" [ref=e347] [cursor=pointer]:
+                  - cell "PKG-2026-40ACA2" [ref=e348]
+                  - cell "N/A" [ref=e349]:
+                    - generic [ref=e350]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e351]:
+                    - generic [ref=e352]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "5 cây" [ref=e353]
+                  - cell "1.300.000 ₫" [ref=e354]
+                  - cell "banking" [ref=e355]
+                  - cell "Chờ xác minh" [ref=e356]:
+                    - generic [ref=e357]: Chờ xác minh
+                  - cell "16:01:47 4/4/2026" [ref=e358]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e359]:
+                    - generic [ref=e360]:
+                      - button "Duyệt thanh toán" [ref=e361]
+                      - button "Xác minh" [ref=e362]
+                - row "PKG-2026-CAF8A1 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:01:46 4/4/2026 Duyệt thanh toán Xác minh" [ref=e363] [cursor=pointer]:
+                  - cell "PKG-2026-CAF8A1" [ref=e364]
+                  - cell "N/A" [ref=e365]:
+                    - generic [ref=e366]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e367]:
+                    - generic [ref=e368]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e369]
+                  - cell "780.000 ₫" [ref=e370]
+                  - cell "banking" [ref=e371]
+                  - cell "Chờ xác minh" [ref=e372]:
+                    - generic [ref=e373]: Chờ xác minh
+                  - cell "16:01:46 4/4/2026" [ref=e374]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e375]:
+                    - generic [ref=e376]:
+                      - button "Duyệt thanh toán" [ref=e377]
+                      - button "Xác minh" [ref=e378]
+                - row "PKG-2026-D690DB N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:01:38 4/4/2026 Duyệt thanh toán Xác minh" [ref=e379] [cursor=pointer]:
+                  - cell "PKG-2026-D690DB" [ref=e380]
+                  - cell "N/A" [ref=e381]:
+                    - generic [ref=e382]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e383]:
+                    - generic [ref=e384]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e385]
+                  - cell "780.000 ₫" [ref=e386]
+                  - cell "banking" [ref=e387]
+                  - cell "Chờ xác minh" [ref=e388]:
+                    - generic [ref=e389]: Chờ xác minh
+                  - cell "16:01:38 4/4/2026" [ref=e390]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e391]:
+                    - generic [ref=e392]:
+                      - button "Duyệt thanh toán" [ref=e393]
+                      - button "Xác minh" [ref=e394]
+                - row "PKG-2026-25AF60 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:01:27 4/4/2026 Duyệt thanh toán Xác minh" [ref=e395] [cursor=pointer]:
+                  - cell "PKG-2026-25AF60" [ref=e396]
+                  - cell "N/A" [ref=e397]:
+                    - generic [ref=e398]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e399]:
+                    - generic [ref=e400]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e401]
+                  - cell "780.000 ₫" [ref=e402]
+                  - cell "banking" [ref=e403]
+                  - cell "Chờ xác minh" [ref=e404]:
+                    - generic [ref=e405]: Chờ xác minh
+                  - cell "16:01:27 4/4/2026" [ref=e406]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e407]:
+                    - generic [ref=e408]:
+                      - button "Duyệt thanh toán" [ref=e409]
+                      - button "Xác minh" [ref=e410]
+                - row "PKG-2026-FF9DDB N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:01:19 4/4/2026 Duyệt thanh toán Xác minh" [ref=e411] [cursor=pointer]:
+                  - cell "PKG-2026-FF9DDB" [ref=e412]
+                  - cell "N/A" [ref=e413]:
+                    - generic [ref=e414]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e415]:
+                    - generic [ref=e416]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e417]
+                  - cell "780.000 ₫" [ref=e418]
+                  - cell "banking" [ref=e419]
+                  - cell "Chờ xác minh" [ref=e420]:
+                    - generic [ref=e421]: Chờ xác minh
+                  - cell "16:01:19 4/4/2026" [ref=e422]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e423]:
+                    - generic [ref=e424]:
+                      - button "Duyệt thanh toán" [ref=e425]
+                      - button "Xác minh" [ref=e426]
+                - row "PKG-2026-6A59BB N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:01:10 4/4/2026 Duyệt thanh toán Xác minh" [ref=e427] [cursor=pointer]:
+                  - cell "PKG-2026-6A59BB" [ref=e428]
+                  - cell "N/A" [ref=e429]:
+                    - generic [ref=e430]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e431]:
+                    - generic [ref=e432]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e433]
+                  - cell "780.000 ₫" [ref=e434]
+                  - cell "banking" [ref=e435]
+                  - cell "Chờ xác minh" [ref=e436]:
+                    - generic [ref=e437]: Chờ xác minh
+                  - cell "16:01:10 4/4/2026" [ref=e438]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e439]:
+                    - generic [ref=e440]:
+                      - button "Duyệt thanh toán" [ref=e441]
+                      - button "Xác minh" [ref=e442]
+                - row "PKG-2026-3C5980 N/A dainganxanh nguyenphuonghoang888@gmail.com 3 cây 780.000 ₫ banking Chờ xác minh 16:01:10 4/4/2026 Duyệt thanh toán Xác minh" [ref=e443] [cursor=pointer]:
+                  - cell "PKG-2026-3C5980" [ref=e444]
+                  - cell "N/A" [ref=e445]:
+                    - generic [ref=e446]: N/A
+                  - cell "dainganxanh nguyenphuonghoang888@gmail.com" [ref=e447]:
+                    - generic [ref=e448]:
+                      - text: dainganxanh
+                      - text: nguyenphuonghoang888@gmail.com
+                  - cell "3 cây" [ref=e449]
+                  - cell "780.000 ₫" [ref=e450]
+                  - cell "banking" [ref=e451]
+                  - cell "Chờ xác minh" [ref=e452]:
+                    - generic [ref=e453]: Chờ xác minh
+                  - cell "16:01:10 4/4/2026" [ref=e454]
+                  - cell "Duyệt thanh toán Xác minh" [ref=e455]:
+                    - generic [ref=e456]:
+                      - button "Duyệt thanh toán" [ref=e457]
+                      - button "Xác minh" [ref=e458]
+            - generic [ref=e459]:
+              - generic [ref=e460]: Hiển thị 20 trong tổng số 128 đơn hàng
+              - generic [ref=e461]:
+                - generic [ref=e462]: Trang 1 / 7
+                - generic [ref=e463]:
+                  - button "Trước" [disabled] [ref=e464]
+                  - button "Sau" [ref=e465] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e471] [cursor=pointer]:
+    - img [ref=e472]
+  - alert [ref=e475]
+```

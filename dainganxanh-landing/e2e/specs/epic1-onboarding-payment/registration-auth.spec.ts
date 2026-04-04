@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from '../../utils/mailpit'
 
 /**
  * Registration & Authentication E2E Test Suite
@@ -12,7 +13,6 @@ import { test, expect } from '@playwright/test'
 test.describe('Registration & Authentication Flow E2E', () => {
     const BASE_EMAIL = 'test-registration'
     const TEST_PHONE = '0901234567'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
     const DEFAULT_REF_CODE = 'DNG895075'
 
     // Generate unique email for each test to avoid OTP conflicts
@@ -20,37 +20,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         const timestamp = Date.now()
         const sanitized = testName.replace(/[^a-z0-9]/gi, '').toLowerCase()
         return `${BASE_EMAIL}-${sanitized}-${timestamp}@test.local`
-    }
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
     }
 
     /**

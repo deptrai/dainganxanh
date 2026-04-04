@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 import crypto from 'crypto'
+import { getOTPFromMailpit } from '../../utils/mailpit'
+import { envConfig } from '../../config/env'
 
 /**
  * Payment Webhook E2E Test Suite
@@ -12,8 +14,7 @@ import crypto from 'crypto'
  */
 
 test.describe.serial('Payment Webhook E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+    const ADMIN_EMAIL = envConfig.ADMIN_EMAIL
     const WEBHOOK_SECRET = process.env.CASSO_WEBHOOK_SECRET || 'test-webhook-secret'
 
     /**
@@ -23,37 +24,6 @@ test.describe.serial('Payment Webhook E2E', () => {
         const hmac = crypto.createHmac('sha256', secret)
         hmac.update(JSON.stringify(payload))
         return hmac.digest('hex')
-    }
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
     }
 
     /**

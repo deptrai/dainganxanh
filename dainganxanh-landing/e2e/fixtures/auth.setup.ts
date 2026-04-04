@@ -13,6 +13,15 @@ setup('Xác thực đăng nhập toàn cục (Global Auth)', async ({ page }) =>
     // Xoá cookie / storage cũ nếu có
     await page.context().clearCookies();
 
+    // Set ref cookie trước để skip referral modal sau OTP login
+    await page.context().addCookies([{
+        name: 'ref',
+        value: 'dainganxanh',
+        domain: 'localhost',
+        path: '/',
+        expires: Math.floor(Date.now() / 1000) + 90 * 24 * 3600,
+    }]);
+
     // Vào trang login Admin/User (trong hệ thống này, /login dùng chung)
     await page.goto('/login');
     await page.waitForLoadState('networkidle');

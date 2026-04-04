@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import * as path from 'path'
 
 /**
  * Admin Blog Management E2E Test Suite
@@ -10,122 +11,18 @@ import { test, expect } from '@playwright/test'
  * - Admin user: phanquochoipt@gmail.com (must have admin role)
  */
 
+test.use({
+    storageState: path.resolve(__dirname, '../../storagestate/admin.json')
+})
+
 test.describe('Admin Blog Management E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
-
-    /**
-     * Helper: Complete admin login flow and navigate to target page
-     */
-    async function loginAsAdmin(page: any, targetPath: string = '/crm/admin/blog') {
-        await page.goto(targetPath)
-        await page.waitForLoadState('networkidle')
-
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        try {
-            await Promise.race([
-                page.waitForURL((url) => !url.href.includes('/login') && !url.href.includes('redirect'), { timeout: 10000 }),
-                page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 10000 })
-            ])
-        } catch {
-            console.log('⚠️ Waiting for OTP verification...')
-        }
-
-        await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            try {
-                await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
-            } catch {
-                console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
-                const afterSkipUrl = page.url()
-                if (!afterSkipUrl.includes(targetPath)) {
-                    await page.goto(targetPath)
-                    await page.waitForLoadState('networkidle')
-                }
-            }
-            await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
-        } else {
-            await page.waitForTimeout(3000)
-            const currentUrl = page.url()
-            if (!currentUrl.includes(targetPath)) {
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
-            }
-        }
-
-        console.log('✅ Admin login successful')
-    }
 
     /**
      * Test 1: Admin creates new blog post
      */
     test('admin creates new blog post at /crm/admin/blog/new', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog')
+        await page.goto('/crm/admin/blog')
+        await page.waitForLoadState('networkidle')
 
         // ============================================
         // Phase 1: Navigate to create new post
@@ -229,7 +126,8 @@ test.describe('Admin Blog Management E2E', () => {
      * Test 2: Admin edits existing blog post
      */
     test('admin edits existing blog post', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog')
+        await page.goto('/crm/admin/blog')
+        await page.waitForLoadState('networkidle')
 
         await expect(page).toHaveURL(/crm\/admin\/blog/)
         await page.waitForTimeout(2000)
@@ -325,7 +223,8 @@ test.describe('Admin Blog Management E2E', () => {
      * Test 3: Admin changes post status (draft/published/scheduled)
      */
     test('admin changes post status (draft/published/scheduled)', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog')
+        await page.goto('/crm/admin/blog')
+        await page.waitForLoadState('networkidle')
 
         await expect(page).toHaveURL(/crm\/admin\/blog/)
         await page.waitForTimeout(2000)
@@ -407,7 +306,8 @@ test.describe('Admin Blog Management E2E', () => {
      * Test 4: Admin previews blog post before publishing
      */
     test('admin previews blog post before publishing', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog/new')
+        await page.goto('/crm/admin/blog/new')
+        await page.waitForLoadState('networkidle')
 
         await page.waitForLoadState('networkidle')
         await page.waitForTimeout(1000)

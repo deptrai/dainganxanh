@@ -3,6 +3,22 @@
  * Hàm dùng chung duy nhất cho việc lấy OTP từ Mailpit.
  */
 import { envConfig } from '../config/env';
+import type { BrowserContext } from '@playwright/test';
+
+/**
+ * Set ref cookie để skip referral modal sau OTP login.
+ * Gọi trước page.goto('/login') để tránh modal xuất hiện.
+ * Logic app: hiện modal khi không có cookie "ref" (client-side check, không phải DB).
+ */
+export async function setRefCookie(context: BrowserContext, refCode = 'dainganxanh'): Promise<void> {
+    await context.addCookies([{
+        name: 'ref',
+        value: refCode,
+        domain: 'localhost',
+        path: '/',
+        expires: Math.floor(Date.now() / 1000) + 90 * 24 * 3600,
+    }]);
+}
 
 export async function getOTPFromMailpit(email: string): Promise<string> {
     // Đợi 2 giây để chờ hệ thống backend đổ email về Mailpit

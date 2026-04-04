@@ -23,8 +23,9 @@ export default defineConfig({
         },
         {
             name: 'chromium',
-            use: { 
+            use: {
                 ...devices['Desktop Chrome'],
+                headless: !!process.env.CI,
                 // storageState: 'e2e/storagestate/admin.json', // Có thể bật global ở đây hoặc từng file
             },
             dependencies: ['setup'],
@@ -32,8 +33,9 @@ export default defineConfig({
     ],
 
     webServer: {
-        command: 'npm run dev',
+        command: 'npx next dev -p 3001',
         url: 'http://localhost:3001',
         reuseExistingServer: !process.env.CI,
+        timeout: 120000,
     },
 })

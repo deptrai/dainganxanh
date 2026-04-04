@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test'
+import * as path from 'path'
+
+test.use({
+    storageState: path.resolve(__dirname, '../../storagestate/admin.json')
+})
 
 /**
  * Tree Detail Extended E2E Test Suite
@@ -121,7 +126,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user views tree GPS location on map', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock Google Maps API
         await page.route('**/maps.googleapis.com/**', route => route.fulfill({
@@ -195,7 +199,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('map displays multiple tree locations for multi-tree orders', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock Google Maps API
         await page.route('**/maps.googleapis.com/**', route => route.fulfill({
@@ -281,7 +284,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user views farm camera section', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock camera stream API
         await page.route('**/api/camera/stream/**', route => route.fulfill({
@@ -348,7 +350,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user switches between multiple farm cameras', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock multiple cameras API
         await page.route('**/api/camera/list/**', route => route.fulfill({
@@ -423,7 +424,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user browses tree growth photo gallery', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock photo gallery API
         await page.route('**/api/orders/*/photos', route => route.fulfill({
@@ -501,7 +501,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user filters photos by growth phase', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock photo gallery API with multiple phases
         await page.route('**/api/orders/*/photos*', route => {
@@ -590,7 +589,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user views tree timeline with key events', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock timeline events API
         await page.route('**/api/orders/*/timeline', route => route.fulfill({
@@ -674,7 +672,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user clicks timeline event for detail popup', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock timeline events API
         await page.route('**/api/orders/*/timeline', route => route.fulfill({
@@ -779,7 +776,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user views quarterly report section', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock reports list API
         await page.route('**/api/orders/*/reports', route => route.fulfill({
@@ -865,7 +861,6 @@ test.describe('Tree Detail Extended Features E2E', () => {
      */
     test('user downloads quarterly PDF report', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
 
         // Mock reports list API
         await page.route('**/api/orders/*/reports', route => route.fulfill({

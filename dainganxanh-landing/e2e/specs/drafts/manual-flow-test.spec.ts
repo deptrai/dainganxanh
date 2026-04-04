@@ -1,14 +1,12 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
 
-const BASE_URL = 'http://localhost:3000'
 const SCREENSHOTS_DIR = path.join(__dirname, '../e2e-results/screenshots')
 
 test.describe('Manual Flow Tests - Đất Ngàn Xanh', () => {
-    test.use({ baseURL: BASE_URL })
 
     test('Flow 1: Homepage loads correctly', async ({ page }) => {
-        await page.goto(BASE_URL)
+        await page.goto('/')
         await page.waitForLoadState('networkidle')
 
         await page.screenshot({
@@ -28,7 +26,7 @@ test.describe('Manual Flow Tests - Đất Ngàn Xanh', () => {
     })
 
     test('Flow 2: Registration page - verify required fields', async ({ page }) => {
-        await page.goto(`${BASE_URL}/register?quantity=1`)
+        await page.goto(`/register?quantity=1`)
         await page.waitForLoadState('networkidle')
 
         await page.screenshot({
@@ -64,7 +62,7 @@ test.describe('Manual Flow Tests - Đất Ngàn Xanh', () => {
     })
 
     test('Flow 3: Duplicate account prevention - referral validation', async ({ page }) => {
-        await page.goto(`${BASE_URL}/register?quantity=1`)
+        await page.goto(`/register?quantity=1`)
         await page.waitForLoadState('networkidle')
 
         // Fill in identifier field with email that should NOT exist
@@ -111,7 +109,7 @@ test.describe('Manual Flow Tests - Đất Ngàn Xanh', () => {
     })
 
     test('Flow 4: Login page loads', async ({ page }) => {
-        await page.goto(`${BASE_URL}/login?quantity=1`)
+        await page.goto(`/login?quantity=1`)
         await page.waitForLoadState('networkidle')
 
         const currentUrl = page.url()
@@ -130,7 +128,7 @@ test.describe('Manual Flow Tests - Đất Ngàn Xanh', () => {
 
     test('Flow 5: CRM routes redirect to login (unauthenticated)', async ({ page }) => {
         // Navigate to /crm
-        await page.goto(`${BASE_URL}/crm`)
+        await page.goto(`/crm`)
         await page.waitForLoadState('networkidle')
 
         const crmUrl = page.url()
@@ -146,7 +144,7 @@ test.describe('Manual Flow Tests - Đất Ngàn Xanh', () => {
         console.log('PASS: /crm redirected correctly:', crmRedirectedToLogin, '-> URL:', crmUrl)
 
         // Navigate to /crm/referrals
-        await page.goto(`${BASE_URL}/crm/referrals`)
+        await page.goto(`/crm/referrals`)
         await page.waitForLoadState('networkidle')
 
         const referralsUrl = page.url()
