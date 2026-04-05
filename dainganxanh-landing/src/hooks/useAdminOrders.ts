@@ -48,7 +48,7 @@ interface UseAdminOrdersReturn {
     pagination: PaginationInfo
     setPage: (page: number) => void
     verifyOrder: (orderId: string) => Promise<void>
-    approveOrder: (orderId: string) => Promise<void>
+    approveOrder: (orderId: string, proofUrl?: string) => Promise<void>
     refetch: () => Promise<void>
 }
 
@@ -59,7 +59,7 @@ export function useAdminOrders(): UseAdminOrdersReturn {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filters, setFilters] = useState<OrderFilters>({
-        status: 'pending', // Default to pending verification
+        status: 'all',
     })
     const [pagination, setPagination] = useState<PaginationInfo>({
         page: 1,
@@ -124,8 +124,8 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         )
     }, [])
 
-    const approveOrder = useCallback(async (orderId: string) => {
-        const result = await approveAdminOrder(orderId)
+    const approveOrder = useCallback(async (orderId: string, proofUrl?: string) => {
+        const result = await approveAdminOrder(orderId, proofUrl)
 
         if (result.error) {
             throw new Error(result.error)

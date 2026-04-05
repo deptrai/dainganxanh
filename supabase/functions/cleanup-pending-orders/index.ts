@@ -41,15 +41,6 @@ serve(async (req) => {
     })
   }
 
-  // Verify Authorization header — must match service role key
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${supabaseServiceKey}`) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 401,
-    })
-  }
-
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 

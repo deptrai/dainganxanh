@@ -201,7 +201,7 @@ export async function verifyAdminOrder(orderId: string): Promise<{ error?: strin
  * Admin approve payment — marks a pending order as completed and triggers
  * the same post-payment flow as Casso webhook (referral commission, telegram, etc.)
  */
-export async function approveAdminOrder(orderId: string): Promise<{ error?: string }> {
+export async function approveAdminOrder(orderId: string, proofUrl?: string): Promise<{ error?: string }> {
     const supabase = await createServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -261,6 +261,9 @@ export async function approveAdminOrder(orderId: string): Promise<{ error?: stri
         .update({
             status: 'completed',
             updated_at: new Date().toISOString(),
+            ...(proofUrl ? { payment_proof_url: proofUrl } : {}),
+            approved_by: user.email,
+            approved_at: new Date().toISOString(),
         })
         .eq('id', orderId)
 

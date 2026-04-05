@@ -24,16 +24,11 @@ const SOFFICE_BIN =
     ? '/Applications/LibreOffice.app/Contents/MacOS/soffice'
     : 'soffice')
 
-// Signature overlay positions (Bên B — right side, bottom of last page)
-// Adjust after testing with real PDF output
-const SIG_X = Number(process.env.CONTRACT_SIG_X) || 360
-const SIG_Y = Number(process.env.CONTRACT_SIG_Y) || 85
-const SIG_W = Number(process.env.CONTRACT_SIG_W) || 130
-const SIG_H = Number(process.env.CONTRACT_SIG_H) || 55
-const STAMP_X = Number(process.env.CONTRACT_STAMP_X) || 350
-const STAMP_Y = Number(process.env.CONTRACT_STAMP_Y) || 70
-const STAMP_W = Number(process.env.CONTRACT_STAMP_W) || 90
-const STAMP_H = Number(process.env.CONTRACT_STAMP_H) || 90
+// Combined stamp+signature overlay (Bên A — left side, above Tổng Giám Đốc)
+const STAMP_SIG_X = Number(process.env.CONTRACT_STAMP_SIG_X) || 110
+const STAMP_SIG_Y = Number(process.env.CONTRACT_STAMP_SIG_Y) || 280
+const STAMP_SIG_W = Number(process.env.CONTRACT_STAMP_SIG_W) || 120
+const STAMP_SIG_H = Number(process.env.CONTRACT_STAMP_SIG_H) || 130
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -156,14 +151,15 @@ async function overlaySignature(pdfBytes: Buffer): Promise<Buffer> {
   const pages = pdfDoc.getPages()
   const lastPage = pages[pages.length - 1]
 
-  const signatureBytes = await readTemplateAsset('signature.png')
-  const stampBytes = await readTemplateAsset('stamp.png')
+  const stampSigBytes = await readTemplateAsset('stamp-signature.png')
+  const stampSigImage = await pdfDoc.embedPng(stampSigBytes)
 
-  const sigImage = await pdfDoc.embedPng(signatureBytes)
-  const stampImage = await pdfDoc.embedPng(stampBytes)
-
-  lastPage.drawImage(sigImage, { x: SIG_X, y: SIG_Y, width: SIG_W, height: SIG_H })
-  lastPage.drawImage(stampImage, { x: STAMP_X, y: STAMP_Y, width: STAMP_W, height: STAMP_H })
+  lastPage.drawImage(stampSigImage, {
+    x: STAMP_SIG_X,
+    y: STAMP_SIG_Y,
+    width: STAMP_SIG_W,
+    height: STAMP_SIG_H,
+  })
 
   const result = await pdfDoc.save()
   return Buffer.from(result)

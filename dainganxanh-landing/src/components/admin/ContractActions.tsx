@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { markOrderForPrint, resendContract } from '@/actions/printQueue'
+import { markOrderForPrint, resendContract, generateContract } from '@/actions/printQueue'
 
 import { useToast } from '@/hooks/use-toast'
-import { Printer, Mail, CheckCircle2 } from 'lucide-react'
+import { Printer, Mail, CheckCircle2, FileText, Loader2 } from 'lucide-react'
 
 interface ContractActionsProps {
     orderId: string
@@ -21,6 +21,7 @@ export function ContractActions({
 }: ContractActionsProps) {
     const [isMarkingPrint, setIsMarkingPrint] = useState(false)
     const [isResending, setIsResending] = useState(false)
+    const [isGenerating, setIsGenerating] = useState(false)
     const { toast } = useToast()
 
     const handleMarkForPrint = async () => {
@@ -81,11 +82,43 @@ export function ContractActions({
         }
     }
 
+    const handleGenerateContract = async () => {
+        setIsGenerating(true)
+        try {
+            const result = await generateContract(orderId)
+            if (result.success) {
+                toast({
+                    title: 'Thành công',
+                    description: `Hợp đồng đơn ${orderCode} đã được tạo. Tải lại trang để xem.`,
+                })
+                onSuccess?.()
+            } else {
+                toast({
+                    title: 'Lỗi',
+                    description: result.error || 'Không thể tạo hợp đồng',
+                    variant: 'destructive',
+                })
+            }
+        } catch {
+            toast({ title: 'Lỗi', description: 'Đã xảy ra lỗi', variant: 'destructive' })
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
     if (!contractUrl) {
         return (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Chưa có hợp đồng</span>
-            </div>
+            <button
+                onClick={handleGenerateContract}
+                disabled={isGenerating}
+                className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 transition-colors"
+            >
+                {isGenerating
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <FileText className="h-4 w-4" />
+                }
+                {isGenerating ? 'Đang tạo...' : 'Tạo hợp đồng'}
+            </button>
         )
     }
 

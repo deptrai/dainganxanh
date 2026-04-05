@@ -16,8 +16,8 @@ interface BankingPaymentProps {
 
 const BANK_INFO = {
     bank: process.env.NEXT_PUBLIC_BANK_NAME || "MB Bank",
-    accountNumber: process.env.NEXT_PUBLIC_BANK_ACCOUNT || "771368999999",
-    accountName: process.env.NEXT_PUBLIC_BANK_HOLDER || "CTY CP BIOCARE",
+    accountNumber: process.env.NEXT_PUBLIC_BANK_ACCOUNT || "796333999",
+    accountName: process.env.NEXT_PUBLIC_BANK_HOLDER || "CONG TY CO PHAN DAI NGAN XANH GROUP",
 };
 
 const POLL_INTERVAL = 5000;

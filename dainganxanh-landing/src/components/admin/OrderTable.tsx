@@ -4,6 +4,7 @@ import { useState, Fragment } from 'react'
 import { Order } from '@/hooks/useAdminOrders'
 import VerifyOrderButton from './VerifyOrderButton'
 import LotAssignmentModal from './LotAssignmentModal'
+import ApprovePaymentModal from './ApprovePaymentModal'
 import { assignOrderToLot } from '@/actions/assignOrderToLot'
 import { ContractActions } from '@/components/admin/ContractActions'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
@@ -11,7 +12,7 @@ import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 interface OrderTableProps {
     orders: Order[]
     verifyOrder: (orderId: string) => Promise<void>
-    approveOrder?: (orderId: string) => Promise<void>
+    approveOrder?: (orderId: string, proofUrl?: string) => Promise<void>
 }
 
 type SortField = 'created_at' | 'total_amount' | 'quantity'
@@ -28,9 +29,9 @@ const statusColors = {
 }
 
 const statusLabels = {
-    pending: 'Chờ xác minh',
+    pending: 'Chờ thanh toán',
     paid: 'Đã thanh toán',
-    manual_payment_claimed: 'Chờ duyệt thanh toán thủ công',
+    manual_payment_claimed: 'Khách báo đã chuyển',
     verified: 'Đã xác minh',
     assigned: 'Đã gán cây',
     completed: 'Hoàn thành',
@@ -43,8 +44,7 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
     const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
     const [assignError, setAssignError] = useState<string | null>(null)
-    const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null)
-    const [approveConfirmId, setApproveConfirmId] = useState<string | null>(null)
+    const [approvingOrder, setApprovingOrder] = useState<Order | null>(null)
 
     const handleAssignToLot = async (lotId: string) => {
         if (!assigningOrder) return
@@ -105,49 +105,15 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
             {(order.status === 'pending' || order.status === 'paid' || order.status === 'manual_payment_claimed') ? (
                 <>
                     {approveOrder && (
-                        approveConfirmId === order.id ? (
-                            <div className="flex gap-1 items-center" onClick={(e) => e.stopPropagation()}>
-                                <span className="text-xs text-red-600 font-medium">Xác nhận?</span>
-                                <button
-                                    disabled={approvingOrderId === order.id}
-                                    onClick={async (e) => {
-                                        e.stopPropagation()
-                                        setApprovingOrderId(order.id)
-                                        try {
-                                            await approveOrder(order.id)
-                                            window.location.reload()
-                                        } catch (err) {
-                                            setAssignError(err instanceof Error ? err.message : 'Duyệt thanh toán thất bại')
-                                        } finally {
-                                            setApprovingOrderId(null)
-                                            setApproveConfirmId(null)
-                                        }
-                                    }}
-                                    className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs disabled:opacity-50"
-                                >
-                                    {approvingOrderId === order.id ? '...' : 'Duyệt'}
-                                </button>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        setApproveConfirmId(null)
-                                    }}
-                                    className="px-2 py-1 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-xs"
-                                >
-                                    Hủy
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setApproveConfirmId(order.id)
-                                }}
-                                className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium"
-                            >
-                                Duyệt thanh toán
-                            </button>
-                        )
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setApprovingOrder(order)
+                            }}
+                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium"
+                        >
+                            Duyệt thanh toán
+                        </button>
                     )}
                     <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                 </>
@@ -180,13 +146,14 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
                 )}
                 <div><strong>Contract:</strong> {order.contract_url ? 'Yes' : 'No'}</div>
             </div>
-            {order.contract_url && (
+            {(order.status === 'completed' || order.contract_url) && (
                 <div className="border-t pt-4">
                     <h4 className="text-sm font-semibold mb-2">Hợp Đồng & In Ấn</h4>
                     <ContractActions
                         orderId={order.id}
                         contractUrl={order.contract_url}
                         orderCode={order.order_code || order.id.substring(0, 8)}
+                        onSuccess={() => window.location.reload()}
                     />
                 </div>
             )}
@@ -380,6 +347,19 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
                         setAssignError(null)
                     }}
                     onAssign={handleAssignToLot}
+                />
+            )}
+
+            {/* Approve Payment Modal */}
+            {approvingOrder && approveOrder && (
+                <ApprovePaymentModal
+                    order={approvingOrder}
+                    onClose={() => setApprovingOrder(null)}
+                    onApprove={async (orderId, proofUrl) => {
+                        await approveOrder(orderId, proofUrl)
+                        setApprovingOrder(null)
+                        window.location.reload()
+                    }}
                 />
             )}
         </div>

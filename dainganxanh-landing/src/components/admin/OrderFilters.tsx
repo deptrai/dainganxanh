@@ -11,8 +11,8 @@ interface OrderFiltersProps {
 
 const statusOptions = [
     { value: 'all', label: 'Tất cả' },
-    { value: 'pending', label: 'Chờ xác minh' },
-    { value: 'manual_payment_claimed', label: 'Chờ admin duyệt' },
+    { value: 'pending', label: 'Chờ thanh toán' },
+    { value: 'manual_payment_claimed', label: 'Khách báo đã chuyển' },
     { value: 'paid', label: 'Đã thanh toán' },
     { value: 'verified', label: 'Đã xác minh' },
     { value: 'assigned', label: 'Đã gán cây' },
@@ -43,7 +43,7 @@ export default function OrderFilters({ filters, setFilters }: OrderFiltersProps)
                         Trạng thái
                     </label>
                     <select
-                        value={filters.status || 'pending'}
+                        value={filters.status || 'all'}
                         onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
@@ -101,7 +101,7 @@ export default function OrderFilters({ filters, setFilters }: OrderFiltersProps)
                 <button
                     onClick={() => {
                         setSearchInput('')
-                        setFilters({ status: 'pending' })
+                        setFilters({ status: 'all' })
                     }}
                     className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
                 >

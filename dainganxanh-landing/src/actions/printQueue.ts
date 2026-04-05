@@ -223,6 +223,67 @@ export async function resendContract(orderId: string): Promise<PrintQueueResult>
 }
 
 /**
+ * Manually trigger contract generation for an order that is missing one
+ */
+export async function generateContract(orderId: string): Promise<PrintQueueResult> {
+    try {
+        if (!orderId || !isValidUUID(orderId)) {
+            return { success: false, error: 'ID đơn hàng không hợp lệ' }
+        }
+
+        const authResult = await requireAdminAuth()
+        if (!authResult.isAdmin) {
+            return { success: false, error: authResult.error }
+        }
+
+        const supabase = createServiceRoleClient()
+
+        const { data: order, error: orderError } = await supabase
+            .from('orders')
+            .select('id, status')
+            .eq('id', orderId)
+            .single()
+
+        if (orderError || !order) {
+            return { success: false, error: 'Không tìm thấy đơn hàng' }
+        }
+
+        if (order.status !== 'completed') {
+            return { success: false, error: 'Chỉ tạo hợp đồng cho đơn đã hoàn thành' }
+        }
+
+        const functionUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-contract`
+        const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({ orderId }),
+        })
+
+        if (!response.ok) {
+            const errText = await response.text().catch(() => '')
+            console.error('generate-contract failed:', response.status, errText)
+            return { success: false, error: `Tạo hợp đồng thất bại (${response.status})` }
+        }
+
+        const data = await response.json()
+        if (!data.success) {
+            return { success: false, error: data.error || 'Tạo hợp đồng thất bại' }
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('generateContract error:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Lỗi không xác định',
+        }
+    }
+}
+
+/**
  * Update print queue status
  */
 export async function updatePrintStatus(
