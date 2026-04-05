@@ -24,9 +24,9 @@ const SOFFICE_BIN =
     ? '/Applications/LibreOffice.app/Contents/MacOS/soffice'
     : 'soffice')
 
-// Combined stamp+signature overlay (Bên A — left side, above Tổng Giám Đốc)
-const STAMP_SIG_X = Number(process.env.CONTRACT_STAMP_SIG_X) || 110
-const STAMP_SIG_Y = Number(process.env.CONTRACT_STAMP_SIG_Y) || 280
+// Combined stamp+signature overlay (Bên B — right column, above Tổng Giám Đốc)
+const STAMP_SIG_X = Number(process.env.CONTRACT_STAMP_SIG_X) || 330
+const STAMP_SIG_Y = Number(process.env.CONTRACT_STAMP_SIG_Y) || 145
 const STAMP_SIG_W = Number(process.env.CONTRACT_STAMP_SIG_W) || 120
 const STAMP_SIG_H = Number(process.env.CONTRACT_STAMP_SIG_H) || 130
 
