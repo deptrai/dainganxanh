@@ -114,9 +114,9 @@ test.describe('Admin Order Management E2E', () => {
     })
 
     /**
-     * Test: Verify order action
+     * Test: Approve payment for a paid order
      */
-    test('verify order from orders table', async ({ page }) => {
+    test('approve payment from orders table', async ({ page }) => {
         await page.goto('/crm/admin/orders')
         await page.waitForLoadState('networkidle')
 
@@ -125,34 +125,33 @@ test.describe('Admin Order Management E2E', () => {
         // Wait for orders to load
         await page.waitForTimeout(2000)
 
-        // Find first "Verify" button (for paid orders)
-        const verifyButton = page.getByRole('button', { name: /verify|xác nhận|xác minh/i }).first()
-        const hasVerifyButton = await verifyButton.count() > 0
+        // Find first "Approve" / "Duyệt" button (for paid orders)
+        const approveButton = page.getByRole('button', { name: /approve|duyệt thanh toán/i }).first()
+        const hasApproveButton = await approveButton.count() > 0
 
-        if (hasVerifyButton) {
-            // Try to get order code, but with timeout
+        if (hasApproveButton) {
             try {
-                const orderCodeElement = verifyButton.locator('..').locator('text=/DH[A-Z0-9]{6}/i').first()
+                const orderCodeElement = approveButton.locator('..').locator('text=/DH[A-Z0-9]{6}/i').first()
                 const orderCode = await orderCodeElement.textContent({ timeout: 5000 })
-                console.log(`📝 Attempting to verify order: ${orderCode}`)
+                console.log(`Attempting to approve order: ${orderCode}`)
 
-                await verifyButton.click()
+                await approveButton.click()
 
                 // Wait for success message or status change
                 await page.waitForTimeout(2000)
 
                 // Check for success indicator
-                const successMessage = page.locator('text=/thành công|success|verified/i')
+                const successMessage = page.locator('text=/thành công|success|approved/i')
                 if (await successMessage.isVisible()) {
-                    console.log(`✅ Order verified successfully`)
+                    console.log(`Order approved successfully`)
                 } else {
-                    console.log('ℹ️ Verify action executed (no visible confirmation)')
+                    console.log('Approve action executed (no visible confirmation)')
                 }
             } catch {
-                console.log('ℹ️ Could not find order code or verify button not actionable')
+                console.log('Could not find order code or approve button not actionable')
             }
         } else {
-            console.log('ℹ️ No orders available to verify')
+            console.log('No orders available to approve')
         }
     })
 

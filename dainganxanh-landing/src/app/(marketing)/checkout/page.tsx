@@ -18,7 +18,7 @@ interface PendingOrder {
     created_at: string;
 }
 
-type CheckoutStep = "loading" | "payment";
+type CheckoutStep = "loading" | "confirm" | "payment";
 
 // validateReferralCode moved to server action (src/actions/validateReferralCode.ts)
 // to bypass RLS on users table — browser client can only read own row
@@ -96,6 +96,7 @@ function CheckoutContent() {
     const [pendingOrder, setPendingOrder] = useState<PendingOrder | null>(null);
     const [cancelling, setCancelling] = useState(false);
     const [cancelError, setCancelError] = useState("");
+    const [placing, setPlacing] = useState(false);
 
     const generateOrderCode = () =>
         `DH${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -153,63 +154,43 @@ function CheckoutContent() {
             } catch {
                 // fallback to new order
             }
-            // Create a new pending order automatically
-            const newCode = generateOrderCode();
-            const supabase = createBrowserClient();
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const DEFAULT_REF_CODE = "dainganxanh";
-                const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
-                let referredBy: string | null = null;
-
-                console.log('[CHECKOUT] Validating referral code:', { refCookie });
-                referredBy = await validateReferralCode(refCookie);
-
-                if (!referredBy && refCookie.toLowerCase() !== DEFAULT_REF_CODE.toLowerCase()) {
-                    console.warn('[CHECKOUT] Fallback to default referral code:', {
-                        originalCode: refCookie,
-                        defaultCode: DEFAULT_REF_CODE,
-                        timestamp: new Date().toISOString(),
-                    });
-                    referredBy = await validateReferralCode(DEFAULT_REF_CODE);
-                }
-
-                if (!referredBy) {
-                    console.error('[CHECKOUT] CRITICAL: Both referral codes failed validation:', {
-                        inputCode: refCookie,
-                        defaultCode: DEFAULT_REF_CODE,
-                        timestamp: new Date().toISOString(),
-                        userId: user?.id || 'anonymous',
-                    });
-                }
-
-                console.log('[CHECKOUT] Final referrer assignment:', {
-                    referredBy,
-                    refCookie,
-                    timestamp: new Date().toISOString(),
-                });
-
-                await fetch("/api/orders/pending", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        code: newCode,
-                        user_email: user.email,
-                        user_name: user.user_metadata?.full_name ?? user.email?.split("@")[0],
-                        quantity: Math.round(total / unitPrice),
-                        total_amount: total,
-                        payment_method: "banking",
-                        referred_by: referredBy,
-                    }),
-                });
-            }
-            setOrderCode(newCode);
+            // No pending order — show confirm step, let user explicitly place order
+            setOrderCode(generateOrderCode());
             setOrderAmount(total);
-            setCheckoutStep("payment");
+            setCheckoutStep("confirm");
         };
         checkPending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const handlePlaceOrder = async () => {
+        setPlacing(true);
+        const supabase = createBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const DEFAULT_REF_CODE = "dainganxanh";
+            const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
+            let referredBy: string | null = await validateReferralCode(refCookie);
+            if (!referredBy && refCookie.toLowerCase() !== DEFAULT_REF_CODE.toLowerCase()) {
+                referredBy = await validateReferralCode(DEFAULT_REF_CODE);
+            }
+            await fetch("/api/orders/pending", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    code: orderCode,
+                    user_email: user.email,
+                    user_name: user.user_metadata?.full_name ?? user.email?.split("@")[0],
+                    quantity: Math.round(orderAmount / unitPrice),
+                    total_amount: orderAmount,
+                    payment_method: "banking",
+                    referred_by: referredBy,
+                }),
+            });
+        }
+        setPlacing(false);
+        setCheckoutStep("payment");
+    };
 
     const handleCancel = async () => {
         if (!orderCode) return;
@@ -268,6 +249,46 @@ function CheckoutContent() {
                 {checkoutStep === "loading" && (
                     <div className="flex items-center justify-center py-20">
                         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+                    </div>
+                )}
+
+                {checkoutStep === "confirm" && (
+                    <div className="max-w-md mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white rounded-2xl p-6 shadow-xl border border-emerald-100 space-y-4"
+                        >
+                            <h2 className="text-xl font-bold text-gray-900">Xác nhận đơn hàng</h2>
+                            <div className="space-y-3 text-sm text-gray-700">
+                                <div className="flex justify-between">
+                                    <span>Số lượng cây:</span>
+                                    <span className="font-semibold">{quantity} cây</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Đơn giá:</span>
+                                    <span className="font-semibold">{unitPrice.toLocaleString("vi-VN")} ₫</span>
+                                </div>
+                                <div className="flex justify-between border-t pt-3 text-base">
+                                    <span className="font-semibold">Tổng cộng:</span>
+                                    <span className="font-bold text-emerald-600">{orderAmount.toLocaleString("vi-VN")} ₫</span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handlePlaceOrder}
+                                disabled={placing}
+                                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+                            >
+                                {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                {placing ? "Đang tạo đơn..." : "🌳 Đặt đơn ngay"}
+                            </button>
+                            <Link
+                                href={`/quantity?quantity=${quantity}`}
+                                className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                Quay lại chọn số lượng
+                            </Link>
+                        </motion.div>
                     </div>
                 )}
 

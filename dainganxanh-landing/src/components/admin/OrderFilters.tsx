@@ -14,7 +14,6 @@ const statusOptions = [
     { value: 'pending', label: 'Chờ thanh toán' },
     { value: 'manual_payment_claimed', label: 'Khách báo đã chuyển' },
     { value: 'paid', label: 'Đã thanh toán' },
-    { value: 'verified', label: 'Đã xác minh' },
     { value: 'assigned', label: 'Đã gán cây' },
     { value: 'completed', label: 'Hoàn thành' },
     { value: 'cancelled', label: 'Đã hủy' },

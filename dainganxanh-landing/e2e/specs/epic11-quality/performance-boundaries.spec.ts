@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import * as path from 'path'
 
 /**
  * Performance & Boundary Testing E2E Test Suite
@@ -6,175 +7,21 @@ import { test, expect } from '@playwright/test'
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Admin user: phanquochoipt@gmail.com (must have admin role)
+ * - Supabase local running
+ * - storagestate/admin.json must be populated (run auth.setup.ts first)
  */
 
+test.use({
+    storageState: path.resolve(__dirname, '../../storagestate/admin.json')
+})
+
 test.describe('Performance & Boundary Testing E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
-
-    /**
-     * Helper: Complete admin login flow and navigate to target page
-     */
-    async function loginAsAdmin(page: any, targetPath: string = '/crm/admin/orders') {
-        await page.goto(targetPath)
-        await page.waitForLoadState('networkidle')
-
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        try {
-            await Promise.race([
-                page.waitForURL((url) => !url.href.includes('/login') && !url.href.includes('redirect'), { timeout: 10000 }),
-                page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 10000 })
-            ])
-        } catch {
-            console.log('⚠️ Waiting for OTP verification...')
-        }
-
-        await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            try {
-                await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
-            } catch {
-                console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
-                const afterSkipUrl = page.url()
-                console.log(`Current URL after skip: ${afterSkipUrl}`)
-                if (!afterSkipUrl.includes(targetPath)) {
-                    console.log(`Manually navigating to ${targetPath}`)
-                    await page.goto(targetPath)
-                    await page.waitForLoadState('networkidle')
-                }
-            }
-            await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
-            const finalUrl = page.url()
-            console.log(`Final URL: ${finalUrl}`)
-        } else {
-            console.log(`No skip button, waiting for auto-redirect...`)
-            await page.waitForTimeout(3000)
-            const currentUrl = page.url()
-            console.log(`Current URL after OTP: ${currentUrl}`)
-            if (!currentUrl.includes(targetPath)) {
-                console.log(`Navigating to target: ${targetPath}`)
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
-            }
-            const finalUrl = page.url()
-            console.log(`Final URL: ${finalUrl}`)
-        }
-
-        console.log('✅ Admin login successful')
-    }
-
-    /**
-     * Helper: Complete user login flow
-     */
-    async function loginAsUser(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
 
     /**
      * Helper: Generate mock orders for pagination testing
      */
     function generateMockOrders(count: number) {
-        const statuses = ['pending', 'paid', 'verified', 'assigned', 'completed']
+        const statuses = ['pending', 'paid', 'assigned', 'completed']
         const orders = []
 
         for (let i = 0; i < count; i++) {
@@ -229,7 +76,8 @@ test.describe('Performance & Boundary Testing E2E', () => {
             })
         })
 
-        await loginAsAdmin(page, '/crm/admin/orders')
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         // Verify page loaded
         await expect(page.getByText(/order management|quản lý đơn hàng/i).first()).toBeVisible({ timeout: 10000 })
@@ -312,8 +160,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
             })
         })
 
-        await loginAsUser(page)
-
         // Measure page load time
         const startTime = await page.evaluate(() => performance.now())
 
@@ -360,8 +206,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * SKIP: Photo gallery UI not yet implemented or requires specific order state
      */
     test.skip('large dataset: photo gallery with 500+ images lazy loading', async ({ page }) => {
-        await loginAsUser(page)
-
         // Navigate to my garden first
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -496,7 +340,8 @@ test.describe('Performance & Boundary Testing E2E', () => {
             })
         })
 
-        await loginAsAdmin(page, '/crm/admin/transactions')
+        await page.goto('/crm/admin/transactions')
+        await page.waitForLoadState('networkidle')
 
         // Wait for page to load
         await page.waitForTimeout(3000)
@@ -560,7 +405,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
         const loginPromises = contexts.map(async (context, index) => {
             const page = await context.newPage()
-            const testEmail = index === 0 ? ADMIN_EMAIL : `testuser${index}@example.com`
+            const testEmail = index === 0 ? 'phanquochoipt@gmail.com' : `testuser${index}@example.com`
 
             try {
                 await page.goto('/login')
@@ -767,8 +612,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies format displays correctly and validation passes
      */
     test('boundary value: maximum withdrawal amount 999,999,999 VNĐ', async ({ page }) => {
-        await loginAsUser(page)
-
         // Navigate to withdrawal page (if exists)
         await page.goto('/crm/withdrawal')
         await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
@@ -837,8 +680,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies checkout allows and price is calculated correctly
      */
     test('boundary value: minimum tree quantity 1', async ({ page }) => {
-        await loginAsUser(page)
-
         // Navigate to checkout with quantity = 1
         await page.goto('/checkout?quantity=1')
         await page.waitForLoadState('networkidle')
@@ -872,8 +713,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies validation accepts and cart is updated correctly
      */
     test('boundary value: maximum tree quantity 100 per order', async ({ page }) => {
-        await loginAsUser(page)
-
         // Navigate to checkout with quantity = 100
         await page.goto('/checkout?quantity=100')
         await page.waitForLoadState('networkidle')

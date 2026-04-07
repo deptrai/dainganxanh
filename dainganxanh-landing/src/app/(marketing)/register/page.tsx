@@ -18,6 +18,7 @@ function RegisterContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
+    const hasQuantityParam = !!searchParams.get("quantity");
     const [refInput, setRefInput] = useState("");
     const [refError, setRefError] = useState("");
     const [accountExists, setAccountExists] = useState(false);
@@ -49,7 +50,7 @@ function RegisterContent() {
             const supabase = createBrowserClient();
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                router.replace(`/checkout?quantity=${quantity}`);
+                router.replace(hasQuantityParam ? `/checkout?quantity=${quantity}` : '/crm/my-garden');
             }
         };
         checkSession();

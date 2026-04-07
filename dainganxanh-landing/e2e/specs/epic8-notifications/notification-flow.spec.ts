@@ -20,7 +20,7 @@ test.describe('Notification Flow E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Verify notification bell is visible
-        const notificationBell = page.getByLabel('Notifications')
+        const notificationBell = page.getByLabel('Thông báo').or(page.getByLabel('Notifications'))
         await expect(notificationBell).toBeVisible({ timeout: 10000 })
 
         // Check for unread count badge (if any)
@@ -42,7 +42,7 @@ test.describe('Notification Flow E2E', () => {
 
         if (!hasNoNotifications) {
             // Click on first notification
-            const firstNotification = page.locator('button[class*="hover:bg-gray-50"]').first()
+            const firstNotification = page.locator('button.hover\\:bg-gray-50, button[class*="hover:bg-gray-50"]').first()
             if (await firstNotification.isVisible()) {
                 await firstNotification.click()
 
@@ -60,7 +60,7 @@ test.describe('Notification Flow E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Verify notification bell is visible
-        const notificationBell = page.getByLabel('Notifications')
+        const notificationBell = page.getByLabel('Thông báo').or(page.getByLabel('Notifications'))
         await expect(notificationBell).toBeVisible({ timeout: 10000 })
 
         // Get badge count (badge shows total unread from DB, not just visible items in dropdown)
@@ -99,7 +99,7 @@ test.describe('Notification Flow E2E', () => {
         })
 
         // Wait for notification bell to be visible (confirms component loaded)
-        const notificationBell = page.getByLabel('Notifications')
+        const notificationBell = page.getByLabel('Thông báo').or(page.getByLabel('Notifications'))
         await expect(notificationBell).toBeVisible({ timeout: 10000 })
 
         // Wait for subscription to establish
@@ -122,7 +122,7 @@ test.describe('Notification Flow E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Open notifications
-        const notificationBell = page.getByLabel('Notifications')
+        const notificationBell = page.getByLabel('Thông báo').or(page.getByLabel('Notifications'))
         await expect(notificationBell).toBeVisible({ timeout: 10000 })
         await notificationBell.click()
 
@@ -152,7 +152,7 @@ test.describe('Notification Flow E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Open notifications
-        const notificationBell = page.getByLabel('Notifications')
+        const notificationBell = page.getByLabel('Thông báo').or(page.getByLabel('Notifications'))
         await expect(notificationBell).toBeVisible({ timeout: 10000 })
         await notificationBell.click()
 

@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test'
 import crypto from 'crypto'
-import { getOTPFromMailpit } from '../../utils/mailpit'
-import { envConfig } from '../../config/env'
+import * as path from 'path'
+
+test.use({
+    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
+})
 
 /**
  * Payment Webhook E2E Test Suite
@@ -9,12 +12,11 @@ import { envConfig } from '../../config/env'
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Admin user: phanquochoipt@gmail.com (must have admin role)
+ * - Supabase local running
+ * - Auth setup via storageState (admin.json)
  */
 
 test.describe.serial('Payment Webhook E2E', () => {
-    const ADMIN_EMAIL = envConfig.ADMIN_EMAIL
     const WEBHOOK_SECRET = process.env.CASSO_WEBHOOK_SECRET || 'test-webhook-secret'
 
     /**
@@ -24,74 +26,6 @@ test.describe.serial('Payment Webhook E2E', () => {
         const hmac = crypto.createHmac('sha256', secret)
         hmac.update(JSON.stringify(payload))
         return hmac.digest('hex')
-    }
-
-    /**
-     * Helper: Complete admin login flow
-     */
-    async function loginAsAdmin(page: any, targetPath: string = '/crm/admin/orders') {
-        await page.goto(targetPath)
-        await page.waitForLoadState('networkidle')
-
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        try {
-            await Promise.race([
-                page.waitForURL((url) => !url.href.includes('/login') && !url.href.includes('redirect'), { timeout: 10000 }),
-                page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 10000 })
-            ])
-        } catch {
-            console.log('⚠️ Waiting for OTP verification...')
-        }
-
-        await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            await page.waitForTimeout(3000)
-            const afterSkipUrl = page.url()
-            if (!afterSkipUrl.includes(targetPath)) {
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-            }
-        } else {
-            await page.waitForTimeout(3000)
-            const currentUrl = page.url()
-            if (!currentUrl.includes(targetPath)) {
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-            }
-        }
-
-        console.log('✅ Admin login successful')
     }
 
     /**
@@ -118,7 +52,8 @@ test.describe.serial('Payment Webhook E2E', () => {
     test('webhook with valid HMAC signature is accepted', async ({ page }) => {
         let webhookAccepted = false
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         // Mock webhook endpoint
         await page.route('**/api/webhooks/casso', async route => {
@@ -182,7 +117,8 @@ test.describe.serial('Payment Webhook E2E', () => {
         let webhookRejected = false
         let securityLogCreated = false
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         // Mock webhook endpoint
         await page.route('**/api/webhooks/casso', async route => {
@@ -244,7 +180,8 @@ test.describe.serial('Payment Webhook E2E', () => {
         let transactionCreated = false
         let orderUpdated = false
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         const orderCode = 'DH789012'
         const orderAmount = 2600000
@@ -316,7 +253,8 @@ test.describe.serial('Payment Webhook E2E', () => {
         let noMatchTransactionCreated = false
         let adminNotified = false
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         const orderCode = 'DH345678'
         const orderAmount = 2600000
@@ -401,7 +339,8 @@ test.describe.serial('Payment Webhook E2E', () => {
         let noMatchTransactionCreated = false
         let errorLogged = false
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         const invalidOrderCode = 'DH999999'
 
@@ -468,7 +407,8 @@ test.describe.serial('Payment Webhook E2E', () => {
         let treesGenerated = false
         let contractGenerated = false
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         const orderCode = 'DH456789'
         const orderAmount = 1300000
@@ -604,7 +544,8 @@ test.describe.serial('Payment Webhook E2E', () => {
         let telegramNotificationSent = false
         let emailPayload: any = null
 
-        await loginAsAdmin(page)
+        await page.goto('/crm/admin/orders')
+        await page.waitForLoadState('networkidle')
 
         const orderCode = 'DH567890'
         const orderAmount = 2600000

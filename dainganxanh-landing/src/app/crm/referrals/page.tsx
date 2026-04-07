@@ -14,8 +14,12 @@ function maskEmail(email: string): string {
     if (atIndex <= 0) return email
     const local = email.slice(0, atIndex)
     const domain = email.slice(atIndex)
-    const visible = local.slice(0, 2)
-    return `${visible}***${domain}`
+    if (local.length <= 4) {
+        return `${local[0]}***${domain}`
+    }
+    const start = local.slice(0, 2)
+    const end = local.slice(-2)
+    return `${start}***${end}${domain}`
 }
 
 export default async function ReferralsPage() {
@@ -51,14 +55,22 @@ export default async function ReferralsPage() {
         }
     }
 
-    let referrerEmail: string | null = null
+    let referrerDisplay: string | null = null
     if (userData?.referred_by_user_id) {
         const { data: referrer } = await serviceClient
             .from('users')
-            .select('email')
+            .select('email, full_name, referral_code')
             .eq('id', userData.referred_by_user_id)
             .single()
-        referrerEmail = referrer?.email ?? null
+        if (referrer) {
+            if (referrer.email) {
+                referrerDisplay = maskEmail(referrer.email)
+            } else if (referrer.full_name) {
+                referrerDisplay = referrer.full_name
+            } else if (referrer.referral_code) {
+                referrerDisplay = referrer.referral_code
+            }
+        }
     }
 
     if (!userData?.referral_code) {
@@ -90,7 +102,7 @@ export default async function ReferralsPage() {
                 </div>
 
                 {/* Referrer info */}
-                {referrerEmail && (
+                {referrerDisplay && (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                             <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -99,7 +111,7 @@ export default async function ReferralsPage() {
                         </div>
                         <div>
                             <p className="text-xs text-emerald-600 font-medium">Người giới thiệu bạn</p>
-                            <p className="text-sm font-semibold text-gray-800">{maskEmail(referrerEmail)}</p>
+                            <p className="text-sm font-semibold text-gray-800">{referrerDisplay}</p>
                         </div>
                     </div>
                 )}

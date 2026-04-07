@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test artifacts
+test-results/
+e2e-results/
+playwright-report/
+coverage/
+test-results.log
+
+# E2E auth state (sensitive - chứa tokens)
+e2e/storagestate/
+
+# Python venv
+templates/venv/
+
+# Claude
+.claude/launch.json

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from 'react'
-import { fetchAdminOrders, verifyAdminOrder, approveAdminOrder } from '@/actions/adminOrders'
+import { fetchAdminOrders, approveAdminOrder } from '@/actions/adminOrders'
 
 export interface Order {
     id: string
@@ -9,7 +9,7 @@ export interface Order {
     quantity: number
     total_amount: number
     payment_method: string
-    status: 'pending' | 'paid' | 'manual_payment_claimed' | 'verified' | 'assigned' | 'completed' | 'cancelled'
+    status: 'pending' | 'paid' | 'manual_payment_claimed' | 'assigned' | 'completed' | 'cancelled'
     verified_at: string | null
     claimed_at?: string | null
     created_at: string
@@ -47,7 +47,6 @@ interface UseAdminOrdersReturn {
     setFilters: (filters: OrderFilters) => void
     pagination: PaginationInfo
     setPage: (page: number) => void
-    verifyOrder: (orderId: string) => Promise<void>
     approveOrder: (orderId: string, proofUrl?: string) => Promise<void>
     refetch: () => Promise<void>
 }
@@ -107,23 +106,6 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         setPagination(prev => ({ ...prev, page: 1 }))
     }, [])
 
-    const verifyOrder = useCallback(async (orderId: string) => {
-        const result = await verifyAdminOrder(orderId)
-
-        if (result.error) {
-            throw new Error(result.error)
-        }
-
-        // Optimistic update
-        setOrders((prev) =>
-            prev.map((order) =>
-                order.id === orderId
-                    ? { ...order, status: 'verified' as const, verified_at: new Date().toISOString() }
-                    : order
-            )
-        )
-    }, [])
-
     const approveOrder = useCallback(async (orderId: string, proofUrl?: string) => {
         const result = await approveAdminOrder(orderId, proofUrl)
 
@@ -158,7 +140,6 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         setFilters: handleSetFilters,
         pagination,
         setPage,
-        verifyOrder,
         approveOrder,
         refetch,
     }

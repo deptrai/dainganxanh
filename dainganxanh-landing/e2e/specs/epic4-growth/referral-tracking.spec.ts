@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test'
+import * as path from 'path'
+
+test.use({ storageState: path.resolve(__dirname, '../../storagestate/admin.json') })
 
 /**
  * Referral Tracking E2E Test Suite
@@ -12,77 +15,6 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Referral Tracking E2E', () => {
     const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
 
     /**
      * Test 1: Landing page with ref parameter sets cookie
@@ -205,7 +137,7 @@ test.describe('Referral Tracking E2E', () => {
         // ============================================
         // Phase 4: Verify registration form loaded with email input
         // ============================================
-        const emailInput = page.locator('input#identifier-input[type="email"]')
+        const emailInput = page.locator('input[type="email"]')
         await expect(emailInput).toBeVisible({ timeout: 10000 })
 
         // ============================================
@@ -230,12 +162,7 @@ test.describe('Referral Tracking E2E', () => {
      */
     test('purchase with referral creates commission', async ({ page }) => {
         // ============================================
-        // Phase 1: Login
-        // ============================================
-        await loginWithOTP(page)
-
-        // ============================================
-        // Phase 2: Set ref cookie to simulate referral
+        // Phase 1: Set ref cookie to simulate referral
         // ============================================
         const cookieExpiry = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60
         await page.context().addCookies([{
@@ -344,7 +271,7 @@ test.describe('Referral Tracking E2E', () => {
         // ============================================
         // Phase 4: Verify referral input and default code button exist
         // ============================================
-        const emailInput = page.locator('input#identifier-input[type="email"]')
+        const emailInput = page.locator('input[type="email"]')
         await expect(emailInput).toBeVisible({ timeout: 10000 })
 
         // Verify referral input exists

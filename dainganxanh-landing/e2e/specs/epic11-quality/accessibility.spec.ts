@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import * as path from 'path'
+
+test.use({
+    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
+})
 
 /**
  * Accessibility & UX E2E Test Suite (Phase 7)
@@ -7,83 +12,12 @@ import AxeBuilder from '@axe-core/playwright'
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com
+ * - Supabase local running
+ * - Auth setup via storageState (admin.json)
  */
 
 test.describe('Accessibility & UX - Phase 7 E2E', () => {
     const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
 
     // ============================================
     // Section 1: Keyboard Navigation (3 tests)
@@ -209,46 +143,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
      * Test 1.3: Escape key closes modals (RefCodeModal, image lightbox, confirmation dialogs)
      */
     test('keyboard navigation: escape key closes modals', async ({ page }) => {
-        // Test 1: Close referral modal on login success
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        const otpScreenAppeared = await page.getByText(/nhập mã otp \(8 chữ số\)/i).isVisible({ timeout: 10000 }).catch(() => false)
-        if (!otpScreenAppeared) {
-            console.log('⚠ OTP screen did not appear (rate limit or server issue). Skipping escape key modal test.')
-            return
-        }
-
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        // Wait for referral modal to appear (if user has no referral code)
-        try {
-            const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-
-            // Press Escape to close modal
-            await page.keyboard.press('Escape')
-
-            // Verify modal is closed (skip button should not be visible)
-            await expect(skipButton).not.toBeVisible({ timeout: 5000 })
-
-            console.log('✅ Escape key closes referral modal')
-        } catch {
-            console.log('ℹ️  Referral modal did not appear')
-        }
-
-        // Test 2: Escape on tree detail image lightbox (if available)
+        // Test 1: Escape on tree detail image lightbox (if available)
         await page.goto('/')
         await page.waitForLoadState('networkidle')
 

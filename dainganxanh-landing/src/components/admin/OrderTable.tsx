@@ -2,7 +2,6 @@
 
 import { useState, Fragment } from 'react'
 import { Order } from '@/hooks/useAdminOrders'
-import VerifyOrderButton from './VerifyOrderButton'
 import LotAssignmentModal from './LotAssignmentModal'
 import ApprovePaymentModal from './ApprovePaymentModal'
 import { assignOrderToLot } from '@/actions/assignOrderToLot'
@@ -11,7 +10,6 @@ import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface OrderTableProps {
     orders: Order[]
-    verifyOrder: (orderId: string) => Promise<void>
     approveOrder?: (orderId: string, proofUrl?: string) => Promise<void>
 }
 
@@ -22,7 +20,6 @@ const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
     paid: 'bg-blue-100 text-blue-800',
     manual_payment_claimed: 'bg-orange-100 text-orange-800',
-    verified: 'bg-green-100 text-green-800',
     assigned: 'bg-purple-100 text-purple-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
@@ -32,13 +29,12 @@ const statusLabels = {
     pending: 'Chờ thanh toán',
     paid: 'Đã thanh toán',
     manual_payment_claimed: 'Khách báo đã chuyển',
-    verified: 'Đã xác minh',
     assigned: 'Đã gán cây',
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
 }
 
-export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderTableProps) {
+export default function OrderTable({ orders, approveOrder }: OrderTableProps) {
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
@@ -115,9 +111,8 @@ export default function OrderTable({ orders, verifyOrder, approveOrder }: OrderT
                             Duyệt thanh toán
                         </button>
                     )}
-                    <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                 </>
-            ) : order.status === 'verified' || order.status === 'completed' ? (
+            ) : order.status === 'completed' ? (
                 <button
                     onClick={(e) => {
                         e.stopPropagation()

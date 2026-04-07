@@ -12,7 +12,7 @@ const ROLE_OPTIONS = [
 ]
 
 export default function UsersPage() {
-    const { users, loading, error, filters, setFilters, pagination, setPage, changeRole, updatingId, assignReferral, refetch } = useAdminUsers()
+    const { users, loading, error, filters, setFilters, pagination, setPage, changeRole, updatingId, assignReferral, refetch, currentUserRole } = useAdminUsers()
     const [searchInput, setSearchInput] = useState('')
 
     const handleSearch = (e: React.FormEvent) => {
@@ -101,7 +101,7 @@ export default function UsersPage() {
                 </div>
             ) : (
                 <>
-                    <UserTable users={users} changeRole={changeRole} updatingId={updatingId} assignReferral={assignReferral} />
+                    <UserTable users={users} changeRole={changeRole} updatingId={updatingId} assignReferral={assignReferral} currentUserRole={currentUserRole} />
 
                     {/* Pagination */}
                     <div className="flex items-center justify-between bg-white rounded-lg shadow px-6 py-4">

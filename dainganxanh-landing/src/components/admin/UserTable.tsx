@@ -9,6 +9,7 @@ interface UserTableProps {
     changeRole: (userId: string, newRole: 'user' | 'admin' | 'super_admin') => Promise<{ error?: string }>
     updatingId: string | null
     assignReferral: (userId: string, refCode: string) => Promise<{ error?: string; retroOrders?: number; retroCommission?: number }>
+    currentUserRole?: string | null
 }
 
 const ROLE_STYLES: Record<string, string> = {
@@ -29,7 +30,7 @@ function formatDate(iso: string) {
     })
 }
 
-export default function UserTable({ users, changeRole, updatingId, assignReferral }: UserTableProps) {
+export default function UserTable({ users, changeRole, updatingId, assignReferral, currentUserRole }: UserTableProps) {
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [successMsg, setSuccessMsg] = useState<string | null>(null)
     const [impersonatingId, setImpersonatingId] = useState<string | null>(null)
@@ -105,7 +106,65 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
                 </div>
             )}
 
-            <div className="overflow-x-auto">
+            {/* Mobile card layout */}
+            <div className="block lg:hidden divide-y divide-gray-100">
+                {users.map((user) => {
+                    const isUpdating = updatingId === user.id
+                    return (
+                        <div key={user.id} className="p-4 space-y-3">
+                            {/* Top row: email + role badge */}
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">{user.email || '—'}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{user.full_name || 'Chưa cập nhật'}</p>
+                                </div>
+                                <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_STYLES[user.role] || ROLE_STYLES.user}`}>
+                                    {ROLE_LABELS[user.role] || user.role}
+                                </span>
+                            </div>
+                            {/* Meta row */}
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                <span>📞 {user.phone || '—'}</span>
+                                <span>🔗 <code className="bg-gray-100 px-1 rounded">{user.referral_code}</code></span>
+                                <span>📦 {user.orders_count || 0} đơn</span>
+                                <span>📅 {formatDate(user.created_at)}</span>
+                            </div>
+                            {/* Actions row */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <select
+                                    value={user.role}
+                                    disabled={isUpdating || (currentUserRole === 'admin' && user.role === 'super_admin')}
+                                    onChange={(e) => handleRoleChange(user, e.target.value as 'user' | 'admin' | 'super_admin')}
+                                    className="text-xs border border-gray-200 rounded px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50"
+                                >
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                    {currentUserRole === 'super_admin' && (
+                                        <option value="super_admin">Super Admin</option>
+                                    )}
+                                </select>
+                                {isUpdating && <svg className="animate-spin w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>}
+                                <button
+                                    onClick={() => { setRefModal({ userId: user.id, userName: user.full_name || user.email || user.id }); setRefInput('') }}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                >
+                                    🤝 Gán mã
+                                </button>
+                                <button
+                                    onClick={() => handleImpersonate(user)}
+                                    disabled={impersonatingId === user.id}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                >
+                                    {impersonatingId === user.id ? <><svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Đang vào...</> : <>👁️ Vào tài khoản</>}
+                                </button>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Desktop table layout */}
+            <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
@@ -152,13 +211,15 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
                                             </span>
                                             <select
                                                 value={user.role}
-                                                disabled={isUpdating}
+                                                disabled={isUpdating || (currentUserRole === 'admin' && user.role === 'super_admin')}
                                                 onChange={(e) => handleRoleChange(user, e.target.value as 'user' | 'admin' | 'super_admin')}
-                                                className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50"
+                                                className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <option value="user">User</option>
                                                 <option value="admin">Admin</option>
-                                                <option value="super_admin">Super Admin</option>
+                                                {currentUserRole === 'super_admin' && (
+                                                    <option value="super_admin">Super Admin</option>
+                                                )}
                                             </select>
                                             {isUpdating && (
                                                 <svg className="animate-spin w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24">

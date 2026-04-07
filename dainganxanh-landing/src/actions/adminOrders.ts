@@ -163,40 +163,6 @@ export async function fetchAdminOrders(
     }
 }
 
-export async function verifyAdminOrder(orderId: string): Promise<{ error?: string }> {
-    const supabase = await createServerClient()
-    const serviceSupabase = createServiceRoleClient()
-
-    // Get current order status before updating
-    const { data: order } = await serviceSupabase
-        .from('orders')
-        .select('id, status')
-        .eq('id', orderId)
-        .single()
-
-    const wasManualPaymentClaimed = order?.status === 'manual_payment_claimed'
-
-    const { error } = await serviceSupabase
-        .from('orders')
-        .update({
-            status: 'verified',
-            verified_at: new Date().toISOString(),
-        })
-        .eq('id', orderId)
-
-    if (error) {
-        console.error('verifyAdminOrder error:', error)
-        return { error: error.message }
-    }
-
-    // Trigger contract generation for manual payment claimed orders (with retry)
-    if (wasManualPaymentClaimed) {
-        triggerContractGeneration(orderId).catch(() => {})
-    }
-
-    return {}
-}
-
 /**
  * Admin approve payment — marks a pending order as completed and triggers
  * the same post-payment flow as Casso webhook (referral commission, telegram, etc.)
@@ -232,8 +198,8 @@ export async function approveAdminOrder(orderId: string, proofUrl?: string): Pro
         return { error: 'Đơn hàng không tồn tại' }
     }
 
-    if (!['pending', 'paid', 'manual_payment_claimed', 'verified'].includes(order.status)) {
-        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending", "paid", "manual_payment_claimed" hoặc "verified"` }
+    if (!['pending', 'paid', 'manual_payment_claimed'].includes(order.status)) {
+        return { error: `Đơn hàng đang ở trạng thái "${order.status}", chỉ có thể duyệt đơn "pending", "paid" hoặc "manual_payment_claimed"` }
     }
 
     // Safety net: if referred_by is null, look up from users.referred_by_user_id

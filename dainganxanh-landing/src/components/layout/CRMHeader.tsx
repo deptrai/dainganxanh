@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, TreePine, Share2, Package, UserCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Home, TreePine, Share2, Package, UserCircle, ShieldCheck } from 'lucide-react'
 import { UserHeader } from './UserHeader'
+import { createBrowserClient } from '@/lib/supabase/client'
 
-const navItems = [
+const baseNavItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
     { name: 'Mua cây', href: '/pricing', icon: Package },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
@@ -15,8 +17,21 @@ const navItems = [
 
 export function CRMHeader() {
     const pathname = usePathname()
+    const [isAdmin, setIsAdmin] = useState(false)
 
-    // Helper to determine active state (copied from MarketingHeader logic)
+    useEffect(() => {
+        const supabase = createBrowserClient()
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+            if (!user) return
+            const { data } = await supabase.from('users').select('role').eq('id', user.id).single()
+            if (data && ['admin', 'super_admin'].includes(data.role)) setIsAdmin(true)
+        })
+    }, [])
+
+    const navItems = isAdmin
+        ? [...baseNavItems, { name: 'Admin', href: '/crm/admin', icon: ShieldCheck }]
+        : baseNavItems
+
     const isActive = (path: string) => {
         if (path === '/' && pathname === '/') return true;
         if (path !== '/' && pathname.startsWith(path)) return true;

@@ -12,6 +12,7 @@ export function useAdminUsers() {
     const [filters, setFilters] = useState<UserFilters>({})
     const [pagination, setPagination] = useState({ page: 1, totalCount: 0, totalPages: 1 })
     const [updatingId, setUpdatingId] = useState<string | null>(null)
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
 
     const loadUsers = useCallback(async (f: UserFilters, page: number) => {
         setLoading(true)
@@ -26,6 +27,7 @@ export function useAdminUsers() {
                 totalCount: result.totalCount,
                 totalPages: Math.max(1, Math.ceil(result.totalCount / PAGE_SIZE)),
             })
+            if (result.currentUserRole) setCurrentUserRole(result.currentUserRole)
         }
         setLoading(false)
     }, [])
@@ -63,5 +65,5 @@ export function useAdminUsers() {
 
     const refetch = () => loadUsers(filters, pagination.page)
 
-    return { users, loading, error, filters, setFilters, pagination, setPage, changeRole, updatingId, assignReferral, refetch }
+    return { users, loading, error, filters, setFilters, pagination, setPage, changeRole, updatingId, assignReferral, refetch, currentUserRole }
 }

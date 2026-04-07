@@ -96,7 +96,8 @@ function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
-    const redirectTo = searchParams.get("redirect") || `/checkout?quantity=${quantity}`;
+    const explicitRedirect = searchParams.get("redirect");
+    const redirectTo = explicitRedirect || (searchParams.get("quantity") ? `/checkout?quantity=${quantity}` : "/crm/my-garden");
     const [showRefModal, setShowRefModal] = useState(false);
 
     const {

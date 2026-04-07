@@ -22,6 +22,7 @@ export interface UserFilters {
 export interface FetchUsersResult {
     users: AdminUser[]
     totalCount: number
+    currentUserRole?: string
     error?: string
 }
 
@@ -46,6 +47,8 @@ export async function fetchAdminUsers(
     if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
         return { users: [], totalCount: 0, error: 'Unauthorized: admin role required' }
     }
+
+    const currentUserRole = profile.role
 
     try {
         let query = serviceSupabase
@@ -88,7 +91,7 @@ export async function fetchAdminUsers(
             orders_count: orderCountMap[u.id] || 0,
         }))
 
-        return { users, totalCount: count || 0 }
+        return { users, totalCount: count || 0, currentUserRole }
     } catch (err) {
         console.error('fetchAdminUsers error:', err)
         return {

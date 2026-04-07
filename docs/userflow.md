@@ -1,6 +1,6 @@
 Bộ **User Flow Diagrams** dạng Mermaid cho dự án Đại Ngàn Xanh.
 
-> Cập nhật lần cuối: 2026-04-04 — thêm harvest flow (check-harvest-ready, process-sellback), verifyAdminOrder, harvest_ready notification, generate-certificate EF.
+> Cập nhật lần cuối: 2026-04-07 — xóa bước verifyAdminOrder (chỉ còn 1 bước duyệt thẳng), checkout yêu cầu user bấm "Đặt đơn ngay", cập nhật default ref code.
 
 ## 1️⃣ FIRST-TIME BUYER JOURNEY
 
@@ -33,7 +33,8 @@ flowchart TD
     LoadCheck -->|Co| PayStep
     LoadCheck -->|Khong| CompletedCheck{Da co completed order?}
     CompletedCheck -->|Co| RedirectSuccess[Redirect<br>Route /checkout/success]
-    CompletedCheck -->|Khong| CreateOrder[Tao pending order tu dong<br>POST /api/orders/pending<br>Format: DH + 6 ky tu<br>Luu referred_by tu ref cookie<br>Telegram: notifyNewOrder]
+    CompletedCheck -->|Khong| ConfirmStep[Man hinh Xac nhan don hang<br>Hien thi: so luong + gia + tong tien<br>Nut: Dat don ngay]
+    ConfirmStep -->|Bam Dat don ngay| CreateOrder[Tao pending order<br>POST /api/orders/pending<br>Format: DH + 6 ky tu<br>Luu referred_by tu ref cookie<br>Telegram: notifyNewOrder]
     CreateOrder --> PayStep
 
     PayStep[Chuyen khoan<br>Hien thi STK + QR Code<br>Noi dung: ma don DHxxxxxx<br>So tien: quantity x 260000] --> WaitOrCancel{Hanh dong?}
@@ -52,9 +53,9 @@ flowchart TD
     IdentityForm --> WaitAdmin
     AutoFill --> WaitAdmin
 
-    WaitAdmin[Man hinh cho admin xac nhan<br>Route /checkout/waiting<br>Hien thi trang thai don hang<br>Poll status moi 5 giay<br>User co the mua them don khac]
+    WaitAdmin[Man hinh cho admin xac nhan<br>Hien thi trang thai don hang<br>Poll status moi 5 giay<br>User co the mua them don khac]
 
-    WaitAdmin -->|Admin approve| RedirectSuccess
+    WaitAdmin -->|Admin duyet| RedirectSuccess
     WaitAdmin -->|Mua them| Quantity
 
     RedirectSuccess --> SuccessPage[Trang thanh cong<br>Route /checkout/success<br>Animation + Ma don + CO2<br>Share Card Preview]
@@ -137,10 +138,8 @@ flowchart TD
     TelegramNotify --> WaitingScreen[Man hinh cho admin xac nhan<br>Poll status moi 5 giay]
 
     WaitingScreen --> AdminApprove[Admin vao /crm/admin/orders<br>Bam Approve<br>Chap nhan status paid hoac manual_payment_claimed]
-    AdminApprove --> VerifyOrApprove{Hanh dong}
-    VerifyOrApprove -->|Xac minh| VerifyOrder2[verifyAdminOrder<br>status: manual_payment_claimed<br>to verified<br>Neu manual_payment: trigger contract gen]
-    VerifyOrder2 --> CompleteOrder
-    VerifyOrApprove -->|Duyet thang| CompleteOrder[approveAdminOrder<br>status: paid/manual_payment_claimed/verified<br>to completed<br>Tao referral commission<br>Trigger contract generation<br>Telegram: notifyAdminApproval]
+    AdminApprove --> VerifyOrApprove{Bam Duyet thanh toan}
+    VerifyOrApprove -->|Duyet| CompleteOrder[approveAdminOrder<br>status: pending/paid/manual_payment_claimed<br>to completed<br>Tao referral commission<br>Trigger contract generation<br>Telegram: notifyAdminApproval]
     CompleteOrder --> RedirectSuccess[Redirect /checkout/success]
 ```
 
@@ -182,9 +181,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Login([Da dang nhap]) --> Garden[Vuon cua toi<br>Route /crm/my-garden<br>Orders: paid/verified/assigned/completed]
+    Login([Da dang nhap]) --> Garden[Vuon cua toi<br>Route /crm/my-garden<br>Orders: paid/assigned/completed]
 
-    Garden --> Summary[Tong quan:<br>Tong cay - Tong CO2 - Tong chi phi]
+    Garden --> Summary[Tong quan:<br>Tong cay - Tong CO2 - Tong chi phi
+    %% Orders shown: pending, paid, assigned, completed]
     Garden --> PackageGrid[Luoi goi cay<br>Moi goi: ma don + so cay + trang thai]
 
     PackageGrid --> PackageDetail[Chi tiet goi<br>Route /crm/my-garden/orderId]
@@ -273,8 +273,8 @@ flowchart TD
     AdminHub --> Blog[Quan ly Blog<br>Route /crm/admin/blog]
     AdminHub --> Analytics[Bao cao<br>Route /crm/admin/analytics]
 
-    Orders --> VerifyOrder[Xac minh don hang<br>Doi chieu bank transfer]
-    VerifyOrder --> AssignLot[Gan lo cay<br>Route /crm/admin/lots]
+    Orders --> ApproveOrder[Duyet thanh toan<br>Bam Duyet thanh toan tren OrderTable<br>approveAdminOrder: completed]
+    ApproveOrder --> AssignLot[Gan lo cay<br>Route /crm/admin/lots]
     AssignLot --> PrintContract{In hop dong?}
     PrintContract -->|Co| PrintQueue[Print Queue<br>Route /crm/admin/print-queue]
     PrintContract -->|Khong| AutoEmail[send-tree-assignment-email<br>+ notifyTreeAssigned Telegram]
@@ -409,7 +409,7 @@ flowchart LR
 
 **RLS:** Admin actions dùng `createServiceRoleClient()` để bypass RLS. User actions dùng session client.
 
-**Referral default:** Nếu không có ref cookie → dùng `DEFAULT_REF = "DNG895075"`.
+**Referral default:** Nếu không có ref cookie → dùng `DEFAULT_REF = "dainganxanh"`.
 
 **Order code format:** `DH` + 6 ký tự alphanumeric ngẫu nhiên (ví dụ: `DH1U90XP`).
 
@@ -427,9 +427,7 @@ flowchart LR
 
 **Contract Generation:** DOCX template → LibreOffice headless DOCX→PDF (Alpine: `font-noto font-noto-extra`). Timeout chain: LibreOffice 45s SIGKILL < EF generate-contract 50s < EF process-payment 55s. Nếu thất bại → Telegram admin alert + payment fail (admin xử lý thủ công và gửi lại hợp đồng).
 
-**Admin verify vs approve:** Có 2 bước riêng trong admin order flow:
-- `verifyAdminOrder` — chuyển status `manual_payment_claimed` → `verified`, trigger contract gen nếu là manual payment. Dùng để xác minh trước khi approve.
-- `approveAdminOrder` — chuyển status `paid | manual_payment_claimed | verified` → `completed`, tạo referral commission, gửi Telegram `notifyAdminApproval`.
+**Admin approve order:** Chỉ có 1 bước duyệt — `approveAdminOrder` chuyển status `pending | paid | manual_payment_claimed` → `completed`, tạo referral commission, trigger contract generation, gửi Telegram `notifyAdminApproval`. Không còn bước `verifyAdminOrder` (đã xóa).
 
 **Harvest Flow:** Khi cây đạt 60 tháng (PROD) hoặc 3 phút (DEV):
 1. `check-harvest-ready` EF chạy scheduled, gửi email + in-app notification `harvest_ready` (idempotent — kiểm tra notification đã tồn tại trước khi gửi)

@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from '../../utils/mailpit'
+import * as path from 'path'
 import { envConfig } from '../../config/env'
+
+test.use({ storageState: path.resolve(__dirname, '../../storagestate/admin.json') })
 
 /**
  * Identity Form E2E Test Suite
@@ -13,47 +15,6 @@ import { envConfig } from '../../config/env'
  */
 
 test.describe('Identity Form E2E', () => {
-    const TEST_EMAIL = envConfig.ADMIN_EMAIL
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
-
     /**
      * Test Data: Valid identity data
      */
@@ -93,9 +54,6 @@ test.describe('Identity Form E2E', () => {
      * Test 1: User without id_number sees identity form after purchase
      */
     test('user without id_number sees identity form after purchase', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
-
         await setupSuccessPageWithIdentityForm(page, 'DHTEST01', 3)
 
         // Verify identity form is visible
@@ -125,9 +83,6 @@ test.describe('Identity Form E2E', () => {
      * Test 2: User fills and submits identity form successfully
      */
     test('user fills and submits identity form successfully', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
-
         // Mock auto-fill-identity — no identity yet
         await page.route('**/api/orders/auto-fill-identity*', async (route: any) => {
             await route.fulfill({
@@ -187,9 +142,6 @@ test.describe('Identity Form E2E', () => {
      * Test 3: Form validation works for required fields
      */
     test('form validation works for required fields', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
-
         await setupSuccessPageWithIdentityForm(page, 'DHTEST03', 2)
 
         // Wait for form
@@ -236,9 +188,6 @@ test.describe('Identity Form E2E', () => {
      * Test 4: User can skip identity form
      */
     test('user can skip identity form', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
-
         await setupSuccessPageWithIdentityForm(page, 'DHTEST04', 1)
 
         // Wait for form
@@ -266,9 +215,6 @@ test.describe('Identity Form E2E', () => {
      * Test 5: User with existing id_number skips form
      */
     test('user with existing id_number skips form', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
-
         // Mock auto-fill-identity — user HAS identity data
         await page.route('**/api/orders/auto-fill-identity*', async (route: any) => {
             await route.fulfill({
@@ -321,9 +267,6 @@ test.describe('Identity Form E2E', () => {
                 }
             }
         })
-
-        // Login
-        await loginWithOTP(page)
 
         await setupSuccessPageWithIdentityForm(page, 'DHTEST06', 2)
 

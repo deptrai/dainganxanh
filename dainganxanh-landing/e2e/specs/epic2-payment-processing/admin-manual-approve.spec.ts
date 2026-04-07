@@ -25,7 +25,7 @@ test.describe('Admin Manual Payment Approval', () => {
         await page.goto('/crm/admin/orders')
         await page.waitForLoadState('networkidle')
 
-        await expect(page.getByRole('heading', { name: /order management/i })).toBeVisible()
+        await expect(page.getByRole('heading', { name: /order management|quản lý đơn hàng/i })).toBeVisible()
         await expect(page.getByText(/xác minh và quản lý đơn hàng/i)).toBeVisible()
     })
 
@@ -168,7 +168,7 @@ test.describe('Admin Manual Payment Approval', () => {
         await page.waitForLoadState('networkidle', { timeout: 10000 })
 
         // Page should still show orders management after reload
-        await expect(page.getByRole('heading', { name: /order management/i })).toBeVisible()
+        await expect(page.getByRole('heading', { name: /order management|quản lý đơn hàng/i })).toBeVisible()
         console.log('✅ Approve order action triggered and page reloaded')
     })
 
@@ -201,8 +201,8 @@ test.describe('Admin Manual Payment Approval', () => {
         await page.goto('/crm/admin/orders')
         await page.waitForLoadState('networkidle')
 
-        // Default filter is 'pending' — orders show "Chờ xác minh" badge
-        // OR page shows "Không có đơn hàng nào" if no pending orders
+        // Default filter is 'all' — orders show various status badges
+        // OR page shows "Không có đơn hàng nào" if no orders
         const hasTable = await page.locator('table').isVisible({ timeout: 5000 }).catch(() => false)
         const isEmpty = await page.getByText(/không có đơn hàng nào/i).isVisible({ timeout: 3000 }).catch(() => false)
 
@@ -214,10 +214,9 @@ test.describe('Admin Manual Payment Approval', () => {
         // Check that at least one status badge is visible in the desktop table
         const table = page.locator('table')
         const statusTexts = [
-            /chờ xác minh/i,
+            /chờ thanh toán/i,
             /đã thanh toán/i,
-            /chờ duyệt thanh toán thủ công/i,
-            /đã xác minh/i,
+            /khách báo đã chuyển/i,
             /đã gán cây/i,
             /hoàn thành/i,
             /đã hủy/i,

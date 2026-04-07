@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Save, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp, FileText, Download, Package } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Save, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp, FileText, Download, Package, CreditCard, X } from 'lucide-react'
 
 interface IdentityData {
     full_name: string
@@ -61,6 +62,7 @@ const statusColors: Record<string, string> = {
 }
 
 export default function ProfilePage() {
+    const router = useRouter()
     const [identity, setIdentity] = useState<IdentityData>(emptyIdentity)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -71,6 +73,7 @@ export default function ProfilePage() {
     const [orders, setOrders] = useState<UserOrder[]>([])
     const [ordersLoading, setOrdersLoading] = useState(true)
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
+    const [cancellingId, setCancellingId] = useState<string | null>(null)
 
     // Active tab
     const [activeTab, setActiveTab] = useState<'identity' | 'orders'>('orders')
@@ -131,6 +134,27 @@ export default function ProfilePage() {
         setIdentity(prev => ({ ...prev, [field]: value }))
     }
 
+    const handleCancelOrder = async (order: UserOrder) => {
+        if (!confirm('Bạn có chắc muốn hủy đơn hàng này?')) return
+        setCancellingId(order.id)
+        try {
+            const res = await fetch('/api/orders/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: order.id }),
+            })
+            if (res.ok) {
+                setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o))
+            }
+        } finally {
+            setCancellingId(null)
+        }
+    }
+
+    const handleContinuePayment = (order: UserOrder) => {
+        router.push(`/checkout?quantity=${order.quantity}`)
+    }
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('vi-VN')
     }
@@ -155,41 +179,35 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-8">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Hồ sơ</h1>
-                <p className="text-gray-600 mt-1">
-                    Quản lý thông tin cá nhân và đơn hàng của bạn
-                </p>
+        <div className="max-w-2xl mx-auto px-3 py-5 sm:px-4 sm:py-8">
+            <div className="mb-5">
+                <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Hồ sơ</h1>
+                <p className="text-gray-500 text-sm mt-0.5">Quản lý thông tin cá nhân và đơn hàng</p>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 mb-6">
+            <div className="flex border-b border-gray-200 mb-5">
                 <button
                     onClick={() => setActiveTab('orders')}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === 'orders'
                             ? 'border-emerald-500 text-emerald-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            : 'border-transparent text-gray-500'
                     }`}
                 >
-                    <span className="flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        Đơn hàng ({orders.length})
-                    </span>
+                    <Package className="w-4 h-4 shrink-0" />
+                    <span>Đơn hàng ({orders.length})</span>
                 </button>
                 <button
                     onClick={() => setActiveTab('identity')}
-                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === 'identity'
                             ? 'border-emerald-500 text-emerald-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                            : 'border-transparent text-gray-500'
                     }`}
                 >
-                    <span className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Thông tin hợp đồng
-                    </span>
+                    <FileText className="w-4 h-4 shrink-0" />
+                    <span>Thông tin hợp đồng</span>
                 </button>
             </div>
 
@@ -206,116 +224,113 @@ export default function ProfilePage() {
                             <p className="text-gray-500">Bạn chưa có đơn hàng nào</p>
                         </div>
                     ) : (
-                        orders.map((order) => (
-                            <div key={order.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                                {/* Order summary row */}
-                                <button
-                                    onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
-                                    className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
-                                >
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                        orders.map((order) => {
+                            const isPending = order.status === 'pending'
+                            const isExpanded = expandedOrderId === order.id
+                            return (
+                                <div key={order.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                    {/* Order summary row */}
+                                    <button
+                                        onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                                        className="w-full px-4 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                                    >
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="font-semibold text-gray-900 text-sm">
+                                                <span className="font-semibold text-gray-900 text-sm font-mono">
                                                     {getOrderCode(order)}
                                                 </span>
                                                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
                                                     {statusLabels[order.status] || order.status}
                                                 </span>
                                             </div>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                {formatDate(order.created_at)}
-                                            </div>
+                                            <div className="text-xs text-gray-400 mt-0.5">{formatDate(order.created_at)}</div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <div className="font-semibold text-gray-900 text-sm">
-                                                {formatCurrency(order.total_amount)}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                {order.quantity} cây
-                                            </div>
+                                            <div className="font-semibold text-gray-900 text-sm">{formatCurrency(order.total_amount)}</div>
+                                            <div className="text-xs text-gray-400">{order.quantity} cây</div>
                                         </div>
-                                    </div>
-                                    {expandedOrderId === order.id ? (
-                                        <ChevronUp className="w-5 h-5 text-gray-400 ml-3 shrink-0" />
-                                    ) : (
-                                        <ChevronDown className="w-5 h-5 text-gray-400 ml-3 shrink-0" />
-                                    )}
-                                </button>
+                                        {isExpanded
+                                            ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />
+                                            : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                                        }
+                                    </button>
 
-                                {/* Expanded details */}
-                                {expandedOrderId === order.id && (
-                                    <div className="px-5 pb-4 border-t border-gray-100">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-sm">
-                                            <div>
-                                                <span className="text-gray-500">Mã đơn:</span>{' '}
-                                                <span className="font-medium">{getOrderCode(order)}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500">Phương thức thanh toán:</span>{' '}
-                                                <span className="font-medium">{order.payment_method || 'N/A'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500">Số lượng:</span>{' '}
-                                                <span className="font-medium">{order.quantity} cây</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500">Tổng tiền:</span>{' '}
-                                                <span className="font-medium">{formatCurrency(order.total_amount)}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500">Ngày tạo:</span>{' '}
-                                                <span className="font-medium">{formatDate(order.created_at)}</span>
-                                            </div>
-                                            {order.verified_at && (
+                                    {/* Expanded details */}
+                                    {isExpanded && (
+                                        <div className="px-4 pb-4 border-t border-gray-100 space-y-3 mt-0">
+                                            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm">
                                                 <div>
-                                                    <span className="text-gray-500">Ngày xác minh:</span>{' '}
-                                                    <span className="font-medium">{formatDate(order.verified_at)}</span>
+                                                    <dt className="text-gray-400 text-xs">Phương thức</dt>
+                                                    <dd className="font-medium">{order.payment_method || 'N/A'}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="text-gray-400 text-xs">Số lượng</dt>
+                                                    <dd className="font-medium">{order.quantity} cây</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="text-gray-400 text-xs">Tổng tiền</dt>
+                                                    <dd className="font-medium text-emerald-600">{formatCurrency(order.total_amount)}</dd>
+                                                </div>
+                                                {order.verified_at && (
+                                                    <div>
+                                                        <dt className="text-gray-400 text-xs">Xác minh lúc</dt>
+                                                        <dd className="font-medium">{formatDate(order.verified_at)}</dd>
+                                                    </div>
+                                                )}
+                                            </dl>
+
+                                            {/* Pending order actions */}
+                                            {isPending && (
+                                                <div className="flex gap-2 pt-1">
+                                                    <button
+                                                        onClick={() => handleContinuePayment(order)}
+                                                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                                                    >
+                                                        <CreditCard className="w-4 h-4" />
+                                                        Tiếp tục thanh toán
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCancelOrder(order)}
+                                                        disabled={cancellingId === order.id}
+                                                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                                    >
+                                                        {cancellingId === order.id
+                                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                            : <X className="w-4 h-4" />
+                                                        }
+                                                        Hủy
+                                                    </button>
                                                 </div>
                                             )}
-                                            {order.user_name && (
-                                                <div>
-                                                    <span className="text-gray-500">Người mua:</span>{' '}
-                                                    <span className="font-medium">{order.user_name}</span>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        {/* Contract section */}
-                                        {order.contract_url ? (
-                                            <div className="mt-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="w-5 h-5 text-emerald-600" />
-                                                        <span className="text-sm font-medium text-emerald-800">
-                                                            Hợp đồng đã sẵn sàng
-                                                        </span>
+                                            {/* Contract section */}
+                                            {order.contract_url ? (
+                                                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                        <span className="text-sm font-medium text-emerald-800 truncate">Hợp đồng đã sẵn sàng</span>
                                                     </div>
                                                     <a
                                                         href={order.contract_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors shrink-0"
                                                     >
-                                                        <Download className="w-4 h-4" />
-                                                        Xem hợp đồng
+                                                        <Download className="w-3.5 h-3.5" />
+                                                        Xem
                                                     </a>
                                                 </div>
-                                            </div>
-                                        ) : order.status === 'completed' || order.status === 'verified' ? (
-                                            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                                                <div className="flex items-center gap-2">
-                                                    <AlertCircle className="w-5 h-5 text-yellow-600" />
-                                                    <span className="text-sm text-yellow-800">
-                                                        Hợp đồng đang được tạo. Vui lòng kiểm tra lại sau.
-                                                    </span>
+                                            ) : order.status === 'completed' ? (
+                                                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex items-center gap-2">
+                                                    <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0" />
+                                                    <span className="text-xs text-yellow-800">Hợp đồng đang được tạo. Vui lòng kiểm tra lại sau.</span>
                                                 </div>
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                )}
-                            </div>
-                        ))
+                                            ) : null}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })
                     )}
                 </div>
             )}
@@ -356,7 +371,7 @@ export default function ProfilePage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Ngày sinh <span className="text-red-500">*</span>
@@ -432,7 +447,7 @@ export default function ProfilePage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Ngày cấp <span className="text-red-500">*</span>

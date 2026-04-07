@@ -13,7 +13,7 @@ import { getOTPFromMailpit } from '../../utils/mailpit'
 test.describe('Registration & Authentication Flow E2E', () => {
     const BASE_EMAIL = 'test-registration'
     const TEST_PHONE = '0901234567'
-    const DEFAULT_REF_CODE = 'DNG895075'
+    const DEFAULT_REF_CODE = 'dainganxanh'
 
     // Generate unique email for each test to avoid OTP conflicts
     function getTestEmail(testName: string): string {
@@ -41,7 +41,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Select quantity (e.g., 5 trees)
-        const fiveTreesButton = page.getByRole('button', { name: /5 cây/i })
+        const fiveTreesButton = page.getByRole('button', { name: /^5$/ })
         await expect(fiveTreesButton).toBeVisible({ timeout: 10000 })
         await fiveTreesButton.click()
 
@@ -305,8 +305,8 @@ test.describe('Registration & Authentication Flow E2E', () => {
 
     /**
      * Test 7: User completes login flow successfully
-     * Flow: /login → OTP verification → referral modal → redirect to /checkout?quantity=1
-     * Note: Login page always redirects to /checkout?quantity={n} after auth
+     * Flow: /login → OTP verification → redirect to /crm/my-garden (default)
+     * Note: Redirects to /checkout?quantity=N only if ?quantity= param is present in URL
      */
     test('user completes login flow successfully', async ({ page }) => {
         const testEmail = getTestEmail('login-test')
@@ -382,11 +382,11 @@ test.describe('Registration & Authentication Flow E2E', () => {
             }
         }
 
-        // Wait for final redirect to /checkout
-        await page.waitForURL(/\/checkout/, { timeout: 15000 })
+        // Wait for final redirect — /crm/my-garden (default) or /checkout (if quantity param present)
+        await page.waitForURL(/\/(crm|checkout)/, { timeout: 15000 })
 
         const currentUrl = page.url()
-        expect(currentUrl).toContain('/checkout')
+        expect(currentUrl).toMatch(/\/(crm|checkout)/)
 
         console.log(`✅ Login completed successfully, redirected to: ${currentUrl}`)
     })

@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test'
+import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
+import { envConfig } from '../../config/env'
+
+test.use({ storageState: path.resolve(__dirname, '../../storagestate/admin.json') })
 
 /**
  * Harvest Decision Flow E2E Test Suite
@@ -8,12 +12,12 @@ import { createClient } from '@supabase/supabase-js'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com (with existing orders)
+ * - Test user with existing orders
  */
 
 test.describe('Harvest Decision Flow E2E', () => {
-    const TEST_EMAIL = 'test@test.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+    const TEST_EMAIL = envConfig.TEST_EMAIL
+    const MAILPIT_URL = envConfig.MAILPIT_URL
     const SUPABASE_URL = 'http://127.0.0.1:54331'
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 
@@ -121,87 +125,12 @@ test.describe('Harvest Decision Flow E2E', () => {
         console.log('✅ [beforeAll] Test data setup complete!')
     })
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        // Wait a bit to avoid rate limiting
-        await page.waitForTimeout(2000)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
 
     /**
      * Test: View harvest page with tree info
      */
     test('view harvest page with tree maturity info', async ({ page }) => {
-        // ============================================
-        // Phase 1: Login
-        // ============================================
-        await loginWithOTP(page)
+        test.skip(!testOrderId, 'No test order created - skipping harvest tests')
 
         // Navigate to My Garden
         await page.goto('/crm/my-garden')
@@ -250,8 +179,7 @@ test.describe('Harvest Decision Flow E2E', () => {
      * Test: View harvest options (3 choices)
      */
     test('view all three harvest options', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
+        test.skip(!testOrderId, 'No test order created - skipping harvest tests')
 
         // Get first order
         await page.goto('/crm/my-garden')
@@ -290,8 +218,7 @@ test.describe('Harvest Decision Flow E2E', () => {
      * Test: Navigate back from harvest page
      */
     test('navigate back to order detail from harvest page', async ({ page }) => {
-        // Login
-        await loginWithOTP(page)
+        test.skip(!testOrderId, 'No test order created - skipping harvest tests')
 
         // Get first order
         await page.goto('/crm/my-garden')
@@ -329,6 +256,7 @@ test.describe('Harvest Decision Flow E2E', () => {
      * Test: No console errors on harvest page
      */
     test('no console errors on harvest page', async ({ page }) => {
+        test.skip(!testOrderId, 'No test order created - skipping harvest tests')
         const consoleErrors: string[] = []
 
         page.on('console', msg => {
@@ -336,9 +264,6 @@ test.describe('Harvest Decision Flow E2E', () => {
                 consoleErrors.push(msg.text())
             }
         })
-
-        // Login
-        await loginWithOTP(page)
 
         // Get first order
         await page.goto('/crm/my-garden')

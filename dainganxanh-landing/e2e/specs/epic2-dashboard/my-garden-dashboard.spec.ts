@@ -136,7 +136,7 @@ test.describe('My Garden Dashboard E2E', () => {
             // Check for order code (format: DH-XXXXXX) - conditional
             const hasOrderCode = await firstCard.locator('text=/DH.*|Mã đơn/i').isVisible({ timeout: 3000 }).catch(() => false)
             const hasQuantity = await firstCard.locator('text=/\\d+ cây/i').isVisible({ timeout: 3000 }).catch(() => false)
-            const hasStatus = await firstCard.locator('text=/pending|paid|verified|assigned|completed/i').isVisible({ timeout: 3000 }).catch(() => false)
+            const hasStatus = await firstCard.locator('text=/pending|paid|assigned|completed/i').isVisible({ timeout: 3000 }).catch(() => false)
             console.log(`Order card info: code=${hasOrderCode}, qty=${hasQuantity}, status=${hasStatus}`)
         } else {
             // Empty state - check gracefully
