@@ -129,6 +129,18 @@ export async function updateUserRole(
         return { error: 'Không thể tự hạ quyền của mình' }
     }
 
+    // Admin cannot change role of super_admin
+    if (profile.role === 'admin') {
+        const { data: targetProfile } = await serviceSupabase
+            .from('users')
+            .select('role')
+            .eq('id', targetUserId)
+            .single()
+        if (targetProfile?.role === 'super_admin') {
+            return { error: 'Admin không được thay đổi quyền của super_admin' }
+        }
+    }
+
     const { error } = await serviceSupabase
         .from('users')
         .update({ role: newRole })
