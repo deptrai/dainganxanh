@@ -35,7 +35,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
         await expect(page).toHaveURL(/crm\/admin\/withdrawals/)
 
         // Check for page title
-        await expect(page.getByText(/withdrawal|rút tiền|yêu cầu rút tiền/i).first()).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('h1').filter({ hasText: /withdrawal|rút tiền|quản lý rút tiền/i })).toBeVisible({ timeout: 10000 })
 
         // ============================================
         // Phase 2: Verify withdrawals table/list
@@ -111,7 +111,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
         }
         
         // Chờ UI load ổn định
-        await expect(page.getByText(/withdrawal|rút tiền|yêu cầu rút tiền/i).first()).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('h1').filter({ hasText: /withdrawal|rút tiền|quản lý rút tiền/i })).toBeVisible({ timeout: 10000 })
         await page.waitForTimeout(2000)
 
         // Thực thi kịch bản (Action)

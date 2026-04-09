@@ -18,12 +18,6 @@ import * as fs from 'fs'
 import { getTestUserId, cleanupOrdersForUser } from '../../utils/supabase-admin'
 import { envConfig } from '../../config/env'
 
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
-})
-
-test.describe.configure({ mode: 'serial' })
-
 const SCREENSHOTS_DIR = path.resolve(__dirname, '../../../e2e-results/full-payment-flow')
 
 async function shot(page: Page, name: string) {
@@ -31,6 +25,8 @@ async function shot(page: Page, name: string) {
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, `${name}.png`), fullPage: true })
     console.log(`📸 ${name}.png`)
 }
+
+test.describe.serial('Full Payment Flow E2E', () => {
 
 // ── Cleanup before all tests ────────────────────────────────────────────────
 test.beforeAll(async () => {
@@ -184,3 +180,5 @@ test('6. Filter dropdown không có "Đã xác minh"', async ({ page }) => {
 
     console.log(`✅ Test 6 PASS: Options = [${options.join(' | ')}]`)
 })
+
+}) // end describe.serial

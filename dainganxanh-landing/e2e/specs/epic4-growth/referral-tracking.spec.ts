@@ -16,6 +16,11 @@ test.use({ storageState: path.resolve(__dirname, '../../storagestate/admin.json'
 test.describe('Referral Tracking E2E', () => {
     const TEST_EMAIL = 'phanquochoipt@gmail.com'
 
+    // Clear ref cookie before each test to avoid interference from admin storageState
+    test.beforeEach(async ({ context }) => {
+        await context.clearCookies({ name: 'ref' })
+    })
+
     /**
      * Test 1: Landing page with ref parameter sets cookie
      */
@@ -104,7 +109,10 @@ test.describe('Referral Tracking E2E', () => {
     /**
      * Test 3: Registration form auto-fills referral code from cookie
      */
-    test('registration form auto-fills referral code from cookie', async ({ page }) => {
+    test('registration form auto-fills referral code from cookie', async ({ page, context }) => {
+        // Clear all auth cookies so page doesn't auto-redirect to checkout
+        await context.clearCookies()
+
         // ============================================
         // Phase 1: Set ref cookie before navigation
         // ============================================
@@ -137,21 +145,17 @@ test.describe('Referral Tracking E2E', () => {
         // ============================================
         // Phase 4: Verify registration form loaded with email input
         // ============================================
-        const emailInput = page.locator('input[type="email"]')
+        const emailInput = page.locator('#identifier-input')
         await expect(emailInput).toBeVisible({ timeout: 10000 })
 
         // ============================================
         // Phase 5: Verify referral code input is pre-filled from cookie
         // ============================================
-        const refInput = page.locator('input[type="text"]').filter({ hasText: /autotest999/i }).or(
-            page.locator('input[placeholder*="dainganxanh"]')
-        )
-
         // Wait a bit for pre-fill to happen
         await page.waitForTimeout(500)
 
-        // Verify referral input has the cookie value
-        const refValue = await page.locator('input[placeholder*="dainganxanh"]').inputValue()
+        // Verify referral input has the cookie value — placeholder is "VD: dainganxanh"
+        const refValue = await page.locator('input[placeholder="VD: dainganxanh"]').inputValue()
         expect(refValue).toBe('autotest999')
 
         console.log('✅ Referral code preserved in cookie and pre-filled in registration form')
@@ -225,12 +229,17 @@ test.describe('Referral Tracking E2E', () => {
         })
 
         // ============================================
-        // Phase 4: Navigate to checkout
+        // Phase 4: Navigate to checkout and place order
         // ============================================
         await page.goto('/checkout?quantity=5')
         await page.waitForLoadState('networkidle')
 
-        // Wait for order creation
+        // Wait for confirm step to load, then click "Đặt đơn ngay"
+        const placeOrderBtn = page.getByRole('button', { name: /đặt đơn ngay/i })
+        await expect(placeOrderBtn).toBeVisible({ timeout: 10000 })
+        await placeOrderBtn.click()
+
+        // Wait for payment step
         await page.waitForTimeout(2000)
 
         // ============================================
@@ -239,7 +248,7 @@ test.describe('Referral Tracking E2E', () => {
         const expectedCommission = Math.round(1300000 * 0.05) // 65,000 VND
         expect(expectedCommission).toBe(65000)
 
-        // Verify order code is displayed
+        // Verify order code is displayed (only visible in payment step)
         const orderCodeElement = page.locator('span.font-mono.font-semibold.text-emerald-600')
         await expect(orderCodeElement).toBeVisible({ timeout: 10000 })
 

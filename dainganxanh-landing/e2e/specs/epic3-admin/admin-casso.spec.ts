@@ -29,7 +29,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         await expect(page).toHaveURL(/crm\/admin\/casso/)
 
         // Check for page title
-        await expect(page.getByText(/casso|transaction|giao dịch|lịch sử thanh toán/i).first()).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('h1').filter({ hasText: /casso|transaction/i })).toBeVisible({ timeout: 10000 })
 
         // ============================================
         // Phase 2: Verify transactions table/list
@@ -83,7 +83,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         await page.goto('/crm/admin/casso')
         await page.waitForLoadState('networkidle')
 
-        await expect(page.getByText(/casso|transaction|giao dịch|lịch sử thanh toán/i).first()).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('h1').filter({ hasText: /casso|transaction/i })).toBeVisible({ timeout: 10000 })
 
         // Mock API response for filtered transactions
         await page.route('**/api/admin/casso**', async route => {
@@ -200,7 +200,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         await page.goto('/crm/admin/casso')
         await page.waitForLoadState('networkidle')
 
-        await expect(page.getByText(/casso|transaction|giao dịch|lịch sử thanh toán/i).first()).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('h1').filter({ hasText: /casso|transaction/i })).toBeVisible({ timeout: 10000 })
 
         // Mock API response for transaction list with failed transaction
         await page.route('**/api/admin/casso', async route => {

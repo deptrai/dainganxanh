@@ -87,7 +87,10 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
     /**
      * Test 1.2: Enter key submits forms (login, registration, checkout)
      */
-    test('keyboard navigation: enter key submits forms', async ({ page }) => {
+    test('keyboard navigation: enter key submits forms', async ({ page, context }) => {
+        // Clear auth session — register/login pages redirect to checkout when logged in
+        await context.clearCookies()
+
         // Test 1: Registration form - Enter on email input
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
@@ -96,7 +99,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await expect(emailInput).toBeVisible()
         await emailInput.fill('test-keyboard@test.local')
 
@@ -183,7 +186,10 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
     /**
      * Test 2.1: Form labels associated with inputs (aria-label or <label for="">)
      */
-    test('screen reader support: form labels associated with inputs', async ({ page }) => {
+    test('screen reader support: form labels associated with inputs', async ({ page, context }) => {
+        // Clear admin session to prevent redirect
+        await context.clearCookies()
+
         // Test registration form
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
@@ -191,7 +197,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await expect(emailInput).toBeVisible()
 
         // Check for aria-label or associated label
@@ -271,7 +277,10 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
     /**
      * Test 2.2: Error messages announced (aria-live="polite" on validation errors)
      */
-    test('screen reader support: error messages announced with aria-live', async ({ page }) => {
+    test('screen reader support: error messages announced with aria-live', async ({ page, context }) => {
+        // Clear admin session to prevent redirect
+        await context.clearCookies()
+
         // Test registration form - check button state based on validation
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
@@ -282,7 +291,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await expect(emailInput).toBeVisible()
 
         // Check initial button state (should be disabled without valid email)
@@ -370,7 +379,8 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
     /**
      * Test 3.1: Focus indicators visible (outline on focused elements, contrast ratio > 3:1)
      */
-    test('visual accessibility: focus indicators visible', async ({ page }) => {
+    test('visual accessibility: focus indicators visible', async ({ page, context }) => {
+        await context.clearCookies()
         await page.goto('/login')
         await page.waitForLoadState('networkidle')
 

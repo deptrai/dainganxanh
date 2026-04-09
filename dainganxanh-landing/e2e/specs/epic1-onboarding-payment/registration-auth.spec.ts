@@ -11,6 +11,9 @@ import { getOTPFromMailpit } from '../../utils/mailpit'
  */
 
 test.describe('Registration & Authentication Flow E2E', () => {
+    // Override global storageState — these tests require unauthenticated context
+    test.use({ storageState: { cookies: [], origins: [] } })
+
     const BASE_EMAIL = 'test-registration'
     const TEST_PHONE = '0901234567'
     const DEFAULT_REF_CODE = 'dainganxanh'
@@ -40,13 +43,13 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/quantity')
         await page.waitForLoadState('networkidle')
 
-        // Select quantity (e.g., 5 trees)
-        const fiveTreesButton = page.getByRole('button', { name: /^5$/ })
+        // Select quantity (e.g., 5 trees) — button has aria-label="Chọn 5 cây"
+        const fiveTreesButton = page.getByRole('button', { name: 'Chọn 5 cây' })
         await expect(fiveTreesButton).toBeVisible({ timeout: 10000 })
         await fiveTreesButton.click()
 
-        // Click checkout button
-        const checkoutButton = page.getByRole('button', { name: /tiếp tục|thanh toán/i })
+        // Click checkout button — aria-label="Tiếp tục đến trang đăng ký"
+        const checkoutButton = page.getByRole('button', { name: /tiếp tục đến trang đăng ký|tiếp tục đăng ký/i })
         await expect(checkoutButton).toBeVisible()
         await checkoutButton.click()
 
@@ -80,7 +83,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await expect(emailInput).toBeVisible()
         await emailInput.fill(testEmail)
 
@@ -127,7 +130,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await emailInput.fill(testEmail)
 
         // Fill referral code (required field)
@@ -155,8 +158,11 @@ test.describe('Registration & Authentication Flow E2E', () => {
         // Should auto-submit and redirect to checkout with quantity
         await expect(page).toHaveURL(/\/checkout\?.*quantity=5/, { timeout: 15000 })
 
-        // Verify checkout page loaded
-        await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
+        // Verify checkout page loaded — new user sees "confirm" step, not "payment" step
+        // "Đơn hàng của bạn" only shows in payment step; confirm step shows "Xác nhận đơn hàng"
+        await expect(
+            page.getByText('Xác nhận đơn hàng').or(page.getByText('Đơn hàng của bạn'))
+        ).toBeVisible({ timeout: 20000 })
 
         console.log('✅ Registration completed and redirected to checkout')
     })
@@ -180,11 +186,11 @@ test.describe('Registration & Authentication Flow E2E', () => {
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await emailInput.fill(testEmail)
 
         // Enter referral code
-        const referralInput = page.locator('input[placeholder*="dainganxanh"]').or(page.locator('input[placeholder*="VD:"]'))
+        const referralInput = page.locator('input[placeholder="VD: dainganxanh"]')
         const hasReferralInput = await referralInput.count() > 0
 
         if (hasReferralInput) {
@@ -238,7 +244,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await emailInput.fill(testEmail)
 
         // Click the "use default" button for referral code
@@ -323,7 +329,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await emailInput.fill(testEmail)
 
         // Send OTP
@@ -419,7 +425,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('input[placeholder*="email"]')
+        const emailInput = page.locator('#identifier-input')
         await emailInput.fill(testEmail)
 
         // Use default referral code
