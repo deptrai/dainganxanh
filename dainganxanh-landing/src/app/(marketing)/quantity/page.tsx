@@ -70,7 +70,7 @@ function QuantityPageContent() {
                             Chọn Số Lượng Cây
                         </h1>
                         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                            Mỗi cây Dó Đen sẽ được chăm sóc trong 5 năm và bạn có thể theo dõi minh bạch qua GPS
+                            Mỗi cây Dó Đen sẽ được chăm sóc trong 10 năm và bạn có thể theo dõi minh bạch qua GPS
                         </p>
                     </motion.div>
 

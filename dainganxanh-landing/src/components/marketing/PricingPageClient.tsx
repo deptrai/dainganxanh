@@ -35,7 +35,7 @@ export function PricingPageClient() {
                 {/* Trust Indicators */}
                 <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                     <div className="text-center">
-                        <div className="text-3xl font-bold text-emerald-600 mb-2">5 năm</div>
+                        <div className="text-3xl font-bold text-emerald-600 mb-2">10 năm</div>
                         <p className="text-gray-600">Cam kết chăm sóc</p>
                     </div>
                     <div className="text-center">

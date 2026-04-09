@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyPaymentSuccess, notifyContractFailure } from '@/lib/utils/telegram'
 import { createReferralClick } from '@/actions/createReferralClick'
 import { createHmac } from 'crypto'
+import { revalidatePath } from 'next/cache'
 
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
 
@@ -193,6 +194,11 @@ export async function POST(req: NextRequest) {
   if (!fnError && order.referred_by) {
     createReferralClick(order.id, order.referred_by, 'casso-webhook')
       .catch((err) => console.error('[Casso] createReferralClick failed:', err))
+  }
+
+  // Revalidate homepage tree counter
+  if (!fnError) {
+    revalidatePath('/')
   }
 
   // Gửi thông báo Telegram khi thanh toán thành công (non-blocking)

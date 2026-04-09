@@ -13,7 +13,7 @@ const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: 'Cây Dó Đen — Gói Cá Nhân',
-    description: 'Trồng 1 cây Dó Đen bản địa tại Việt Nam. Theo dõi minh bạch qua dashboard. Thu hoạch trầm hương sau 5 năm.',
+    description: 'Trồng 1 cây Dó Đen bản địa tại Việt Nam. Theo dõi minh bạch qua dashboard. Thu hoạch trầm hương sau 10 năm.',
     image: 'https://dainganxanh.com.vn/opengraph-image',
     brand: {
         '@type': 'Organization',

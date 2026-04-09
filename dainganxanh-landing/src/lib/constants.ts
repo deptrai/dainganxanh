@@ -3,7 +3,7 @@
 export const PACKAGE_PRICE = 260000; // VNĐ per tree
 
 // Business logic thresholds
-export const HARVEST_MONTHS = 60; // trees must be 60 months old to harvest
+export const HARVEST_MONTHS = 120; // trees must be 120 months old to harvest
 export const PHOTO_PLACEHOLDER_MONTHS = 9; // show placeholder before 9 months
 export const MIN_WITHDRAWAL = 200_000; // minimum withdrawal amount in VNĐ
 
@@ -33,7 +33,7 @@ export const COST_BREAKDOWN: CostBreakdown[] = [
         icon: "Sprout"
     },
     {
-        label: "Phí chăm sóc 5 năm",
+        label: "Phí chăm sóc 10 năm",
         amount: 194000,
         description: "Chăm sóc chuyên nghiệp, báo cáo hàng quý",
         icon: "Heart"
@@ -55,7 +55,7 @@ export const PACKAGE_INFO = {
         "Chứng nhận sở hữu cây",
         "Báo cáo hàng quý với ảnh thực tế",
         "Theo dõi GPS vị trí cây",
-        "3 lựa chọn thu hoạch sau 5 năm"
+        "3 lựa chọn thu hoạch sau 10 năm"
     ]
 };
 

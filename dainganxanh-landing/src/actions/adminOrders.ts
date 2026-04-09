@@ -3,6 +3,7 @@
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { createReferralClick } from '@/actions/createReferralClick'
 import { notifyAdminApproval, notifyContractFailure } from '@/lib/utils/telegram'
+import { revalidatePath } from 'next/cache'
 
 async function triggerContractGeneration(orderId: string, retries = 2) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
@@ -242,6 +243,9 @@ export async function approveAdminOrder(orderId: string, proofUrl?: string): Pro
     if (referredBy) {
         await createReferralClick(orderId, referredBy, 'admin-approve')
     }
+
+    // Revalidate homepage tree counter
+    revalidatePath('/')
 
     // Send Telegram notification to admin group
     notifyAdminApproval({

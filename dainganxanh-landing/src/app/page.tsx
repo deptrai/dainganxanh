@@ -8,12 +8,26 @@ import { VideoButton } from '@/components/marketing/VideoButton'
 import { HeroVideo } from '@/components/marketing/HeroVideo'
 import { TreeCounter } from '@/components/marketing/TreeCounter'
 import { CTAButton } from '@/components/marketing/CTAButton'
+import { createServerClient } from '@/lib/supabase/server'
 
 export const revalidate = 60; // Cache trang này 60 giây (ISR) để chịu tải tốt hơn khi bị đột biến traffic
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
     const params = await searchParams
     const refCode = params.ref
+
+    // Fetch tree count from completed orders server-side
+    let treeCount = 0
+    try {
+        const supabase = await createServerClient()
+        const { data } = await supabase
+            .from('orders')
+            .select('quantity')
+            .eq('status', 'completed')
+        if (data) {
+            treeCount = data.reduce((sum, row) => sum + (row.quantity ?? 0), 0)
+        }
+    } catch { /* fallback to 0 */ }
 
     return (
         <main className="overflow-x-hidden">
@@ -50,7 +64,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
                     <FadeIn delay={0.4} className="inline-block">
-                        <TreeCounter />
+                        <TreeCounter initialCount={treeCount} />
                     </FadeIn>
 
                     <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-8 leading-tight text-shadow">
@@ -269,11 +283,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             },
                             {
                                 question: 'Nếu cây không may qua đời thì sao?',
-                                answer: 'Luôn có những rủi ro và những biến cố bất ngờ. Tuy nhiên, chúng tôi cam kết rằng nếu không phải vì nguyên nhân do thiên tai, dịch bệnh thì trong suốt 5 năm, Bạn trồng 1 cây, chắc chắn sẽ có 1 cây trưởng thành.'
+                                answer: 'Luôn có những rủi ro và những biến cố bất ngờ. Tuy nhiên, chúng tôi cam kết rằng nếu không phải vì nguyên nhân do thiên tai, dịch bệnh thì trong suốt 10 năm, Bạn trồng 1 cây, chắc chắn sẽ có 1 cây trưởng thành.'
                             },
                             {
                                 question: 'Tại sao lại là 260.000 VNĐ?',
-                                answer: 'Đó là chi phí trọn gói cho: cây giống, đất được thuê để trồng cây và 5 năm (60 tháng) công và phí chăm sóc, phân bón, bảo vệ và công nghệ quản lý cho cây của bạn. Chỉ với chưa đến 150 đồng mỗi ngày để nuôi dưỡng một sự sống.'
+                                answer: 'Đó là chi phí trọn gói cho: cây giống, đất được thuê để trồng cây và 10 năm (120 tháng) công và phí chăm sóc, phân bón, bảo vệ và công nghệ quản lý cho cây của bạn. Chỉ với chưa đến 150 đồng mỗi ngày để nuôi dưỡng một sự sống.'
                             }
                         ].map((faq, index) => (
                             <StaggerItem key={index} className="border border-brand-100 rounded-2xl p-6 hover:shadow-soft transition-all duration-300 bg-brand-50/30 hover:bg-white cursor-pointer group">

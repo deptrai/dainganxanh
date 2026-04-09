@@ -25,29 +25,37 @@ export function TreeCounter({ initialCount }: { initialCount?: number }) {
     const [count, setCount] = useState(initialCount ?? 0)
 
     useEffect(() => {
+        if (initialCount !== undefined) {
+            setCount(initialCount)
+        }
+    }, [initialCount])
+
+    useEffect(() => {
         const supabase = createBrowserClient()
 
-        // Fetch initial count
+        // Fetch current count from completed orders
         async function fetchCount() {
-            const { count: treeCount } = await supabase
-                .from('trees')
-                .select('*', { count: 'exact', head: true })
+            const { data } = await supabase
+                .from('orders')
+                .select('quantity')
+                .eq('status', 'completed')
 
-            if (treeCount !== null) {
-                setCount(treeCount)
+            if (data) {
+                const total = data.reduce((sum, row) => sum + (row.quantity ?? 0), 0)
+                setCount(total)
             }
         }
 
         fetchCount()
 
-        // Subscribe to realtime changes
+        // Subscribe to realtime: re-fetch when any order is updated
         const channel = supabase
             .channel('tree-counter')
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'trees' },
+                { event: 'UPDATE', schema: 'public', table: 'orders' },
                 () => {
-                    setCount((prev) => prev + 1)
+                    fetchCount()
                 }
             )
             .subscribe()
