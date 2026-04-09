@@ -20,7 +20,7 @@ flowchart LR
     EV9[9 — Tạo hợp đồng PDF thất bại]
     EV10[10 — User báo đã chuyển tiền]
     EV11[11 — Admin approve đơn hàng thủ công]
-    EV12[12 — Cây đạt 60 tháng tuổi]
+    EV12[12 — Cây đạt 120 tháng tuổi]
 
     EV1 --> T1([Telegram\nnotifyNewOrder\nĐơn hàng mới — chờ thanh toán])
 
@@ -70,7 +70,7 @@ flowchart LR
 | Tạo hợp đồng PDF thất bại | notifyContractFailure | — | — | — |
 | User báo đã chuyển tiền | notifyManualPaymentClaim | — | — | — |
 | Admin approve đơn hàng | notifyAdminApproval | — | — | — |
-| Cây đạt 60 tháng | — | check-harvest-ready EF | — | harvest_ready |
+| Cây đạt 120 tháng | — | check-harvest-ready EF | — | harvest_ready |
 
 ## Ghi chú kỹ thuật
 

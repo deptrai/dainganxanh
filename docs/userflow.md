@@ -395,7 +395,7 @@ flowchart LR
 | Tạo hợp đồng PDF thất bại | ✅ notifyContractFailure | — | — | — |
 | User báo đã chuyển tiền | ✅ notifyManualPaymentClaim | — | — | — |
 | Admin approve đơn hàng | ✅ notifyAdminApproval | — | — | — |
-| Cây đạt 60 tháng tuổi | — | ✅ check-harvest-ready EF | — | ✅ harvest_ready |
+| Cây đạt 120 tháng tuổi | — | ✅ check-harvest-ready EF | — | ✅ harvest_ready |
 
 ## 📌 Ghi chú kỹ thuật
 
@@ -429,7 +429,7 @@ flowchart LR
 
 **Admin approve order:** Chỉ có 1 bước duyệt — `approveAdminOrder` chuyển status `pending | paid | manual_payment_claimed` → `completed`, tạo referral commission, trigger contract generation, gửi Telegram `notifyAdminApproval`. Không còn bước `verifyAdminOrder` (đã xóa).
 
-**Harvest Flow:** Khi cây đạt 60 tháng (PROD) hoặc 3 phút (DEV):
+**Harvest Flow:** Khi cây đạt 120 tháng (PROD) hoặc 3 phút (DEV):
 1. `check-harvest-ready` EF chạy scheduled, gửi email + in-app notification `harvest_ready` (idempotent — kiểm tra notification đã tồn tại trước khi gửi)
 2. User vào `/crm/my-garden/[orderId]/harvest`, chọn phương án
 3. Nếu chọn bán lại → POST `process-sellback` EF:
@@ -448,7 +448,7 @@ flowchart LR
 - `checklist-reminder` — quarterly, nhắc đội field
 - `send-quarterly-update` — quarterly, gửi báo cáo cho users
 - `profile-backfill` — hourly, tạo profiles cho auth users bị thiếu (pg_cron)
-- `check-harvest-ready` — scheduled, kiểm tra cây đủ 60 tháng → email + in-app notification
+- `check-harvest-ready` — scheduled, kiểm tra cây đủ 120 tháng → email + in-app notification
 
 **Environment Variables:**
 

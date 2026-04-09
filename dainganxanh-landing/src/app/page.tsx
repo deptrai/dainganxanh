@@ -311,7 +311,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 <div className="relative z-10 max-w-4xl mx-auto px-4">
                     <FadeIn>
                         <h2 className="font-serif text-4xl md:text-5xl font-bold text-white mb-10 leading-tight">
-                            &ldquo;Hôm nay bạn gieo một hạt mầm xanh, <br />5 năm nữa con bạn sẽ có bóng mát của cả một khu rừng.&rdquo;
+                            &ldquo;Hôm nay bạn gieo một hạt mầm xanh, <br />10 năm nữa con bạn sẽ có bóng mát của cả một khu rừng.&rdquo;
                         </h2>
                     </FadeIn>
 

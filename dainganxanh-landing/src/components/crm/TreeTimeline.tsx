@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
-import { PHOTO_PLACEHOLDER_MONTHS } from '@/lib/constants'
+import { PHOTO_PLACEHOLDER_MONTHS, HARVEST_MONTHS } from '@/lib/constants'
 
 interface TimelineStage {
     month: number
@@ -51,8 +51,10 @@ const TIMELINE_STAGES: TimelineStage[] = [
     { month: 12, label: 'Năm 1: Bám rễ', icon: '🌳' },
     { month: 24, label: 'Năm 2: Phát triển', icon: '🌳' },
     { month: 36, label: 'Năm 3: Trưởng thành', icon: '🎋' },
-    { month: 48, label: 'Năm 4: Sắp thu hoạch', icon: '🎋' },
-    { month: 60, label: 'Năm 5: Thu hoạch', icon: '✨' },
+    { month: 60, label: 'Năm 5: Tích tụ hương', icon: '🎋' },
+    { month: 84, label: 'Năm 7: Hương thành', icon: '🌿' },
+    { month: 108, label: 'Năm 9: Sắp thu hoạch', icon: '🎋' },
+    { month: 120, label: 'Năm 10: Thu hoạch', icon: '✨' },
 ]
 
 // Utility function for robust date arithmetic (handles edge cases like month overflow)
@@ -277,7 +279,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
                     <div className="text-right">
                         <p className="text-sm text-gray-600">{T.progressToHarvest}</p>
                         <p className="text-2xl font-bold text-emerald-700">
-                            {Math.min(Math.round((ageInMonths / 60) * 100), 100)}%
+                            {Math.min(Math.round((ageInMonths / HARVEST_MONTHS) * 100), 100)}%
                         </p>
                     </div>
                 </div>

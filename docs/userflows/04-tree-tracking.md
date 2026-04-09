@@ -7,7 +7,7 @@
 
 ## Mô tả
 
-User theo dõi vườn cây sau khi mua thành công. Dashboard hiển thị các đơn hàng với status `paid`, `assigned`, `completed`. Chi tiết mỗi đơn gồm metrics tăng trưởng, bản đồ GPS, camera farm, timeline 9 mốc, ảnh và báo cáo. Khi cây đủ 60 tháng, user chọn 1 trong 3 phương án thu hoạch.
+User theo dõi vườn cây sau khi mua thành công. Dashboard hiển thị các đơn hàng với status `paid`, `assigned`, `completed`. Chi tiết mỗi đơn gồm metrics tăng trưởng, bản đồ GPS, camera farm, timeline 9 mốc, ảnh và báo cáo. Khi cây đủ 120 tháng, user chọn 1 trong 3 phương án thu hoạch.
 
 ## Flowchart (Mermaid)
 
@@ -20,7 +20,7 @@ flowchart TD
 
     PackageGrid --> PackageDetail[Chi tiết gói\nRoute /crm/my-garden/orderId]
 
-    PackageDetail --> GrowthMetrics[Chỉ số tăng trưởng\nCO2 hấp thu + Tuổi tháng\nTiến độ đến thu hoạch 60 tháng]
+    PackageDetail --> GrowthMetrics[Chỉ số tăng trưởng\nCO2 hấp thu + Tuổi tháng\nTiến độ đến thu hoạch 120 tháng]
     PackageDetail --> MapSection[Bản đồ GPS\nNếu đã gán lô cây]
     PackageDetail --> CameraSection[Farm Camera\nStream trực tiếp]
     PackageDetail --> TreeList[Danh sách cây\nMã cây từng cây]
@@ -28,7 +28,7 @@ flowchart TD
     PackageDetail --> Timeline[Tree Timeline\nMốc thời gian trồng cây\nCập nhật hàng quý\n9 giai đoạn]
     PackageDetail --> Reports[Báo cáo quý\nDownload PDF]
 
-    Timeline --> MonthCheck{Đủ 60 tháng?}
+    Timeline --> MonthCheck{Đủ 120 tháng?}
     MonthCheck -->|Chưa| Wait[Chờ cập nhật tiếp theo\nNhận email báo cáo quý]
     MonthCheck -->|Rồi| HarvestNotif[Nhận thông báo harvest_ready\nIn-app + Email]
     HarvestNotif --> Harvest[Thu hoạch\nRoute /crm/my-garden/orderId/harvest]
@@ -43,7 +43,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Cron([Scheduled Job\ncheck-harvest-ready EF]) --> QueryTrees[Query trees\nPROD: age >= 60 tháng\nDEV: age >= 3 phút]
+    Cron([Scheduled Job\ncheck-harvest-ready EF]) --> QueryTrees[Query trees\nPROD: age >= 120 tháng\nDEV: age >= 3 phút]
     QueryTrees --> CheckNotif{Đã gửi thông báo\nharvest_ready?}
     CheckNotif -->|Rồi| Skip[Bỏ qua cây này\nIdempotent]
     CheckNotif -->|Chưa| InsertNotif[Insert notifications\ntype: harvest_ready\ndata: treeId, treeCode, ageMonths, co2]

@@ -33,9 +33,9 @@ describe('TreeTimeline', () => {
     })
 
     it('shows progress percentage to harvest', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={30} />)
+        render(<TreeTimeline {...mockProps} ageInMonths={60} />)
 
-        // 30 months / 60 months = 50%
+        // 60 months / 120 months = 50%
         expect(screen.getByText('50%')).toBeInTheDocument()
     })
 
@@ -85,9 +85,9 @@ describe('TreeTimeline', () => {
     })
 
     it('caps progress percentage at 100%', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={70} />)
+        render(<TreeTimeline {...mockProps} ageInMonths={130} />)
 
-        // Should show 100% even though tree is older than 60 months
+        // Should show 100% even though tree is older than 120 months
         expect(screen.getByText('100%')).toBeInTheDocument()
     })
 
@@ -140,18 +140,18 @@ describe('TreeTimeline', () => {
             expect(screen.getByText(/Bạn đang ở đây/)).toBeInTheDocument()
         })
 
-        it('handles very large ageInMonths (beyond 60 months)', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={120} />)
+        it('handles very large ageInMonths (beyond 120 months)', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={150} />)
 
             // Should cap progress at 100%
             expect(screen.getByText('100%')).toBeInTheDocument()
         })
 
-        it('handles exactly 60 months (harvest time)', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={60} />)
+        it('handles exactly 120 months (harvest time)', () => {
+            render(<TreeTimeline {...mockProps} ageInMonths={120} />)
 
             // Should be at final stage
-            expect(screen.getByText('Năm 5: Thu hoạch')).toBeInTheDocument()
+            expect(screen.getByText('Năm 10: Thu hoạch')).toBeInTheDocument()
         })
 
         it('renders timeline stages with aria labels for accessibility', () => {

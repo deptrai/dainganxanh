@@ -53,10 +53,10 @@ describe('TreeCard', () => {
         expect(link).toHaveAttribute('href', '/crm/my-garden/123')
     })
 
-    it('shows harvest badge for trees >= 60 months old', () => {
+    it('shows harvest badge for trees >= 120 months old', () => {
         const harvestReadyTree = {
             ...mockTree,
-            planted_at: new Date(Date.now() - 60 * 30 * 24 * 60 * 60 * 1000).toISOString(), // 60 months ago
+            planted_at: new Date(Date.now() - 120 * 30 * 24 * 60 * 60 * 1000).toISOString(), // 120 months ago
         }
         render(<TreeCard tree={harvestReadyTree} />)
         expect(screen.getByText('Sẵn sàng thu hoạch')).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe('TreeCard', () => {
     it('shows gold ring border for harvest-ready trees', () => {
         const harvestReadyTree = {
             ...mockTree,
-            planted_at: new Date(Date.now() - 60 * 30 * 24 * 60 * 60 * 1000).toISOString(),
+            planted_at: new Date(Date.now() - 120 * 30 * 24 * 60 * 60 * 1000).toISOString(),
         }
         const { container } = render(<TreeCard tree={harvestReadyTree} />)
         const link = container.querySelector('a')

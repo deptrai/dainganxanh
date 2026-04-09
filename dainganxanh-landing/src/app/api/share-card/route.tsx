@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         break
       case 'harvest':
         title = `${userName} sắp thu hoạch trầm hương! 🎉`
-        subtitle = 'Sau 5 năm chăm sóc'
+        subtitle = 'Sau 10 năm chăm sóc'
         break
       default:
         title = `${userName} đã tham gia Đại Ngàn Xanh! 🌳`

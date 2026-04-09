@@ -2,21 +2,21 @@ import { render, screen } from '@testing-library/react'
 import HarvestBadge from '../HarvestBadge'
 
 describe('HarvestBadge', () => {
-    it('renders badge for trees >= 60 months', () => {
-        render(<HarvestBadge ageInMonths={60} />)
+    it('renders badge for trees >= 120 months', () => {
+        render(<HarvestBadge ageInMonths={120} />)
 
         expect(screen.getByText('Sẵn sàng thu hoạch')).toBeInTheDocument()
         expect(screen.getByText('🌟')).toBeInTheDocument()
     })
 
-    it('renders badge for trees > 60 months', () => {
-        render(<HarvestBadge ageInMonths={72} />)
+    it('renders badge for trees > 120 months', () => {
+        render(<HarvestBadge ageInMonths={132} />)
 
         expect(screen.getByText('Sẵn sàng thu hoạch')).toBeInTheDocument()
     })
 
-    it('does not render badge for trees < 60 months', () => {
-        const { container } = render(<HarvestBadge ageInMonths={59} />)
+    it('does not render badge for trees < 120 months', () => {
+        const { container } = render(<HarvestBadge ageInMonths={119} />)
 
         expect(container.firstChild).toBeNull()
     })
@@ -34,7 +34,7 @@ describe('HarvestBadge', () => {
     })
 
     it('has correct styling classes', () => {
-        const { container } = render(<HarvestBadge ageInMonths={60} />)
+        const { container } = render(<HarvestBadge ageInMonths={120} />)
 
         const badge = container.querySelector('.bg-gradient-to-r')
         expect(badge).toBeInTheDocument()
@@ -42,7 +42,7 @@ describe('HarvestBadge', () => {
     })
 
     it('includes motion-reduce accessibility', () => {
-        const { container } = render(<HarvestBadge ageInMonths={60} />)
+        const { container } = render(<HarvestBadge ageInMonths={120} />)
 
         const badge = container.querySelector('.animate-pulse')
         expect(badge).toHaveClass('motion-reduce:animate-none')

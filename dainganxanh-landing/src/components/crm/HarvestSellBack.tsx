@@ -155,7 +155,7 @@ export default function HarvestSellBack({
                         </li>
                         <li className="flex items-start gap-2">
                             <span className="text-emerald-500 mt-0.5">&#10003;</span>
-                            <span>Hệ số mua lại: <strong>x{buybackMultiplier}</strong> (cây 5 năm tuổi)</span>
+                            <span>Hệ số mua lại: <strong>x{buybackMultiplier}</strong> (cây 10 năm tuổi)</span>
                         </li>
                         <li className="flex items-start gap-2">
                             <span className="text-emerald-500 mt-0.5">&#10003;</span>

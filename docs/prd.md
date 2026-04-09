@@ -179,7 +179,7 @@
 - **Priority:** P2
 - **Description:** Thông báo thu hoạch khi cây đến năm thứ 5
 - **Acceptance Criteria:**
-  - Given tree reaches 60 months old
+  - Given tree reaches 120 months old
   - When system checks monthly cron job
   - Then send email/SMS: "Cây của bạn sẵn sàng thu hoạch"
   - And redirect to harvest contract signing page
@@ -1018,7 +1018,7 @@
 - **So that** I can decide on next steps (sell back, keep, or receive product)
 - **Acceptance Criteria:**
   ```gherkin
-  Given my tree is 60 months old
+  Given my tree is 120 months old
   When monthly cron job runs
   Then I should receive email: "Cây của bạn sẵn sàng thu hoạch"
   And email should contain link to e-contract signing page

@@ -63,7 +63,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                         🌟 Cây Sẵn Sàng Thu Hoạch
                     </h1>
                     <p className="text-gray-600 mt-2">
-                        Chúc mừng! Cây của bạn đã đạt 5 năm tuổi và sẵn sàng cho thu hoạch.
+                        Chúc mừng! Cây của bạn đã đạt 10 năm tuổi và sẵn sàng cho thu hoạch.
                     </p>
                 </div>
 

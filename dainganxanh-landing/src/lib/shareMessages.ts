@@ -54,7 +54,7 @@ export function getShareMessage(
         case 'harvest':
             return {
                 title: 'Thu hoạch trầm hương',
-                text: `Sau 5 năm chăm sóc, cây trầm hương của tôi đã sẵn sàng thu hoạch! 🎉`,
+                text: `Sau 10 năm chăm sóc, cây trầm hương của tôi đã sẵn sàng thu hoạch! 🎉`,
                 url: shareUrl,
             }
 

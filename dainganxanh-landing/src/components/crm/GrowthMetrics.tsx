@@ -75,7 +75,7 @@ export default function GrowthMetrics({ co2Total, ageInMonths, quantity, progres
 
                 <p className="text-sm text-gray-500 mt-2">
                     {ageInMonths < HARVEST_MONTHS
-                        ? `Còn ${HARVEST_MONTHS - ageInMonths} tháng nữa đến năm thứ 5`
+                        ? `Còn ${HARVEST_MONTHS - ageInMonths} tháng nữa đến năm thứ ${HARVEST_MONTHS / 12}`
                         : 'Đã đến thời điểm thu hoạch!'}
                 </p>
             </div>

@@ -1,13 +1,15 @@
 'use client'
 
+import { HARVEST_MONTHS } from '@/lib/constants'
+
 interface HarvestBadgeProps {
     ageInMonths: number
 }
 
 export default function HarvestBadge({ ageInMonths }: HarvestBadgeProps) {
-    // Show badge only for trees >= 60 months old (harvest ready)
+    // Show badge only for trees >= HARVEST_MONTHS old (harvest ready)
     // In DEV mode, TreeCard will pass this when minutesOld >= 3
-    if (ageInMonths < 60) {
+    if (ageInMonths < HARVEST_MONTHS) {
         return null
     }
 
