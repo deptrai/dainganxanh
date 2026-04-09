@@ -4,7 +4,6 @@ import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { PDFDocument } from 'pdf-lib'
 import createReport from 'docx-templates'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import {
@@ -23,12 +22,6 @@ const SOFFICE_BIN =
   (process.platform === 'darwin'
     ? '/Applications/LibreOffice.app/Contents/MacOS/soffice'
     : 'soffice')
-
-// Combined stamp+signature overlay (Bên B — right column, above Tổng Giám Đốc)
-const STAMP_SIG_X = Number(process.env.CONTRACT_STAMP_SIG_X) || 330
-const STAMP_SIG_Y = Number(process.env.CONTRACT_STAMP_SIG_Y) || 145
-const STAMP_SIG_W = Number(process.env.CONTRACT_STAMP_SIG_W) || 120
-const STAMP_SIG_H = Number(process.env.CONTRACT_STAMP_SIG_H) || 130
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -143,30 +136,7 @@ async function convertDocxToPdf(docxBuffer: Buffer): Promise<Buffer> {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Step 5: Overlay signature + stamp on last page
-// ─────────────────────────────────────────────────────────────────
-
-async function overlaySignature(pdfBytes: Buffer): Promise<Buffer> {
-  const pdfDoc = await PDFDocument.load(pdfBytes)
-  const pages = pdfDoc.getPages()
-  const lastPage = pages[pages.length - 1]
-
-  const stampSigBytes = await readTemplateAsset('stamp-signature.png')
-  const stampSigImage = await pdfDoc.embedPng(stampSigBytes)
-
-  lastPage.drawImage(stampSigImage, {
-    x: STAMP_SIG_X,
-    y: STAMP_SIG_Y,
-    width: STAMP_SIG_W,
-    height: STAMP_SIG_H,
-  })
-
-  const result = await pdfDoc.save()
-  return Buffer.from(result)
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Step 6: Upload PDF to Supabase Storage
+// Upload PDF to Supabase Storage
 // ─────────────────────────────────────────────────────────────────
 
 async function uploadPdf(pdfBytes: Buffer, orderCode: string): Promise<string> {
@@ -242,13 +212,10 @@ export async function POST(req: NextRequest) {
     // Step 4: Convert DOCX → PDF via LibreOffice
     const pdfBytes = await convertDocxToPdf(filledDocx)
 
-    // Step 5: Overlay signature + stamp
-    const signedPdfBytes = await overlaySignature(pdfBytes)
+    // Step 5: Upload to Supabase Storage contracts/{orderCode}.pdf
+    const contractUrl = await uploadPdf(pdfBytes, order.code)
 
-    // Step 6: Upload to Supabase Storage contracts/{orderCode}.pdf
-    const contractUrl = await uploadPdf(signedPdfBytes, order.code)
-
-    // Step 7: Update orders.contract_url
+    // Step 6: Update orders.contract_url
     await updateContractUrl(order.id, contractUrl)
 
     return NextResponse.json({ contractUrl, success: true })
