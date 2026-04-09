@@ -8,7 +8,7 @@ import { VideoButton } from '@/components/marketing/VideoButton'
 import { HeroVideo } from '@/components/marketing/HeroVideo'
 import { TreeCounter } from '@/components/marketing/TreeCounter'
 import { CTAButton } from '@/components/marketing/CTAButton'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const revalidate = 60; // Cache trang này 60 giây (ISR) để chịu tải tốt hơn khi bị đột biến traffic
 
@@ -16,10 +16,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     const params = await searchParams
     const refCode = params.ref
 
-    // Fetch tree count from completed orders server-side
+    // Fetch tree count from completed orders server-side (service role to bypass RLS)
     let treeCount = 0
     try {
-        const supabase = await createServerClient()
+        const supabase = createServiceRoleClient()
         const { data } = await supabase
             .from('orders')
             .select('quantity')
