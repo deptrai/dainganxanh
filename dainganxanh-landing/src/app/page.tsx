@@ -20,14 +20,18 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     let treeCount = 0
     try {
         const supabase = createServiceRoleClient()
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('orders')
             .select('quantity')
             .eq('status', 'completed')
+        if (error) console.error('[TreeCounter] fetch error:', error.message)
         if (data) {
             treeCount = data.reduce((sum, row) => sum + (row.quantity ?? 0), 0)
         }
-    } catch { /* fallback to 0 */ }
+        console.log('[TreeCounter] count:', treeCount)
+    } catch (err) {
+        console.error('[TreeCounter] exception:', err)
+    }
 
     return (
         <main className="overflow-x-hidden">
