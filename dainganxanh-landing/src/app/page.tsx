@@ -333,12 +333,60 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </section>
 
             {/* Footer */}
-            <footer className="bg-brand-900 text-white/60 py-12 border-t border-white/10">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <FadeIn>
-                        <p className="font-serif text-brand-100 mb-4 text-lg tracking-widest">Đại Ngàn Xanh - Dó Đen Việt</p>
-                        <p className="text-sm">© 2026 Copyright by Dai Ngan Xanh Project. All rights reserved.</p>
-                    </FadeIn>
+            <footer className="bg-brand-900 text-white py-16 border-t border-white/10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                        {/* Cột 1 — Thương hiệu */}
+                        <div>
+                            <p className="font-serif text-2xl font-bold text-white mb-3">Đại Ngàn Xanh</p>
+                            <p className="text-white/60 text-sm leading-relaxed mb-4">
+                                Dệt đại ngàn Dó Đen Việt — Gặt phước báu cho thế hệ mai sau.
+                            </p>
+                            <div className="flex gap-4">
+                                <a href="https://www.facebook.com/profile.php?id=61585922638193" target="_blank" rel="noopener noreferrer"
+                                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                    </svg>
+                                </a>
+                                <a href="https://zalo.me/dainganxanh" target="_blank" rel="noopener noreferrer"
+                                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                                    <span className="text-white text-xs font-bold">Zalo</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Cột 2 — Navigation */}
+                        <div>
+                            <p className="text-white font-semibold mb-4 uppercase tracking-wider text-sm">Khám phá</p>
+                            <ul className="space-y-2 text-white/60 text-sm">
+                                <li><a href="#about" className="hover:text-white transition-colors">Câu chuyện</a></li>
+                                <li><a href="#product" className="hover:text-white transition-colors">Dó Đen Việt</a></li>
+                                <li><a href="#how-it-works" className="hover:text-white transition-colors">Cách tham gia</a></li>
+                                <li><Link href="/pricing" className="hover:text-white transition-colors">Mua cây</Link></li>
+                                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+                            </ul>
+                        </div>
+
+                        {/* Cột 3 — Thông tin công ty */}
+                        <div>
+                            <p className="text-white font-semibold mb-4 uppercase tracking-wider text-sm">Thông tin công ty</p>
+                            <ul className="space-y-2 text-white/60 text-sm">
+                                <li className="font-medium text-white/80">CÔNG TY CỔ PHẦN ĐẠI NGÀN XANH GROUP</li>
+                                <li>MST: <a href="https://masothue.com/0319475343-cong-ty-co-phan-dai-ngan-xanh-group" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors underline">0319475343</a></li>
+                                <li>Số 53 Đường số 1, Khu phố 36,<br />Phường Hiệp Bình, TP. Hồ Chí Minh</li>
+                                <li>
+                                    <a href="mailto:lienhe@dainganxanh.com.vn" className="hover:text-white transition-colors">
+                                        lienhe@dainganxanh.com.vn
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-white/10 pt-8 text-center text-white/40 text-sm">
+                        © 2026 Công ty Cổ phần Đại Ngàn Xanh Group. Bảo lưu mọi quyền.
+                    </div>
                 </div>
             </footer>
         </main>
