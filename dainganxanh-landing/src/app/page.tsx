@@ -10,7 +10,7 @@ import { TreeCounter } from '@/components/marketing/TreeCounter'
 import { CTAButton } from '@/components/marketing/CTAButton'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
-export const revalidate = 60; // Cache trang này 60 giây (ISR) để chịu tải tốt hơn khi bị đột biến traffic
+export const dynamic = 'force-dynamic'; // Tree counter cần real-time, không cache
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
     const params = await searchParams
