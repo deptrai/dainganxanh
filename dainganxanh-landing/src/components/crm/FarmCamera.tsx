@@ -130,10 +130,16 @@ export default function FarmCamera({ streamName = "farm" }: FarmCameraProps) {
                         <p className="font-medium">Đang kết nối camera...</p>
                     </div>
                 ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                        <VideoOff className="w-12 h-12 mb-3 opacity-50" />
-                        <p className="font-medium">Camera đang ngoại tuyến</p>
-                        <p className="text-sm mt-1 opacity-70">Server stream không phản hồi</p>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 to-emerald-950 text-white px-6 text-center">
+                        <span className="text-5xl mb-4">🌿</span>
+                        <p className="text-lg font-bold text-emerald-300">Camera Vườn Sắp Ra Mắt</p>
+                        <p className="text-sm mt-2 text-gray-400 max-w-xs">
+                            Tính năng xem trực tiếp vườn cây 24/7 đang được triển khai.<br />
+                            Bạn sẽ sớm thấy cây của mình lớn lên từng ngày!
+                        </p>
+                        <span className="mt-4 px-4 py-1.5 rounded-full bg-emerald-800/50 border border-emerald-700 text-emerald-300 text-xs font-medium">
+                            🚧 Đang phát triển
+                        </span>
                     </div>
                 )}
             </div>
