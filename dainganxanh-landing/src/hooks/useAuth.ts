@@ -80,8 +80,8 @@ export function useAuth(): UseAuthReturn {
         const supabase = createBrowserClient();
 
         try {
-            // DEV BYPASS: Accept "12345678" as universal test OTP (development only)
-            if (process.env.NODE_ENV === "development" && code === "12345678") {
+            // DEV BYPASS: Accept "123456" as universal test OTP (development only)
+            if (process.env.NODE_ENV === "development" && code === "123456") {
                 console.warn("⚠️ DEV BYPASS: Using test OTP");
                 const result = await devBypassOTP(identifier, mode, code);
 

@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-const DEV_OTP = '12345678'
+const DEV_OTP = '123456'
 
 /**
  * DEV ONLY: Bypass OTP verification for testing

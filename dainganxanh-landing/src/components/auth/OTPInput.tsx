@@ -16,7 +16,7 @@ interface OTPInputProps {
 }
 
 export function OTPInput({
-    length = 8,
+    length = 6,
     onComplete,
     onResend,
     countdown,
@@ -97,9 +97,9 @@ export function OTPInput({
             {/* OTP Input Boxes */}
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Nhập mã OTP (8 chữ số)
+                    Nhập mã OTP (6 chữ số)
                 </label>
-                <div className="grid grid-cols-8 gap-1 sm:gap-1.5">
+                <div className="grid grid-cols-6 gap-2 sm:gap-3">
                     {otp.map((digit, index) => (
                         <motion.input
                             key={index}
