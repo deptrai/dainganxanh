@@ -12,7 +12,7 @@ export function ReferralLink({ referralCode, onRegenerate }: ReferralLinkProps) 
     const [copied, setCopied] = useState(false)
     const [regenerating, setRegenerating] = useState(false)
 
-    const fullUrl = `https://dainganxanh.com.vn/?ref=${referralCode}`
+    const fullUrl = `https://dainganxanh.com.vn/register?ref=${referralCode}`
 
     const handleCopy = async () => {
         try {

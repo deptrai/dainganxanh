@@ -19,7 +19,8 @@ function RegisterContent() {
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
     const hasQuantityParam = !!searchParams.get("quantity");
-    const [refInput, setRefInput] = useState("");
+    const refFromUrl = searchParams.get("ref") || "";
+    const [refInput, setRefInput] = useState(refFromUrl.toLowerCase());
     const [refError, setRefError] = useState("");
     const [accountExists, setAccountExists] = useState(false);
 
@@ -38,11 +39,15 @@ function RegisterContent() {
         resendOTP,
     } = useAuth();
 
-    // Pre-fill from cookie if exists (from referral link)
+    // Pre-fill from URL param first, then cookie as fallback
     useEffect(() => {
-        const existing = Cookies.get("ref");
-        if (existing) setRefInput(existing.toLowerCase());
-    }, []);
+        if (refFromUrl) {
+            setRefInput(refFromUrl.toLowerCase());
+        } else {
+            const existing = Cookies.get("ref");
+            if (existing) setRefInput(existing.toLowerCase());
+        }
+    }, [refFromUrl]);
 
     // Auto-redirect if already logged in
     useEffect(() => {

@@ -88,7 +88,7 @@ export default async function ReferralsPage() {
     // Get conversions list
     const conversions = await getReferralConversions(effectiveUserId)
 
-    const referralUrl = `https://dainganxanh.com.vn/?ref=${userData.referral_code}`
+    const referralUrl = `https://dainganxanh.com.vn/register?ref=${userData.referral_code}`
 
     return (
         <div className="container mx-auto px-4 py-8">
