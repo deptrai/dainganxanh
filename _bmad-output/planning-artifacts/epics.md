@@ -930,6 +930,32 @@ Tài liệu này cung cấp phân tích chi tiết Epics và Stories cho dự á
 
 ---
 
+### Story 5.7: Order Refund for Completed Orders
+
+**As an** admin,
+**I want to** issue a refund when cancelling a completed (paid) order,
+**So that** customers receive their money back when an order is cancelled after payment.
+
+**Acceptance Criteria:**
+
+**Given** đơn hàng status = completed (đã thanh toán)
+**When** admin cancel order từ trang quản lý đơn hàng
+**Then** hệ thống tạo refund record với số tiền gốc
+**And** status order chuyển sang `cancelled_refunded`
+**And** admin nhận thông báo xác nhận refund cần xử lý thủ công (chuyển khoản)
+**And** customer nhận email/notification thông báo đơn bị hủy và sẽ được hoàn tiền
+**And** ghi audit log: admin_id, order_id, amount, reason
+
+**Out of scope:**
+- Auto refund qua cổng thanh toán (xử lý thủ công)
+- Partial refund
+
+**Story Points:** 3
+**Status:** todo
+**FRs:** FR-35 (extension)
+
+---
+
 ## Epic 6: SEO
 
 **Goal:** Tối ưu SEO để tăng organic traffic.

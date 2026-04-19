@@ -11,6 +11,7 @@ import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 interface OrderTableProps {
     orders: Order[]
     verifyOrder: (orderId: string) => Promise<void>
+    refundOrder?: (orderId: string) => Promise<void>
 }
 
 type SortField = 'created_at' | 'total_amount' | 'quantity'
@@ -23,6 +24,7 @@ const statusColors = {
     assigned: 'bg-purple-100 text-purple-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
+    cancelled_refunded: 'bg-orange-100 text-orange-800',
 }
 
 const statusLabels = {
@@ -32,14 +34,16 @@ const statusLabels = {
     assigned: 'Đã gán cây',
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
+    cancelled_refunded: 'Hoàn tiền',
 }
 
-export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
+export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTableProps) {
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
     const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
     const [assignError, setAssignError] = useState<string | null>(null)
+    const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null)
 
     const handleAssignToLot = async (lotId: string) => {
         if (!assigningOrder) return
@@ -196,15 +200,35 @@ export default function OrderTable({ orders, verifyOrder }: OrderTableProps) {
                                         {order.status === 'pending' || order.status === 'paid' ? (
                                             <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                                         ) : order.status === 'verified' || order.status === 'completed' ? (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    setAssigningOrder(order)
-                                                }}
-                                                className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
-                                            >
-                                                Gán lô cây
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setAssigningOrder(order)
+                                                    }}
+                                                    className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                                                >
+                                                    Gán lô cây
+                                                </button>
+                                                {order.status === 'completed' && refundOrder && (
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation()
+                                                            if (!confirm(`Xác nhận hoàn tiền đơn hàng ${order.order_code || order.id}?`)) return
+                                                            setRefundingOrderId(order.id)
+                                                            try {
+                                                                await refundOrder(order.id)
+                                                            } finally {
+                                                                setRefundingOrderId(null)
+                                                            }
+                                                        }}
+                                                        disabled={refundingOrderId === order.id}
+                                                        className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-xs disabled:opacity-50"
+                                                    >
+                                                        {refundingOrderId === order.id ? '...' : 'Hoàn tiền'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         ) : (
                                             <span className="text-gray-400">-</span>
                                         )}

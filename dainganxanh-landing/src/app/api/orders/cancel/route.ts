@@ -18,8 +18,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid order code format' }, { status: 400 })
     }
 
-    // Use service role to bypass RLS (user authenticated above)
     const serviceSupabase = createServiceRoleClient()
+
+    // Fetch caller role (needed for admin refund path)
+    const { data: callerProfile } = await serviceSupabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isAdmin = ['admin', 'super_admin'].includes(callerProfile?.role ?? '')
+
+    // Admin refund path: check if target order is completed
+    if (orderId) {
+      const { data: existingOrder } = await serviceSupabase
+        .from('orders')
+        .select('id, code, total_amount, user_id, status')
+        .eq('id', orderId)
+        .single()
+
+      if (existingOrder?.status === 'completed') {
+        // Only admins can cancel completed orders
+        if (!isAdmin) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        }
+
+        const { error: updateError } = await serviceSupabase
+          .from('orders')
+          .update({ status: 'cancelled_refunded' })
+          .eq('id', orderId)
+          .eq('status', 'completed')
+
+        if (updateError) {
+          console.error('Failed to refund order:', updateError)
+          return NextResponse.json({ error: 'Không thể hoàn tiền đơn hàng' }, { status: 500 })
+        }
+
+        // Non-blocking audit log
+        try {
+          await serviceSupabase.from('admin_audit_log').insert({
+            admin_id: user.id,
+            action: 'order_refund_initiated',
+            target_id: existingOrder.id,
+            metadata: {
+              order_code: existingOrder.code,
+              amount: existingOrder.total_amount,
+              user_id: existingOrder.user_id,
+            },
+          })
+        } catch (auditErr) {
+          console.error('Audit log failed (non-blocking):', auditErr)
+        }
+
+        return NextResponse.json({ success: true, refundStatus: 'manual_pending' })
+      }
+
+      if (!existingOrder) {
+        return NextResponse.json({ error: 'Đơn hàng không tìm thấy hoặc đã xử lý' }, { status: 404 })
+      }
+    }
+
+    // Regular cancel path: user cancels own pending order (existing behavior)
     let query = serviceSupabase
       .from('orders')
       .update({ status: 'cancelled' })

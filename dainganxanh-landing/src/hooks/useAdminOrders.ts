@@ -9,7 +9,7 @@ export interface Order {
     quantity: number
     total_amount: number
     payment_method: string
-    status: 'pending' | 'paid' | 'verified' | 'assigned' | 'completed' | 'cancelled'
+    status: 'pending' | 'paid' | 'verified' | 'assigned' | 'completed' | 'cancelled' | 'cancelled_refunded'
     verified_at: string | null
     created_at: string
     // Joined from users table
@@ -47,6 +47,7 @@ interface UseAdminOrdersReturn {
     pagination: PaginationInfo
     setPage: (page: number) => void
     verifyOrder: (orderId: string) => Promise<void>
+    refundOrder: (orderId: string) => Promise<void>
     refetch: () => Promise<void>
 }
 
@@ -122,6 +123,26 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         )
     }, [])
 
+    const refundOrder = useCallback(async (orderId: string) => {
+        const res = await fetch('/api/orders/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Không thể hoàn tiền đơn hàng')
+        }
+        // Optimistic update
+        setOrders((prev) =>
+            prev.map((order) =>
+                order.id === orderId
+                    ? { ...order, status: 'cancelled_refunded' as const }
+                    : order
+            )
+        )
+    }, [])
+
     const refetch = useCallback(async () => {
         await fetchOrders()
     }, [fetchOrders])
@@ -140,6 +161,7 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         pagination,
         setPage,
         verifyOrder,
+        refundOrder,
         refetch,
     }
 }
