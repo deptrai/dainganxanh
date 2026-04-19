@@ -1,6 +1,15 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Notification Flow E2E', () => {
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
     test.beforeEach(async ({ page }) => {
         // Navigate to login page
         await page.goto('/login')
@@ -110,7 +119,7 @@ test.describe('Notification Flow E2E', () => {
         })
 
         // Wait a bit for subscription to establish
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Verify subscription was established
         const hasSubscribedLog = logs.some(log => log.includes('SUBSCRIBED'))

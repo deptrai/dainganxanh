@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Admin Referrals Management E2E Test Suite
@@ -11,39 +12,17 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Admin Referrals Management E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete admin login flow and navigate to target page
@@ -88,8 +67,6 @@ test.describe('Admin Referrals Management E2E', () => {
         }
 
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         const hasSkipButton = await skipButton.count() > 0
 
@@ -99,7 +76,7 @@ test.describe('Admin Referrals Management E2E', () => {
                 await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
             } catch {
                 console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
                 const afterSkipUrl = page.url()
                 if (!afterSkipUrl.includes(targetPath)) {
                     await page.goto(targetPath)
@@ -107,14 +84,12 @@ test.describe('Admin Referrals Management E2E', () => {
                 }
             }
             await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
         } else {
-            await page.waitForTimeout(3000)
+            await page.waitForLoadState('networkidle')
             const currentUrl = page.url()
             if (!currentUrl.includes(targetPath)) {
                 await page.goto(targetPath)
                 await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
             }
         }
 
@@ -138,7 +113,7 @@ test.describe('Admin Referrals Management E2E', () => {
         // ============================================
         // Phase 2: Verify referrals table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if referrals table exists
         const referralsTable = page.locator('table, div[class*="referral"]').first()
@@ -225,7 +200,7 @@ test.describe('Admin Referrals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for "assign referral code" button or section
         const assignButton = page.getByRole('button', { name: /gán mã|assign|tạo mã/i }).first()
@@ -234,7 +209,7 @@ test.describe('Admin Referrals Management E2E', () => {
         if (hasAssignButton) {
             console.log('📝 Attempting to assign referral code to user...')
             await assignButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Look for user selection (could be dropdown or search)
             const userSelect = page.locator('select[name*="user"], input[placeholder*="tìm người dùng"]')
@@ -242,7 +217,7 @@ test.describe('Admin Referrals Management E2E', () => {
 
             if (hasUserSelect) {
                 await userSelect.first().fill('noref@example.com')
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
 
                 // Select from dropdown if available
                 const userOption = page.getByText('noref@example.com')
@@ -257,7 +232,7 @@ test.describe('Admin Referrals Management E2E', () => {
 
             if (hasConfirmButton) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success message
                 const successMessage = page.locator('text=/thành công|success|đã gán/i')
@@ -325,7 +300,7 @@ test.describe('Admin Referrals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for assign button
         const assignButton = page.getByRole('button', { name: /gán mã|assign|tạo mã/i }).first()
@@ -333,20 +308,20 @@ test.describe('Admin Referrals Management E2E', () => {
 
         if (hasAssignButton) {
             await assignButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Fill user selection if available
             const userSelect = page.locator('select[name*="user"], input[placeholder*="tìm người dùng"]')
             if (await userSelect.count() > 0) {
                 await userSelect.first().fill('test@example.com')
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
             }
 
             // Click confirm
             const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|gán mã|assign/i }).last()
             if (await confirmButton.count() > 0) {
                 await confirmButton.click()
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
 
                 // Verify Telegram API was called
                 if (telegramApiCalled) {

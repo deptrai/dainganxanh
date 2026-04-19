@@ -9,7 +9,13 @@ jest.mock('lucide-react', () => ({
     RefreshCw: () => <svg data-testid="icon-refresh" />,
 }))
 
-const mockFetchOnline = () =>
+const mockFetchStreaming = () =>
+    jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ online: true, streaming: true }),
+    } as Response)
+
+const mockFetchConfigured = () =>
     jest.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ online: true, streaming: false }),
@@ -18,7 +24,7 @@ const mockFetchOnline = () =>
 const mockFetchOffline = () =>
     jest.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ online: false }),
+        json: async () => ({ online: false, streaming: false }),
     } as Response)
 
 const mockFetchError = () =>
@@ -35,7 +41,7 @@ describe('FarmCamera', () => {
     })
 
     it('renders section title and subtitle', async () => {
-        global.fetch = mockFetchOnline()
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera />)
         })
@@ -43,16 +49,16 @@ describe('FarmCamera', () => {
         expect(screen.getByText('Quan sát cây của bạn 24/7')).toBeInTheDocument()
     })
 
-    it('renders iframe optimistically before first status check resolves', () => {
-        // fetch never resolves → isOnline stays null
+    it('shows loading state before first status check resolves', () => {
+        // fetch never resolves → status stays "loading"
         global.fetch = jest.fn().mockReturnValue(new Promise(() => {}))
         render(<FarmCamera streamName="farm" />)
-        expect(screen.getByTitle('Camera vườn trực tiếp')).toBeInTheDocument()
-        expect(screen.queryByTestId('icon-video-off')).not.toBeInTheDocument()
+        expect(screen.getByText('Đang kết nối camera...')).toBeInTheDocument()
+        expect(screen.queryByTitle('Camera vườn trực tiếp')).not.toBeInTheDocument()
     })
 
-    it('shows "Đang phát" badge when stream is online', async () => {
-        global.fetch = mockFetchOnline()
+    it('shows "Đang phát" badge when stream is streaming', async () => {
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera streamName="farm" />)
         })
@@ -61,8 +67,8 @@ describe('FarmCamera', () => {
         })
     })
 
-    it('shows iframe when stream is online', async () => {
-        global.fetch = mockFetchOnline()
+    it('shows iframe when stream is streaming', async () => {
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera streamName="farm" />)
         })
@@ -73,6 +79,17 @@ describe('FarmCamera', () => {
         })
     })
 
+    it('shows "Camera mất tín hiệu" badge when online but not streaming', async () => {
+        global.fetch = mockFetchConfigured()
+        await act(async () => {
+            render(<FarmCamera streamName="farm" />)
+        })
+        await waitFor(() => {
+            expect(screen.getAllByText('Camera mất tín hiệu').length).toBeGreaterThan(0)
+        })
+        expect(screen.queryByTitle('Camera vườn trực tiếp')).not.toBeInTheDocument()
+    })
+
     it('shows offline placeholder when stream is offline', async () => {
         global.fetch = mockFetchOffline()
         await act(async () => {
@@ -80,7 +97,6 @@ describe('FarmCamera', () => {
         })
         await waitFor(() => {
             expect(screen.getByText('Camera đang ngoại tuyến')).toBeInTheDocument()
-            expect(screen.getByText('Vui lòng thử lại sau')).toBeInTheDocument()
         })
         expect(screen.queryByTitle('Camera vườn trực tiếp')).not.toBeInTheDocument()
     })
@@ -95,19 +111,18 @@ describe('FarmCamera', () => {
         })
     })
 
-    it('assumes online when fetch fails (optimistic fallback)', async () => {
+    it('shows offline state when fetch fails', async () => {
         global.fetch = mockFetchError()
         await act(async () => {
             render(<FarmCamera streamName="farm" />)
         })
         await waitFor(() => {
-            expect(screen.queryByText('Camera đang ngoại tuyến')).not.toBeInTheDocument()
-            expect(screen.getByTitle('Camera vườn trực tiếp')).toBeInTheDocument()
+            expect(screen.getByText('Camera đang ngoại tuyến')).toBeInTheDocument()
         })
     })
 
     it('polls status every 30 seconds', async () => {
-        global.fetch = mockFetchOnline()
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera streamName="farm" />)
         })
@@ -126,7 +141,7 @@ describe('FarmCamera', () => {
     })
 
     it('calls /api/camera/status with correct stream name', async () => {
-        global.fetch = mockFetchOnline()
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera streamName="my-stream" />)
         })
@@ -136,27 +151,26 @@ describe('FarmCamera', () => {
         )
     })
 
-    it('refresh button remounts iframe (changes key)', async () => {
-        global.fetch = mockFetchOnline()
+    it('refresh button is present and clickable when streaming', async () => {
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera streamName="farm" />)
         })
-
-        const iframeBefore = screen.getByTitle('Camera vườn trực tiếp')
-        const srcBefore = iframeBefore.getAttribute('src')
-
-        act(() => {
-            fireEvent.click(screen.getByTitle('Tải lại stream'))
+        await waitFor(() => {
+            expect(screen.getByTitle('Camera vườn trực tiếp')).toBeInTheDocument()
         })
 
-        // After refresh the iframe is remounted — src stays the same but React key changed.
-        // We can't easily assert the key, but we can verify the iframe is still present.
+        const refreshBtn = screen.getByTitle('Tải lại stream')
+        act(() => {
+            fireEvent.click(refreshBtn)
+        })
+
+        // Iframe should still be present after refresh (key changes but component stays)
         expect(screen.getByTitle('Camera vườn trực tiếp')).toBeInTheDocument()
-        expect(screen.getByTitle('Camera vườn trực tiếp').getAttribute('src')).toBe(srcBefore)
     })
 
     it('renders fullscreen button', async () => {
-        global.fetch = mockFetchOnline()
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera />)
         })
@@ -164,7 +178,7 @@ describe('FarmCamera', () => {
     })
 
     it('stream URL uses NEXT_PUBLIC_GO2RTC_URL env', async () => {
-        global.fetch = mockFetchOnline()
+        global.fetch = mockFetchStreaming()
         await act(async () => {
             render(<FarmCamera streamName="farm" />)
         })
@@ -176,7 +190,7 @@ describe('FarmCamera', () => {
 
     it('cleans up interval on unmount', async () => {
         const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
-        global.fetch = mockFetchOnline()
+        global.fetch = mockFetchStreaming()
         let unmount: () => void
         await act(async () => {
             const result = render(<FarmCamera />)

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Admin Withdrawals Management E2E Test Suite
@@ -11,39 +12,17 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Admin Withdrawals Management E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete admin login flow and navigate to target page
@@ -88,8 +67,6 @@ test.describe('Admin Withdrawals Management E2E', () => {
         }
 
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         const hasSkipButton = await skipButton.count() > 0
 
@@ -99,7 +76,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
                 await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
             } catch {
                 console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
                 const afterSkipUrl = page.url()
                 if (!afterSkipUrl.includes(targetPath)) {
                     await page.goto(targetPath)
@@ -107,14 +84,12 @@ test.describe('Admin Withdrawals Management E2E', () => {
                 }
             }
             await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
         } else {
-            await page.waitForTimeout(3000)
+            await page.waitForLoadState('networkidle')
             const currentUrl = page.url()
             if (!currentUrl.includes(targetPath)) {
                 await page.goto(targetPath)
                 await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
             }
         }
 
@@ -138,7 +113,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
         // ============================================
         // Phase 2: Verify withdrawals table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if withdrawals table exists
         const withdrawalsTable = page.locator('table, div[class*="withdrawal"]').first()
@@ -229,7 +204,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for approve button
         const approveButton = page.getByRole('button', { name: /duyệt|approve|xác nhận/i }).first()
@@ -237,7 +212,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
 
         if (hasApproveButton) {
             await approveButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Look for proof image upload input
             const fileInput = page.locator('input[type="file"]')
@@ -252,7 +227,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
                     buffer: buffer
                 })
 
-                await page.waitForTimeout(1000)
+                await page.waitForLoadState('networkidle')
                 console.log('✅ Proof image uploaded (mocked)')
             }
 
@@ -262,7 +237,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
 
             if (hasConfirmButton) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success message
                 const successMessage = page.locator('text=/thành công|success|đã duyệt/i')
@@ -311,7 +286,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for reject button
         const rejectButton = page.getByRole('button', { name: /từ chối|reject|hủy/i }).first()
@@ -319,7 +294,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
 
         if (hasRejectButton) {
             await rejectButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Look for rejection reason textarea
             const reasonInput = page.locator('textarea[name*="reason"], textarea[placeholder*="lý do"]').or(page.locator('input[name*="reason"]'))
@@ -336,7 +311,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
 
             if (hasConfirmButton) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success message
                 const successMessage = page.locator('text=/thành công|success|đã từ chối/i')
@@ -389,7 +364,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
             })
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if balance information is displayed
         const balanceSection = page.locator('text=/số dư|balance|available/i')
@@ -477,7 +452,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for approve button and trigger approval flow
         const approveButton = page.getByRole('button', { name: /duyệt|approve|xác nhận/i }).first()
@@ -485,7 +460,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
 
         if (hasApproveButton) {
             await approveButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Upload proof image if input exists
             const fileInput = page.locator('input[type="file"]')
@@ -506,7 +481,7 @@ test.describe('Admin Withdrawals Management E2E', () => {
 
             if (hasConfirmButton) {
                 await confirmButton.click()
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
 
                 // Verify email API was called
                 if (emailApiCalled) {

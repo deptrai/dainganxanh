@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Notification System E2E Test Suite
@@ -11,39 +12,8 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe.serial('Notification System E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete admin login flow
@@ -78,14 +48,14 @@ test.describe.serial('Notification System E2E', () => {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         const hasSkipButton = await skipButton.count() > 0
 
         if (hasSkipButton) {
             await skipButton.click()
-            await page.waitForTimeout(2000)
+            await page.waitForLoadState('networkidle')
         }
 
         console.log('✅ Admin login successful')
@@ -178,7 +148,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, orderData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify email sent with correct template and data
         expect(emailApiCalls.length).toBeGreaterThan(0)
@@ -256,7 +226,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, withdrawalData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify email sent with correct template and data
         expect(emailApiCalls.length).toBeGreaterThan(0)
@@ -330,7 +300,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, rejectionData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify email sent with correct template and data
         expect(emailApiCalls.length).toBeGreaterThan(0)
@@ -403,7 +373,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, reportData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify email sent with correct template and data
         expect(emailApiCalls.length).toBeGreaterThan(0)
@@ -474,7 +444,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, orderData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify Telegram message sent with correct data
         expect(telegramApiCalls.length).toBeGreaterThan(0)
@@ -553,7 +523,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, withdrawalData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify Telegram message sent with correct data and action buttons
         expect(telegramApiCalls.length).toBeGreaterThan(0)
@@ -633,7 +603,7 @@ test.describe.serial('Notification System E2E', () => {
             })
         }, referralData)
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify Telegram message sent with correct data
         expect(telegramApiCalls.length).toBeGreaterThan(0)

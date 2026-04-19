@@ -5,7 +5,9 @@ export default defineConfig({
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 1,
-    workers: process.env.CI ? 1 : 1,
+    // CI: 2 workers (cân bằng giữa speed và OTP rate-limit từ Supabase auth)
+    // Local: 4 workers cho dev iteration nhanh hơn
+    workers: process.env.CI ? 2 : 4,
     reporter: 'html',
     use: {
         baseURL: 'http://localhost:3001',

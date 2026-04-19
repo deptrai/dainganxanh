@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Performance & Boundary Testing E2E Test Suite
@@ -11,40 +12,18 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Performance & Boundary Testing E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
+    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete admin login flow and navigate to target page
@@ -89,8 +68,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
         }
 
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         const hasSkipButton = await skipButton.count() > 0
 
@@ -100,7 +77,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
             } catch {
                 console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
                 const afterSkipUrl = page.url()
                 console.log(`Current URL after skip: ${afterSkipUrl}`)
                 if (!afterSkipUrl.includes(targetPath)) {
@@ -110,19 +87,17 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 }
             }
             await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
             const finalUrl = page.url()
             console.log(`Final URL: ${finalUrl}`)
         } else {
             console.log(`No skip button, waiting for auto-redirect...`)
-            await page.waitForTimeout(3000)
+            await page.waitForLoadState('networkidle')
             const currentUrl = page.url()
             console.log(`Current URL after OTP: ${currentUrl}`)
             if (!currentUrl.includes(targetPath)) {
                 console.log(`Navigating to target: ${targetPath}`)
                 await page.goto(targetPath)
                 await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
             }
             const finalUrl = page.url()
             console.log(`Final URL: ${finalUrl}`)
@@ -233,11 +208,11 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
         // Verify page loaded
         await expect(page.getByText(/order management|quản lý đơn hàng/i).first()).toBeVisible({ timeout: 10000 })
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Measure initial load time
         const loadStartTime = await page.evaluate(() => performance.now())
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         const loadEndTime = await page.evaluate(() => performance.now())
         const loadTime = loadEndTime - loadStartTime
         console.log(`📊 Initial load time: ${loadTime.toFixed(2)}ms`)
@@ -271,7 +246,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 const isNextEnabled = await nextButton.isEnabled()
                 if (isNextEnabled) {
                     await nextButton.click()
-                    await page.waitForTimeout(500)
+                    await page.waitForLoadState('networkidle')
                 } else {
                     console.log(`  ⚠️ Next button disabled at page ${i}`)
                     break
@@ -328,7 +303,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
         // Verify page loaded
         await expect(page).toHaveURL(/crm\/my-garden/)
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Verify order cards are displayed
         const orderCards = page.locator('a[href*="/crm/my-garden/"]')
@@ -340,7 +315,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
             // Scroll through the page to trigger virtual scroll
             for (let i = 0; i < 5; i++) {
                 await page.evaluate(() => window.scrollBy(0, 500))
-                await page.waitForTimeout(300)
+                await page.waitForLoadState('networkidle')
             }
 
             console.log('✅ Virtual scroll tested successfully')
@@ -365,8 +340,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
         // Navigate to my garden first
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         // Try to find and click first order card to get to detail page
         const firstOrderCard = page.locator('a[href*="/crm/my-garden/"]').first()
         if (await firstOrderCard.count() > 0) {
@@ -406,7 +379,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
             const photoSection = page.locator('text=/thư viện ảnh|photos/i').first()
             if (await photoSection.isVisible()) {
                 await photoSection.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Count initially loaded images
                 const initialImages = await page.locator('img[src*="picsum"], img[alt*="photo"]').count()
@@ -422,7 +395,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                             window.scrollBy(0, 500)
                         }
                     })
-                    await page.waitForTimeout(800) // Wait for lazy load
+                    await page.waitForLoadState('networkidle') // Wait for lazy load
 
                     const currentImages = await page.locator('img[src*="picsum"], img[alt*="photo"]').count()
                     console.log(`  After scroll ${scroll + 1}: ${currentImages} images loaded`)
@@ -499,7 +472,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
         await loginAsAdmin(page, '/crm/admin/transactions')
 
         // Wait for page to load
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Measure query time with timeout protection
         const queryStartTime = await page.evaluate(() => performance.now())
@@ -526,7 +499,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
                 // Apply filter
                 await filterDropdown.selectOption({ value: 'deposit' })
-                await page.waitForTimeout(1000)
+                await page.waitForLoadState('networkidle')
 
                 const filteredRows = await page.locator('tr[class*="transaction"], div[class*="transaction-row"]').count()
                 console.log(`📊 Filtered transactions (deposit): ${filteredRows}`)
@@ -572,7 +545,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
                 await sendOTPButton.click()
 
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 console.log(`✅ User ${index + 1} (${testEmail}): Login request sent successfully`)
 

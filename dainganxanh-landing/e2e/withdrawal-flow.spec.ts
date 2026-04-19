@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 
@@ -24,40 +25,18 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
  */
 
 test.describe('Withdrawal Flow E2E', () => {
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
     const TEST_EMAIL = 'test@test.com'
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow for test user
@@ -70,7 +49,7 @@ test.describe('Withdrawal Flow E2E', () => {
         await expect(emailInput).toBeVisible()
         await emailInput.fill(TEST_EMAIL)
 
-        await page.waitForTimeout(2000) // Rate limiting
+        await page.waitForLoadState('networkidle') // Rate limiting
 
         const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
         await sendOTPButton.click()
@@ -111,7 +90,7 @@ test.describe('Withdrawal Flow E2E', () => {
         await expect(emailInput).toBeVisible()
         await emailInput.fill(ADMIN_EMAIL)
 
-        await page.waitForTimeout(2000) // Rate limiting
+        await page.waitForLoadState('networkidle') // Rate limiting
 
         const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
         await sendOTPButton.click()
@@ -156,7 +135,7 @@ test.describe('Withdrawal Flow E2E', () => {
         await expect(page.getByText(/giới thiệu bạn bè/i)).toBeVisible({ timeout: 10000 })
 
         // Wait for withdrawal section to load
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Verify withdrawal section exists
         const balanceSection = page.locator('text=/số dư khả dụng/i')

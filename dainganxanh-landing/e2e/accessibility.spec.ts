@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 import AxeBuilder from '@axe-core/playwright'
 
 /**
@@ -12,39 +13,17 @@ import AxeBuilder from '@axe-core/playwright'
  */
 
 test.describe('Accessibility & UX - Phase 7 E2E', () => {
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow
@@ -129,7 +108,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
 
             // Move to next focusable element
             await page.keyboard.press('Tab')
-            await page.waitForTimeout(100)
+            await page.waitForLoadState('networkidle')
         }
 
         console.log('Focused elements sequence:', focusedElements)
@@ -257,11 +236,11 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
             try {
                 // Click first image to open lightbox
                 await images.first().click({ timeout: 5000 })
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
 
                 // Press Escape to close
                 await page.keyboard.press('Escape')
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
 
                 console.log('✅ Escape key closes image lightbox')
             } catch {
@@ -378,9 +357,6 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
@@ -401,7 +377,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
 
         // Enter invalid email to trigger validation
         await emailInput.fill('invalid-email')
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         // Check for error messages
         const errorMessages = page.locator('[role="alert"]').or(
@@ -423,9 +399,6 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         await page.goto('/login')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         const loginInput = page.locator('input#identifier-input[type="email"]')
         await expect(loginInput).toBeVisible()
 
@@ -441,7 +414,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
 
         // Enter invalid email
         await loginInput.fill('invalid')
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         const loginErrorMessages = page.locator('[role="alert"]').or(
             page.locator('.error').or(
@@ -544,7 +517,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
             document.documentElement.style.fontSize = '200%'
         })
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Check for horizontal scrollbar
         const hasHorizontalScroll = await page.evaluate(() => {
@@ -570,7 +543,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
             document.documentElement.style.fontSize = '200%'
         })
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         const checkoutHasHorizontalScroll = await page.evaluate(() => {
             return document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -621,7 +594,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Wait to avoid rate limiting before login
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         const loginAccessibilityScanResults = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

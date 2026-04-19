@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 import { createClient } from '@supabase/supabase-js'
 
 /**
@@ -12,8 +13,16 @@ import { createClient } from '@supabase/supabase-js'
  */
 
 test.describe('Harvest Decision Flow E2E', () => {
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
     const TEST_EMAIL = 'test@test.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
     const SUPABASE_URL = 'http://127.0.0.1:54331'
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 
@@ -121,36 +130,6 @@ test.describe('Harvest Decision Flow E2E', () => {
         console.log('✅ [beforeAll] Test data setup complete!')
     })
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow
@@ -164,7 +143,7 @@ test.describe('Harvest Decision Flow E2E', () => {
         await emailInput.fill(TEST_EMAIL)
 
         // Wait a bit to avoid rate limiting
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
         await sendOTPButton.click()
@@ -356,7 +335,7 @@ test.describe('Harvest Decision Flow E2E', () => {
 
         // Wait for page to fully render
         await expect(page.getByText(/cây sẵn sàng thu hoạch/i)).toBeVisible({ timeout: 10000 })
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Verify no console errors
         if (consoleErrors.length > 0) {

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Certificate Download E2E Test Suite
@@ -11,8 +12,16 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Certificate Download E2E', () => {
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
+    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
     // Use serial mode to prevent OTP conflicts when running in parallel
     test.describe.configure({ mode: 'serial' })
@@ -21,53 +30,7 @@ test.describe('Certificate Download E2E', () => {
     /**
      * Helper: Fetch OTP code from Mailpit
      */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        // Poll for email to arrive - give it up to 3 seconds
-        let latestMessage = null
-        let attempts = 0
-        const maxAttempts = 30 // 3 second total wait (100ms * 30)
 
-        while (!latestMessage && attempts < maxAttempts) {
-            // Fetch messages from Mailpit API
-            const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-            const data = await response.json()
-
-            // Find all messages to our email, get the most recent one
-            const messages = (data.messages || []).filter((msg: any) =>
-                msg.To && msg.To.some((to: any) => to.Address === email)
-            )
-
-            if (messages.length > 0) {
-                // Get the most recent message (first in the list)
-                latestMessage = messages[0]
-                break
-            }
-
-            if (!latestMessage) {
-                // Wait a bit and try again
-                await new Promise(resolve => setTimeout(resolve, 100))
-                attempts++
-            }
-        }
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit after ${maxAttempts * 100}ms`)
-        }
-
-        // Fetch message body
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        // Extract 8-digit OTP from email text
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow
@@ -104,11 +67,11 @@ test.describe('Certificate Download E2E', () => {
             const input = otpInputs.nth(i)
             await input.fill(otpCode[i])
             // Minimal delay to let the form process each digit
-            await page.waitForTimeout(15)
+            await page.waitForLoadState('networkidle')
         }
 
         // Wait for form to auto-submit and process
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         // Check if we have a referral modal (which appears after OTP success but we stay on /login URL)
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })

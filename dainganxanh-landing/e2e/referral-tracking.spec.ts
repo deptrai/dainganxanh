@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Referral Tracking E2E Test Suite
@@ -11,39 +12,17 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Referral Tracking E2E', () => {
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow
@@ -95,7 +74,7 @@ test.describe('Referral Tracking E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Wait for ReferralTracker component to set cookie
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // ============================================
         // Phase 2: Read cookies and verify ref cookie
@@ -154,7 +133,7 @@ test.describe('Referral Tracking E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Wait for tracking call
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // ============================================
         // Phase 3: Verify API was called
@@ -216,7 +195,7 @@ test.describe('Referral Tracking E2E', () => {
         )
 
         // Wait a bit for pre-fill to happen
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         // Verify referral input has the cookie value
         const refValue = await page.locator('input[placeholder*="dainganxanh"]').inputValue()
@@ -304,7 +283,7 @@ test.describe('Referral Tracking E2E', () => {
         await page.waitForLoadState('networkidle')
 
         // Wait for order creation
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // ============================================
         // Phase 5: Verify commission calculation (5% of 1,300,000 = 65,000)
@@ -358,7 +337,7 @@ test.describe('Referral Tracking E2E', () => {
         await useDefaultButton.click()
 
         // Wait for refInput to be filled with default value
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         // Verify refInput now has "dainganxanh" value
         const refValue = await refInput.inputValue()
@@ -384,7 +363,7 @@ test.describe('Referral Tracking E2E', () => {
         }
 
         // Wait for verification to complete and default ref to be set
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // ============================================
         // Phase 5: Verify default ref cookie is set

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Tree Detail Extended E2E Test Suite
@@ -16,40 +17,18 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Tree Detail Extended Features E2E', () => {
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
+    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
     const TEST_ORDER_ID = 'test-order-uuid-123'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow
@@ -153,7 +132,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Verify map section exists (graceful check)
         const mapSection = page.locator('text=/vị trí cây|bản đồ|map/i').first()
@@ -227,7 +206,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for map section
         const mapSection = page.locator('text=/vị trí cây|bản đồ|map/i').first()
@@ -298,7 +277,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for camera section
         const cameraSection = page.locator('text=/camera|live stream|trực tiếp/i').first()
@@ -367,7 +346,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for camera selector
         const cameraSelector = page.locator('select, [role="combobox"]').filter({ hasText: /camera|khu/i }).first()
@@ -378,7 +357,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
 
             // Try to switch cameras
             await cameraSelector.click()
-            await page.waitForTimeout(500)
+            await page.waitForLoadState('networkidle')
 
             // Check for camera options
             const cameraOptions = page.locator('option, [role="option"]').filter({ hasText: /camera|khu/i })
@@ -389,7 +368,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
 
                 // Select second camera
                 await cameraOptions.nth(1).click().catch(() => {})
-                await page.waitForTimeout(1000)
+                await page.waitForLoadState('networkidle')
 
                 console.log('✅ Camera switch triggered')
             }
@@ -443,7 +422,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for photo gallery section
         const gallerySection = page.locator('text=/thư viện ảnh|photos|gallery|hình ảnh/i').first()
@@ -469,7 +448,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
 
                 // Try to click first photo to open lightbox
                 await photoGrid.first().click().catch(() => {})
-                await page.waitForTimeout(1000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for lightbox/modal
                 const lightbox = page.locator('[role="dialog"], .lightbox, .modal').first()
@@ -530,7 +509,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for photo filter controls
         const filterSection = page.locator('text=/lọc ảnh|filter|giai đoạn/i').first()
@@ -553,7 +532,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
                 // Try clicking growth filter
                 if (await growthFilter.isVisible({ timeout: 1000 }).catch(() => false)) {
                     await growthFilter.click()
-                    await page.waitForTimeout(1000)
+                    await page.waitForLoadState('networkidle')
                     console.log('✅ Growth phase filter applied')
                 }
 
@@ -564,7 +543,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
                 // Reset filter - show all
                 if (await allFilter.isVisible({ timeout: 1000 }).catch(() => false)) {
                     await allFilter.click()
-                    await page.waitForTimeout(1000)
+                    await page.waitForLoadState('networkidle')
                     console.log('✅ Filter reset to show all')
                 }
             }
@@ -611,7 +590,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for timeline section
         const timelineSection = page.locator('text=/timeline|tiến độ|dòng thời gian/i').first()
@@ -705,7 +684,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Find timeline event markers
         const eventMarker = page.locator('[data-testid="timeline-event"], .timeline-item, text=/trồng cây|planting/i').first()
@@ -716,7 +695,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
 
             // Click event marker
             await eventMarker.click().catch(() => {})
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Check for event detail popup/modal
             const popup = page.locator('[role="dialog"], .modal, .popup').first()
@@ -748,7 +727,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
 
                 if (closeBtnExists) {
                     await closeBtn.click()
-                    await page.waitForTimeout(500)
+                    await page.waitForLoadState('networkidle')
                     console.log('✅ Event popup closed')
                 } else {
                     // Try ESC key
@@ -799,7 +778,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check for reports section
         const reportsSection = page.locator('text=/báo cáo|reports|quarterly/i').first()
@@ -895,7 +874,7 @@ test.describe('Tree Detail Extended Features E2E', () => {
         await navigateToOrderDetail(page)
 
         // Wait for page to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for download button
         const downloadButton = page.getByRole('button', { name: /tải xuống|download/i }).first()

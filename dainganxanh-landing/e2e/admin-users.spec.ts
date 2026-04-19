@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Admin Users Management E2E Test Suite
@@ -11,39 +12,17 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Admin Users Management E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete admin login flow and navigate to target page
@@ -92,8 +71,6 @@ test.describe('Admin Users Management E2E', () => {
         }
 
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         const hasSkipButton = await skipButton.count() > 0
 
@@ -103,7 +80,7 @@ test.describe('Admin Users Management E2E', () => {
                 await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
             } catch {
                 console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
                 const afterSkipUrl = page.url()
                 console.log(`Current URL after skip: ${afterSkipUrl}`)
                 if (!afterSkipUrl.includes(targetPath)) {
@@ -113,19 +90,17 @@ test.describe('Admin Users Management E2E', () => {
                 }
             }
             await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
             const finalUrl = page.url()
             console.log(`Final URL: ${finalUrl}`)
         } else {
             console.log(`No skip button, waiting for auto-redirect...`)
-            await page.waitForTimeout(3000)
+            await page.waitForLoadState('networkidle')
             const currentUrl = page.url()
             console.log(`Current URL after OTP: ${currentUrl}`)
             if (!currentUrl.includes(targetPath)) {
                 console.log(`Navigating to target: ${targetPath}`)
                 await page.goto(targetPath)
                 await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
             }
             const finalUrl = page.url()
             console.log(`Final URL: ${finalUrl}`)
@@ -152,7 +127,7 @@ test.describe('Admin Users Management E2E', () => {
         // ============================================
         // Phase 2: Verify users table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if users table exists
         const usersTable = page.locator('table, div[class*="user"]').first()
@@ -226,7 +201,7 @@ test.describe('Admin Users Management E2E', () => {
 
         if (hasSearchInput) {
             await searchInput.fill('test@example.com')
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Verify search results
             await expect(page.getByText('test@example.com')).toBeVisible({ timeout: 5000 })
@@ -257,7 +232,7 @@ test.describe('Admin Users Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for role change dropdown or button
         const roleSelect = page.locator('select[name*="role"], button[class*="role"]').first()
@@ -266,7 +241,7 @@ test.describe('Admin Users Management E2E', () => {
         if (hasRoleControl) {
             // Click role control
             await roleSelect.click()
-            await page.waitForTimeout(500)
+            await page.waitForLoadState('networkidle')
 
             // Try to select admin role
             const adminOption = page.getByRole('option', { name: /admin/i }).or(page.getByText(/admin/i).and(page.locator('[role="menuitem"]')))
@@ -274,7 +249,7 @@ test.describe('Admin Users Management E2E', () => {
 
             if (hasAdminOption) {
                 await adminOption.first().click()
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
 
                 // Check for confirmation dialog
                 const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|đồng ý/i })
@@ -282,7 +257,7 @@ test.describe('Admin Users Management E2E', () => {
 
                 if (hasConfirmDialog) {
                     await confirmButton.click()
-                    await page.waitForTimeout(1000)
+                    await page.waitForLoadState('networkidle')
 
                     // Check for success message
                     const successMessage = page.locator('text=/thành công|success|đã cập nhật/i')
@@ -327,7 +302,7 @@ test.describe('Admin Users Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for impersonate button
         const impersonateButton = page.getByRole('button', { name: /impersonate|hỗ trợ|xem như/i }).first()
@@ -336,7 +311,7 @@ test.describe('Admin Users Management E2E', () => {
         if (hasImpersonateButton) {
             console.log('📝 Attempting to impersonate user...')
             await impersonateButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Check for confirmation dialog
             const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|tiếp tục/i })
@@ -344,7 +319,7 @@ test.describe('Admin Users Management E2E', () => {
 
             if (hasConfirmDialog) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
             }
 
             // Check if redirected or impersonation banner appeared

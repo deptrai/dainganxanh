@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Error Handling & Edge Cases E2E Test Suite
@@ -20,51 +21,22 @@ import { test, expect } from '@playwright/test'
 
 
 test.describe('Error Handling & Edge Cases E2E', () => {
-    const TEST_EMAIL = 'phanquochoipt@gmail.com'
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
+    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
     /**
      * Helper: Fetch OTP code from Mailpit
      */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        let attempts = 0
-        const maxAttempts = 30
-        let latestMessage = null
 
-        while (!latestMessage && attempts < maxAttempts) {
-            const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-            const data = await response.json()
-
-            const messages = (data.messages || []).filter((msg: any) =>
-                msg.To && msg.To.some((to: any) => to.Address === email)
-            )
-
-            if (messages.length > 0) {
-                latestMessage = messages[0]
-                break
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 100))
-            attempts++
-        }
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit after ${maxAttempts * 100}ms`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete OTP login flow
@@ -91,10 +63,10 @@ test.describe('Error Handling & Edge Cases E2E', () => {
 
         for (let i = 0; i < 8; i++) {
             await otpInputs.nth(i).fill(otpCode[i])
-            await page.waitForTimeout(15)
+            await page.waitForLoadState('networkidle')
         }
 
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         try {
@@ -137,12 +109,12 @@ test.describe('Error Handling & Edge Cases E2E', () => {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         if (await skipButton.count() > 0) {
             await skipButton.click()
-            await page.waitForTimeout(3000)
+            await page.waitForLoadState('networkidle')
         }
 
         console.log('✅ Admin login successful')
@@ -193,7 +165,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         await phoneInput.fill('0901234567')
         await phoneInput.blur()
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         await expect(page.getByText(/số điện thoại.*không hợp lệ/i)).not.toBeVisible()
 
         console.log('✅ Phone validation working correctly')
@@ -254,7 +226,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         await idInput.fill('001234567890')
         await idInput.blur()
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         await expect(page.getByText(/số cccd.*phải có/i)).not.toBeVisible()
 
         console.log('✅ CCCD validation working correctly')
@@ -314,7 +286,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         await nameInput.fill('Nguyễn Văn A')
         await nameInput.blur()
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         await expect(page.getByText(/họ tên không hợp lệ/i)).not.toBeVisible()
 
         console.log('✅ Name validation working correctly')
@@ -348,7 +320,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         }
 
         await withdrawButton.click()
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Fill required fields
         await page.selectOption('select', { label: 'Vietcombank' })
@@ -361,7 +333,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         // Submit to trigger client-side validation
         const submitButton = page.getByRole('button', { name: /gửi yêu cầu/i })
         await submitButton.click()
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         // Verify error message from client-side validation
         await expect(page.getByText(/số tiền rút tối thiểu là 200,000 VNĐ/i))
@@ -398,7 +370,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         }
 
         await withdrawButton.click()
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Fill required fields
         await page.selectOption('select', { label: 'Vietcombank' })
@@ -411,7 +383,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         // Submit to trigger validation
         const submitButton = page.getByRole('button', { name: /gửi yêu cầu/i })
         await submitButton.click()
-        await page.waitForTimeout(500)
+        await page.waitForLoadState('networkidle')
 
         // Verify error message
         await expect(page.getByText(/số tiền vượt quá số dư khả dụng/i))
@@ -461,7 +433,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         await refCodeInput.fill('DNG895075')
         await refCodeInput.blur()
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         await expect(page.getByText(/mã.*không hợp lệ/i)).not.toBeVisible()
 
         console.log('✅ Referral code validation working correctly')
@@ -530,13 +502,13 @@ test.describe('Error Handling & Edge Cases E2E', () => {
 
         // Clear session cookies to simulate expiration
         await page.context().clearCookies()
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Try to proceed with checkout
         const confirmButton = page.getByRole('button', { name: /xác nhận|thanh toán/i })
         if (await confirmButton.isVisible()) {
             await confirmButton.click()
-            await page.waitForTimeout(2000)
+            await page.waitForLoadState('networkidle')
         }
 
         // Should redirect to login or show session expired message
@@ -800,7 +772,7 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         }
 
         await withdrawButton.click()
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Fill valid withdrawal form
         await page.selectOption('select', { label: 'Vietcombank' })
@@ -820,11 +792,11 @@ test.describe('Error Handling & Edge Cases E2E', () => {
         // Rapid click 4 more times while in loading state
         for (let i = 0; i < 4; i++) {
             await submitButton.click({ force: true })
-            await page.waitForTimeout(100)
+            await page.waitForLoadState('networkidle')
         }
 
         // Wait for processing
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // The button was disabled (isSubmitting=true), so multiple clicks didn't trigger new submissions
         // Verify via UI: button returned to normal state or showed success/error

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Admin Casso Transaction History E2E Test Suite
@@ -11,39 +12,17 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Admin Casso Transaction History E2E', () => {
-    const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
 
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
         }
+    })
+    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
-    }
 
     /**
      * Helper: Complete admin login flow and navigate to target page
@@ -88,8 +67,6 @@ test.describe('Admin Casso Transaction History E2E', () => {
         }
 
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
         const hasSkipButton = await skipButton.count() > 0
 
@@ -99,7 +76,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
                 await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
             } catch {
                 console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
                 const afterSkipUrl = page.url()
                 if (!afterSkipUrl.includes(targetPath)) {
                     await page.goto(targetPath)
@@ -107,14 +84,12 @@ test.describe('Admin Casso Transaction History E2E', () => {
                 }
             }
             await page.waitForLoadState('networkidle')
-            await page.waitForTimeout(2000)
         } else {
-            await page.waitForTimeout(3000)
+            await page.waitForLoadState('networkidle')
             const currentUrl = page.url()
             if (!currentUrl.includes(targetPath)) {
                 await page.goto(targetPath)
                 await page.waitForLoadState('networkidle')
-                await page.waitForTimeout(2000)
             }
         }
 
@@ -138,7 +113,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         // ============================================
         // Phase 2: Verify transactions table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if transactions table exists
         const transactionsTable = page.locator('table, div[class*="transaction"]').first()
@@ -255,7 +230,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for status filter dropdown
         const statusFilter = page.locator('select[name*="status"], select:has(option[value*="processed"])')
@@ -264,7 +239,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         if (hasStatusFilter) {
             // Test filtering by "processed"
             await statusFilter.selectOption({ value: 'processed' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Verify "processed" results
             const processedBadge = page.locator('text=/processed|đã xử lý/i')
@@ -274,7 +249,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
 
             // Test filtering by "no_match"
             await statusFilter.selectOption({ value: 'no_match' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             const noMatchBadge = page.locator('text=/no_match|không khớp/i')
             if (await noMatchBadge.count() > 0) {
@@ -283,7 +258,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
 
             // Test filtering by "function_error"
             await statusFilter.selectOption({ value: 'function_error' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             const errorBadge = page.locator('text=/function_error|lỗi|error/i')
             if (await errorBadge.count() > 0) {
@@ -348,7 +323,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for reprocess button
         const reprocessButton = page.getByRole('button', { name: /reprocess|xử lý lại|thử lại/i }).first()
@@ -357,7 +332,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         if (hasReprocessButton) {
             console.log('📝 Attempting to reprocess failed transaction...')
             await reprocessButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Check for confirmation dialog
             const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|đồng ý/i })
@@ -365,7 +340,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
 
             if (hasConfirmDialog) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success message
                 const successMessage = page.locator('text=/thành công|success|đã xử lý/i')
@@ -376,7 +351,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
                 }
             } else {
                 // No confirmation dialog - direct reprocess
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
                 const successMessage = page.locator('text=/thành công|success|đã xử lý/i')
                 if (await successMessage.isVisible({ timeout: 5000 })) {
                     console.log('✅ Transaction reprocessed successfully (no confirmation dialog)')

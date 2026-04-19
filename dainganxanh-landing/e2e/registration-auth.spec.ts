@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Registration & Authentication E2E Test Suite
@@ -7,12 +8,20 @@ import { test, expect } from '@playwright/test'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ *   (or set MAILPIT_URL env var)
  */
 
 test.describe('Registration & Authentication Flow E2E', () => {
+
+    test.afterAll(async ({ browser }) => {
+        // Clean up: close all pages and reset browser state
+        const contexts = browser.contexts()
+        for (const ctx of contexts) {
+            await ctx.clearCookies()
+            await ctx.clearPermissions()
+        }
+    })
     const BASE_EMAIL = 'test-registration'
-    const TEST_PHONE = '0901234567'
-    const MAILPIT_URL = 'http://127.0.0.1:54334'
     const DEFAULT_REF_CODE = 'DNG895075'
 
     // Generate unique email for each test to avoid OTP conflicts
@@ -20,37 +29,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         const timestamp = Date.now()
         const sanitized = testName.replace(/[^a-z0-9]/gi, '').toLowerCase()
         return `${BASE_EMAIL}-${sanitized}-${timestamp}@test.local`
-    }
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-    async function getOTPFromMailpit(email: string): Promise<string> {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        const response = await fetch(`${MAILPIT_URL}/api/v1/messages`)
-        const data = await response.json()
-
-        const messages = data.messages || []
-        const latestMessage = messages.find((msg: any) =>
-            msg.To && msg.To.some((to: any) => to.Address === email)
-        )
-
-        if (!latestMessage) {
-            throw new Error(`No email found for ${email} in Mailpit`)
-        }
-
-        const msgResponse = await fetch(`${MAILPIT_URL}/api/v1/message/${latestMessage.ID}`)
-        const msgData = await msgResponse.json()
-
-        const text = msgData.Text || ''
-        const otpMatch = text.match(/\b\d{8}\b/)
-
-        if (!otpMatch) {
-            throw new Error(`Could not extract OTP from email: ${text}`)
-        }
-
-        return otpMatch[0]
     }
 
     /**
@@ -103,9 +81,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Find email input (after selecting Email tab)
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
@@ -150,9 +125,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         // Navigate to register page
         await page.goto('/register?quantity=5')
         await page.waitForLoadState('networkidle')
-
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
 
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
@@ -203,9 +175,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         // Navigate to register
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
-
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
 
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
@@ -261,9 +230,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         // Navigate to register (no ref in URL)
         await page.goto('/register?quantity=2')
         await page.waitForLoadState('networkidle')
-
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
 
         // Click Email tab and enter email (do NOT enter referral code)
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
@@ -346,9 +312,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/login')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
@@ -371,8 +334,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
-        // Wait for form to auto-submit
-        await page.waitForTimeout(500)
+        // Form auto-submits — wait for navigation or redirect
 
         // Handle referral modal if it appears (after OTP success)
         const skipButton = page.getByRole('button', { name: /bỏ qua/i })
@@ -413,9 +375,6 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
@@ -443,7 +402,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
 
         // Wait for redirect and any async errors
         await page.waitForURL(/\/checkout/, { timeout: 15000 })
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Verify no critical console errors (ignore 406 Not Acceptable - expected for some resources)
         const criticalErrors = consoleErrors.filter(err =>
