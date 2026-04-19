@@ -63,14 +63,14 @@ development_status:
   epic-4-retrospective: backlog
 
   # Epic 5: Payment Automation — Casso Integration (Sprint 1)
-  epic-5: in-progress
+  epic-5: done
   5-1-pending-order-at-checkout: done  # ✅ Deployed 2026-03-26
   5-2-casso-webhook-integration: done  # ✅ Deployed 2026-03-26
   5-3-casso-admin-transaction-log: done  # ✅ Deployed 2026-03-26
   5-4-casso-transaction-sync: done  # ✅ Added 2026-03-28
   5-5-order-cancellation: done  # ✅ Added 2026-03-28
   5-6-casso-hmac-v2-verification: done  # ✅ Added 2026-03-28
-  5-7-order-refund-completed: in-progress  # Added 2026-04-20
+  5-7-order-refund-completed: done  # ✅ Implemented 2026-04-20
   epic-5-retrospective: backlog
 
   # Epic 6: SEO Optimization (Sprint 1)
