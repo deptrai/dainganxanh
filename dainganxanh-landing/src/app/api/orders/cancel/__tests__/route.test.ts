@@ -18,6 +18,15 @@
 import { NextRequest } from 'next/server'
 import { POST } from '../route'
 
+jest.mock('@/lib/rate-limit', () => ({
+    rateLimit: jest.fn(() => ({ ok: true, retryAfterSec: 0 })),
+}))
+
+jest.mock('@/lib/monitoring', () => ({
+    captureError: jest.fn(),
+    trackLatency: jest.fn(),
+}))
+
 const mockGetUser = jest.fn()
 const mockServiceFrom = jest.fn()
 

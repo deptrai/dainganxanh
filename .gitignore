@@ -41,3 +41,23 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .auth/
+
+# Test artifacts / Playwright output
+**/test-results/
+**/playwright-report/
+**/e2e-results/
+**/.playwright-artifacts-*/
+**/coverage/
+
+# Serena / tool metadata
+.serena/
+**/.serena/
+
+# Symdex index
+.symdex/
+
+# Supabase temp
+supabase/.temp/
+
+# TypeScript incremental build info
+**/*.tsbuildinfo

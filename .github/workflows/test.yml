@@ -1,0 +1,267 @@
+name: CI — Test Suite
+
+on:
+  push:
+    branches: [main, develop, production]
+  pull_request:
+    branches: [main, develop, production]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: dainganxanh-landing
+
+jobs:
+  # ─── Lint ──────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+  # ─── Unit / Integration tests (Jest) ──────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (Jest) — Shard ${{ matrix.shard }}/${{ matrix.total }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+        total: [3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Jest (shard ${{ matrix.shard }}/${{ matrix.total }})
+        run: |
+          npx jest \
+            --shard=${{ matrix.shard }}/${{ matrix.total }} \
+            --ci \
+            --forceExit \
+            --coverage \
+            --coverageDirectory=coverage/shard-${{ matrix.shard }} \
+            --reporters=default --reporters=jest-junit
+        env:
+          # Security: pass test env as data, not commands
+          CI: true
+          JEST_JUNIT_OUTPUT_DIR: test-results/jest
+          JEST_JUNIT_OUTPUT_NAME: results-shard-${{ matrix.shard }}.xml
+
+      - name: Upload Jest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-results-shard-${{ matrix.shard }}
+          path: |
+            dainganxanh-landing/test-results/jest/
+            dainganxanh-landing/coverage/shard-${{ matrix.shard }}/
+          retention-days: 7
+
+  # ─── E2E tests (Playwright) ────────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests (Playwright) — Shard ${{ matrix.shard }}/${{ matrix.total }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+        total: [2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          # Security: env vars as data, never shell-executed
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Run Playwright (shard ${{ matrix.shard }}/${{ matrix.total }})
+        run: |
+          npx playwright test \
+            --shard=${{ matrix.shard }}/${{ matrix.total }} \
+            --reporter=html,junit
+        env:
+          # Security: inputs passed through env: to prevent script injection
+          CI: true
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: results-shard-${{ matrix.shard }}.xml
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: |
+            dainganxanh-landing/playwright-report/
+            dainganxanh-landing/test-results/
+          retention-days: 7
+
+  # ─── Burn-in (flaky detection) ────────────────────────────────────────────
+  burn-in:
+    name: Burn-in (Flaky Detection)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [unit-tests, e2e-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Burn-in — repeat E2E x3
+        run: |
+          for i in 1 2 3; do
+            echo "=== Burn-in run $i/3 ==="
+            npx playwright test --reporter=list || exit 1
+          done
+        env:
+          # Security: inputs passed through env: to prevent script injection
+          CI: true
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Upload burn-in artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: burn-in-failure-artifacts
+          path: |
+            dainganxanh-landing/playwright-report/
+            dainganxanh-landing/test-results/
+          retention-days: 14
+
+  # ─── Report (aggregate) ───────────────────────────────────────────────────
+  report:
+    name: Test Report
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, e2e-tests]
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Merge Jest JUnit reports
+        run: |
+          echo "=== Jest Shards ==="
+          find all-artifacts -name "*.xml" -path "*/jest/*" | sort
+          echo "=== Coverage ==="
+          find all-artifacts -name "coverage-summary.json" | sort
+
+      - name: Merge Playwright HTML reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-test-results
+          path: all-artifacts/
+          retention-days: 14
+
+      - name: Summarize test results
+        if: always()
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      # Quality gate: block if any critical jobs failed
+      - name: Quality gate — fail if P0 jobs failed
+        if: |
+          needs.lint.result == 'failure' ||
+          needs.unit-tests.result == 'failure' ||
+          needs.e2e-tests.result == 'failure'
+        run: |
+          echo "❌ Quality gate FAILED: one or more critical jobs did not pass."
+          echo "  Lint:        ${{ needs.lint.result }}"
+          echo "  Unit Tests:  ${{ needs.unit-tests.result }}"
+          echo "  E2E Tests:   ${{ needs.e2e-tests.result }}"
+          exit 1
+
+  # ─── Notify on failure ────────────────────────────────────────────────────
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, e2e-tests]
+    if: |
+      failure() &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
+    steps:
+      - name: Notify Slack on CI failure
+        if: ${{ secrets.SLACK_CI_WEBHOOK != '' }}
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_CI_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "❌ CI failed on *${{ github.ref_name }}*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *CI Pipeline Failed*\n*Branch:* `${{ github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}\n*<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>*"
+                  }
+                }
+              ]
+            }
