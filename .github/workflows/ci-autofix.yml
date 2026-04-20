@@ -36,16 +36,18 @@ jobs:
         env:
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
-          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
-          CLAUDE_CODE_SKIP_AUTOLOGIN: "1"
           ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-5
         run: |
-          LOGS=$(cat ci-failure-logs.txt)
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          RUN_ID="${{ github.event.workflow_run.id }}"
+          # Inject credentials into claude config so CLI skips interactive login
+          mkdir -p ~/.config
+          cat > ~/.claude.json << EOF
+          {
+            "hasCompletedOnboarding": true,
+            "primaryApiKey": "${ANTHROPIC_API_KEY}"
+          }
+          EOF
 
-          # Write prompt to file to avoid shell quoting issues with $LOGS
           cat > /tmp/prompt.txt << 'PROMPT_EOF'
           CI pipeline failed. The failure logs are in ci-failure-logs.txt in the workspace root.
 
