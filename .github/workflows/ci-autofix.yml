@@ -23,6 +23,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
@@ -35,8 +37,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TARGET_RUN_ID="${{ github.event.workflow_run.id || inputs.run_id }}"
-          gh run view "$TARGET_RUN_ID" --log-failed 2>&1 | head -400 > ci-failure-logs.txt
-          echo "=== Log preview ===" && head -40 ci-failure-logs.txt
+          gh run view "$TARGET_RUN_ID" --log-failed 2>&1 | head -400 > ci-failure-logs.txt || true
+          echo "=== Log preview ===" && head -40 ci-failure-logs.txt || true
 
       - name: Claude Code — analyze and fix
         env:
