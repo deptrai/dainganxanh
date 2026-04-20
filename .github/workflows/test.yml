@@ -259,19 +259,10 @@ jobs:
           UNIT_RESULT: ${{ needs.unit-tests.result }}
           E2E_RESULT: ${{ needs.e2e-tests.result }}
         run: |
-          MESSAGE="❌ *CI Pipeline Failed*
-Branch: \`${BRANCH}\`
-Commit: \`${SHA:0:7}\`
-Author: ${ACTOR}
-
-| Job | Status |
-|-----|--------|
-| Lint | ${LINT_RESULT} |
-| Unit Tests | ${UNIT_RESULT} |
-| E2E Tests | ${E2E_RESULT} |
-
-🔗 [View Run](${RUN_URL})"
-
+          MESSAGE="$(printf '❌ *CI Pipeline Failed*\nBranch: `%s`\nCommit: `%s`\nAuthor: %s\n\nLint: %s\nUnit Tests: %s\nE2E Tests: %s\n\n🔗 [View Run](%s)' \
+            "$BRANCH" "${SHA:0:7}" "$ACTOR" \
+            "$LINT_RESULT" "$UNIT_RESULT" "$E2E_RESULT" \
+            "$RUN_URL")"
           curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${CHAT_ID}\", \"text\": \"${MESSAGE}\", \"parse_mode\": \"Markdown\"}"
