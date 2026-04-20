@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
+import { loginAtLoginPage } from './fixtures/auth'
 
 /**
  * Referral System E2E Test Suite
@@ -22,50 +23,6 @@ test.describe('Referral System Flow E2E', () => {
         }
     })
     const TEST_EMAIL = 'test@test.com'
-
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        // Wait a bit to avoid rate limiting
-        await page.waitForLoadState('networkidle')
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
-
     /**
      * Test: View referral page with code and stats
      */
@@ -73,7 +30,7 @@ test.describe('Referral System Flow E2E', () => {
         // ============================================
         // Phase 1: Login
         // ============================================
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // ============================================
         // Phase 2: Navigate to Referrals page
@@ -125,7 +82,7 @@ test.describe('Referral System Flow E2E', () => {
         await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')
@@ -167,7 +124,7 @@ test.describe('Referral System Flow E2E', () => {
      */
     test('view referral QR code', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')
@@ -196,7 +153,7 @@ test.describe('Referral System Flow E2E', () => {
      */
     test('view referral conversions list or empty state', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')
@@ -249,7 +206,7 @@ test.describe('Referral System Flow E2E', () => {
         })
 
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')

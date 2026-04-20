@@ -3,6 +3,7 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
@@ -41,91 +42,15 @@ test.describe('[P0] Withdrawal Flow E2E', () => {
     /**
      * Helper: Complete OTP login flow for test user
      */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        await page.waitForLoadState('networkidle') // Rate limiting
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
-
     /**
      * Helper: Complete admin login flow
      */
-    async function loginAsAdmin(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        await page.waitForLoadState('networkidle') // Rate limiting
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching admin OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got admin OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Admin login successful')
-    }
-
     /**
      * Test 1: User can view referrals page and withdrawal section
      * This test verifies the withdrawal UI exists and adapts based on balance
      */
     test('user can view referrals page and withdrawal section', async ({ page }) => {
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')

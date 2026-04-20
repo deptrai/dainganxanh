@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import AxeBuilder from '@axe-core/playwright'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAtLoginPage } from './fixtures/auth'
 
 /**
  * Accessibility & UX E2E Test Suite (Phase 7)
@@ -23,47 +24,6 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
             await ctx.clearPermissions()
         }
     })
-
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
-
     // ============================================
     // Section 1: Keyboard Navigation (3 tests)
     // ============================================
@@ -72,7 +32,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
      * Test 1.1: Tab through checkout form (all fields reachable via Tab, order correct)
      */
     test('keyboard navigation: tab through checkout form fields', async ({ page }) => {
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
         await page.goto('/checkout')
         await page.waitForLoadState('networkidle')
 
@@ -533,7 +493,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         })
 
         // Test checkout page at 200% zoom
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
         await page.goto('/checkout')
         await page.waitForLoadState('networkidle')
 
@@ -612,7 +572,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         }
 
         // Test 3: Checkout page accessibility (requires login)
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
         await page.goto('/checkout')
         await page.waitForLoadState('networkidle')
 
@@ -696,7 +656,7 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
         }
 
         // Test authenticated pages
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         const authenticatedPages = [
             { url: '/checkout', name: 'Checkout' },

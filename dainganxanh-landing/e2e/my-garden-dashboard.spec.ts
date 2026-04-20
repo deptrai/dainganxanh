@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAtLoginPage } from './fixtures/auth'
 
 /**
  * My Garden Dashboard E2E Test Suite
@@ -22,53 +23,12 @@ test.describe('My Garden Dashboard E2E', () => {
             await ctx.clearPermissions()
         }
     })
-
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
-
     /**
      * Test: View My Garden dashboard with orders
      */
     test('view my garden dashboard with existing orders', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to My Garden explicitly
         await page.goto('/crm/my-garden')
@@ -131,7 +91,7 @@ test.describe('My Garden Dashboard E2E', () => {
      */
     test('navigate to order detail from dashboard', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to My Garden
         await page.goto('/crm/my-garden')
@@ -187,7 +147,7 @@ test.describe('My Garden Dashboard E2E', () => {
         // Note: This test requires a new user account or cleared orders
         // For now, we'll test the empty state component exists in DOM
 
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -206,7 +166,7 @@ test.describe('My Garden Dashboard E2E', () => {
      * Test: Dashboard stats calculation
      */
     test('dashboard displays correct aggregate stats', async ({ page }) => {
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -246,7 +206,7 @@ test.describe('My Garden Dashboard E2E', () => {
      * Test: Notification bell interaction
      */
     test('notification bell opens dropdown', async ({ page }) => {
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -277,7 +237,7 @@ test.describe('My Garden Dashboard E2E', () => {
             }
         })
 
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
 
 /**
  * Performance & Boundary Testing E2E Test Suite
@@ -22,128 +23,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
             await ctx.clearPermissions()
         }
     })
-
-
-    /**
-     * Helper: Complete admin login flow and navigate to target page
-     */
-    async function loginAsAdmin(page: any, targetPath: string = '/crm/admin/orders') {
-        await page.goto(targetPath)
-        await page.waitForLoadState('networkidle')
-
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        try {
-            await Promise.race([
-                page.waitForURL((url) => !url.href.includes('/login') && !url.href.includes('redirect'), { timeout: 10000 }),
-                page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 10000 })
-            ])
-        } catch {
-            console.log('⚠️ Waiting for OTP verification...')
-        }
-
-        await page.waitForLoadState('networkidle')
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            try {
-                await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
-            } catch {
-                console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForLoadState('networkidle')
-                const afterSkipUrl = page.url()
-                console.log(`Current URL after skip: ${afterSkipUrl}`)
-                if (!afterSkipUrl.includes(targetPath)) {
-                    console.log(`Manually navigating to ${targetPath}`)
-                    await page.goto(targetPath)
-                    await page.waitForLoadState('networkidle')
-                }
-            }
-            await page.waitForLoadState('networkidle')
-            const finalUrl = page.url()
-            console.log(`Final URL: ${finalUrl}`)
-        } else {
-            console.log(`No skip button, waiting for auto-redirect...`)
-            await page.waitForLoadState('networkidle')
-            const currentUrl = page.url()
-            console.log(`Current URL after OTP: ${currentUrl}`)
-            if (!currentUrl.includes(targetPath)) {
-                console.log(`Navigating to target: ${targetPath}`)
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-            }
-            const finalUrl = page.url()
-            console.log(`Final URL: ${finalUrl}`)
-        }
-
-        console.log('✅ Admin login successful')
-    }
-
-    /**
-     * Helper: Complete user login flow
-     */
-    async function loginAsUser(page: any) {
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Login successful')
-    }
-
     /**
      * Helper: Generate mock orders for pagination testing
      */
@@ -286,7 +165,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
             })
         })
 
-        await loginAsUser(page)
+        await loginAtLoginPage(page)
 
         // Measure page load time
         const startTime = await page.evaluate(() => performance.now())
@@ -334,7 +213,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * SKIP: Photo gallery UI not yet implemented or requires specific order state
      */
     test.skip('large dataset: photo gallery with 500+ images lazy loading', async ({ page }) => {
-        await loginAsUser(page)
+        await loginAtLoginPage(page)
 
         // Navigate to my garden first
         await page.goto('/crm/my-garden')
@@ -740,7 +619,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies format displays correctly and validation passes
      */
     test('boundary value: maximum withdrawal amount 999,999,999 VNĐ', async ({ page }) => {
-        await loginAsUser(page)
+        await loginAtLoginPage(page)
 
         // Navigate to withdrawal page (if exists)
         await page.goto('/crm/withdrawal')
@@ -810,7 +689,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies checkout allows and price is calculated correctly
      */
     test('boundary value: minimum tree quantity 1', async ({ page }) => {
-        await loginAsUser(page)
+        await loginAtLoginPage(page)
 
         // Navigate to checkout with quantity = 1
         await page.goto('/checkout?quantity=1')
@@ -845,7 +724,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies validation accepts and cart is updated correctly
      */
     test('boundary value: maximum tree quantity 100 per order', async ({ page }) => {
-        await loginAsUser(page)
+        await loginAtLoginPage(page)
 
         // Navigate to checkout with quantity = 100
         await page.goto('/checkout?quantity=100')

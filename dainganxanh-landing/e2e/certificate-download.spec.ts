@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAtLoginPage } from './fixtures/auth'
 
 /**
  * Certificate Download E2E Test Suite
@@ -26,89 +27,6 @@ test.describe('Certificate Download E2E', () => {
     // Use serial mode to prevent OTP conflicts when running in parallel
     test.describe.configure({ mode: 'serial' })
     test.setTimeout(60000) // 60 seconds per test
-
-    /**
-     * Helper: Fetch OTP code from Mailpit
-     */
-
-
-    /**
-     * Helper: Complete OTP login flow
-     */
-    async function loginWithOTP(page: any) {
-        // Navigate to login
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        // Step 1: Enter email
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(TEST_EMAIL)
-
-        // Click "Gửi mã OTP" button
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await expect(sendOTPButton).toBeEnabled()
-        await sendOTPButton.click()
-
-        // Wait for OTP input screen
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        // Step 2: Get real OTP from Mailpit
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        // Step 3: Enter OTP (8 digits) - use fill() for speed, it auto-submits when complete
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        // Fill each digit quickly - the form should auto-submit after the 8th digit
-        for (let i = 0; i < 8; i++) {
-            const input = otpInputs.nth(i)
-            await input.fill(otpCode[i])
-            // Minimal delay to let the form process each digit
-            await page.waitForLoadState('networkidle')
-        }
-
-        // Wait for form to auto-submit and process
-        await page.waitForLoadState('networkidle')
-
-        // Check if we have a referral modal (which appears after OTP success but we stay on /login URL)
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            console.log('Waiting for referral modal...')
-            await skipButton.waitFor({ state: 'visible', timeout: 5000 })
-            console.log('Found referral modal, clicking skip')
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            // No referral modal - check if we navigated elsewhere
-            const currentUrl = new URL(page.url()).pathname
-            console.log(`No referral modal. Current URL: ${currentUrl}`)
-
-            if (currentUrl.includes('/login')) {
-                // Still on login and no referral modal - must be an error
-                const errorAlert = page.locator('[role="alert"]')
-                const errorCount = await errorAlert.count()
-
-                if (errorCount > 0) {
-                    const errorText = await errorAlert.first().textContent()
-                    console.error(`❌ OTP verification failed: ${errorText}`)
-                    throw new Error(`OTP verification failed: ${errorText || 'Check alert on page'}`)
-                } else {
-                    // Take screenshot to debug
-                    await page.screenshot({ path: 'e2e-results/login-error.png', fullPage: true })
-                    throw new Error('OTP verification failed: page still on /login with no error message')
-                }
-            } else {
-                console.log(`✅ Successfully navigated to: ${currentUrl}`)
-                await page.waitForLoadState('networkidle')
-            }
-        }
-
-        console.log('✅ Login successful')
-    }
-
     /**
      * Main Test: Complete certificate download flow
      */
@@ -124,7 +42,7 @@ test.describe('Certificate Download E2E', () => {
         // ============================================
         // Phase 1: Login
         // ============================================
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // ============================================
         // Phase 2: Navigate to My Garden
@@ -255,7 +173,7 @@ test.describe('Certificate Download E2E', () => {
      */
     test('verify QR code redirects to verification page', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to My Garden
         await page.goto('/crm/my-garden')
@@ -290,7 +208,7 @@ test.describe('Certificate Download E2E', () => {
      */
     test('certificate button disabled during generation', async ({ page }) => {
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to order detail
         await page.goto('/crm/my-garden')
@@ -351,7 +269,7 @@ test.describe('Certificate Download E2E', () => {
         })
 
         // Login
-        await loginWithOTP(page)
+        await loginAtLoginPage(page)
 
         // Navigate to order detail
         await page.goto('/crm/my-garden')

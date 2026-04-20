@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Notification System E2E Test Suite
@@ -18,49 +19,6 @@ test.describe.serial('Notification System E2E', () => {
     /**
      * Helper: Complete admin login flow
      */
-    async function loginAsAdmin(page: any) {
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
-
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        await page.waitForLoadState('networkidle')
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        }
-
-        console.log('✅ Admin login successful')
-    }
-
     /**
      * Helper: Verify email was sent with correct payload
      */

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Order Management E2E Test Suite
@@ -27,108 +28,6 @@ test.describe('[P0] Admin Order Management E2E', () => {
     /**
      * Helper: Complete admin login flow and navigate to target page
      */
-    async function loginAsAdmin(page: any, targetPath: string = '/crm/admin/orders') {
-        // Start by going to the target page (will redirect to login if not authenticated)
-        await page.goto(targetPath)
-        await page.waitForLoadState('networkidle')
-
-        // Check if we're on login page (redirected)
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            // Already authenticated
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        // Wait for OTP verification to complete - URL should change away from /login
-        // or skip button should appear
-        try {
-            await Promise.race([
-                page.waitForURL((url) => !url.href.includes('/login') && !url.href.includes('redirect'), { timeout: 10000 }),
-                page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 10000 })
-            ])
-        } catch {
-            // Timeout - OTP may still be processing
-            console.log('⚠️ Waiting for OTP verification...')
-        }
-
-        await page.waitForLoadState('networkidle')
-        // Additional wait for auth state to be persisted
-        await page.waitForLoadState('networkidle')
-
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            // Wait for navigation after skip - should redirect back to target page
-            try {
-                await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
-            } catch {
-                // Timeout waiting for URL change, wait longer for auth state to persist
-                console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForLoadState('networkidle')
-                // Check current URL
-                const afterSkipUrl = page.url()
-                console.log(`Current URL after skip: ${afterSkipUrl}`)
-                // If not at target, manually navigate
-                if (!afterSkipUrl.includes(targetPath)) {
-                    console.log(`Manually navigating to ${targetPath}`)
-                    await page.goto(targetPath)
-                    await page.waitForLoadState('networkidle')
-                }
-            }
-            await page.waitForLoadState('networkidle')
-
-            // Extra wait to ensure page fully loaded
-            await page.waitForLoadState('networkidle')
-
-            // Log final URL to debug
-            const finalUrl = page.url()
-            console.log(`Final URL: ${finalUrl}`)
-        } else {
-            // If no skip button, OTP login completed and redirected already
-            // Wait for redirect to complete, then check where we are
-            console.log(`No skip button, waiting for auto-redirect...`)
-            await page.waitForLoadState('networkidle')
-
-            const currentUrl = page.url()
-            console.log(`Current URL after OTP: ${currentUrl}`)
-
-            // If not at target path, navigate manually
-            if (!currentUrl.includes(targetPath)) {
-                console.log(`Navigating to target: ${targetPath}`)
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-            }
-
-            const finalUrl = page.url()
-            console.log(`Final URL: ${finalUrl}`)
-        }
-
-        console.log('✅ Admin login successful')
-    }
-
     /**
      * Test: View admin orders dashboard
      */

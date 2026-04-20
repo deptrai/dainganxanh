@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Blog Management E2E Test Suite
@@ -27,75 +28,6 @@ test.describe('Admin Blog Management E2E', () => {
     /**
      * Helper: Complete admin login flow and navigate to target page
      */
-    async function loginAsAdmin(page: any, targetPath: string = '/crm/admin/blog') {
-        await page.goto(targetPath)
-        await page.waitForLoadState('networkidle')
-
-        const currentUrl = page.url()
-        if (!currentUrl.includes('/login')) {
-            console.log('✅ Already authenticated')
-            return
-        }
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await expect(emailInput).toBeVisible()
-        await emailInput.fill(ADMIN_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        console.log('⏳ Fetching OTP from Mailpit...')
-        const otpCode = await getOTPFromMailpit(ADMIN_EMAIL)
-        console.log(`✅ Got OTP: ${otpCode}`)
-
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        try {
-            await Promise.race([
-                page.waitForURL((url) => !url.href.includes('/login') && !url.href.includes('redirect'), { timeout: 10000 }),
-                page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 10000 })
-            ])
-        } catch {
-            console.log('⚠️ Waiting for OTP verification...')
-        }
-
-        await page.waitForLoadState('networkidle')
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const hasSkipButton = await skipButton.count() > 0
-
-        if (hasSkipButton) {
-            await skipButton.click()
-            try {
-                await page.waitForURL(new RegExp(targetPath.replace(/\//g, '\\/')), { timeout: 15000 })
-            } catch {
-                console.log('⚠️ Redirect timeout, waiting for auth state...')
-                await page.waitForLoadState('networkidle')
-                const afterSkipUrl = page.url()
-                if (!afterSkipUrl.includes(targetPath)) {
-                    await page.goto(targetPath)
-                    await page.waitForLoadState('networkidle')
-                }
-            }
-            await page.waitForLoadState('networkidle')
-        } else {
-            await page.waitForLoadState('networkidle')
-            const currentUrl = page.url()
-            if (!currentUrl.includes(targetPath)) {
-                await page.goto(targetPath)
-                await page.waitForLoadState('networkidle')
-            }
-        }
-
-        console.log('✅ Admin login successful')
-    }
-
     /**
      * Test 1: Admin creates new blog post
      */

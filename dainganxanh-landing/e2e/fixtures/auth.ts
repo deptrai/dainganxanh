@@ -95,10 +95,11 @@ async function loginWithOTP(
 
 /**
  * Log in as the admin account (TEST_ADMIN_EMAIL) and land on `targetPath`.
+ * Defaults to `/crm/admin` when no target is given (most admin suites use it).
  */
 export async function loginAsAdmin(
     page: Page,
-    targetPath: string,
+    targetPath: string = '/crm/admin',
     opts?: LoginOpts
 ): Promise<void> {
     return loginWithOTP(page, ADMIN_EMAIL, targetPath, opts)
@@ -106,12 +107,50 @@ export async function loginAsAdmin(
 
 /**
  * Log in as the regular-user account (TEST_USER_EMAIL, falls back to admin)
- * and land on `targetPath`.
+ * and land on `targetPath`. Defaults to `/my-garden`.
  */
 export async function loginAsUser(
     page: Page,
-    targetPath: string,
+    targetPath: string = '/my-garden',
     opts?: LoginOpts
 ): Promise<void> {
     return loginWithOTP(page, TEST_EMAIL, targetPath, opts)
+}
+
+/**
+ * Simpler login helper matching the historical `loginWithOTP(page)` signature
+ * used by user-flow specs (checkout, my-garden, referral). Navigates to /login,
+ * authenticates as TEST_EMAIL, dismisses the skip-identity modal, and returns.
+ * The caller is expected to `await page.goto(...)` afterwards.
+ */
+export async function loginAtLoginPage(page: Page): Promise<void> {
+    await page.goto('/login')
+    await page.waitForLoadState('networkidle')
+
+    const emailInput = page.locator('input#identifier-input[type="email"]')
+    await expect(emailInput).toBeVisible()
+    await emailInput.fill(TEST_EMAIL)
+
+    const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
+    await sendOTPButton.click()
+
+    await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+
+    const otpCode = await getOTPFromMailpit(TEST_EMAIL)
+
+    const otpInputs = page.locator('input[inputmode="numeric"]')
+    await expect(otpInputs).toHaveCount(8)
+
+    for (let i = 0; i < 8; i++) {
+        await otpInputs.nth(i).fill(otpCode[i])
+    }
+
+    const skipButton = page.getByRole('button', { name: /bỏ qua/i })
+    try {
+        await skipButton.waitFor({ state: 'visible', timeout: 10000 })
+        await skipButton.click()
+        await page.waitForLoadState('networkidle')
+    } catch {
+        await page.waitForLoadState('networkidle')
+    }
 }
