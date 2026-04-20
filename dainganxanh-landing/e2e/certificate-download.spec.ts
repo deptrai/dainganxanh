@@ -13,7 +13,7 @@ import { loginAtLoginPage } from './fixtures/auth'
  * - Test user: TEST_USER_EMAIL (env override)
  */
 
-test.describe('Certificate Download E2E', () => {
+test.describe('[P1] Certificate Download E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state

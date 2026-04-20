@@ -13,7 +13,7 @@ import { loginAsAdmin } from './fixtures/auth'
  * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe('Admin Referrals Management E2E', () => {
+test.describe('[P2] Admin Referrals Management E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state

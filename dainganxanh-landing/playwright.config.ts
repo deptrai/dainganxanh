@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const ADMIN_AUTH_FILE = '.auth/admin.json'
+const USER_AUTH_FILE = '.auth/user.json'
+
 export default defineConfig({
     testDir: './e2e',
     fullyParallel: true,
@@ -15,9 +18,59 @@ export default defineConfig({
     },
 
     projects: [
+        // Setup project: runs ONCE before all tests, performs OTP login and
+        // saves storage state. Subsequent projects load it via `use.storageState`,
+        // so individual tests never repeat the OTP flow.
         {
-            name: 'chromium',
+            name: 'setup',
+            testMatch: /.*\.setup\.ts/,
+        },
+        // Admin-flow specs (admin-*, payment-webhook, notification-system,
+        // performance-boundaries, error-handling-*, withdrawal-flow). Run
+        // pre-authenticated as ADMIN_EMAIL.
+        {
+            name: 'chromium-admin',
+            use: {
+                ...devices['Desktop Chrome'],
+                storageState: ADMIN_AUTH_FILE,
+            },
+            dependencies: ['setup'],
+            testMatch: [
+                /admin-.*\.spec\.ts/,
+                /payment-webhook\.spec\.ts/,
+                /notification-system\.spec\.ts/,
+                /performance-boundaries\.spec\.ts/,
+                /error-handling-.*\.spec\.ts/,
+                /withdrawal-flow\.spec\.ts/,
+            ],
+        },
+        // User-flow specs (checkout, my-garden, harvest, certificate, identity,
+        // referral, tree-detail, accessibility, registration-auth). Run
+        // pre-authenticated as TEST_EMAIL (falls back to admin if unset).
+        {
+            name: 'chromium-user',
+            use: {
+                ...devices['Desktop Chrome'],
+                storageState: USER_AUTH_FILE,
+            },
+            dependencies: ['setup'],
+            testMatch: [
+                /checkout-payment-flow\.spec\.ts/,
+                /my-garden-dashboard\.spec\.ts/,
+                /harvest-decision\.spec\.ts/,
+                /certificate-download\.spec\.ts/,
+                /identity-form\.spec\.ts/,
+                /referral-.*\.spec\.ts/,
+                /tree-detail-.*\.spec\.ts/,
+                /accessibility\.spec\.ts/,
+                /notification-flow\.spec\.ts/,
+            ],
+        },
+        // Unauthenticated specs (login/register flow itself). No storageState.
+        {
+            name: 'chromium-anon',
             use: { ...devices['Desktop Chrome'] },
+            testMatch: [/registration-auth\.spec\.ts/],
         },
     ],
 

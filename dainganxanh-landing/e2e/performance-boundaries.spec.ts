@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
+import { mockServerDelay } from './fixtures/timing'
 
 /**
  * Performance & Boundary Testing E2E Test Suite
@@ -13,7 +14,7 @@ import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
  * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe('Performance & Boundary Testing E2E', () => {
+test.describe('[P3] Performance & Boundary Testing E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state
@@ -26,18 +27,32 @@ test.describe('Performance & Boundary Testing E2E', () => {
     /**
      * Helper: Generate mock orders for pagination testing
      */
+    /**
+     * Deterministic pseudo-RNG so generated test datasets are reproducible
+     * across runs. Uses a tiny LCG seeded by an index, not Math.random().
+     */
+    function det(seed: number, max: number): number {
+        // Linear congruential — same input always yields same output.
+        const v = (seed * 1103515245 + 12345) & 0x7fffffff
+        return v % max
+    }
+
+    /** Fixed reference timestamp for any "N days ago" mock data. */
+    const FIXED_NOW = new Date('2026-04-20T12:00:00Z').getTime()
+
     function generateMockOrders(count: number) {
         const statuses = ['pending', 'paid', 'verified', 'assigned', 'completed']
         const orders = []
 
         for (let i = 0; i < count; i++) {
+            const ageDays = det(i, 30)
             orders.push({
                 id: `order-${i + 1}`,
                 order_code: `DH${String(i + 1).padStart(6, '0')}`,
-                quantity: Math.floor(Math.random() * 50) + 1,
-                total_amount: (Math.floor(Math.random() * 50) + 1) * 260000,
-                status: statuses[Math.floor(Math.random() * statuses.length)],
-                created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+                quantity: det(i + 1, 50) + 1,
+                total_amount: (det(i + 2, 50) + 1) * 260000,
+                status: statuses[det(i + 3, statuses.length)],
+                created_at: new Date(FIXED_NOW - ageDays * 24 * 60 * 60 * 1000).toISOString(),
                 user_email: `user${i + 1}@example.com`
             })
         }
@@ -154,7 +169,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                     order_code: `DH${String(Math.floor(i / 5) + 1).padStart(6, '0')}`,
                     status: 'active',
                     location: `Lô ${Math.floor(i / 10) + 1}`,
-                    planted_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString()
+                    planted_date: new Date(FIXED_NOW - det(i, 365) * 24 * 60 * 60 * 1000).toISOString()
                 })
             }
 
@@ -236,7 +251,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                         id: `photo-${i + 1}`,
                         url: `https://picsum.photos/400/300?random=${i + 1}`,
                         thumbnail_url: `https://picsum.photos/200/150?random=${i + 1}`,
-                        taken_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                        taken_at: new Date(FIXED_NOW - det(i, 365) * 24 * 60 * 60 * 1000).toISOString(),
                         description: `Photo ${i + 1}`
                     })
                 }
@@ -313,14 +328,14 @@ test.describe('Performance & Boundary Testing E2E', () => {
             let allTransactions = []
 
             for (let i = 0; i < 5000; i++) {
-                const type = types[Math.floor(Math.random() * types.length)]
+                const type = types[det(i, types.length)]
                 if (filter === 'all' || filter === type) {
                     allTransactions.push({
                         id: `txn-${i + 1}`,
                         type: type,
-                        amount: Math.floor(Math.random() * 10000000) + 10000,
+                        amount: det(i + 1, 10000000) + 10000,
                         description: `Transaction ${i + 1}`,
-                        created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                        created_at: new Date(FIXED_NOW - det(i + 2, 365) * 24 * 60 * 60 * 1000).toISOString(),
                         status: 'completed'
                     })
                 }
@@ -548,9 +563,9 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
             // Mock approval API
             await page.route(`**/api/withdrawals/${withdrawalId}/approve`, async route => {
-                // Justified hard wait: mock-server side; simulates ~500ms backend
-                // processing latency for batch-approval throughput test. Not a UI wait.
-                await new Promise(resolve => setTimeout(resolve, 500))
+                // Mock-server side: simulates ~500ms backend processing latency
+                // for batch-approval throughput test. Named helper documents intent.
+                await mockServerDelay(500)
 
                 await route.fulfill({
                     status: 200,

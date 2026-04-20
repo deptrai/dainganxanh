@@ -12,7 +12,7 @@ import { loginAtLoginPage } from './fixtures/auth'
  * - Test user: TEST_USER_EMAIL (env override) (with referral code setup)
  */
 
-test.describe('Referral System Flow E2E', () => {
+test.describe('[P1] Referral System Flow E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state

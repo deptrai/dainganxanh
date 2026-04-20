@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
+import { mockServerDelay } from './fixtures/timing'
 
 /**
  * Error Handling — External Service Failures E2E
@@ -138,9 +139,9 @@ test.describe('[P1] Error Handling — External Service Failures E2E', () => {
             if (route.request().method() === 'POST') {
                 timeoutOccurred = true
 
-                // Justified hard wait: mock-server side; simulates a gateway timeout
-                // before fulfilling with 504. Not a UI wait.
-                await new Promise(resolve => setTimeout(resolve, 100))
+                // Mock-server side: simulates a gateway timeout before fulfilling
+                // with 504. Named helper documents intent.
+                await mockServerDelay(100)
 
                 await route.fulfill({
                     status: 504,

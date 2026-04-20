@@ -9,6 +9,7 @@
  */
 
 import type { Page, Locator } from '@playwright/test'
+import { expect } from '@playwright/test'
 
 /**
  * Wait for network to settle (replaces waitForTimeout after navigation).
@@ -52,7 +53,7 @@ export async function waitForFormSubmit(page: Page, submitButton: Locator, timeo
     // Wait for button to become enabled again (loading state ends)
     // OR wait for navigation/network idle
     await Promise.race([
-        submitButton.waitFor({ state: 'enabled', timeout }),
+        expect(submitButton).toBeEnabled({ timeout }),
         page.waitForLoadState('networkidle', { timeout }),
     ])
 }

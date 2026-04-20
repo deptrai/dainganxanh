@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Notification Flow E2E', () => {
+test.describe('[P1] Notification Flow E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state

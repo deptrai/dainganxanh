@@ -14,7 +14,7 @@ import { loginAsAdmin } from './fixtures/auth'
  * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe.serial('[P0] Payment Webhook E2E', () => {
+test.describe('[P0] Payment Webhook E2E', () => {
     const WEBHOOK_SECRET = process.env.CASSO_WEBHOOK_SECRET || 'test-webhook-secret'
 
     /**

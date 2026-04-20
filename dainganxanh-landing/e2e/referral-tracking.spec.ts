@@ -13,7 +13,7 @@ import { loginAtLoginPage } from './fixtures/auth'
  * - Test user: TEST_USER_EMAIL (env override)
  */
 
-test.describe('Referral Tracking E2E', () => {
+test.describe('[P2] Referral Tracking E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state

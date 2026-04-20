@@ -13,7 +13,7 @@ import { loginAsAdmin } from './fixtures/auth'
  * - Admin user: TEST_ADMIN_EMAIL (env override)
  */
 
-test.describe.serial('Notification System E2E', () => {
+test.describe('[P1] Notification System E2E', () => {
 
 
     /**

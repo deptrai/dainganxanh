@@ -52,7 +52,7 @@ describe('ChecklistItem', () => {
             ...mockItem,
             completed: true,
             completed_by: 'admin',
-            completed_at: new Date().toISOString(),
+            completed_at: '2026-04-20T12:00:00.000Z',
         }
 
         render(

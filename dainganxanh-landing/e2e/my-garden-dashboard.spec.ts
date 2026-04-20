@@ -13,7 +13,7 @@ import { loginAtLoginPage } from './fixtures/auth'
  * - Test user: TEST_USER_EMAIL (env override) (with existing orders)
  */
 
-test.describe('My Garden Dashboard E2E', () => {
+test.describe('[P1] My Garden Dashboard E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state
