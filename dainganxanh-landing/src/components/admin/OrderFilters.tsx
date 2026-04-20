@@ -17,6 +17,7 @@ const statusOptions = [
     { value: 'assigned', label: 'Đã gán cây' },
     { value: 'completed', label: 'Hoàn thành' },
     { value: 'cancelled', label: 'Đã hủy' },
+    { value: 'cancelled_refunded', label: 'Hoàn tiền' },
 ]
 
 export default function OrderFilters({ filters, setFilters }: OrderFiltersProps) {

@@ -62,56 +62,78 @@ function mockUnauthenticated() {
 function mockServiceCalls(opts: {
     role?: string
     existingOrder?: { id: string; code: string; total_amount: number; user_id: string; status: string } | null
+    /**
+     * Result of the admin refund UPDATE … RETURNING id.
+     * Default: 1 row updated (success). Pass [] to simulate TOCTOU race (0 rows).
+     */
+    refundUpdateResult?: { data: Array<{ id: string }> | null; error: Error | null }
+    /** Result of the regular pending-cancel UPDATE … RETURNING id. */
     cancelResult?: { data: Array<{ id: string }> | null; error: Error | null }
     refundError?: Error | null
+    /** If set, makes admin_audit_log.insert resolve with { error } instead of throwing. */
+    auditInsertError?: Error | null
 }) {
-    const { role = 'user', existingOrder = null, cancelResult = { data: [], error: null }, refundError = null } = opts
+    const {
+        role = 'user',
+        existingOrder = null,
+        refundUpdateResult = { data: [{ id: 'updated' }], error: null },
+        cancelResult = { data: [], error: null },
+        refundError = null,
+        auditInsertError = null,
+    } = opts
 
     const eqCalls: Array<[string, unknown]> = []
-    const updateSpy = jest.fn()
+    const auditInsertSpy = jest.fn(() => Promise.resolve({ error: auditInsertError }))
 
-    // Build a chainable query object that records .eq() calls
     function makeChain(finalResult: unknown) {
         const chain: Record<string, unknown> = {}
-        const eq = jest.fn((col: string, val: unknown) => {
+        chain.eq = jest.fn((col: string, val: unknown) => {
             eqCalls.push([col, val])
             return chain
         })
-        chain.eq = eq
-        chain.select = jest.fn(() => Promise.resolve(finalResult))
+        chain.select = jest.fn(() => {
+            // Make .select() chainable too — refund path does .eq().eq().select() then awaits.
+            return Object.assign(Promise.resolve(finalResult), chain)
+        })
         chain.single = jest.fn(() => Promise.resolve(finalResult))
-        chain.insert = jest.fn(() => Promise.resolve({ error: null }))
         return chain
     }
 
     const userChain = makeChain({ data: { role }, error: null })
     const orderFetchChain = makeChain({ data: existingOrder, error: null })
-    const updateChain = makeChain(cancelResult)
-    updateSpy.mockReturnValue(updateChain)
+
+    // Route only fetches the order (the SELECT) when caller is admin AND orderId is present.
+    // For non-admin orderId callers, the only orders call is the regular cancel UPDATE.
+    const adminPathTaken = ['admin', 'super_admin'].includes(role)
+    let ordersCallCount = 0
 
     mockServiceFrom.mockImplementation((table: string) => {
         if (table === 'users') {
             return { select: jest.fn(() => userChain) }
         }
         if (table === 'admin_audit_log') {
-            return { insert: jest.fn(() => Promise.resolve({ error: null })) }
+            return { insert: auditInsertSpy }
         }
-        // 'orders' table — first call is select (order fetch), subsequent is update
-        const callCount = (mockServiceFrom.mock.calls.filter((c: string[]) => c[0] === 'orders').length)
-        if (callCount === 1) {
-            // First orders call: select for status check
-            return { select: jest.fn(() => orderFetchChain) }
+        if (table === 'orders') {
+            ordersCallCount += 1
+            if (adminPathTaken && ordersCallCount === 1) {
+                // First orders call (admin only): select for status check
+                return { select: jest.fn(() => orderFetchChain) }
+            }
+            // Otherwise: this is an UPDATE (refund or regular cancel)
+            if (refundError) {
+                const errChain = makeChain({ data: null, error: refundError })
+                return { update: jest.fn(() => errChain) }
+            }
+            const useRefund = existingOrder?.status === 'completed' && adminPathTaken
+            const result = useRefund ? refundUpdateResult : cancelResult
+            const updateChain = makeChain(result)
+            return { update: jest.fn(() => updateChain) }
         }
-        // Subsequent orders calls: update
-        if (refundError) {
-            const errChain = makeChain({ error: refundError })
-            const errUpdate = jest.fn(() => errChain)
-            return { update: errUpdate }
-        }
-        return { update: updateSpy }
+        return { from: jest.fn() }
     })
 
-    return { eqCalls, updateSpy }
+    return { eqCalls, auditInsertSpy }
 }
 
 /**
@@ -297,28 +319,90 @@ describe('[P0] POST /api/orders/cancel — admin refunds completed order (Story 
         expect(body.refundStatus).toBe('manual_pending')
     })
 
-    test('[P0] non-admin attempting completed cancel returns 403', async () => {
+    // P4 (oracle leak): non-admin must NOT receive 403 for completed orders —
+    // doing so would let them probe which UUIDs map to other users' completed
+    // orders. They should fall through to the user-scoped pending-cancel path
+    // and receive 404, identical to a non-existent UUID.
+    test('[P0] non-admin targeting a completed order falls through to 404 (no oracle leak)', async () => {
         mockAuthenticated('user-1')
         mockServiceCalls({
             role: 'user',
             existingOrder: { id: 'order-1', code: 'DH123ABC', total_amount: 100, user_id: 'user-1', status: 'completed' },
+            cancelResult: { data: [], error: null },
         })
 
         const res = await POST(makeRequest({ orderId: 'order-1' }))
-        expect(res.status).toBe(403)
+        expect(res.status).toBe(404)
         const body = await res.json()
-        expect(body.error).toMatch(/unauthorized/i)
+        expect(body.error).toMatch(/không tìm thấy|đã xử lý/i)
     })
 
-    test('[P0] customer role cannot refund completed orders', async () => {
+    test('[P0] customer role targeting a completed order also gets 404, not 403', async () => {
         mockAuthenticated('customer-1')
         mockServiceCalls({
             role: 'customer',
             existingOrder: { id: 'order-3', code: 'DH456DEF', total_amount: 300000, user_id: 'customer-1', status: 'completed' },
+            cancelResult: { data: [], error: null },
         })
 
         const res = await POST(makeRequest({ orderId: 'order-3' }))
-        expect(res.status).toBe(403)
+        expect(res.status).toBe(404)
+    })
+
+    // P1 (TOCTOU): UPDATE matching 0 rows because of a concurrent refund must
+    // return 404, NOT a false success with a spurious audit log entry.
+    test('[P0] TOCTOU: when refund UPDATE matches 0 rows (race lost), returns 404 and writes NO audit log', async () => {
+        mockAuthenticated('admin-1')
+        const { auditInsertSpy } = mockServiceCalls({
+            role: 'admin',
+            existingOrder: { id: 'order-1', code: 'DH123ABC', total_amount: 500000, user_id: 'user-1', status: 'completed' },
+            refundUpdateResult: { data: [], error: null },
+        })
+
+        const res = await POST(makeRequest({ orderId: 'order-1' }))
+        expect(res.status).toBe(404)
+        const body = await res.json()
+        expect(body).not.toHaveProperty('success', true)
+        expect(auditInsertSpy).not.toHaveBeenCalled()
+    })
+
+    // P5 (audit log assertion): AC4 requires writing admin_audit_log with the
+    // documented payload. Verify the call shape directly.
+    test('[P0] writes admin_audit_log with action, target_id, and metadata on successful refund', async () => {
+        mockAuthenticated('admin-1')
+        const { auditInsertSpy } = mockServiceCalls({
+            role: 'admin',
+            existingOrder: { id: 'order-1', code: 'DH123ABC', total_amount: 500000, user_id: 'customer-1', status: 'completed' },
+        })
+
+        await POST(makeRequest({ orderId: 'order-1' }))
+
+        expect(auditInsertSpy).toHaveBeenCalledTimes(1)
+        expect(auditInsertSpy).toHaveBeenCalledWith({
+            admin_id: 'admin-1',
+            action: 'order_refund_initiated',
+            target_id: 'order-1',
+            metadata: {
+                order_code: 'DH123ABC',
+                amount: 500000,
+                user_id: 'customer-1',
+            },
+        })
+    })
+
+    // P8 (non-blocking audit): audit log soft errors must NOT fail the request.
+    test('[P0] audit log soft error does NOT fail the refund request', async () => {
+        mockAuthenticated('admin-1')
+        mockServiceCalls({
+            role: 'admin',
+            existingOrder: { id: 'order-1', code: 'DH123ABC', total_amount: 500000, user_id: 'customer-1', status: 'completed' },
+            auditInsertError: new Error('FK violation: admin not in public.users'),
+        })
+
+        const res = await POST(makeRequest({ orderId: 'order-1' }))
+        expect(res.status).toBe(200)
+        const body = await res.json()
+        expect(body).toEqual({ success: true, refundStatus: 'manual_pending' })
     })
 })
 
@@ -422,5 +506,20 @@ describe('[P2] POST /api/orders/cancel — orderCode lookup branch', () => {
         })
         const res = await POST(makeRequest({ orderCode: 'dh123abc' }))
         expect(res.status).toBe(200)
+    })
+
+    // P6 (regression guard): when both orderId and orderCode are supplied,
+    // the route prefers orderId and never filters on `code`.
+    test('[P2] prefers orderId over orderCode when both supplied', async () => {
+        const { eqCalls } = mockServiceCalls({
+            role: 'user',
+            existingOrder: { id: 'order-1', code: 'DH123ABC', total_amount: 100, user_id: 'user-1', status: 'pending' },
+            cancelResult: { data: [{ id: 'order-1' }], error: null },
+        })
+
+        await POST(makeRequest({ orderId: 'order-1', orderCode: 'DH123ABC' }))
+
+        expect(eqCalls).toContainEqual(['id', 'order-1'])
+        expect(eqCalls).not.toContainEqual(['code', 'DH123ABC'])
     })
 })

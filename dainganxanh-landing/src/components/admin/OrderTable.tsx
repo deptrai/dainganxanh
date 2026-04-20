@@ -44,6 +44,9 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
     const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
     const [assignError, setAssignError] = useState<string | null>(null)
     const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null)
+    const [refundConfirmOrder, setRefundConfirmOrder] = useState<Order | null>(null)
+    const [refundConfirmInput, setRefundConfirmInput] = useState('')
+    const [refundError, setRefundError] = useState<string | null>(null)
 
     const handleAssignToLot = async (lotId: string) => {
         if (!assigningOrder) return
@@ -212,15 +215,11 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                                                 </button>
                                                 {order.status === 'completed' && refundOrder && (
                                                     <button
-                                                        onClick={async (e) => {
+                                                        onClick={(e) => {
                                                             e.stopPropagation()
-                                                            if (!confirm(`Xác nhận hoàn tiền đơn hàng ${order.order_code || order.id}?`)) return
-                                                            setRefundingOrderId(order.id)
-                                                            try {
-                                                                await refundOrder(order.id)
-                                                            } finally {
-                                                                setRefundingOrderId(null)
-                                                            }
+                                                            setRefundConfirmOrder(order)
+                                                            setRefundConfirmInput('')
+                                                            setRefundError(null)
                                                         }}
                                                         disabled={refundingOrderId === order.id}
                                                         className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-xs disabled:opacity-50"
@@ -282,6 +281,82 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                     />
                 )
             }
+
+            {/* Refund confirmation modal — requires typing the order code to prevent misclicks on money flow */}
+            {refundConfirmOrder && refundOrder && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                    onClick={() => {
+                        if (refundingOrderId) return
+                        setRefundConfirmOrder(null)
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            Xác nhận hoàn tiền đơn hàng
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Hành động này sẽ chuyển đơn hàng sang trạng thái{' '}
+                            <span className="font-semibold text-orange-700">Hoàn tiền</span>.
+                            Nhập mã đơn hàng{' '}
+                            <code className="px-1 py-0.5 bg-gray-100 text-orange-700 rounded font-mono text-xs">
+                                {refundConfirmOrder.order_code || refundConfirmOrder.id}
+                            </code>{' '}
+                            để xác nhận.
+                        </p>
+                        <input
+                            type="text"
+                            value={refundConfirmInput}
+                            onChange={(e) => setRefundConfirmInput(e.target.value)}
+                            placeholder="Nhập mã đơn hàng"
+                            autoFocus
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            disabled={!!refundingOrderId}
+                        />
+                        {refundError && (
+                            <p className="mt-2 text-sm text-red-600">{refundError}</p>
+                        )}
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                onClick={() => setRefundConfirmOrder(null)}
+                                disabled={!!refundingOrderId}
+                                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const expected = refundConfirmOrder.order_code || refundConfirmOrder.id
+                                    if (refundConfirmInput !== expected) {
+                                        setRefundError('Mã đơn hàng không khớp')
+                                        return
+                                    }
+                                    setRefundingOrderId(refundConfirmOrder.id)
+                                    setRefundError(null)
+                                    try {
+                                        await refundOrder(refundConfirmOrder.id)
+                                        setRefundConfirmOrder(null)
+                                    } catch (err) {
+                                        setRefundError(err instanceof Error ? err.message : 'Lỗi không xác định')
+                                    } finally {
+                                        setRefundingOrderId(null)
+                                    }
+                                }}
+                                disabled={
+                                    !!refundingOrderId ||
+                                    refundConfirmInput !== (refundConfirmOrder.order_code || refundConfirmOrder.id)
+                                }
+                                className="px-4 py-2 text-sm text-white bg-orange-600 rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {refundingOrderId ? 'Đang xử lý...' : 'Xác nhận hoàn tiền'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     )
 }

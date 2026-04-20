@@ -1,6 +1,6 @@
 # Story 5.7: Order Refund for Completed Orders
 
-**Status:** ready-for-dev
+**Status:** done
 **Epic:** 5 — Payment Automation
 **Story Points:** 3
 **Date:** 2026-04-20
@@ -75,6 +75,30 @@ So that customers receive their money back when an order needs to be reversed af
 - [ ] **Task 3: Update admin Orders UI** (AC5 — display)
   - [ ] In `src/app/crm/admin/orders/page.tsx`: add `cancelled_refunded` to status badge mapping (e.g. orange badge "Hoàn tiền")
   - [ ] Add cancel/refund action button for `completed` orders visible only to admin role
+
+### Review Findings
+
+**Decision-needed:**
+- [x] [Review][Defer] Referral commission clawback when a `completed` order is refunded — `getAvailableBalance` filters by `status='completed'` (`src/actions/withdrawals.ts:40-43`, `src/actions/referrals.ts:124-128`, `src/actions/adminReferrals.ts:33-38`). Decision: defer. Clawback policy needs a separate story (when/how/notify referrer). Refunds are rare → narrow window of risk.
+- [x] [Review][Patch] Refund confirmation strength — replace `confirm()` with a typed-code modal at `src/components/admin/OrderTable.tsx:217`. Industry convention for irreversible money writes.
+
+**Patch:**
+- [x] [Review][Patch] TOCTOU: refund UPDATE has no row-count check → false `success:true` + spurious audit log on concurrent admin clicks [`src/app/api/orders/cancel/route.ts:46-72`]. UPDATE only checks `error`; if `.eq('status','completed')` matches 0 rows (because another admin already refunded), no error is raised, audit row is still inserted, and 200 is returned. Add `.select('id')` and treat zero rows as 404 (mirror the regular-cancel branch).
+- [x] [Review][Patch] Migration `DROP CONSTRAINT` not idempotent — add `IF EXISTS` [`supabase/migrations/20260420000001_add_cancelled_refunded_status.sql:6`]. Re-applying the migration on a fresh env will fail.
+- [x] [Review][Patch] `OrderFilters` dropdown missing `cancelled_refunded` option [`src/components/admin/OrderFilters.tsx:12-20`]. Refunded orders are invisible unless admin selects "Tất cả"; default filter is `pending` so the row vanishes from the list right after refund.
+- [x] [Review][Patch] Admin path leaks 403/404 oracle: regular user submitting any `orderId` that resolves to a `completed` order receives 403, otherwise 404 [`src/app/api/orders/cancel/route.ts:33-44`]. Lets an authenticated regular user enumerate which UUIDs map to other users' completed orders. Either return 404 uniformly when the caller is non-admin, or skip the order fetch entirely when caller is non-admin.
+- [x] [Review][Patch] Tests do not assert `admin_audit_log.insert` is called with the spec'd payload [`src/app/api/orders/cancel/__tests__/route.test.ts` admin-refund block]. AC4 is unverified by CI; payload regressions won't be caught.
+- [x] [Review][Patch] Lost regression: "prefers orderId over orderCode when both supplied" test was deleted in the rewrite [`src/app/api/orders/cancel/__tests__/route.test.ts`]. Behaviour still exists in `route.ts:88-89` but is no longer guarded.
+- [x] [Review][Patch] Role lookup `error` is destructured away [`src/app/api/orders/cancel/route.ts:24-28`]. Any DB hiccup, RLS misconfig or missing `public.users` row collapses `isAdmin` to `false` silently — admin gets 403 with no operator log line. At minimum log the error; consider failing closed with 500.
+- [x] [Review][Patch] Audit log try/catch only catches thrown errors, not Supabase's `{error}` return shape [`src/app/api/orders/cancel/route.ts:58-71`]. RLS / FK / schema mismatches are silently dropped; AC4 says "log error if fails". Inspect the resolved `{error}` and `console.error` it.
+
+**Deferred (pre-existing or out of scope):**
+- [x] [Review][Defer] Admin cancelling a `verified`/`paid`/`assigned` order silently 404s — out of scope for AC2 (only `completed` required), but worth a follow-up story.
+- [x] [Review][Defer] Analytics revenue + carbon under-report after refund (5-min cache, no bust) [`src/actions/analytics.ts:144-170`] — separate story.
+- [x] [Review][Defer] "Gán lô cây" + "Hoàn tiền" buttons coexist on completed rows; no status re-check in `assignOrderToLot` at UPDATE time [`src/components/admin/OrderTable.tsx:202-230`, `src/actions/assignOrderToLot.ts`] — pre-existing race surface.
+- [x] [Review][Defer] No CSRF / rate-limit on admin money-relevant POST [`src/app/api/orders/cancel/route.ts:4-19`] — pre-existing pattern across all admin routes; needs a platform-level fix.
+- [x] [Review][Defer] `Order.status` union missing `failed` / `manual_payment_claimed` (DB allows them, UI breaks silently) [`src/hooks/useAdminOrders.ts:12`, `src/components/admin/OrderTable.tsx:20-38`] — pre-existing values, not introduced by 5-7.
+- [x] [Review][Defer] `admin_audit_log.admin_id` FK to `public.users` can fail silently if admin only exists in `auth.users` [`supabase/migrations/20260420000000_add_admin_audit_log.sql:6`] — pre-existing schema.
 
 ---
 

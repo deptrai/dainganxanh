@@ -3,7 +3,7 @@
 -- Date: 2026-04-20
 
 ALTER TABLE public.orders
-  DROP CONSTRAINT orders_status_check;
+  DROP CONSTRAINT IF EXISTS orders_status_check;
 
 ALTER TABLE public.orders
   ADD CONSTRAINT orders_status_check CHECK (
