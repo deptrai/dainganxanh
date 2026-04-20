@@ -15,7 +15,6 @@ jobs:
       contents: write
       pull-requests: write
       actions: read
-      workflows: write
 
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +78,16 @@ jobs:
 
           git checkout -b "$FIX_BRANCH"
           git add -A
+          # Exclude files Claude shouldn't modify
           git reset HEAD ci-failure-logs.txt 2>/dev/null || true
+          git reset HEAD '.github/workflows/' 2>/dev/null || true
+
+          # Only create PR if there are staged changes
+          if [ -z "$(git diff --cached --name-only)" ]; then
+            echo "No staged changes after exclusions — skipping PR creation"
+            exit 0
+          fi
+
           git commit -m "fix(autofix): CI run #${RUN_ID} — auto-fix by Claude Code"
           git push origin "$FIX_BRANCH"
 
