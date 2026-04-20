@@ -22,31 +22,65 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - name: Fetch failed CI logs into workspace
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Fetch failed CI logs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RUN_ID="${{ github.event.workflow_run.id }}"
+          gh run view "${{ github.event.workflow_run.id }}" --log-failed 2>&1 | head -400 > ci-failure-logs.txt
+          echo "=== Log preview ===" && head -40 ci-failure-logs.txt
+
+      - name: Claude Code — analyze and fix
+        env:
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+          ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-5
+        run: |
+          LOGS=$(cat ci-failure-logs.txt)
           BRANCH="${{ github.event.workflow_run.head_branch }}"
-          echo "Fetching failed logs for run #$RUN_ID on branch $BRANCH"
+          RUN_ID="${{ github.event.workflow_run.id }}"
 
-          gh run view "$RUN_ID" --log-failed 2>&1 | head -400 > ci-failure-logs.txt
-          echo "=== Log preview ===" && head -30 ci-failure-logs.txt
+          claude --print --dangerously-skip-permissions \
+            "CI pipeline failed on branch \`$BRANCH\` (run #$RUN_ID).
 
-      - name: Run Claude Code auto-fix
-        uses: anthropic/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          direct_prompt: |
-            The CI pipeline just failed on branch `${{ github.event.workflow_run.head_branch }}` (run #${{ github.event.workflow_run.id }}).
+          Failure logs:
+          \`\`\`
+          $LOGS
+          \`\`\`
 
-            The failure logs are saved at `ci-failure-logs.txt` in the workspace root. Read that file first.
+          1. Read the logs carefully to identify root cause
+          2. Fix by editing the relevant files in this repo
+          3. Do NOT skip or weaken tests — fix the actual bug
+          4. Keep changes minimal and focused on the failure
+          5. After fixing, run: git diff --name-only to confirm changes"
 
-            Then:
-            1. Identify the root cause of the failure
-            2. Fix it by editing the relevant files
-            3. Do NOT skip or weaken tests — fix the actual bug
-            4. Keep changes minimal and focused on the failure
+      - name: Create fix PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          FIX_BRANCH="autofix/ci-run-${RUN_ID}"
 
-            Create a PR with your fix when done.
+          git config user.name "claude-autofix[bot]"
+          git config user.email "claude-autofix[bot]@users.noreply.github.com"
+
+          # Only create PR if there are actual changes
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes made — skipping PR creation"
+            exit 0
+          fi
+
+          git checkout -b "$FIX_BRANCH"
+          git add -A
+          git commit -m "fix(autofix): CI run #${RUN_ID} — auto-fix by Claude Code"
+          git push origin "$FIX_BRANCH"
+
+          gh pr create \
+            --base "$BRANCH" \
+            --head "$FIX_BRANCH" \
+            --title "fix: auto-fix CI failure (run #${RUN_ID})" \
+            --body "$(printf '## Auto-fix by Claude Code\n\nCI run [#%s](https://github.com/${{ github.repository }}/actions/runs/%s) failed on branch \`%s\`.\n\nClaude Code analyzed the failure logs and applied this fix automatically.\n\n> ⚠️ Review carefully before merging.' "$RUN_ID" "$RUN_ID" "$BRANCH")"
