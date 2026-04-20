@@ -37,25 +37,24 @@ jobs:
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+          CLAUDE_CODE_SKIP_AUTOLOGIN: "1"
           ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-5
         run: |
           LOGS=$(cat ci-failure-logs.txt)
           BRANCH="${{ github.event.workflow_run.head_branch }}"
           RUN_ID="${{ github.event.workflow_run.id }}"
 
-          claude --print --dangerously-skip-permissions \
-            "CI pipeline failed on branch \`$BRANCH\` (run #$RUN_ID).
+          # Write prompt to file to avoid shell quoting issues with $LOGS
+          cat > /tmp/prompt.txt << 'PROMPT_EOF'
+          CI pipeline failed. The failure logs are in ci-failure-logs.txt in the workspace root.
 
-          Failure logs:
-          \`\`\`
-          $LOGS
-          \`\`\`
-
-          1. Read the logs carefully to identify root cause
-          2. Fix by editing the relevant files in this repo
+          1. Read ci-failure-logs.txt to identify the root cause
+          2. Fix it by editing the relevant files in this repo
           3. Do NOT skip or weaken tests — fix the actual bug
           4. Keep changes minimal and focused on the failure
-          5. After fixing, run: git diff --name-only to confirm changes"
+          PROMPT_EOF
+
+          claude --print --dangerously-skip-permissions "$(cat /tmp/prompt.txt)"
 
       - name: Create fix PR
         env:
