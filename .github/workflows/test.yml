@@ -140,6 +140,7 @@ jobs:
   burn-in:
     name: Burn-in (Flaky Detection)
     runs-on: ubuntu-latest
+    continue-on-error: true  # E2E requires Mailpit+Supabase; informational only
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [unit-tests, e2e-tests]
     steps:
