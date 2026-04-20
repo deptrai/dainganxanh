@@ -44,18 +44,27 @@ async function performOTPLogin(page: import('@playwright/test').Page, email: str
         await otpInputs.nth(i).fill(otpCode[i])
     }
 
-    // Wait for redirect off /login OR the skip-identity modal — the canonical
-    // post-OTP states.
+    // Wait for redirect off /login OR any post-login modal.
     await Promise.race([
         page.waitForURL((url) => !url.href.includes('/login'), { timeout: 15000 }),
         page.getByRole('button', { name: /bỏ qua/i }).waitFor({ state: 'visible', timeout: 15000 }),
+        page.getByRole('button', { name: /xác nhận/i }).waitFor({ state: 'visible', timeout: 15000 }),
     ])
 
-    // Dismiss the skip-identity modal if present — it's a one-time prompt
-    // for accounts that haven't filled CCCD; safe to dismiss here so that
-    // dependent tests never see it.
+    // Dismiss referral-code modal if present (new accounts without referral).
+    const referralInput = page.getByPlaceholder(/VD: dainganxanh/i)
+    if (await referralInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        const skipReferral = page.getByRole('button', { name: /bấm vào đây để dùng mã/i })
+        if (await skipReferral.isVisible({ timeout: 1000 }).catch(() => false)) {
+            await skipReferral.click()
+        }
+        await page.getByRole('button', { name: /xác nhận/i }).click()
+        await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 15000 })
+    }
+
+    // Dismiss skip-identity modal if present — one-time CCCD prompt.
     const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-    if ((await skipButton.count()) > 0) {
+    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await skipButton.click()
         await page.waitForLoadState('networkidle')
     }

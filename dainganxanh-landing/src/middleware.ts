@@ -78,6 +78,59 @@ export async function middleware(request: NextRequest) {
         }
     }
 
+    // ── Security headers ───────────────────────────────────────────────────
+    // Skip for Next.js internals and static assets (already excluded by matcher,
+    // but guard here for belt-and-suspenders).
+    const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+
+    // Content-Security-Policy
+    // - default-src 'self': block all external by default
+    // - script-src: allow self + inline scripts Next.js uses, plus Supabase CDN
+    // - style-src: allow self + inline (Tailwind inlines critical CSS)
+    // - img-src: allow self + data URIs + remote images declared in next.config
+    // - connect-src: allow Supabase API/realtime and local dev server
+    // - frame-ancestors 'none': equivalent to X-Frame-Options DENY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const supabaseHost = supabaseUrl ? new URL(supabaseUrl).host : ''
+    const csp = [
+        `default-src 'self'`,
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+        `style-src 'self' 'unsafe-inline'`,
+        `img-src 'self' data: blob: https://www.transparenttextures.com https://*.supabase.co`,
+        `font-src 'self' data:`,
+        `connect-src 'self' ${supabaseUrl} ${supabaseHost ? `wss://${supabaseHost}` : ''} https://api.vietqr.io`,
+        `frame-ancestors 'none'`,
+        `base-uri 'self'`,
+        `form-action 'self'`,
+    ].join('; ')
+
+    response.headers.set('Content-Security-Policy', csp)
+
+    // HSTS: 1 year, include subdomains, allow preload
+    // Only set on HTTPS — browsers ignore HSTS over HTTP anyway, but be explicit
+    if (request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production') {
+        response.headers.set(
+            'Strict-Transport-Security',
+            'max-age=31536000; includeSubDomains; preload'
+        )
+    }
+
+    // Clickjacking protection (redundant with CSP frame-ancestors but some older
+    // proxies/scanners only check this header)
+    response.headers.set('X-Frame-Options', 'DENY')
+
+    // Prevent MIME sniffing
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+
+    // Referrer policy — send origin only to same-origin, nothing to cross-origin
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+
+    // Permissions Policy — disable unused browser APIs
+    response.headers.set(
+        'Permissions-Policy',
+        'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+    )
+
     return response
 }
 

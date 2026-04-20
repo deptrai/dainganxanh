@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 const identitySchema = z.object({
   orderCode: z.string().min(1),
@@ -16,6 +17,15 @@ const identitySchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 30 identity submissions per minute per IP
+    const rl = rateLimit(req, { limit: 30, windowMs: 60_000, keyPrefix: 'identity' })
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      )
+    }
+
     const supabase = await createServerClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {

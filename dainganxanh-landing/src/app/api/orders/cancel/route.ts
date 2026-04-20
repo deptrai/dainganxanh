@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
+import { captureError, trackLatency } from '@/lib/monitoring'
 
 export async function POST(req: NextRequest) {
+  const _start = Date.now()
   try {
+    // Rate limit: 10 cancel attempts per minute per IP
+    const rl = rateLimit(req, { limit: 10, windowMs: 60_000, keyPrefix: 'cancel' })
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      )
+    }
+
     // Auth check with user session
     const supabase = await createServerClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -110,9 +122,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Đơn hàng không tìm thấy hoặc đã xử lý' }, { status: 404 })
     }
 
+    trackLatency('/api/orders/cancel', Date.now() - _start)
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Unexpected error in /api/orders/cancel:', err)
+    captureError(err, { route: '/api/orders/cancel' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

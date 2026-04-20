@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config } from 'dotenv'
+
+// Load .env.test so TEST_ADMIN_EMAIL / TEST_USER_EMAIL / MAILPIT_URL are
+// available to all spec files and fixtures at Playwright startup time.
+config({ path: '.env.test', override: false })
 
 const ADMIN_AUTH_FILE = '.auth/admin.json'
 const USER_AUTH_FILE = '.auth/user.json'
