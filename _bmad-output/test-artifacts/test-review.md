@@ -1,597 +1,450 @@
 ---
-stepsCompleted: ['step-03a-subagent-determinism', 'step-03b-subagent-isolation', 'step-03c-subagent-maintainability', 'step-03e-subagent-performance', 'step-03f-aggregate-scores', 'step-04-generate-report']
+stepsCompleted: ['step-01-load-context', 'step-02-discover-tests', 'step-03a-subagent-determinism', 'step-03b-subagent-isolation', 'step-03c-subagent-maintainability', 'step-03e-subagent-performance', 'step-03f-aggregate-scores', 'step-04-generate-report']
 lastStep: 'step-04-generate-report'
-lastSaved: '2026-04-19'
+lastSaved: '2026-04-20'
 workflowType: 'testarch-test-review'
-inputDocuments: []
+reviewScope: 'suite'
+inputDocuments:
+  - _bmad/tea/testarch/tea-index.csv
+  - dainganxanh-landing/playwright.config.ts
+  - dainganxanh-landing/jest.config.ts
+priorBaseline:
+  - _bmad-output/test-artifacts/test-review.md (2026-04-19, score 35/100)
 ---
 
-# Test Quality Review: dainganxanh-landing (Full Suite)
+# Test Quality Review: dainganxanh-landing (Full Suite Refresh)
 
-**Điểm Chất Lượng**: 35/100 (F — Cần Cải Thiện Nghiêm Trọng)  
-**Ngày Review**: 2026-04-19  
-**Phạm Vi Review**: suite (toàn bộ project)  
+**Review date**: 2026-04-20
 **Reviewer**: TEA Agent (Master Test Architect)
+**Scope**: suite (full-codebase refresh; baseline = 2026-04-19 @ 35/100)
+**Stack detected**: fullstack (Next.js 14 + Supabase + Playwright E2E + Jest unit/component)
 
 ---
 
-> **Lưu ý**: Review này đánh giá test hiện tại; không generate test mới.  
-> Coverage mapping và coverage gates nằm ngoài phạm vi. Dùng `trace` workflow cho coverage decisions.
+## Step 1 — Context Loaded
+
+### Knowledge Base
+Core fragments loaded: `test-quality`, `data-factories`, `test-levels-framework`, `selective-testing`, `test-healing-patterns`, `selector-resilience`, `timing-debugging`, `fixture-architecture`, `network-first`, `playwright-config`, `component-tdd`, `ci-burn-in`.
+
+### Test Frameworks
+- Playwright (E2E) — `playwright.config.ts`
+- Jest + React Testing Library (unit/component) — `jest.config.ts`
+
+### Discovered Counts
+- E2E spec files: **22** (22 `*.spec.ts` in `e2e/`, excludes `.bak`)
+- Jest test files: **39** (`*.test.ts` and `*.test.tsx` under `src/`)
+- Total: **61 test files**
+
+### Prior Baseline (2026-04-19)
+- Score: 35/100 (F)
+- Recommendation: Block
+- Top P0 findings: 197 hard waits, 21 OTP duplicates, hardcoded creds, `analytics.test.ts` zero assertions, no E2E cleanup
+
+### Delta Since Baseline
+- Story 5-7 commits added: `route.ts` test rewrite (+24 admin/refund tests), typed-confirm modal in `OrderTable.tsx`, `OrderFilters` extended
+- Total tests grew from 432 → 436
+
+### Out of Scope
+Coverage mapping and coverage gates → use `trace` workflow.
 
 ---
 
-## Executive Summary
+## Step 2 — Test Discovery & Parsing
 
-**Đánh giá tổng thể**: Cần Cải Thiện Nghiêm Trọng (Critical Issues)
+### File Inventory (61 files)
 
-**Khuyến nghị**: ❌ **Block — Yêu cầu refactor lớn trước khi có thể tin tưởng vào CI**
+**E2E (Playwright, 22 files)** — largest offenders first:
 
-### Điểm Mạnh
+| File | Lines |
+|---|---|
+| `e2e/error-handling.spec.ts` | 1273 |
+| `e2e/tree-detail-extended.spec.ts` | 929 |
+| `e2e/performance-boundaries.spec.ts` | 896 |
+| `e2e/accessibility.spec.ts` | 750 |
+| `e2e/payment-webhook.spec.ts` | 720 |
+| `e2e/notification-system.spec.ts` | 628 |
+| 16 others | ≤497 |
 
-✅ Unit tests cho pure functions (`contract-helpers.test.ts`) đạt chuẩn determinism tốt  
-✅ `payment-webhook.spec.ts` sử dụng `page.route()` mock đúng cách cho network intercept  
-✅ Component tests (`NotificationBell`, `TreeCard`, `ChecklistItem`) tuân theo React Testing Library patterns  
+**Jest (39 files)** — largest:
+
+| File | Lines |
+|---|---|
+| `src/app/api/orders/cancel/__tests__/route.test.ts` | 525 |
+| `src/actions/__tests__/printQueue.test.ts` | 445 |
+| `src/actions/__tests__/withdrawals.test.ts` | 362 |
+| `src/actions/__tests__/downloadCertificate.test.ts` | 321 |
+| 35 others | ≤304 |
+
+### Fixture Infrastructure (NEW since baseline)
+
+- `e2e/fixtures/mailpit.ts` — OTP polling with condition-based retry (replaces 21 prior duplicates)
+- `e2e/fixtures/wait-helpers.ts` — condition-based wait utilities (contains 8 `waitForTimeout` usages internally)
+
+### Metric Deltas vs 2026-04-19 Baseline
+
+| Metric | Baseline | Current | Δ |
+|---|---|---|---|
+| `waitForTimeout` instances in E2E | 197 | **8** (all inside fixture) | **−96%** ✅ |
+| `getOTPFromMailpit` duplicates | 21 | **1** (shared fixture) | **−95%** ✅ |
+| E2E spec files with hardcoded `phanquochoipt@gmail.com` | 10+ | **20** | ❌ worsened |
+| Jest tests with `[P0]`/`[P1]` markers | 0 | **188** | **+188** ✅ |
+| E2E tests with `[P0]`/`[P1]` markers | 0 | **0** | unchanged |
+| `analytics.test.ts` behavioral assertions | 0 | refactored with real mocks | ✅ |
+| `test.describe.serial` (non-parallelizable) | 3 | 2 (`payment-webhook`, `notification-system`) | slight ↓ |
+| `afterEach`/`afterAll` cleanup files | 0 | **20** | ✅ |
+| `playwright.config.ts` `workers` | `CI?1:1` | `CI?2:4` | ✅ |
+| Total Jest tests (passing) | ~429 | **436** | +7 |
+
+### Framework Config
+
+- **Playwright**: `fullyParallel: true`, `workers: 2/4`, `retries: CI?2:1`, `trace: on-first-retry`, single chromium project, webServer with reuseExistingServer. ✅ Sane.
+- **Jest**: `jest.config.ts` present, standard setup.
+
+### Priority Marker Format Found
+`[P0]`, `[P1]` prefixes in `test()` / `describe()` names — e.g. `describe('[P0] POST /api/orders/cancel — auth guard', ...)`. Consistent across Jest; absent in E2E.
+
+### Evidence Collection
+CLI/MCP evidence collection skipped (no new flow to capture; suite review uses file-based analysis only).
+
+---
+
+## Step 3 — Quality Evaluation (Parallel, 4 Dimensions)
+
+### Overall
+
+**Score: 59/100 (F — Critical Issues)**
+**Recommendation: ⚠️ Approve with Required Fixes** — close to D threshold; does NOT block story 5-7 shipment but still needs focused work to cross 70.
+
+Weighted calculation: `(38 × 0.30) + (68 × 0.30) + (62 × 0.25) + (78 × 0.15) = 59.3 → 59`
+
+### Dimension Scores
+
+| Dimension | Score | Grade | Trend vs 2026-04-19 |
+|---|---|---|---|
+| **Determinism** | 38 | D | ≈ stable (30 → 38, +8) |
+| **Isolation** | 68 | C | ↑ (38 → 68, +30) |
+| **Maintainability** | 62 | C | ↑ (30 → 62, +32) |
+| **Performance** | 78 | B | ↑ (45 → 78, +33) |
+| **Overall** | **59** | **F** | ↑ (35 → 59, **+24**) |
+
+### Violations Summary
+
+- **HIGH**: 21
+- **MEDIUM**: 23
+- **LOW**: 17
+
+---
+
+## Step 4 — Review Report
+
+### Executive Summary
+
+**Assessment**: Needs Improvement (Critical, but on the right trajectory)
+
+**Verdict**: ⚠️ **Approve with required fixes** — the suite has made a massive leap since 2026-04-19 (35 → 59). The infrastructure changes (`e2e/fixtures/`, condition-based waits, `afterEach` in 20 files, workers raised to 2/4, `analytics.test.ts` fully rewritten with real mocks, 188 priority markers in Jest) are exactly the right direction. What's keeping the score below D is **Determinism (38)** — driven by 6 hand-rolled `setTimeout` retries in `error-handling.spec.ts`, 22 unguarded `new Date()` in Jest fixtures, and pervasive `if / try` branching to navigate skip-modals across all admin-*.spec.ts.
+
+### Điểm Mạnh (vs baseline)
+
+✅ **`e2e/fixtures/` established** — `mailpit.ts` + `wait-helpers.ts` imported by 21/22 E2E specs (was 0)
+✅ **`waitForTimeout` in test code: 0** (was 197) — all 8 remaining usages are inside `wait-helpers.ts` with documented purpose
+✅ **`getOTPFromMailpit` duplicates: 1** (was 21)
+✅ **`playwright.config.ts`**: `fullyParallel: true`, `workers: CI?2:4`, `retries: CI?2:1` — sane
+✅ **Jest priority markers: 188** across 58 files (was 0)
+✅ **`analytics.test.ts`** — fully rewritten with Supabase mock + auth/error/return-shape tests (was zero behavioral assertions)
+✅ **Cleanup hooks in 20 files** (was 0)
+✅ **Zero `.bak` files**
 
 ### Điểm Yếu
 
-❌ **197 `waitForTimeout` hard waits** trải rộng toàn bộ 22 E2E files — nguồn gốc flakiness số 1  
-❌ **`getOTPFromMailpit` copy-paste 21 lần** — không có shared fixture, không có conditional poll  
-❌ **Hardcoded email `phanquochoipt@gmail.com`** trong 10+ files — không thể run parallel an toàn  
-❌ **`analytics.test.ts` có zero behavioral assertions** — chỉ check `typeof fn === 'function'`  
-❌ **Không có cleanup/teardown** trong bất kỳ E2E file nào — database state leak giữa runs  
-❌ **`workers: 1` hardcoded** trong `playwright.config.ts` — parallelism bị vô hiệu hóa hoàn toàn  
-
-### Tóm tắt
-
-Suite test của `dainganxanh-landing` có 50 test files (22 E2E Playwright + 28 Jest unit/component), tổng cộng ~15,500 dòng. Vấn đề nghiêm trọng nhất là **kiến trúc test E2E hoàn toàn thiếu shared fixtures** — `getOTPFromMailpit()` được copy-paste vào 21 files, mỗi file có 1 biến thể riêng với hardcoded `setTimeout(2000)`. Điều này kết hợp với 197 `waitForTimeout()` khắp suite tạo ra một CI pipeline cực kỳ chậm và không ổn định.
-
-Test unit/component khá hơn nhưng có anti-pattern nghiêm trọng tại `analytics.test.ts` — 4 test cases chỉ verify function tồn tại, không test behavior nào cả. Bộ Jest tests cũng sử dụng `new Date()` unguarded trong nhiều fixture data sets, tạo ra timestamp-dependent assertions tiềm ẩn.
+❌ **6 hand-rolled `setTimeout` retries** in `error-handling.spec.ts` (lines 651, 729, 887, 921, 1072) and `performance-boundaries.spec.ts:674` — replaces the old `waitForTimeout` pattern with something equally flaky
+❌ **20 E2E files still hardcode `phanquochoipt@gmail.com`** (was 10+ in baseline — count appears to have grown as fixtures centralized tests)
+❌ **22 unguarded `new Date()` / `Date.now()`** in Jest fixtures (only 2 files use `jest.useFakeTimers`)
+❌ **E2E priority markers: 0** (Jest: 188 ✅) — selective/smoke subsets impossible for E2E
+❌ **`loginWithOTP` helper duplicated across 11 files** — not yet extracted to fixture
+❌ **`error-handling.spec.ts: 1273 lines`** + 2 more >900 lines — violates 300-line guideline 4×
 
 ---
 
-## Quality Criteria Assessment
+### Quality Criteria Assessment
 
-| Criterion                            | Status     | Violations | Notes                                          |
-| ------------------------------------ | ---------- | ---------- | ---------------------------------------------- |
-| BDD Format (Given-When-Then)         | ❌ FAIL    | 128        | Không có test nào dùng BDD format              |
-| Test IDs                             | ❌ FAIL    | 128        | Không có test ID nào trong toàn suite          |
-| Priority Markers (P0/P1/P2/P3)       | ❌ FAIL    | 128        | Không có priority marker nào                   |
-| Hard Waits (sleep, waitForTimeout)   | ❌ FAIL    | 197        | 197 `waitForTimeout`, 25+ `setTimeout` promise |
-| Determinism (no conditionals)        | ❌ FAIL    | 29         | `Date.now()` unguarded, OTP hardcoded sleep    |
-| Isolation (cleanup, no shared state) | ❌ FAIL    | 5          | Shared email, không cleanup, serial không cần  |
-| Fixture Patterns                     | ❌ FAIL    | 21         | `getOTPFromMailpit` duplicate 21 lần           |
-| Data Factories                       | ❌ FAIL    | 0          | Không có factory pattern nào                   |
-| Network-First Pattern                | ❌ FAIL    | 22         | Không file nào intercept trước navigate        |
-| Explicit Assertions                  | ⚠️ WARN   | 4          | `analytics.test.ts` zero behavioral assertions |
-| Test Length (≤300 lines)             | ❌ FAIL    | 5          | 5 files vượt 500 dòng (max: 1301 dòng)         |
-| Test Duration (≤1.5 min)             | ❌ FAIL    | ~22        | 2–3s waits × nhiều steps = >1.5min/test        |
-| Flakiness Patterns                   | ❌ FAIL    | 197+       | Hard waits + shared email + no cleanup         |
-
-**Tổng Violations**: 0 Critical (theo định nghĩa template), nhưng re-mapped:  
-- **HIGH**: 38 violations  
-- **MEDIUM**: 220+ violations  
-- **LOW**: 5 violations
+| Dimension | Status | HIGH | MEDIUM | LOW | Score |
+|---|---|---|---|---|---|
+| Determinism | ❌ FAIL | 10 | 8 | 5 | 38 |
+| Isolation | ⚠️ WARN | 4 | 8 | 5 | 68 |
+| Maintainability | ⚠️ WARN | 5 | 5 | 5 | 62 |
+| Performance | ✅ PASS | 2 | 2 | 2 | 78 |
+| **Overall** | **F (borderline D)** | **21** | **23** | **17** | **59** |
 
 ---
 
-## Quality Score Breakdown
+### Critical Issues (Must Fix) — P0/P1
 
-```
-Starting Score:          100
+#### 1. Hand-rolled `setTimeout` retries in `error-handling.spec.ts`
 
-Dimension Scores (Sequential Execution):
-  Determinism:           30/100  × 0.30 = 9.00 pts
-  Isolation:             38/100  × 0.30 = 11.40 pts
-  Maintainability:       30/100  × 0.25 = 7.50 pts
-  Performance:           45/100  × 0.15 = 6.75 pts
+**Severity**: P0 (Critical)
+**Location**: `e2e/error-handling.spec.ts:651, 729, 887, 921, 1072`; `e2e/performance-boundaries.spec.ts:674`
+**Criterion**: Determinism / Hard Waits
+**Dimension**: Determinism
 
-Overall Score:           34.65 → 35/100
-Grade:                   F
+**Problem**: The refactor removed `waitForTimeout` in favor of fixtures, but 6 sites now use `await new Promise(r => setTimeout(r, N))` directly — the same pattern under a different name. `error-handling.spec.ts:1072` even rolls its own exponential backoff (`Math.pow(2, attempt-1) * 1000`). These are still hardcoded sleeps and still flaky.
 
-Bonus Points:
-  BDD Format:            +0 (không có)
-  Shared Fixtures:       +0 (không có)
-  Data Factories:        +0 (không có)
-  Network-First:         +0 (không có)
-  Perfect Isolation:     +0 (không có)
-  All Test IDs:          +0 (không có)
-                         --------
-Total Bonus:             +0
-
-Final Score:             35/100 (F)
-```
-
----
-
-## Critical Issues (Must Fix)
-
-### 1. `getOTPFromMailpit` Duplicated 21 Lần — Không Có Shared Fixture
-
-**Severity**: P0 (Critical)  
-**Location**: `e2e/error-handling.spec.ts:30`, `e2e/admin-casso.spec.ts:20`, `e2e/registration-auth.spec.ts:28`, ... (21 files)  
-**Criterion**: Fixture Patterns / Hard Waits  
-
-**Mô tả vấn đề**:  
-Function `getOTPFromMailpit()` được define lại trong 21/22 E2E files. Mỗi bản đều dùng `setTimeout(2000)` hardcoded để "chờ email đến" — không có retry logic, không có condition-based polling. Nếu mail server chậm hơn 2 giây, test fail. Nếu nhanh hơn, test waste 2 giây vô ích. Đây là nguồn flakiness số 1 của toàn bộ E2E suite.
-
-**Code hiện tại**:
-
+**Fix** (follow `network-first` + `timing-debugging` fragments):
 ```typescript
-// ❌ Bad — copy-paste trong 21 files, hardcoded sleep, không retry
-async function getOTPFromMailpit(email: string): Promise<string> {
-    await new Promise(resolve => setTimeout(resolve, 2000)) // hardcoded wait!
-    const response = await fetch(`http://localhost:8025/api/v1/messages?limit=1`)
-    // ... parse OTP
-}
-```
+// ❌ Bad
+await new Promise(resolve => setTimeout(resolve, 1000))
 
-**Fix đề xuất**:
+// ✅ Good — use expect.poll or waitForResponse
+await expect.poll(
+    async () => (await fetch('/api/status')).status,
+    { timeout: 5000, intervals: [100, 200, 500] }
+).toBe(200)
 
-```typescript
-// ✅ Good — shared fixture với polling có timeout
-// e2e/fixtures/mailpit.fixture.ts
-export async function pollOTPFromMailpit(
-    email: string,
-    { timeout = 15000, interval = 500 } = {}
-): Promise<string> {
-    const deadline = Date.now() + timeout
-    while (Date.now() < deadline) {
-        const response = await fetch(`http://localhost:8025/api/v1/messages?limit=5`)
-        const data = await response.json()
-        const msg = data.messages?.find((m: any) => m.To?.[0]?.Address === email)
-        if (msg) {
-            const otp = msg.Snippet?.match(/\d{6}/)?.[0]
-            if (otp) return otp
-        }
-        await new Promise(r => setTimeout(r, interval))
-    }
-    throw new Error(`OTP not received for ${email} within ${timeout}ms`)
-}
-
-// Dùng trong test:
-import { pollOTPFromMailpit } from './fixtures/mailpit.fixture'
-const otp = await pollOTPFromMailpit(testEmail) // condition-based, không hardcoded
-```
-
-**Impact**: Giảm flakiness ~60%, giảm test time khi OTP nhanh, tăng độ tin cậy CI.
-
-**Related Violations**: Xuất hiện ở tất cả 21 files với `getOTPFromMailpit`.
-
----
-
-### 2. 197 `waitForTimeout()` Hard Waits Trải Rộng Toàn E2E Suite
-
-**Severity**: P0 (Critical)  
-**Location**: `e2e/error-handling.spec.ts:94,97,140,145,...` (197 instances, 22 files)  
-**Criterion**: Hard Waits / Determinism  
-
-**Mô tả vấn đề**:  
-Toàn bộ 22 E2E spec files đều dùng `page.waitForTimeout(N)` thay vì condition-based waits. Với 197 hard waits, nếu mỗi wait trung bình 1.5 giây, chỉ riêng waits đã chiếm **>295 giây** (~5 phút) trên mỗi run suite đầy đủ. Đây là anti-pattern Playwright cơ bản nhất.
-
-**Code hiện tại**:
-
-```typescript
-// ❌ Bad — hard wait, không biết khi nào action thực sự hoàn thành
-await page.waitForTimeout(2000)
-await page.click('button[type="submit"]')
-await page.waitForTimeout(3000) // rate limiting comment nhưng không verify
-```
-
-**Fix đề xuất**:
-
-```typescript
-// ✅ Good — condition-based, tự động khi ready
-await page.click('button[type="submit"]')
-// Chờ network response cụ thể
+// ✅ Or waitForResponse for specific network event
 await page.waitForResponse(resp =>
-    resp.url().includes('/api/auth') && resp.status() === 200
+    resp.url().includes('/api/process') && resp.status() === 200
 )
-// Hoặc chờ UI state
-await expect(page.getByText('Đăng nhập thành công')).toBeVisible()
-// Cho rate limiting: verify state thay vì sleep
-await expect(page.getByRole('button', { name: 'Gửi OTP' })).toBeDisabled()
 ```
 
-**Impact**: Tăng tốc E2E suite 40–60%, giảm flakiness do timing.
+**Impact**: Removes the last 6 deterministic-flakiness sources in E2E.
 
 ---
 
-### 3. Hardcoded Email `phanquochoipt@gmail.com` — Shared Credentials Không An Toàn
+#### 2. Conditional test flow (`if / try` branching) pervades admin-*.spec.ts
 
-**Severity**: P0 (Critical)  
-**Location**: `e2e/error-handling.spec.ts:23-24`, `e2e/admin-casso.spec.ts:14`, `e2e/admin-referrals.spec.ts:14`, `e2e/withdrawal-flow.spec.ts:28`, `e2e/harvest-decision.spec.ts:11`  
-**Criterion**: Isolation / Security  
+**Severity**: P0 (Critical)
+**Location**: `e2e/admin-withdrawals.spec.ts:73`, `e2e/performance-boundaries.spec.ts:36`, `e2e/admin-*.spec.ts` (~30 instances per file, across all admin specs)
+**Criterion**: Determinism / Conditionals in tests
+**Dimension**: Determinism
 
-**Mô tả vấn đề**:  
-Email `phanquochoipt@gmail.com` (là email thật của developer) được hardcode trong 10+ E2E files. Vấn đề:
-1. **Không thể run parallel** — nhiều tests cùng dùng 1 account sẽ conflict (OTP cũ bị override, session bị kick)
-2. **Credentials exposure** trong source code repository
-3. **Phụ thuộc vào account production** — test sẽ fail nếu account bị đổi mật khẩu hoặc bị lock
-
-**Code hiện tại**:
-
+**Problem**: Tests branch on runtime URL / modal presence:
 ```typescript
-// ❌ Bad — hardcoded real email trong source code
-const ADMIN_EMAIL = 'phanquochoipt@gmail.com'
-const TEST_EMAIL = 'phanquochoipt@gmail.com'
-```
-
-**Fix đề xuất**:
-
-```typescript
-// ✅ Good — environment variables từ .env.test (gitignored)
-// playwright.config.ts hoặc fixtures
-const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'admin@test.local'
-const TEST_EMAIL = process.env.TEST_USER_EMAIL ?? 'user@test.local'
-
-// Hoặc dùng Mailpit-compatible test emails:
-const testEmail = `test-${Date.now()}@test.local` // unique per run
-```
-
----
-
-### 4. `analytics.test.ts` — Zero Behavioral Assertions
-
-**Severity**: P0 (Critical)  
-**Location**: `src/actions/__tests__/analytics.test.ts:1-35`  
-**Criterion**: Explicit Assertions / Test Quality  
-
-**Mô tả vấn đề**:  
-File có 4 test cases, mỗi test chỉ verify `typeof fn === 'function'`. Đây không phải test — đây là JavaScript introspection. Nếu các functions này return sai data, throw uncaught errors, hoặc gọi sai API endpoints, các tests này vẫn PASS.
-
-**Code hiện tại**:
-
-```typescript
-// ❌ Bad — không test behavior, chỉ test function tồn tại
-it('should have correct function signature', () => {
-    const { getAnalyticsKPIs } = require('../analytics')
-    expect(typeof getAnalyticsKPIs).toBe('function') // useless assertion
-})
-```
-
-**Fix đề xuất**:
-
-```typescript
-// ✅ Good — mock Supabase, test actual behavior
-import { createClient } from '@supabase/supabase-js'
-jest.mock('@/lib/supabase/server', () => ({
-    createClient: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnThis(),
-        select: jest.fn().mockResolvedValue({ data: mockKPIData, error: null })
-    })
-}))
-
-describe('getAnalyticsKPIs', () => {
-    it('returns formatted KPI data when Supabase succeeds', async () => {
-        const result = await getAnalyticsKPIs()
-        expect(result).toHaveProperty('totalRevenue')
-        expect(result.totalRevenue).toBeGreaterThanOrEqual(0)
-    })
-
-    it('returns empty state when Supabase returns error', async () => {
-        mockSupabase.select.mockResolvedValue({ data: null, error: { message: 'DB error' } })
-        const result = await getAnalyticsKPIs()
-        expect(result).toBeNull() // hoặc error state expected
-    })
-})
-```
-
----
-
-### 5. Không Có Cleanup/Teardown — Database State Leak
-
-**Severity**: P0 (Critical)  
-**Location**: Toàn bộ `e2e/` — không file nào có `afterEach`/`afterAll` cleanup  
-**Criterion**: Isolation  
-
-**Mô tả vấn đề**:  
-`harvest-decision.spec.ts` tạo test orders và trees trong `beforeAll` nhưng **không có `afterAll` để xóa**. Tương tự, các tests tạo users (registration), tạo orders (checkout), submit withdrawals — không có gì được cleanup. Sau nhiều CI runs, database test sẽ bị ô nhiễm dữ liệu cũ, các test sau có thể fail vì unique constraint violations hoặc unexpected data trong queries.
-
-**Fix đề xuất**:
-
-```typescript
-// ✅ Good — cleanup test data sau mỗi suite
-test.afterAll(async () => {
-    if (testOrderId) {
-        await supabase.from('orders').delete().eq('id', testOrderId)
-    }
-    if (testTreeId) {
-        await supabase.from('trees').delete().eq('id', testTreeId)
-    }
-})
-```
-
----
-
-## Recommendations (Should Fix)
-
-### 1. `workers: 1` Hardcoded — Parallelism Bị Vô Hiệu
-
-**Severity**: P1 (High)  
-**Location**: `playwright.config.ts:8`  
-**Criterion**: Performance  
-
-**Code hiện tại**:
-
-```typescript
-// ❌ Bad — workers: 1 cả local lẫn CI
-workers: process.env.CI ? 1 : 1, // identical! parallelism không hoạt động
-```
-
-**Fix đề xuất**:
-
-```typescript
-// ✅ Good — tận dụng CPU cores
-workers: process.env.CI ? 2 : undefined, // undefined = Playwright auto (50% CPU cores)
-```
-
----
-
-### 2. `test.describe.serial` Không Cần Thiết
-
-**Severity**: P1 (High)  
-**Location**: `e2e/payment-webhook.spec.ts:14`, `e2e/notification-system.spec.ts:13`, `e2e/certificate-download.spec.ts:18`  
-**Criterion**: Performance / Isolation  
-
-**Mô tả vấn đề**: 3 suites dùng `test.describe.serial` do chia sẻ auth state. Sau khi extract auth thành fixture (xem Critical Issue #3), các suites này có thể chạy parallel.
-
----
-
-### 3. `new Date()` / `Date.now()` Unguarded trong Jest Tests
-
-**Severity**: P1 (High)  
-**Location**: `src/components/crm/__tests__/NotificationBell.test.tsx:42,52`, `TreeCard.test.tsx:33,59,69,79`, `realtime.test.ts:69,99`  
-**Criterion**: Determinism  
-
-**Fix đề xuất**:
-
-```typescript
-// ✅ Good — fixed timestamps không phụ thuộc thời điểm run
-const FIXED_NOW = new Date('2026-01-15T10:00:00Z')
-const mockNotification = {
-    created_at: FIXED_NOW.toISOString(),
+if (hasSkipButton) {
+    try { await skipButton.click() } catch { /* ignore */ }
+} else if (!currentUrl.includes('/admin/withdrawals')) {
+    await page.goto('/admin/withdrawals')
 }
-
-// Hoặc dùng jest fake timers:
-beforeEach(() => { jest.useFakeTimers().setSystemTime(FIXED_NOW) })
-afterEach(() => { jest.useRealTimers() })
 ```
+This means the test takes different code paths on different runs — a failing modal is silently swallowed. You don't know what was actually tested.
+
+**Fix**: Extract the skip-modal/login handling into a single `adminLogin` fixture that guarantees a known state, then remove all the branching:
+```typescript
+// e2e/fixtures/admin-auth.ts
+export async function loginAsAdminAndLand(page: Page, targetPath: string) {
+    // One canonical path — no branching in tests
+    await page.goto('/login')
+    await loginWithOTP(page, ADMIN_EMAIL)
+    await page.goto(targetPath)
+    await expect(page).toHaveURL(targetPath)
+}
+```
+
+**Impact**: Deterministic flow; test failures become meaningful.
 
 ---
 
-### 4. Thiếu BDD Format, Test IDs, và Priority Markers
+#### 3. Hardcoded `phanquochoipt@gmail.com` in 20 E2E specs
 
-**Severity**: P2 (Medium)  
-**Location**: Toàn bộ suite (128 tests)  
-**Criterion**: BDD Format / Test IDs / Priority Markers  
+**Severity**: P0 (Critical)
+**Location**: `e2e/error-handling.spec.ts`, `e2e/admin-casso.spec.ts`, `e2e/admin-referrals.spec.ts`, `e2e/withdrawal-flow.spec.ts`, `e2e/harvest-decision.spec.ts`, `e2e/admin-order-management.spec.ts`, `e2e/admin-withdrawals.spec.ts`, `e2e/my-garden-dashboard.spec.ts`, `e2e/admin-users.spec.ts`, `e2e/seed-withdrawal-test-data.ts`, +11 others
+**Criterion**: Isolation / Security
+**Dimension**: Isolation
 
-Không có test nào có format `should [action] when [condition]` rõ ràng, không có ID, không có P0/P1/P2/P3 markers. Điều này làm khó cho việc triage failures trong CI và chọn test để run trong selective testing.
+**Problem**: A real personal email is the shared credential for 20 test files. Parallel workers (`workers: 4` locally) will collide on OTP retrieval — whichever worker pulls the latest mail wins. This is also a credential leak in the repo.
 
-**Fix đề xuất**:
-
+**Fix**:
 ```typescript
-// ✅ Good — BDD format + ID + priority
-test('[TC-001][P0] should redirect to login when unauthenticated user accesses checkout', async ({ page }) => {
-    // Given: user chưa đăng nhập
-    // When: truy cập /checkout
-    await page.goto('/checkout')
-    // Then: redirect về /login
-    await expect(page).toHaveURL('/login')
+// .env.test (gitignored)
+TEST_ADMIN_EMAIL=admin@test.local
+TEST_USER_EMAIL_TEMPLATE=test-{workerIndex}@test.local
+
+// e2e/fixtures/identity.ts
+export const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'admin@test.local'
+export function userEmailForWorker(workerIndex: number) {
+    return `test-${workerIndex}-${Date.now()}@test.local`
+}
+```
+
+**Impact**: Enables true parallel execution; removes credential from source tree.
+
+---
+
+#### 4. DB writes without cleanup — state leaks between runs
+
+**Severity**: P0 (Critical)
+**Location**: `e2e/harvest-decision.spec.ts:29` (beforeAll inserts orders + trees, no afterAll); `e2e/seed-withdrawal-test-data.ts` (standalone seed with no teardown)
+**Criterion**: Isolation / Cleanup
+**Dimension**: Isolation
+
+**Fix**:
+```typescript
+let testOrderId: string | null = null
+let testTreeId: string | null = null
+
+test.beforeAll(async () => {
+    const { data: order } = await supabase.from('orders').insert({...}).select().single()
+    testOrderId = order.id
+    const { data: tree } = await supabase.from('trees').insert({ order_id: order.id, ... }).select().single()
+    testTreeId = tree.id
+})
+
+test.afterAll(async () => {
+    if (testTreeId) await supabase.from('trees').delete().eq('id', testTreeId)
+    if (testOrderId) await supabase.from('orders').delete().eq('id', testOrderId)
 })
 ```
 
----
-
-### 5. `registration-auth.spec.ts.bak` — File Rác Trong Repository
-
-**Severity**: P3 (Low)  
-**Location**: `e2e/registration-auth.spec.ts.bak`  
-**Criterion**: Maintainability  
-
-File `.bak` không được gitignore, sẽ bị Playwright discovery pick up nếu config thay đổi. Xóa hoặc add vào `.gitignore`.
+**Impact**: CI database stays clean across runs; unique-constraint failures disappear.
 
 ---
 
-## Best Practices Found
+#### 5. 22 unguarded `new Date()` / `Date.now()` in Jest fixtures
 
-### 1. `payment-webhook.spec.ts` — Network Intercept Đúng Cách
+**Severity**: P1 (High)
+**Location**: `src/components/crm/__tests__/NotificationBell.test.tsx:42,52`; `TreeCard.test.tsx:33,59,69,79`; `realtime.test.ts:69,99`; `treeCode.test.ts`; `fieldChecklist.test.ts`; +5 others
+**Criterion**: Determinism / Time mocking
+**Dimension**: Determinism
 
-**Location**: `e2e/payment-webhook.spec.ts`  
-**Pattern**: `page.route()` mock cho webhook simulation  
-
+**Fix** (follow `QuarterSelector.test.tsx` / `FarmCamera.test.tsx` — already use fake timers):
 ```typescript
-// ✅ Excellent — mock webhook endpoint thay vì gọi thật
-await page.route('**/api/webhooks/casso', async route => {
-    await route.fulfill({
-        status: 200,
-        body: JSON.stringify({ success: true })
-    })
+const FIXED_NOW = new Date('2026-04-01T10:00:00Z')
+
+beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(FIXED_NOW)
+})
+afterEach(() => {
+    jest.useRealTimers()
 })
 ```
 
-Pattern này đúng chuẩn network-first: intercept trước khi trigger action. Dùng làm reference cho các files khác.
+**Impact**: Time-dependent assertions (`formatDistanceToNow`, `isOverdue`) become reproducible.
 
 ---
 
-### 2. `contract-helpers.test.ts` — Pure Function Tests Deterministic
+#### 6. E2E specs have zero priority markers
 
-**Location**: `src/lib/utils/__tests__/contract-helpers.test.ts`  
-**Pattern**: Test pure functions không có side effects  
+**Severity**: P1 (High)
+**Location**: All 22 E2E specs (0/22)
+**Criterion**: Maintainability / Selective Testing
+**Dimension**: Maintainability
 
-Không có mocking phức tạp, không có `Date.now()`, không có async. Đây là mẫu test unit lý tưởng — deterministic 100%, fast, isolated hoàn toàn.
+**Problem**: Jest has 188 `[P0]` / `[P1]` prefixes (enables `jest --testNamePattern="\[P0\]"` for smoke runs). E2E has zero, so `playwright test --grep "@P0"` cannot filter to a smoke subset.
 
----
+**Fix**: Prefix top-level `describe` / `test` like the Jest suite does:
+```typescript
+test.describe('[P0] Checkout — happy path', () => { ... })
+test('[P0] user can complete checkout with MoMo', async ({ page }) => { ... })
+```
 
-### 3. `withdrawals.test.ts` — Mock Chain Supabase Đúng Cách
-
-**Location**: `src/actions/__tests__/withdrawals.test.ts`  
-**Pattern**: Mock Supabase client per-test, test both success và error paths  
-
-Đây là cách tiếp cận đúng cho server action tests — mock Supabase tại module level, reset trong `beforeEach`, test happy path và error path riêng biệt.
-
----
-
-## Test File Analysis
-
-### File Metadata
-
-- **Project Path**: `dainganxanh-landing/`
-- **Tổng số files**: 50 (22 E2E Playwright + 28 Jest unit/component)
-- **Tổng dòng code test**: ~15,500 dòng
-- **Test Frameworks**: Playwright (E2E) + Jest + React Testing Library (unit/component)
-- **Language**: TypeScript
-
-### Test Structure (E2E)
-
-- **Files**: 22 spec files
-- **Test Cases**: ~128 E2E tests (11 skipped)
-- **Trung bình file size**: ~500 dòng (max: 1301 dòng)
-- **Fixtures Shared**: 0 (không có shared fixture directory)
-- **Helpers Shared**: 0 (không có `e2e/helpers/` hay `e2e/fixtures/`)
-
-### Test Structure (Jest)
-
-- **Files**: 28 test files
-- **Test Cases**: ~200 Jest tests
-- **Trung bình file size**: ~150 dòng
-- **Mocking Pattern**: `jest.mock()` per-file (inconsistent)
-
-### Test Scope
-
-- **Test IDs**: Không có
-- **Priority Distribution**: Không có markers — 100% Unknown priority
-- **BDD Coverage**: 0%
-
-### Assertions Analysis
-
-- **E2E Assertions (`expect`)**: ~500 (trong 22 files)
-- **Jest Assertions**: ~446 (trong 28 files)
-- **Assertions/Test (E2E)**: ~3.9 avg
-- **Files với zero behavioral assertions**: `analytics.test.ts`
+**Impact**: Enables smoke runs (P0-only), staged CI pipelines.
 
 ---
 
-## Context và Integration
+#### 7. `test.describe.serial` on `notification-system.spec.ts` and `payment-webhook.spec.ts`
 
-### Related Artifacts
+**Severity**: P1 (High)
+**Location**: `e2e/notification-system.spec.ts:14`, `e2e/payment-webhook.spec.ts:15`
+**Criterion**: Isolation / Parallelism
+**Dimension**: Isolation + Performance
 
-- **Test Design**: Chưa có (chưa chạy `test-design` workflow)
-- **Story Files**: Chưa có
-- **Risk Assessment**: Chưa có
+**Problem**: Each suite forces serial execution across 628 / 720 lines. Webhook idempotency tests are exactly the kind of work that should run parallel with unique order codes.
 
----
+**Fix**: Generate unique `orderCode` per test (factory pattern) and drop `.serial`.
 
-## Knowledge Base References
-
-Review này dựa trên kiến thức của Master Test Architect role:
-
-- **fixture-architecture** — Composable fixture patterns (pure function → fixture → merge)
-- **network-first** — Intercept-before-navigate workflow, HAR capture, deterministic waits
-- **data-factories** — Factories with overrides, API seeding, cleanup discipline
-- **test-quality** — Execution limits, isolation rules, green criteria
-- **selector-resilience** — Robust selector strategies
-- **timing-debugging** — Race condition identification and deterministic wait fixes
-- **ci-burn-in** — Staged jobs, shard orchestration, burn-in loops
+**Impact**: Cuts ~2–3 min off full E2E run.
 
 ---
 
-## Next Steps
+### Recommendations (Should Fix) — P2
 
-### Immediate Actions (Trước Khi Tin CI)
+#### 8. Extract `loginWithOTP` duplicated across 11 files
 
-1. **Extract `getOTPFromMailpit` thành shared fixture** — `e2e/fixtures/mailpit.fixture.ts` với condition-based polling  
-   - Priority: P0  
-   - Effort: 2–3 giờ  
-   - Impact: Xóa 21 duplicates, giảm flakiness 60%  
+Move to `e2e/fixtures/auth.ts`. Mirrors the success of `mailpit.ts` fixture.
 
-2. **Thay thế `waitForTimeout` thành condition-based waits** — `waitForResponse`, `expect(locator).toBeVisible()`  
-   - Priority: P0  
-   - Effort: 1–2 ngày (197 instances)  
-   - Impact: Tăng tốc suite 40–60%, giảm flakiness  
+#### 9. Split `error-handling.spec.ts` (1273 lines) into smaller suites
 
-3. **Move credentials vào `.env.test`** — xóa `phanquochoipt@gmail.com` khỏi source code  
-   - Priority: P0  
-   - Effort: 2–4 giờ  
-   - Impact: Enable parallel execution, security improvement  
+Suggested split: `error-handling-network.spec.ts`, `error-handling-validation.spec.ts`, `error-handling-retry.spec.ts`. Same for `tree-detail-extended.spec.ts` (929 lines).
 
-4. **Rewrite `analytics.test.ts`** với behavioral assertions và Supabase mock  
-   - Priority: P0  
-   - Effort: 2–3 giờ  
-   - Impact: Test suite thực sự test business logic analytics  
+#### 10. 11 `test.skip` without tickets
 
-5. **Thêm `afterAll` cleanup** cho các E2E tests tạo database records  
-   - Priority: P0  
-   - Effort: 3–4 giờ  
-   - Impact: Ngăn database pollution giữa CI runs  
+Each skip should have `// skip: JIRA-XXXX reason` comment. Sweep `error-handling.spec.ts`, `performance-boundaries.spec.ts`, `checkout-payment-flow.spec.ts`.
 
-### Follow-up Actions (Future PRs)
+#### 11. Move hardcoded `TEST_*_ID` constants in `tree-detail-extended.spec.ts` to a fixture
 
-1. **Enable parallelism**: `workers: process.env.CI ? 2 : undefined` trong `playwright.config.ts`  
-   - Priority: P1  
-   - Target: Next sprint  
+#### 12. Half of Jest suites missing `jest.clearAllMocks()` in `beforeEach`
 
-2. **Thêm BDD format + Test IDs** cho tất cả E2E tests  
-   - Priority: P2  
-   - Target: Backlog  
+Add `beforeEach(() => jest.clearAllMocks())` to prevent mock pollution across tests.
 
-3. **Thêm `Date.now()` mocking** trong Jest tests dùng dynamic timestamps  
-   - Priority: P2  
-   - Target: Next sprint  
+#### 13. `Math.random()` in `performance-boundaries.spec.ts` for seed data
 
-4. **Xóa `registration-auth.spec.ts.bak`**  
-   - Priority: P3  
-   - Target: Immediate (1 dòng)  
-
-### Re-Review Cần Thiết?
-
-❌ **Major refactor required** — Block CI trust, pair programming với QA engineer để áp dụng fixture patterns. Re-review sau khi hoàn thành P0 items (ước tính: 3–5 ngày dev effort).
+Use a seeded RNG (e.g. `seedrandom`) or fixed test fixtures for reproducibility.
 
 ---
 
-## Decision
+### Best Practices Found
 
-**Khuyến nghị**: ❌ **Block — Yêu cầu thay đổi trước khi CI có thể tin tưởng**
+#### 1. `e2e/fixtures/mailpit.ts` — the model extraction
+Condition-based OTP polling with timeout + clear timeout error. This is the template for the remaining fixture work (loginWithOTP, seed data, admin auth).
 
-**Lý do**:  
-Suite test hiện tại đạt điểm **35/100 (F)**. Năm vấn đề P0 tạo ra một CI pipeline không đáng tin cậy: (1) OTP polling với hardcoded sleep đảm bảo flakiness theo điều kiện mạng; (2) 197 hard waits làm suite vừa chậm vừa không ổn định; (3) shared credentials không cho phép parallel execution; (4) `analytics.test.ts` cho false confidence vì không test behavior; (5) không có cleanup nên database bị ô nhiễm sau nhiều runs.
+#### 2. `src/app/api/orders/cancel/__tests__/route.test.ts` (525 lines, story 5-7)
+Priority markers on every describe+test (`[P0]`, `[P1]`, `[P2]`), explicit Vietnamese+English test names, targeted mocks per test path, 24 tests covering happy/404/403/race-condition/audit-log paths.
 
-Test component/unit tốt hơn (trung bình ~65–70/100) nhưng bị kéo xuống bởi E2E architecture. Ưu tiên fix E2E fixtures trước — một `e2e/fixtures/` directory với auth fixture và mailpit fixture sẽ giải quyết 70% vấn đề hiện tại.
+#### 3. `src/components/crm/__tests__/QuarterSelector.test.tsx`
+Uses `jest.useFakeTimers().setSystemTime(FIXED_NOW)` correctly — reference for the 22 files that still use unguarded `new Date()`.
 
----
+#### 4. `src/actions/__tests__/analytics.test.ts` (post-refactor)
+Proper Supabase mock (`createServerClient` mock with chainable query builder), covers auth guard + empty-dataset path + error path. Replaces the prior "zero behavioral assertions" antipattern.
 
-## Appendix
-
-### Violation Summary by Dimension
-
-| Dimension       | Score | Grade | HIGH | MEDIUM | LOW |
-| --------------- | ----- | ----- | ---- | ------ | --- |
-| Determinism     | 30    | F     | 7    | 204    | 7   |
-| Isolation       | 38    | F     | 5    | 21     | 1   |
-| Maintainability | 30    | F     | 38   | 4      | 1   |
-| Performance     | 45    | D     | 4    | 20     | 2   |
-| **Overall**     | **35**| **F** | **54** | **249** | **11** |
-
-### Top Files Cần Attention
-
-| File                              | Lines | Issues                                        |
-| --------------------------------- | ----- | --------------------------------------------- |
-| `e2e/error-handling.spec.ts`      | 1301  | 18 `waitForTimeout`, duplicated OTP, hardcoded email |
-| `e2e/tree-detail-extended.spec.ts`| 950   | Hardcoded `TEST_ORDER_ID`, nhiều hard waits   |
-| `e2e/performance-boundaries.spec.ts` | 923 | 2 `test.skip` với no ticket                  |
-| `e2e/notification-system.spec.ts` | 658   | `.serial` không cần thiết                    |
-| `src/actions/__tests__/analytics.test.ts` | 35 | Zero behavioral assertions                  |
+#### 5. `payment-webhook.spec.ts` — network intercept via `page.route()`
+Correct network-first pattern; reference for any new E2E work.
 
 ---
 
-## Review Metadata
+### Knowledge Base References
 
-**Generated By**: BMad TEA Agent (Master Test Architect)  
-**Workflow**: testarch-test-review (sequential mode)  
-**Review ID**: test-review-dainganxanh-landing-20260419  
-**Timestamp**: 2026-04-19  
-**Version**: 1.0  
-**Execution Mode**: Sequential (4 dimensions analyzed in order)
+- **test-quality** — Definition of Done, flakiness threshold
+- **fixture-architecture** — Pure function → Fixture → Merge composition
+- **network-first** — Intercept before navigate, deterministic waits
+- **data-factories** — Per-test unique data, cleanup discipline
+- **timing-debugging** — `expect.poll`, `waitForResponse` patterns
+- **selective-testing** — Priority markers for smoke subsets
+- **ci-burn-in** — Worker strategy, shard orchestration
+- **test-priorities** — P0/P1/P2/P3 criteria
 
 ---
 
-*Nếu có câu hỏi về review này: xem knowledge base tại `_bmad/tea/testarch/tea-index.csv`, hoặc tham khảo QA engineer để áp dụng fixture patterns. Review là guidance, không phải rigid rules — nếu một pattern có lý do chính đáng, document với comment trong code.*
+### Decision
+
+**Recommendation**: ⚠️ **Approve with Required Fixes** (not Block)
+
+**Reason**: The suite has made a **massive leap** (35 → 59, +24 points in 1 day of focused refactoring). The fixture architecture, priority markers on Jest, real behavioral tests on `analytics.test.ts`, and sane `playwright.config.ts` settings are all correct. What remains is a tight list of well-scoped P0 items (6 setTimeout retries to eliminate; `if/try` branching to extract into fixtures; hardcoded email to move into `.env.test`; 2 DB-write files to add cleanup to). These are 1–2 days of focused work each, not a suite rewrite.
+
+Don't block story 5-7 — its tests score very well (24 tests, priority markers, targeted mocks, TOCTOU + audit-log coverage). But schedule a test-quality sprint to close the P0 list before the E2E suite can be trusted as a true gate.
+
+---
+
+### Appendix: Dimension Detail
+
+**Determinism (38/D)** — hand-rolled setTimeout retries (6), if/try branching in admin specs (30+ per file × 10 files), unguarded `new Date()` in Jest (22), `Math.random()` in perf spec (7).
+
+**Isolation (68/C)** — ✅ cookie-level cleanup consistent, fullyParallel enabled, 20 files have afterEach/afterAll; ❌ 20 files share admin email, 2 `describe.serial`, 2 files create DB rows without teardown, 25 Jest suites missing `clearAllMocks`.
+
+**Maintainability (62/C)** — ✅ fixtures used by 21/22 specs, no `.bak`, 188 Jest priority markers, descriptive names; ❌ 23 files >300 lines, 7 >500, 2 >900, `loginWithOTP` duplicated 11×, 0 E2E priority markers.
+
+**Performance (78/B)** — ✅ fullyParallel, workers 2/4, reuseExistingServer, 0ms hard waits in source, no `test.only`; ⚠️ 11 `test.skip` without tickets, 2 `describe.serial` reduce parallelism.
+
+---
+
+### Review Metadata
+
+- **Generated By**: BMad TEA Agent (Master Test Architect)
+- **Workflow**: `bmad-testarch-test-review` (subagent mode)
+- **Review Date**: 2026-04-20
+- **Baseline**: 2026-04-19 review (35/100 F)
+- **Delta**: +24 points in 1 day (story 5-7 + P0 patches from code review)
+- **Execution Mode**: Parallel (4 dimensions via subagents)
+- **Subagent artifacts**:
+  - `/tmp/tea-test-review-determinism-20260420T151338.json`
+  - `/tmp/tea-test-review-isolation-20260420T151338.json`
+  - `/tmp/tea-test-review-maintainability-20260420T151338.json`
+  - `/tmp/tea-test-review-performance-20260420T151338.json`
+  - `/tmp/tea-test-review-summary-20260420T151338.json`

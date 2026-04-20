@@ -26,6 +26,16 @@ jest.mock('@/lib/supabase/realtime', () => ({
 }))
 
 describe('NotificationBell', () => {
+    // Freeze time so formatDistanceToNow output (e.g. "1 hour ago") is deterministic.
+    const FIXED_NOW = new Date('2026-04-20T12:00:00Z')
+
+    beforeAll(() => {
+        jest.useFakeTimers().setSystemTime(FIXED_NOW)
+    })
+    afterAll(() => {
+        jest.useRealTimers()
+    })
+
     const mockPush = jest.fn()
     const mockUnsubscribe = jest.fn()
 
@@ -39,7 +49,7 @@ describe('NotificationBell', () => {
             body: 'Lô A vừa được cập nhật',
             data: { orderIds: ['order-1'], lotId: 'lot-1' },
             read: false,
-            created_at: new Date().toISOString(),
+            created_at: FIXED_NOW.toISOString(),
         },
         {
             id: 'notif-2',
@@ -49,7 +59,7 @@ describe('NotificationBell', () => {
             body: 'Lô B vừa được cập nhật',
             data: { orderIds: ['order-2'], lotId: 'lot-2' },
             read: true,
-            created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+            created_at: new Date(FIXED_NOW.getTime() - 3600000).toISOString(), // 1 hour before FIXED_NOW
         },
     ]
 

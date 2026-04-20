@@ -57,6 +57,10 @@ jest.mock('@/lib/supabase/server', () => ({
 }))
 
 describe('fieldChecklist actions', () => {
+    beforeEach(() => {
+        jest.clearAllMocks()
+    })
+
     describe('getChecklistsByQuarter', () => {
         it('returns checklists for a specific quarter', async () => {
             const result = await getChecklistsByQuarter('2026-Q1')

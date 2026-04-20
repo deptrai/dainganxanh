@@ -8,7 +8,7 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com (with referral code setup)
+ * - Test user: TEST_USER_EMAIL (env override) (with referral code setup)
  */
 
 test.describe('Referral System Flow E2E', () => {

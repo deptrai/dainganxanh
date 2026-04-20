@@ -2,6 +2,16 @@ import { render, screen } from '@testing-library/react'
 import TreeCard from '@/components/crm/TreeCard'
 
 describe('TreeCard', () => {
+    // Freeze time so age-derived UI ("vừa trồng", "đã 2.5 năm", etc.) is deterministic.
+    const FIXED_NOW = new Date('2026-04-20T12:00:00Z')
+
+    beforeAll(() => {
+        jest.useFakeTimers().setSystemTime(FIXED_NOW)
+    })
+    afterAll(() => {
+        jest.useRealTimers()
+    })
+
     const mockTree = {
         id: '123',
         tree_code: 'TREE-2026-001',

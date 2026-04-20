@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import AxeBuilder from '@axe-core/playwright'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 
 /**
  * Accessibility & UX E2E Test Suite (Phase 7)
@@ -9,7 +10,7 @@ import AxeBuilder from '@axe-core/playwright'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com
+ * - Test user: TEST_USER_EMAIL (env override)
  */
 
 test.describe('Accessibility & UX - Phase 7 E2E', () => {
@@ -22,7 +23,6 @@ test.describe('Accessibility & UX - Phase 7 E2E', () => {
             await ctx.clearPermissions()
         }
     })
-    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
 
     /**

@@ -9,24 +9,46 @@ import { createClient } from '@supabase/supabase-js'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com (with existing orders)
+ * - Test user: TEST_USER_EMAIL (env override) (with existing orders)
  */
 
-test.describe('Harvest Decision Flow E2E', () => {
+test.describe('[P1] Harvest Decision Flow E2E', () => {
+
+    const TEST_EMAIL = 'test@test.com'
+    const SUPABASE_URL = 'http://127.0.0.1:54331'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+
+    let testOrderId: string | null = null
+    let testTreeId: string | null = null
+    /** Whether the order was created by this run (vs reused). Only created rows are deleted in afterAll. */
+    let createdOrderInThisRun = false
 
     test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
+        // 1. Database cleanup — only delete rows we created in this run.
+        //    Reused/pre-existing orders are left untouched to keep dev DB stable.
+        if (createdOrderInThisRun && (testOrderId || testTreeId)) {
+            const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+            try {
+                if (testTreeId) {
+                    await supabase.from('trees').delete().eq('id', testTreeId)
+                    console.log(`🧹 [afterAll] Deleted test tree ${testTreeId}`)
+                }
+                if (testOrderId) {
+                    await supabase.from('orders').delete().eq('id', testOrderId)
+                    console.log(`🧹 [afterAll] Deleted test order ${testOrderId}`)
+                }
+            } catch (cleanupErr) {
+                console.warn('⚠️ [afterAll] DB cleanup failed (non-blocking):', cleanupErr)
+            }
+        }
+
+        // 2. Browser cleanup
         const contexts = browser.contexts()
         for (const ctx of contexts) {
             await ctx.clearCookies()
             await ctx.clearPermissions()
         }
     })
-    const TEST_EMAIL = 'test@test.com'
-    const SUPABASE_URL = 'http://127.0.0.1:54331'
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
-
-    let testOrderId: string | null = null
 
     // Setup test data before all tests
     test.beforeAll(async () => {
@@ -103,6 +125,7 @@ test.describe('Harvest Decision Flow E2E', () => {
         }
 
         testOrderId = order.id
+        createdOrderInThisRun = true
         console.log(`✅ [beforeAll] Created test order: ${orderCode} (${testOrderId})`)
 
         // Create at least one tree for this order
@@ -124,7 +147,8 @@ test.describe('Harvest Decision Flow E2E', () => {
             console.error('❌ [beforeAll] Failed to create test tree:', treeError.message)
             console.error('❌ [beforeAll] Error details:', JSON.stringify(treeError, null, 2))
         } else {
-            console.log(`✅ [beforeAll] Created test tree: ${treeCode}`)
+            testTreeId = tree?.id ?? null
+            console.log(`✅ [beforeAll] Created test tree: ${treeCode} (${testTreeId})`)
         }
 
         console.log('✅ [beforeAll] Test data setup complete!')

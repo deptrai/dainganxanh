@@ -11,7 +11,7 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
  *   (or set MAILPIT_URL env var)
  */
 
-test.describe('Registration & Authentication Flow E2E', () => {
+test.describe('[P0] Registration & Authentication Flow E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state

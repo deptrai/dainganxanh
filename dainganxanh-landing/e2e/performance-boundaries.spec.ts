@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 
 /**
  * Performance & Boundary Testing E2E Test Suite
@@ -8,7 +9,7 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Admin user: phanquochoipt@gmail.com (must have admin role)
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
 test.describe('Performance & Boundary Testing E2E', () => {
@@ -21,8 +22,6 @@ test.describe('Performance & Boundary Testing E2E', () => {
             await ctx.clearPermissions()
         }
     })
-    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
-    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
 
     /**
@@ -670,7 +669,8 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
             // Mock approval API
             await page.route(`**/api/withdrawals/${withdrawalId}/approve`, async route => {
-                // Simulate processing delay
+                // Justified hard wait: mock-server side; simulates ~500ms backend
+                // processing latency for batch-approval throughput test. Not a UI wait.
                 await new Promise(resolve => setTimeout(resolve, 500))
 
                 await route.fulfill({

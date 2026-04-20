@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 
 /**
  * Error Handling & Edge Cases E2E Test Suite
@@ -8,8 +9,8 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com
- * - Admin user: phanquochoipt@gmail.com (with admin role)
+ * - Test user: TEST_USER_EMAIL (env override)
+ * - Admin user: TEST_ADMIN_EMAIL (env override, with admin role)
  *
  * Test Sections:
  * 1. Form Validation Errors (6 tests)
@@ -30,8 +31,6 @@ test.describe('Error Handling & Edge Cases E2E', () => {
             await ctx.clearPermissions()
         }
     })
-    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
-    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
     /**
      * Helper: Fetch OTP code from Mailpit
@@ -647,7 +646,8 @@ test.describe('Error Handling & Edge Cases E2E', () => {
                 return { status: res.status, data: await res.json() }
             }),
             page.evaluate(async () => {
-                // Small delay to simulate near-concurrent request
+                // Justified hard wait: staggers concurrent requests in the browser to
+                // provoke a TOCTOU race against the first evaluate(). Not a UI wait.
                 await new Promise(resolve => setTimeout(resolve, 50))
                 const res = await fetch('/api/orders/pending', {
                     method: 'POST',
@@ -726,6 +726,8 @@ test.describe('Error Handling & Edge Cases E2E', () => {
                 return { status: res.status, data: await res.json() }
             }, withdrawalId),
             page.evaluate(async (id) => {
+                // Justified hard wait: staggers the second approval request to provoke
+                // a double-approve TOCTOU race. Not a UI wait.
                 await new Promise(resolve => setTimeout(resolve, 50))
                 const res = await fetch(`/api/admin/withdrawals/${id}/approve`, {
                     method: 'POST',
@@ -884,6 +886,8 @@ test.describe('Error Handling & Edge Cases E2E', () => {
                 }
 
                 if (data.retry && attempt < maxRetries) {
+                    // Justified hard wait: client-side retry backoff. Simulates real
+                    // user retry behavior, not a UI state wait.
                     await new Promise(resolve => setTimeout(resolve, 1000))
                     lastError = data
                     continue
@@ -917,7 +921,8 @@ test.describe('Error Handling & Edge Cases E2E', () => {
             if (route.request().method() === 'POST') {
                 timeoutOccurred = true
 
-                // Simulate timeout
+                // Justified hard wait: mock-server side; simulates a gateway timeout
+                // before fulfilling with 504. Not a UI wait.
                 await new Promise(resolve => setTimeout(resolve, 100))
 
                 await route.fulfill({
@@ -1066,7 +1071,8 @@ test.describe('Error Handling & Edge Cases E2E', () => {
                 }
 
                 if (res.status === 429 && attempt < maxRetries) {
-                    // Exponential backoff: 1s, 2s, 4s
+                    // Justified hard wait: tests exponential backoff behavior on 429.
+                    // The wait IS the thing under test. Backoff: 1s, 2s, 4s.
                     const backoffMs = Math.pow(2, attempt - 1) * 1000
                     delays.push(backoffMs)
                     await new Promise(resolve => setTimeout(resolve, backoffMs))

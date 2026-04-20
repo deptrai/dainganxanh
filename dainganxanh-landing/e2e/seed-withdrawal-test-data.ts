@@ -4,11 +4,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { ADMIN_EMAIL } from './fixtures/identity'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54331'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
+const TEST_EMAIL = ADMIN_EMAIL
 
 async function seedWithdrawalTestData() {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {

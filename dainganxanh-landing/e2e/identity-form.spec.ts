@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 
 /**
  * Identity Form E2E Test Suite
@@ -8,7 +9,7 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com
+ * - Test user: TEST_USER_EMAIL (env override)
  */
 
 test.describe('Identity Form E2E', () => {
@@ -21,7 +22,6 @@ test.describe('Identity Form E2E', () => {
             await ctx.clearPermissions()
         }
     })
-    const TEST_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
 
     /**

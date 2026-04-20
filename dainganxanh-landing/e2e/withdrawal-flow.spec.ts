@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
@@ -14,7 +15,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
  * - Test user: test@test.com (existing user with possible commission)
- * - Admin user: phanquochoipt@gmail.com (existing admin)
+ * - Admin user: TEST_ADMIN_EMAIL (env override, existing admin)
  *
  * Test Flow:
  * 1. User views referrals page and checks withdrawal button state
@@ -24,7 +25,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
  * Note: Tests are designed to work with existing data and adapt to current state
  */
 
-test.describe('Withdrawal Flow E2E', () => {
+test.describe('[P0] Withdrawal Flow E2E', () => {
 
     test.afterAll(async ({ browser }) => {
         // Clean up: close all pages and reset browser state
@@ -35,7 +36,6 @@ test.describe('Withdrawal Flow E2E', () => {
         }
     })
     const TEST_EMAIL = 'test@test.com'
-    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
 
 
     /**

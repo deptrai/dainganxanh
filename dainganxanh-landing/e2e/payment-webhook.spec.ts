@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import crypto from 'crypto'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 
 /**
  * Payment Webhook E2E Test Suite
@@ -9,11 +10,10 @@ import crypto from 'crypto'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Admin user: phanquochoipt@gmail.com (must have admin role)
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe.serial('Payment Webhook E2E', () => {
-    const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'phanquochoipt@gmail.com'
+test.describe.serial('[P0] Payment Webhook E2E', () => {
     const WEBHOOK_SECRET = process.env.CASSO_WEBHOOK_SECRET || 'test-webhook-secret'
 
     /**
