@@ -38,7 +38,8 @@ jobs:
         run: |
           TARGET_RUN_ID="${{ github.event.workflow_run.id || inputs.run_id }}"
           gh run view "$TARGET_RUN_ID" --log-failed 2>&1 | head -400 > ci-failure-logs.txt || true
-          echo "=== Log preview ===" && head -40 ci-failure-logs.txt || true
+          echo "=== Log preview (sanitized) ==="
+          head -40 ci-failure-logs.txt | sed 's/##\[error\]/[error]/g; s/##\[warning\]/[warning]/g' || true
 
       - name: Claude Code — analyze and fix
         env:
