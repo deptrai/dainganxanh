@@ -82,14 +82,8 @@ jobs:
 
   # ─── E2E tests (Playwright) ────────────────────────────────────────────────
   e2e-tests:
-    name: E2E Tests (Playwright) — Shard ${{ matrix.shard }}/${{ matrix.total }}
+    name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    continue-on-error: true  # E2E requires Mailpit+Supabase local; informational only until infra is ready
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2]
-        total: [2]
     steps:
       - uses: actions/checkout@v4
 
@@ -105,32 +99,69 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Build Next.js
-        run: npm run build
-        env:
-          # Security: env vars as data, never shell-executed
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
-      - name: Run Playwright (shard ${{ matrix.shard }}/${{ matrix.total }})
+      - name: Start Supabase local stack
+        run: supabase start
+        working-directory: ${{ github.workspace }}
+
+      - name: Extract Supabase local credentials
+        id: supabase
+        working-directory: ${{ github.workspace }}
         run: |
-          npx playwright test \
-            --shard=${{ matrix.shard }}/${{ matrix.total }} \
-            --reporter=html,junit
+          STATUS=$(supabase status 2>&1)
+          ANON_KEY=$(echo "$STATUS" | grep 'anon key' | awk '{print $NF}')
+          SERVICE_ROLE_KEY=$(echo "$STATUS" | grep 'service_role key' | awk '{print $NF}')
+          if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "ERROR: Could not extract Supabase keys:"
+            echo "$STATUS"
+            exit 1
+          fi
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Seed CI test users
         env:
-          # Security: inputs passed through env: to prevent script injection
+          SUPABASE_SRK: ${{ steps.supabase.outputs.service_role_key }}
+        run: |
+          # Create admin CI user (email pre-confirmed so OTP flow still works in tests)
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-admin@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+          # handle_new_user trigger already created public.users row; promote to admin
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "UPDATE public.users SET role='admin', full_name='CI Admin' WHERE email='ci-admin@test.local';"
+          # Create regular CI user
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-user@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+
+      - name: Run Playwright
+        run: npx playwright test --reporter=html,junit
+        env:
           CI: true
-          PLAYWRIGHT_JUNIT_OUTPUT_NAME: results-shard-${{ matrix.shard }}.xml
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: results.xml
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          MAILPIT_URL: http://127.0.0.1:54334
+          TEST_ADMIN_EMAIL: ci-admin@test.local
+          TEST_USER_EMAIL: ci-user@test.local
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-shard-${{ matrix.shard }}
+          name: playwright-report
           path: |
             dainganxanh-landing/playwright-report/
             dainganxanh-landing/test-results/
@@ -140,7 +171,6 @@ jobs:
   burn-in:
     name: Burn-in (Flaky Detection)
     runs-on: ubuntu-latest
-    continue-on-error: true  # E2E requires Mailpit+Supabase; informational only
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [unit-tests, e2e-tests]
     steps:
@@ -158,12 +188,48 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Build Next.js
-        run: npm run build
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase local stack
+        run: supabase start
+        working-directory: ${{ github.workspace }}
+
+      - name: Extract Supabase local credentials
+        id: supabase
+        working-directory: ${{ github.workspace }}
+        run: |
+          STATUS=$(supabase status 2>&1)
+          ANON_KEY=$(echo "$STATUS" | grep 'anon key' | awk '{print $NF}')
+          SERVICE_ROLE_KEY=$(echo "$STATUS" | grep 'service_role key' | awk '{print $NF}')
+          if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "ERROR: Could not extract Supabase keys:"
+            echo "$STATUS"
+            exit 1
+          fi
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Seed CI test users
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SRK: ${{ steps.supabase.outputs.service_role_key }}
+        run: |
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-admin@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "UPDATE public.users SET role='admin', full_name='CI Admin' WHERE email='ci-admin@test.local';"
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-user@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
 
       - name: Burn-in — repeat E2E x3
         run: |
@@ -172,11 +238,13 @@ jobs:
             npx playwright test --reporter=list || exit 1
           done
         env:
-          # Security: inputs passed through env: to prevent script injection
           CI: true
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          MAILPIT_URL: http://127.0.0.1:54334
+          TEST_ADMIN_EMAIL: ci-admin@test.local
+          TEST_USER_EMAIL: ci-user@test.local
 
       - name: Upload burn-in artifacts on failure
         if: failure()
