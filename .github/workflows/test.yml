@@ -112,12 +112,21 @@ jobs:
         id: supabase
         working-directory: ${{ github.workspace }}
         run: |
-          STATUS=$(supabase status 2>&1)
-          ANON_KEY=$(echo "$STATUS" | grep 'anon key' | awk '{print $NF}')
-          SERVICE_ROLE_KEY=$(echo "$STATUS" | grep 'service_role key' | awk '{print $NF}')
+          # supabase status -o env outputs KEY=VALUE pairs (stable across CLI versions)
+          STATUS_ENV=$(supabase status -o env 2>&1)
+          echo "$STATUS_ENV"
+          ANON_KEY=$(echo "$STATUS_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          SERVICE_ROLE_KEY=$(echo "$STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)
+          # Fallback: parse new table format (Publishable / Secret)
+          if [ -z "$ANON_KEY" ]; then
+            ANON_KEY=$(supabase status 2>&1 | grep '│ Publishable' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
+          if [ -z "$SERVICE_ROLE_KEY" ]; then
+            SERVICE_ROLE_KEY=$(supabase status 2>&1 | grep '│ Secret' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
           if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
-            echo "ERROR: Could not extract Supabase keys:"
-            echo "$STATUS"
+            echo "ERROR: Could not extract Supabase keys. supabase status output:"
+            supabase status 2>&1
             exit 1
           fi
           echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
@@ -201,12 +210,19 @@ jobs:
         id: supabase
         working-directory: ${{ github.workspace }}
         run: |
-          STATUS=$(supabase status 2>&1)
-          ANON_KEY=$(echo "$STATUS" | grep 'anon key' | awk '{print $NF}')
-          SERVICE_ROLE_KEY=$(echo "$STATUS" | grep 'service_role key' | awk '{print $NF}')
+          STATUS_ENV=$(supabase status -o env 2>&1)
+          echo "$STATUS_ENV"
+          ANON_KEY=$(echo "$STATUS_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          SERVICE_ROLE_KEY=$(echo "$STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)
+          if [ -z "$ANON_KEY" ]; then
+            ANON_KEY=$(supabase status 2>&1 | grep '│ Publishable' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
+          if [ -z "$SERVICE_ROLE_KEY" ]; then
+            SERVICE_ROLE_KEY=$(supabase status 2>&1 | grep '│ Secret' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
           if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
-            echo "ERROR: Could not extract Supabase keys:"
-            echo "$STATUS"
+            echo "ERROR: Could not extract Supabase keys. supabase status output:"
+            supabase status 2>&1
             exit 1
           fi
           echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
