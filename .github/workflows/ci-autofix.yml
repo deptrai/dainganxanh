@@ -5,12 +5,17 @@ on:
     workflows: ["CI — Test Suite"]
     types: [completed]
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'CI run ID to fix (from CI — Test Suite)'
+        required: true
 
 jobs:
   auto-fix:
     name: Auto-fix CI failure
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure' }}
     permissions:
       contents: write
       pull-requests: write
@@ -19,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - name: Install Claude Code CLI
@@ -29,7 +34,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh run view "${{ github.event.workflow_run.id }}" --log-failed 2>&1 | head -400 > ci-failure-logs.txt
+          TARGET_RUN_ID="${{ github.event.workflow_run.id || inputs.run_id }}"
+          gh run view "$TARGET_RUN_ID" --log-failed 2>&1 | head -400 > ci-failure-logs.txt
           echo "=== Log preview ===" && head -40 ci-failure-logs.txt
 
       - name: Claude Code — analyze and fix
@@ -63,8 +69,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          RUN_ID="${{ github.event.workflow_run.id }}"
+          BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          RUN_ID="${{ github.event.workflow_run.id || inputs.run_id }}"
           FIX_BRANCH="autofix/ci-run-${RUN_ID}"
 
           git config user.name "claude-autofix[bot]"
