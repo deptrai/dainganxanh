@@ -246,22 +246,32 @@ jobs:
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
     steps:
-      - name: Notify Slack on CI failure
-        if: ${{ secrets.SLACK_CI_WEBHOOK != '' }}
-        uses: slackapi/slack-github-action@v2
-        with:
-          webhook: ${{ secrets.SLACK_CI_WEBHOOK }}
-          webhook-type: incoming-webhook
-          payload: |
-            {
-              "text": "❌ CI failed on *${{ github.ref_name }}*",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "❌ *CI Pipeline Failed*\n*Branch:* `${{ github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Author:* ${{ github.actor }}\n*<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>*"
-                  }
-                }
-              ]
-            }
+      - name: Notify Telegram on CI failure
+        env:
+          # Security: inputs passed through env: to prevent script injection
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          E2E_RESULT: ${{ needs.e2e-tests.result }}
+        run: |
+          MESSAGE="❌ *CI Pipeline Failed*
+Branch: \`${BRANCH}\`
+Commit: \`${SHA:0:7}\`
+Author: ${ACTOR}
+
+| Job | Status |
+|-----|--------|
+| Lint | ${LINT_RESULT} |
+| Unit Tests | ${UNIT_RESULT} |
+| E2E Tests | ${E2E_RESULT} |
+
+🔗 [View Run](${RUN_URL})"
+
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${CHAT_ID}\", \"text\": \"${MESSAGE}\", \"parse_mode\": \"Markdown\"}"
