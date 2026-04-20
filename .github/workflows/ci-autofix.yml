@@ -35,7 +35,8 @@ jobs:
       - name: Claude Code — analyze and fix
         env:
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
           CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
           CLAUDE_CODE_SKIP_AUTOLOGIN: "1"
           ANTHROPIC_DEFAULT_SONNET_MODEL: claude-sonnet-4-5
