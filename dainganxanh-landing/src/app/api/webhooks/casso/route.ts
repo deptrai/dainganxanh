@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   // Casso Webhook V2 payload: { error: 0, data: { id, reference, description, amount,
   //   runningBalance, transactionDateTime, accountNumber, bankName, bankAbbreviation } }
   // V1 compat: { data: { tid, amount, type, description, bank_sub_acc_id, when } }
-  const tx = body?.data
+  const tx = (body as any)?.data
 
   // Casso gửi test ping không có data — acknowledge và return
   const txId = tx?.id ?? tx?.tid
