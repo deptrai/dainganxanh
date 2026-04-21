@@ -372,6 +372,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
                 onChange={handleCoverImageUpload}
                 disabled={uploadingImage}
                 ref={fileInputRef}
+                data-testid="cover-file-input"
               />
             </label>
           </div>
@@ -483,6 +484,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={`px-2 py-1 text-xs rounded border transition-colors ${
         active
           ? 'bg-green-600 text-white border-green-600'

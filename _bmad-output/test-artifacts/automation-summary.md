@@ -1,12 +1,19 @@
 ---
-stepsCompleted: ['step-01-preflight-and-context', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize', 'step-05-followup-complete']
-lastStep: 'step-05-followup-complete'
-lastSaved: '2026-04-19'
+stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets', 'step-03-generate-tests', 'step-03c-aggregate', 'step-04-validate-and-summarize', 'step-05-followup-complete']
+lastStep: 'step-02-identify-targets'
+lastSaved: '2026-04-21'
+currentSession: 'session-5'
 inputDocuments:
-  - _bmad-output/test-artifacts/test-review.md
-  - playwright.config.ts
-  - jest.config.ts
+  - _bmad-output/test-artifacts/test-review.md (session 5 — official 82/100)
   - _bmad/tea/config.yaml
+  - _bmad/tea/testarch/tea-index.csv
+  - dainganxanh-landing/playwright.config.ts
+  - dainganxanh-landing/jest.config.ts
+  - dainganxanh-landing/src/components/admin/blog/BlogEditor.tsx (495 LOC, 0% coverage — target)
+  - dainganxanh-landing/src/actions/blog.ts (uploadBlogImage/createPost/updatePost — gap paths)
+  - dainganxanh-landing/src/components/blog/PostList.tsx (target)
+  - dainganxanh-landing/src/components/blog/PostCard.tsx (target)
+  - dainganxanh-landing/src/components/blog/BlogSidebar.tsx (target)
 ---
 
 # Test Automation Expansion: dainganxanh-landing
@@ -215,3 +222,127 @@ inputDocuments:
 | **Overall** | **~75/100** | **~78/100** |
 
 *Session 4 hoàn thành: 2026-04-21*
+
+---
+
+## Session 5 — Step 1: Preflight & Context (2026-04-21)
+
+### Stack & Framework
+- **Stack**: `fullstack` (auto-detected: Next.js 16 + React 19 + Supabase + Playwright 1.57 + Jest)
+- **Framework**: ✅ verified — `dainganxanh-landing/playwright.config.ts`, `dainganxanh-landing/jest.config.ts`
+- **Subproject root**: `dainganxanh-landing/` (monorepo-style layout)
+
+### Mode
+- **BMad-Integrated** — input artifacts provided:
+  - `test-review.md` (official score **82/100** — Session 5)
+  - Gap analysis (session 5 deep-dive): BlogEditor.tsx 495 LOC 0% coverage, 3 action gap paths, 3 blog components missing tests
+
+### TEA Config Flags (loaded)
+| Flag | Value |
+|---|---|
+| `tea_use_playwright_utils` | `true` |
+| `tea_use_pactjs_utils` | `false` |
+| `tea_pact_mcp` | `none` |
+| `tea_browser_automation` | `auto` |
+| `tea_execution_mode` | `auto` |
+| `tea_capability_probe` | `true` |
+| `test_stack_type` | `auto` → resolved `fullstack` |
+| `risk_threshold` | `p1` |
+
+### Loading Profile
+- **Full UI+API profile** (fullstack + browser tests detected via `page.goto`/`page.locator` in `dainganxanh-landing/e2e/`)
+
+### Knowledge Fragments Loaded
+
+**Core (8)**: `test-levels-framework`, `test-priorities-matrix`, `data-factories`, `selective-testing`, `ci-burn-in`, `test-quality`, `risk-governance`, `probability-impact`
+
+**Playwright Utils — Full UI+API (11)**: `overview`, `api-request`, `network-recorder`, `auth-session`, `intercept-network-call`, `recurse`, `log`, `file-utils`, `burn-in`, `network-error-monitor`, `fixtures-composition`
+
+**Healing (3)**: `test-healing-patterns`, `selector-resilience`, `timing-debugging`
+
+**Playwright CLI (1)**: `playwright-cli`
+
+**Skipped**: contract-testing, pact-*, email-auth, feature-flags, visual-debugging, adr-quality-readiness-checklist (not relevant to session 5 targets)
+
+### Targets Resolved (via SymDex)
+
+| Target | Path | LOC | Priority |
+|---|---|---|---|
+| `BlogEditor` | `dainganxanh-landing/src/components/admin/blog/BlogEditor.tsx:30-448` | 495 | **P0** (0% coverage, complex form) |
+| `uploadBlogImage` success path | `dainganxanh-landing/src/actions/blog.ts:209-246` | 38 | **P1** (gap) |
+| `createPost` DB error path | `dainganxanh-landing/src/actions/blog.ts:27-98` | 72 | **P1** (gap) |
+| `updatePost` slug conflict | `dainganxanh-landing/src/actions/blog.ts:102-187` | 86 | **P1** (gap) |
+| `PostList` | `dainganxanh-landing/src/components/blog/PostList.tsx:14-91` | 78 | **P2** (public-facing) |
+| `PostCard` | `dainganxanh-landing/src/components/blog/PostCard.tsx:23-80` | 58 | **P2** (public-facing) |
+| `BlogSidebar` | `dainganxanh-landing/src/components/blog/BlogSidebar.tsx:23-116` | 94 | **P2** (public-facing) |
+
+### Step 1 Status: ✅ Complete → Load `step-02-identify-targets.md`
+
+---
+
+## Session 5 — Step 2: Identify Targets (2026-04-21)
+
+### Mode
+- **BMad-Integrated** — gap analysis từ test-review session 5 đã chỉ rõ targets; không tự discover thêm
+- **Browser exploration**: SKIP (targets đã định nghĩa rõ; CLI exploration không add value)
+- **Provider Endpoint Map**: SKIP (`tea_use_pactjs_utils=false`)
+
+### Existing Coverage Audit (avoid duplication)
+| Target | Existing test | Status |
+|---|---|---|
+| `createPost` auth/validation/slug-exists | `src/actions/__tests__/blog.test.ts` | ✅ covered |
+| `updatePost` auth/validation/empty-content | `src/actions/__tests__/blog.test.ts` | ✅ covered |
+| `deletePost` auth + happy path | `src/actions/__tests__/blog.test.ts` | ✅ covered |
+| `uploadBlogImage` no-file/wrong-type/oversize | `src/actions/__tests__/blog.test.ts` | ✅ covered |
+| `BlogEditor` | — | ❌ 0% (P0 gap) |
+| `PostList` / `PostCard` / `BlogSidebar` | — | ❌ no tests (P2 gap) |
+
+### Coverage Plan (new tests only — no overlap with existing)
+
+#### T1 — BlogEditor (Component, P0)
+**File**: `src/components/admin/blog/__tests__/BlogEditor.test.tsx` (new)
+**Test level**: Component (RTL + Jest, jsdom)
+**Justification**: 495 LOC, 0% coverage, complex stateful form (title→slug autogenerate, tag chips, Tiptap editor wrapper, cover image upload, server-action submit via `useTransition`)
+**Mock surface**: `next/navigation` (useRouter), `@/actions/blog` (createPost/updatePost/uploadBlogImage), `@tiptap/react` (mock `useEditor` + `EditorContent`)
+
+| Tests | Priority | Scenario |
+|---|---|---|
+| 6 | P0 | Render — title/slug/excerpt/tags/cover/status fields; create vs edit mode; submit button label |
+| 5 | P0 | Title→slug autogeneration (Vietnamese diacritics, special chars); manual slug override stops sync |
+| 4 | P1 | Tag chip add via Enter/comma; remove via × button; duplicate tag rejected |
+| 4 | P1 | Cover image upload — calls `uploadBlogImage`, sets URL, shows loading/error states |
+| 4 | P1 | Submit — calls `createPost`/`updatePost` with FormData, redirects on success, shows error toast on failure |
+| 3 | P2 | Tiptap toolbar — bold/italic/h1-h3/list/code/quote buttons toggle editor commands |
+| 2 | P2 | Accessibility — labels associated with inputs; submit button has accessible name |
+| **28** | — | — |
+
+#### T2 — Action Gap Paths (Unit, P1)
+**File**: extend `src/actions/__tests__/blog.test.ts` (append, not new file)
+**Test level**: Unit (Jest)
+**Justification**: 3 specific gap paths flagged in session-5 deep-dive — not currently asserted
+
+| Tests | Priority | Scenario |
+|---|---|---|
+| 3 | P1 | `uploadBlogImage` success — admin auth + valid jpg → `{ success: true, url: 'https://...' }`; verifies storage.upload call args (filename pattern, contentType); falls back to 'jpg' for unknown extension |
+| 2 | P1 | `createPost` DB insert error — supabase insert returns `{ error: ... }` → returns `{ success: false, error: 'Không thể tạo bài viết...' }`; logs to console.error |
+| 2 | P1 | `updatePost` slug conflict — existing post with same slug (different id) → `{ success: false, error: 'Slug đã tồn tại...' }`; verifies `.neq('id', currentId)` filter |
+| **7** | — | — |
+
+#### T3 — Public Blog Components (Component, P2)
+**Test level**: Component (RTL + Jest)
+**Mock surface**: `next/link` (auto via Jest), `next/image` (auto), `date-fns` (real)
+
+| File | Tests | Priority | Scenarios |
+|---|---|---|---|
+| `src/components/blog/__tests__/PostList.test.tsx` (new) | 8 | P2 | Renders posts grid; empty state; tag filter bar visibility; "Tất cả" active when no currentTag; pagination links (page>1 only); URL building with tag+page params |
+| `src/components/blog/__tests__/PostCard.test.tsx` (new) | 7 | P2 | Renders title/cover/excerpt/date; cover fallback when null; date formatted vi locale; tag badges link to filtered list; published_at null → no date shown |
+| `src/components/blog/__tests__/BlogSidebar.test.tsx` (new) | 7 | P2 | Filters out currentSlug; renders thumbnails + dates; emoji fallback when no cover_image; empty state when only one post; date formatting |
+| **22** | — | — | — |
+
+### Coverage Scope: **Selective** (gap-driven)
+- Total new tests planned: **57** (28 + 7 + 22)
+- Total new files: **4** (1 component test for admin + 3 component tests for public blog; action tests appended to existing)
+- Levels: Component-heavy (50/57 = 88%); Unit (7/57 = 12%); E2E: 0 (already covered by `admin-blog.spec.ts` + `public-blog.spec.ts` from session 5)
+- Justification: maximize ROI — close 0%-coverage P0 component + 3 specific action branches + 3 public components without redundant E2E
+
+### Step 2 Status: ✅ Complete → Load `step-03-generate-tests.md`

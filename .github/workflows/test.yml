@@ -152,6 +152,17 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"email":"ci-user@test.local","email_confirm":true}' \
             | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "INSERT INTO public.posts (title, slug, excerpt, content, status, published_at, tags)
+                VALUES (
+                  'CI Test Post — Cây Dó Đen',
+                  'ci-test-post-cay-do-den',
+                  'Bài viết dùng để kiểm thử tự động trong CI pipeline.',
+                  '<p>Nội dung bài viết kiểm thử.</p>',
+                  'published',
+                  now() - interval ''1 hour'',
+                  ARRAY[''carbon-credit'', ''ci-test'']
+                ) ON CONFLICT (slug) DO NOTHING;"
 
       - name: Run Playwright
         run: npx playwright test --reporter=html,junit
@@ -249,6 +260,17 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"email":"ci-user@test.local","email_confirm":true}' \
             | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "INSERT INTO public.posts (title, slug, excerpt, content, status, published_at, tags)
+                VALUES (
+                  'CI Test Post — Cây Dó Đen',
+                  'ci-test-post-cay-do-den',
+                  'Bài viết dùng để kiểm thử tự động trong CI pipeline.',
+                  '<p>Nội dung bài viết kiểm thử.</p>',
+                  'published',
+                  now() - interval ''1 hour'',
+                  ARRAY[''carbon-credit'', ''ci-test'']
+                ) ON CONFLICT (slug) DO NOTHING;"
 
       - name: Burn-in — repeat E2E x3
         run: |
@@ -326,6 +348,108 @@ jobs:
           echo "  Unit Tests:  ${{ needs.unit-tests.result }}"
           echo "  E2E Tests:   ${{ needs.e2e-tests.result }} (informational — requires Mailpit+Supabase)"
           exit 1
+
+  # ─── R1: Coverage Ratchet Gate ───────────────────────────────────────────
+  coverage-gate:
+    name: Coverage Gate (Ratchet)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download current coverage shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jest-results-shard-*
+          path: all-artifacts
+          merge-multiple: false
+
+      - name: Merge shard coverage → current summary
+        run: |
+          node dainganxanh-landing/scripts/ci/merge-coverage.js \
+            --input \
+              all-artifacts/jest-results-shard-1/coverage/shard-1/coverage-summary.json \
+              all-artifacts/jest-results-shard-2/coverage/shard-2/coverage-summary.json \
+              all-artifacts/jest-results-shard-3/coverage/shard-3/coverage-summary.json \
+            --output current-coverage-summary.json
+
+      - name: Download baseline coverage from main
+        id: baseline
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ARTIFACT_URL=$(gh api \
+            "repos/${{ github.repository }}/actions/artifacts?name=coverage-summary-main&per_page=5" \
+            --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].archive_download_url // empty')
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "no_baseline=true" >> $GITHUB_OUTPUT
+            echo "⚠️  No baseline artifact found — gate will be skipped for this run."
+          else
+            curl -L -H "Authorization: Bearer $GH_TOKEN" "$ARTIFACT_URL" -o baseline.zip
+            unzip -q baseline.zip -d baseline/
+            echo "no_baseline=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare coverage — fail if regression > 2%
+        if: steps.baseline.outputs.no_baseline == 'false'
+        run: |
+          node dainganxanh-landing/scripts/ci/compare-coverage.js \
+            --baseline baseline/coverage-summary.json \
+            --current  current-coverage-summary.json \
+            --threshold 2.0
+
+      - name: Skip gate (no baseline yet)
+        if: steps.baseline.outputs.no_baseline == 'true'
+        run: echo "ℹ️  First PR — baseline not yet established. Gate skipped."
+
+  # ─── R1: Upload coverage baseline on main merge ───────────────────────────
+  coverage-baseline-upload:
+    name: Upload Coverage Baseline (main)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download current coverage shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jest-results-shard-*
+          path: all-artifacts
+          merge-multiple: false
+
+      - name: Merge shard coverage → baseline summary
+        run: |
+          node dainganxanh-landing/scripts/ci/merge-coverage.js \
+            --input \
+              all-artifacts/jest-results-shard-1/coverage/shard-1/coverage-summary.json \
+              all-artifacts/jest-results-shard-2/coverage/shard-2/coverage-summary.json \
+              all-artifacts/jest-results-shard-3/coverage/shard-3/coverage-summary.json \
+            --output coverage-summary.json
+
+      - name: Upload as main baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary-main
+          path: coverage-summary.json
+          retention-days: 90
+          overwrite: true
 
   # ─── Notify on failure ────────────────────────────────────────────────────
   notify-failure:

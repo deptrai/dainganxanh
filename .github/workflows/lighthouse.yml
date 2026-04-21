@@ -1,0 +1,97 @@
+name: Lighthouse CI — Blog Performance
+
+on:
+  pull_request:
+    branches: [main, develop, production]
+    paths:
+      - 'dainganxanh-landing/src/app/**/blog/**'
+      - 'dainganxanh-landing/src/components/blog/**'
+      - 'dainganxanh-landing/src/components/admin/blog/**'
+      - 'dainganxanh-landing/src/actions/blog*'
+      - 'dainganxanh-landing/lighthouserc.js'
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: dainganxanh-landing
+
+jobs:
+  lighthouse-blog:
+    name: Lighthouse — Blog (LCP / SEO / A11y)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase local stack
+        run: supabase start
+        working-directory: ${{ github.workspace }}
+
+      - name: Apply migrations & seed blog post
+        run: |
+          supabase db reset --no-verify-jwt
+          STATUS_ENV=$(supabase status -o env 2>&1)
+          SERVICE_ROLE_KEY=$(echo "$STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)
+          # Seed a published post so /blog/[slug] renders real content
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "INSERT INTO public.posts (title, slug, excerpt, content, status, published_at, tags)
+                VALUES (
+                  'CI Test Post — Cây Dó Đen',
+                  'ci-test-post-cay-do-den',
+                  'Bài viết dùng để kiểm thử hiệu năng Lighthouse trong CI.',
+                  '<h2>Giới thiệu</h2><p>Cây Dó Đen là loài cây quý hiếm.</p>',
+                  'published',
+                  now() - interval ''1 hour'',
+                  ARRAY[''carbon-credit'', ''ci-test'']
+                ) ON CONFLICT (slug) DO NOTHING;"
+        working-directory: ${{ github.workspace }}
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          CI: true
+          # Point to local Supabase for build-time data fetches
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
+
+      - name: Extract Supabase anon key
+        id: supabase
+        working-directory: ${{ github.workspace }}
+        run: |
+          STATUS_ENV=$(supabase status -o env 2>&1)
+          ANON_KEY=$(echo "$STATUS_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+
+      - name: Install @lhci/cli
+        run: npm install -g @lhci/cli@0.14
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report-${{ github.sha }}
+          path: dainganxanh-landing/.lighthouseci/
+          retention-days: 14

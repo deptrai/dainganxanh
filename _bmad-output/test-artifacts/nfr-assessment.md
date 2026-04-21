@@ -168,3 +168,99 @@ inputDocuments:
 ---
 
 *Assessment scope: application-layer only. Infrastructure (Supabase platform, Dokploy server) assessed via documentation and config; no penetration test or load test performed.*
+
+---
+
+## Appendix — Epic 7 Blog NFR Delta (2026-04-21, Session 6)
+
+### Scope
+
+Session 6 shipped the blog CMS (FR-31) + public blog routes (FR-30 SEO). This appendix measures NFR posture specifically for:
+
+- `/blog` listing page (Server Component, paginated, tag filter)
+- `/blog/[slug]` detail page (Server Component, SEO-critical)
+- `/crm/admin/blog/*` (Admin CRUD — BlogEditor with Tiptap)
+- Server actions: `createPost`, `updatePost`, `deletePost`, `uploadBlogImage`
+- Storage bucket `blog-images` (Supabase Storage + service-role client)
+
+### Threshold Matrix — Blog-specific
+
+| NFR | Target | Source | Current | Status |
+|---|---|---|---|---|
+| **Performance** | LCP `/blog/[slug]` ≤ 2.5s @ p75 | Web Vitals Good | Not measured | ⚠️ UNKNOWN |
+| **Performance** | TTFB server actions ≤ 800ms @ p95 | Next.js best practice | Not measured | ⚠️ UNKNOWN |
+| **Performance** | Cover image ≤ 200KB (WebP, 1200px max) | blog-image-upload-spec | `browser-image-compression` compresses on upload | ✅ MEETS |
+| **Performance** | `/blog` listing revalidate ≤ 60s | ISR cache | `export const revalidate = 60` verified | ✅ MEETS |
+| **SEO** | `<title>` + `<meta description>` on every blog page | FR-30 | `generateMetadata()` + `meta_title`/`meta_desc` fields | ✅ MEETS |
+| **SEO** | Open Graph image for social sharing | FR-30 | Uses `cover_image` as og:image | ✅ MEETS |
+| **SEO** | Canonical URL to prevent dup content | FR-30 | `alternates.canonical` set in metadata | ✅ MEETS |
+| **SEO** | JSON-LD `Article` schema | FR-30 | Implemented per PRD | ✅ MEETS |
+| **SEO** | sitemap.xml includes blog posts | FR-30 | `/sitemap.ts` queries `posts` table | ✅ MEETS |
+| **SEO** | robots.txt disallows `/crm/*` | FR-30 | `/robots.ts` configured | ✅ MEETS |
+| **Security** | Admin-only mutation (RBAC enforced in action) | FR-31 | `verifyAdmin()` called at top of every mutation | ✅ MEETS |
+| **Security** | Slug uniqueness enforced server-side | FR-31 | `maybeSingle()` check + `.neq('id', ...)` on update | ✅ MEETS |
+| **Security** | Image upload MIME whitelist | blog-image-upload-spec | JPG/PNG/WebP/GIF enforced in `uploadBlogImage` | ✅ MEETS |
+| **Security** | Image upload size limit | blog-image-upload-spec | 5MB limit enforced | ✅ MEETS |
+| **Security** | Service-role client scoped to upload only | blog-image-upload-spec | `createServiceRoleClient` used only for storage, not for auth | ✅ MEETS |
+| **Reliability** | Graceful DB error handling | NFR-6 | `createPost` returns `{success: false, error}` on insert failure | ✅ MEETS |
+| **Reliability** | Optimistic UI on save (draft autosave) | Story 7-2 | Not implemented — user waits for full roundtrip | 🟡 ACCEPTABLE (draft save < 500ms locally) |
+| **Accessibility** | Admin toolbar buttons have accessible names | WCAG 2.1 SC 4.1.2 | Uses `title` attr only — no `aria-label` | ⚠️ GAP (see G13 in remediation-playbook.md) |
+| **Accessibility** | Blog reading order keyboard-navigable | WCAG 2.1 SC 2.1.1 | Semantic HTML `<article>`, `<h1>`, `<time>` | ✅ MEETS |
+| **Accessibility** | Cover image has alt text | WCAG 2.1 SC 1.1.1 | `alt={post.title}` used | ✅ MEETS |
+| **Scalability** | 10K posts, listing stays < 2s | Projection | Paginated (10/page), indexed by `published_at` | ✅ MEETS (tested up to 1K locally) |
+
+### Dimension Scores — Blog Context
+
+| Dimension | Score | Grade | Rationale |
+|---|---|---|---|
+| **Security** | 90 | A- | RBAC, input validation, MIME/size guards, no bypass paths in server actions; service-role scoped narrowly |
+| **Performance** | 75 | C+ | ISR + image compression strong; **LCP/TTFB not instrumented** — largest blind spot |
+| **Reliability** | 85 | B | All error paths return typed `{success, error}` — no uncaught exceptions; draft autosave not yet implemented |
+| **Scalability** | 82 | B | Pagination + `published_at` index handle forecast load; no async queue for bulk ops yet |
+| **Accessibility** | 78 | C+ | Reading order and alt text solid; **toolbar buttons lack aria-label** (G13) |
+| **SEO (FR-30)** | 95 | A | All 6 SEO NFRs met — sitemap, robots, metadata, OG, canonical, JSON-LD |
+
+### Blog NFR Risks (ordered by probability × impact)
+
+| ID | Risk | Prob | Impact | Score | Mitigation |
+|---|---|---|---|---|---|
+| BNR-1 | LCP regression on `/blog/[slug]` due to unoptimized cover image | 3 | 3 | 9 | Add Lighthouse CI check with LCP ≤ 2.5s threshold |
+| BNR-2 | Slug collision race (two admins save simultaneously) | 2 | 2 | 4 | Existing unique constraint on `posts.slug` + 2nd-check `.neq()` — risk is contained |
+| BNR-3 | Storage bucket fills up (no orphan cleanup when post deleted) | 3 | 2 | 6 | Add cron to delete orphaned images (images with no post ref) — weekly |
+| BNR-4 | Admin toolbar not usable by screen reader (G13) | 2 | 3 | 6 | Fix per remediation-playbook.md |
+| BNR-5 | Image upload fails silently when Supabase quota hit | 2 | 3 | 6 | `uploadBlogImage` already surfaces `error.message` — add Sentry breadcrumb |
+| BNR-6 | Published post cached stale for 60s (revalidate window) | 4 | 1 | 4 | Add manual `revalidatePath('/blog/[slug]')` call after update — already implemented in action |
+
+### Blog NFR Action Items
+
+| Priority | Action | Dimension | Effort |
+|---|---|---|---|
+| P1 | Add Lighthouse CI check for `/blog/[slug]` (LCP ≤ 2.5s, CLS ≤ 0.1) | Performance | 2h |
+| P1 | Execute G13 aria-label fix (see remediation-playbook.md) | Accessibility | 30min |
+| P2 | Add Sentry breadcrumbs to `uploadBlogImage` error path | Reliability | 30min |
+| P2 | Schedule weekly orphan-image cleanup cron | Scalability | 2h |
+| P2 | Instrument `createPost`/`updatePost` TTFB via Vercel Analytics | Performance | 1h |
+| P3 | Implement draft autosave (debounced `updatePost` every 30s) | Reliability | 4h |
+| P3 | Add `<link rel="preload">` for cover image in `/blog/[slug]` | Performance | 1h |
+
+### Gate Decision — Blog-specific
+
+| Launch Scenario | Status | Conditions |
+|---|---|---|
+| Internal content team (staff only) | ✅ GO | — |
+| Limited publish (<50 posts, <1K readers/day) | ✅ GO | — |
+| Marketing launch (SEO-dependent, CTR tracking) | 🟡 GO with actions | Complete P1 items first (Lighthouse CI + G13) |
+| High-volume content operation (10+ posts/day, 10K+ readers/day) | 🟡 Plan needed | Orphan cleanup, draft autosave, TTFB instrumentation |
+
+### Compliance Delta
+
+| Standard | Delta | Note |
+|---|---|---|
+| WCAG 2.1 AA | ⚠️ 1 new gap (G13) | Fix in remediation-playbook.md brings blog toolbar to AA |
+| GDPR | — No change | Blog doesn't collect new PII |
+| OWASP Top 10 A01 (Broken Access Control) | ✅ Reinforced | Admin guard tested in `blog.test.ts` with 24 tests |
+| OWASP Top 10 A03 (Injection) | ✅ Reinforced | Zod validation on all blog inputs |
+
+---
+
+**Blog NFR verdict**: Production-ready for marketing launch once G13 + Lighthouse CI land (~2.5h work). SEO posture (95/A) is a strong asset — FR-30 is the most mature NFR dimension in this codebase.
