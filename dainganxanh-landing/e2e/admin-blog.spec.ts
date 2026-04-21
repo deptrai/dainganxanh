@@ -272,3 +272,33 @@ test.describe('[P2] Admin Blog – Edit', () => {
     await expect(page.getByText('Đã lưu draft!')).toBeVisible({ timeout: 10000 })
   })
 })
+
+// Cleanup: xóa tất cả blog posts được tạo trong test suite này
+test.afterAll(async ({ browser }) => {
+  const TEST_TITLE_PATTERNS = [
+    'Bài kiểm tra E2E – Trồng cây',
+    'Draft Test – Bền vững',
+    'Edit Target –',
+  ]
+
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  try {
+    await loginAsAdmin(page, '/crm/admin/blog')
+    await page.waitForLoadState('networkidle')
+
+    for (const pattern of TEST_TITLE_PATTERNS) {
+      // Loop in case multiple matching posts were created (e.g. retries)
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const row = page.locator('tbody tr').filter({ hasText: pattern }).first()
+        if ((await row.count()) === 0) break
+
+        page.once('dialog', (dialog) => dialog.accept())
+        await row.getByRole('button', { name: 'Xóa' }).click()
+        await page.waitForLoadState('networkidle')
+      }
+    }
+  } finally {
+    await context.close()
+  }
+})

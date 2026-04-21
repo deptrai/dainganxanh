@@ -43,6 +43,7 @@ describe('VerifyOrderButton', () => {
     })
 
     it('shows loading state during verification', async () => {
+        jest.useFakeTimers()
         mockVerifyOrder.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
 
         render(<VerifyOrderButton orderId={orderId} verifyOrder={mockVerifyOrder} />)
@@ -55,6 +56,8 @@ describe('VerifyOrderButton', () => {
         await waitFor(() => {
             expect(screen.getByText('Đang xử lý...')).toBeInTheDocument()
         })
+        jest.runAllTimers()
+        jest.useRealTimers()
     })
 
     it('shows error message on verification failure', async () => {

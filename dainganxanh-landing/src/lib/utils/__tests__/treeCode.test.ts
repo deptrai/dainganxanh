@@ -1,6 +1,16 @@
 import { generateTreeCode, generateTreeCodes, isValidTreeCode } from '../treeCode'
 
+// Pin time so year-based assertions never flip at Dec 31 → Jan 1 boundary
+const FIXED_DATE = new Date('2026-04-21T12:00:00Z')
+
 describe('Tree Code Generation', () => {
+    beforeAll(() => {
+        jest.useFakeTimers().setSystemTime(FIXED_DATE)
+    })
+    afterAll(() => {
+        jest.useRealTimers()
+    })
+
     describe('generateTreeCode', () => {
         it('should generate code in correct format with timestamp', () => {
             const code = generateTreeCode('abc123', 1)
@@ -10,7 +20,7 @@ describe('Tree Code Generation', () => {
 
         it('should use current year in tree code', () => {
             const orderId = 'test-order-id'
-            const year = new Date().getFullYear()
+            const year = FIXED_DATE.getFullYear()
             const code = generateTreeCode(orderId, 1)
 
             expect(code).toContain(`TREE-${year}`)
@@ -66,7 +76,7 @@ describe('Tree Code Generation', () => {
 
         it('should use correct year', () => {
             const code = generateTreeCode('test12', 1)
-            const year = new Date().getFullYear()
+            const year = FIXED_DATE.getFullYear()
             expect(code).toContain(`TREE-${year}`)
         })
 
