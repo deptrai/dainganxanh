@@ -71,11 +71,11 @@ export default defineConfig({
                 /notification-flow\.spec\.ts/,
             ],
         },
-        // Unauthenticated specs (login/register flow itself). No storageState.
+        // Unauthenticated specs (login/register flow itself, public pages). No storageState.
         {
             name: 'chromium-anon',
             use: { ...devices['Desktop Chrome'] },
-            testMatch: [/registration-auth\.spec\.ts/],
+            testMatch: [/registration-auth\.spec\.ts/, /public-blog\.spec\.ts/],
         },
     ],
 

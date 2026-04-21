@@ -1,373 +1,274 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
-import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
 import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Blog Management E2E Test Suite
- * Tests the admin dashboard for blog post creation, editing, and status management
+ *
+ * Stack notes:
+ * - Blog actions use Next.js Server Actions (no REST endpoints) → no route mocking needed
+ * - Content editor is TipTap (div.ProseMirror contenteditable) → use .click() + .pressSequentially()
+ * - Inputs are React controlled state (no `name` attr) → select by placeholder or role
+ * - Delete uses window.confirm() → handle with page.on('dialog', ...)
  *
  * Prerequisites:
- * - Dev server running at http://localhost:3001
- * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
+ * - Dev server at http://localhost:3001
+ * - Supabase local + Mailpit at http://127.0.0.1:54334
+ * - Admin user configured in TEST_ADMIN_EMAIL env
  */
 
-test.describe('[P2] Admin Blog Management E2E', () => {
+test.describe('[P0] Admin Blog – List Page', () => {
+  test('hiển thị trang danh sách blog', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog')
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
+    await expect(page).toHaveURL(/crm\/admin\/blog/)
+    await expect(page.getByRole('heading', { name: 'Blog' })).toBeVisible()
+    await expect(page.getByRole('link', { name: '+ Tạo bài mới' })).toBeVisible()
+  })
+})
 
+test.describe('[P0] Admin Blog – Create', () => {
+  test('tạo bài viết mới và publish', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-    /**
-     * Helper: Complete admin login flow and navigate to target page
-     */
-    /**
-     * Test 1: Admin creates new blog post
-     */
-    test('admin creates new blog post at /crm/admin/blog/new', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog')
+    // Use timestamp suffix to avoid slug collision on retry
+    const ts = Date.now()
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await titleInput.fill(`Bài kiểm tra E2E – Trồng cây ${ts}`)
 
-        // ============================================
-        // Phase 1: Navigate to create new post
-        // ============================================
-        await expect(page).toHaveURL(/crm\/admin\/blog/)
+    // Fill TipTap content
+    const editor = page.locator('.ProseMirror')
+    await editor.click()
+    await editor.pressSequentially('Nội dung bài viết kiểm tra E2E cho dự án Đại Ngàn Xanh.')
 
-        // Look for "Create New Post" button
-        const createButton = page.getByRole('button', { name: /tạo bài viết|create post|new post/i }).or(page.getByRole('link', { name: /tạo bài viết|create post|new post/i }))
-        const hasCreateButton = await createButton.count() > 0
+    // Click Publish ngay
+    await page.getByRole('button', { name: 'Publish ngay' }).click()
 
-        if (hasCreateButton) {
-            await createButton.first().click()
-            await page.waitForLoadState('networkidle')
+    // After create, Server Action → router.push(); assert redirect URL
+    await expect(page).toHaveURL(/crm\/admin\/blog\/.+\/edit/, { timeout: 15000 })
+  })
 
-            // Verify we're on the create page
-            await expect(page).toHaveURL(/crm\/admin\/blog\/new/)
-            console.log('✅ Navigated to blog post creation page')
-        } else {
-            // Try direct navigation
-            await page.goto('/crm/admin/blog/new')
-            await page.waitForLoadState('networkidle')
-        }
+  test('lưu bài viết dưới dạng draft', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-        // ============================================
-        // Phase 2: Fill in blog post form
-        // ============================================
-        // Mock API for creating blog post
-        await page.route('**/api/admin/blog', async route => {
-            if (route.request().method() === 'POST') {
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        id: 'post-123',
-                        slug: 'trao-chung-chi-trong-cay-2026',
-                        message: 'Blog post created successfully'
-                    })
-                })
-            } else {
-                await route.continue()
-            }
-        })
+    const ts = Date.now()
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await titleInput.fill(`Draft Test – Bền vững ${ts}`)
 
-        await page.waitForLoadState('networkidle')
+    const editor = page.locator('.ProseMirror')
+    await editor.click()
+    await editor.pressSequentially('Nội dung draft bài viết thử nghiệm.')
 
-        // Fill in title
-        const titleInput = page.locator('input[name="title"], input[placeholder*="tiêu đề"]').first()
-        const hasTitleInput = await titleInput.count() > 0
+    await page.getByRole('button', { name: 'Lưu Draft' }).click()
 
-        if (hasTitleInput) {
-            await titleInput.fill('Trao chứng chỉ trồng cây cho cộng đồng 2026')
-            console.log('✅ Blog title entered')
-        }
+    // After create, Server Action → router.push(); assert redirect URL
+    await expect(page).toHaveURL(/crm\/admin\/blog\/.+\/edit/, { timeout: 15000 })
+  })
+})
 
-        // Fill in slug (if separate field)
-        const slugInput = page.locator('input[name="slug"]')
-        if (await slugInput.count() > 0) {
-            await slugInput.fill('trao-chung-chi-trong-cay-2026')
-        }
+test.describe('[P1] Admin Blog – Validation', () => {
+  test('báo lỗi khi tiêu đề trống', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-        // Fill in content (could be textarea or rich text editor)
-        const contentInput = page.locator('textarea[name="content"], div[contenteditable="true"]').first()
-        const hasContentInput = await contentInput.count() > 0
+    // Fill content but leave title empty
+    const editor = page.locator('.ProseMirror')
+    await editor.click()
+    await editor.pressSequentially('Có nội dung nhưng không có tiêu đề.')
 
-        if (hasContentInput) {
-            await contentInput.fill('Ngày 20/3/2026, Đại Ngàn Xanh đã tổ chức lễ trao chứng chỉ trồng cây cho hơn 500 người tham gia chương trình. Đây là cột mốc quan trọng trong hành trình phủ xanh Việt Nam.')
-            console.log('✅ Blog content entered')
-        }
+    await page.getByRole('button', { name: 'Lưu Draft' }).click()
 
-        // Select category (if available)
-        const categorySelect = page.locator('select[name="category"]')
-        if (await categorySelect.count() > 0) {
-            await categorySelect.selectOption({ label: 'Tin tức' })
-        }
+    await expect(page.getByText('Tiêu đề không được để trống')).toBeVisible({ timeout: 5000 })
+  })
 
-        // Click save/publish button
-        const saveButton = page.getByRole('button', { name: /lưu|save|tạo|create/i }).last()
-        const hasSaveButton = await saveButton.count() > 0
+  test('báo lỗi khi nội dung trống', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-        if (hasSaveButton) {
-            await saveButton.click()
-            await page.waitForLoadState('networkidle')
+    // Fill title but leave TipTap empty
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await titleInput.fill('Tiêu đề có, nội dung không')
 
-            // Check for success message
-            const successMessage = page.locator('text=/thành công|success|đã tạo/i')
-            if (await successMessage.isVisible({ timeout: 5000 })) {
-                console.log('✅ Blog post created successfully')
-            } else {
-                console.log('✅ Blog post creation action executed')
-            }
-        }
+    await page.getByRole('button', { name: 'Lưu Draft' }).click()
 
-        await page.screenshot({
-            path: 'e2e-results/admin-blog-create.png',
-            fullPage: true
-        })
-    })
+    await expect(page.getByText('Nội dung bài viết không được để trống')).toBeVisible({ timeout: 5000 })
+  })
 
-    /**
-     * Test 2: Admin edits existing blog post
-     */
-    test('admin edits existing blog post', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog')
+  test('báo lỗi khi slug không hợp lệ', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-        await expect(page).toHaveURL(/crm\/admin\/blog/)
-        await page.waitForLoadState('networkidle')
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await titleInput.fill('Test')
 
-        // Mock API for blog post list
-        await page.route('**/api/admin/blog**', async route => {
-            if (route.request().method() === 'GET') {
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        posts: [
-                            {
-                                id: 'post-456',
-                                title: 'Hướng dẫn trồng cây tràm',
-                                slug: 'huong-dan-trong-cay-tram',
-                                status: 'draft',
-                                created_at: '2026-03-15T10:00:00Z'
-                            }
-                        ],
-                        total: 1
-                    })
-                })
-            } else {
-                await route.continue()
-            }
-        })
+    // Manually override slug to invalid value
+    const slugInput = page.getByPlaceholder('url-slug-bai-viet')
+    await slugInput.fill('Slug Không Hợp Lệ!')
 
-        // Mock API for updating blog post
-        await page.route('**/api/admin/blog/post-456', async route => {
-            if (route.request().method() === 'PATCH' || route.request().method() === 'PUT') {
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        message: 'Blog post updated successfully'
-                    })
-                })
-            } else {
-                await route.continue()
-            }
-        })
+    const editor = page.locator('.ProseMirror')
+    await editor.click()
+    await editor.pressSequentially('Nội dung hợp lệ.')
 
-        // Look for edit button
-        const editButton = page.getByRole('button', { name: /sửa|edit|chỉnh sửa/i }).first().or(page.getByRole('link', { name: /sửa|edit|chỉnh sửa/i }).first())
-        const hasEditButton = await editButton.count() > 0
+    await page.getByRole('button', { name: 'Lưu Draft' }).click()
 
-        if (hasEditButton) {
-            await editButton.click()
-            await page.waitForLoadState('networkidle')
-            console.log('✅ Navigated to blog post edit page')
+    await expect(page.getByText('Slug chỉ được chứa chữ thường, số và dấu gạch ngang')).toBeVisible({ timeout: 5000 })
+  })
+})
 
-            // Modify title
-            const titleInput = page.locator('input[name="title"], input[placeholder*="tiêu đề"]').first()
-            if (await titleInput.count() > 0) {
-                await titleInput.fill('Hướng dẫn trồng cây tràm - Cập nhật 2026')
-                console.log('✅ Blog title updated')
-            }
+test.describe('[P1] Admin Blog – Slug Auto-gen', () => {
+  test('slug tự động sinh từ tiêu đề', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-            // Modify content
-            const contentInput = page.locator('textarea[name="content"], div[contenteditable="true"]').first()
-            if (await contentInput.count() > 0) {
-                await contentInput.fill('Cây tràm là loài cây quý hiếm, được trồng phổ biến tại miền Tây Nam Bộ. Bài viết này sẽ hướng dẫn chi tiết cách trồng và chăm sóc cây tràm.')
-                console.log('✅ Blog content updated')
-            }
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await titleInput.fill('Trồng Cây Xanh 2026')
 
-            // Click save button
-            const saveButton = page.getByRole('button', { name: /lưu|save|cập nhật|update/i }).last()
-            if (await saveButton.count() > 0) {
-                await saveButton.click()
-                await page.waitForLoadState('networkidle')
+    // Wait for slug to auto-update via useEffect
+    const slugInput = page.getByPlaceholder('url-slug-bai-viet')
+    await expect(slugInput).not.toHaveValue('', { timeout: 3000 })
 
-                // Check for success message
-                const successMessage = page.locator('text=/thành công|success|đã cập nhật/i')
-                if (await successMessage.isVisible({ timeout: 5000 })) {
-                    console.log('✅ Blog post edited successfully')
-                }
-            }
-        } else {
-            console.log('ℹ️ No blog posts available to edit')
-        }
+    const slugValue = await slugInput.inputValue()
+    expect(slugValue).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    expect(slugValue).toContain('trong')
+    expect(slugValue).toContain('cay')
+    expect(slugValue).toContain('xanh')
+  })
 
-        await page.screenshot({
-            path: 'e2e-results/admin-blog-edit.png',
-            fullPage: true
-        })
-    })
+  test('nút Tự động reset slug về giá trị sinh từ tiêu đề', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-    /**
-     * Test 3: Admin changes post status (draft/published/scheduled)
-     */
-    test('admin changes post status (draft/published/scheduled)', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog')
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await titleInput.fill('Hướng dẫn trồng cây tràm')
 
-        await expect(page).toHaveURL(/crm\/admin\/blog/)
-        await page.waitForLoadState('networkidle')
+    // Manually override slug
+    const slugInput = page.getByPlaceholder('url-slug-bai-viet')
+    await slugInput.fill('slug-manual-override')
 
-        // Mock API for updating post status
-        await page.route('**/api/admin/blog/*/status', async route => {
-            if (route.request().method() === 'PATCH') {
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        success: true,
-                        message: 'Post status updated successfully'
-                    })
-                })
-            } else {
-                await route.continue()
-            }
-        })
+    // Click Tự động button to reset
+    await page.getByRole('button', { name: 'Tự động' }).click()
 
-        // Look for status dropdown or status change button
-        const statusSelect = page.locator('select[name*="status"]').first()
-        const hasStatusSelect = await statusSelect.count() > 0
+    const slugValue = await slugInput.inputValue()
+    expect(slugValue).not.toBe('slug-manual-override')
+    expect(slugValue).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  })
+})
 
-        if (hasStatusSelect) {
-            // Test changing status from draft to published
-            await statusSelect.selectOption({ value: 'published' })
-            await page.waitForLoadState('networkidle')
+test.describe('[P1] Admin Blog – Delete', () => {
+  // Note: these tests require at least one post to exist.
+  // They will log a skip message if no posts are found rather than failing.
 
-            const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|xuất bản/i })
-            if (await confirmButton.count() > 0) {
-                await confirmButton.click()
-                await page.waitForLoadState('networkidle')
-            }
+  test('xóa bài viết sau khi xác nhận', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog')
+    await page.waitForLoadState('networkidle')
 
-            // Check for success message
-            const successMessage = page.locator('text=/thành công|success|đã xuất bản/i')
-            if (await successMessage.isVisible({ timeout: 5000 })) {
-                console.log('✅ Post status changed to "published"')
-            }
+    const deleteButton = page.getByRole('button', { name: 'Xóa' }).first()
+    const hasPost = await deleteButton.count() > 0
 
-            // Test changing to scheduled
-            if (await statusSelect.isVisible()) {
-                await statusSelect.selectOption({ value: 'scheduled' })
-                await page.waitForLoadState('networkidle')
+    if (!hasPost) {
+      console.log('ℹ️ Không có bài viết để xóa – bỏ qua test')
+      return
+    }
 
-                // Look for datetime picker if scheduled
-                const datetimeInput = page.locator('input[type="datetime-local"], input[name*="publish_at"]')
-                if (await datetimeInput.count() > 0) {
-                    await datetimeInput.fill('2026-04-01T10:00')
-                    console.log('✅ Scheduled publish date set')
-                }
-            }
+    // Get title of post to be deleted (for assertion)
+    const firstRow = page.locator('tbody tr').first()
+    const postTitle = await firstRow.locator('td').first().locator('.font-medium').textContent()
 
-            console.log('✅ Post status change functionality working')
-        } else {
-            // Look for status change buttons instead
-            const publishButton = page.getByRole('button', { name: /xuất bản|publish/i }).first()
-            if (await publishButton.count() > 0) {
-                await publishButton.click()
-                await page.waitForLoadState('networkidle')
+    // Accept the confirm dialog
+    page.once('dialog', dialog => dialog.accept())
+    await deleteButton.click()
 
-                const successMessage = page.locator('text=/thành công|success|đã xuất bản/i')
-                if (await successMessage.isVisible({ timeout: 5000 })) {
-                    console.log('✅ Post published successfully')
-                }
-            } else {
-                console.log('ℹ️ Status change controls not found')
-            }
-        }
+    // Wait for table to re-render (router.refresh())
+    await page.waitForLoadState('networkidle')
 
-        await page.screenshot({
-            path: 'e2e-results/admin-blog-status.png',
-            fullPage: true
-        })
-    })
+    // Post should be gone from the table
+    if (postTitle) {
+      await expect(page.getByText(postTitle, { exact: true })).not.toBeVisible({ timeout: 5000 })
+    }
+  })
 
-    /**
-     * Test 4: Admin previews blog post before publishing
-     */
-    test('admin previews blog post before publishing', async ({ page }) => {
-        await loginAsAdmin(page, '/crm/admin/blog/new')
+  test('hủy xóa bài viết', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog')
+    await page.waitForLoadState('networkidle')
 
-        await page.waitForLoadState('networkidle')
-        // Fill in basic blog post info
-        const titleInput = page.locator('input[name="title"], input[placeholder*="tiêu đề"]').first()
-        if (await titleInput.count() > 0) {
-            await titleInput.fill('Preview Test - Phương pháp trồng cây bền vững')
-        }
+    const deleteButton = page.getByRole('button', { name: 'Xóa' }).first()
+    const hasPost = await deleteButton.count() > 0
 
-        const contentInput = page.locator('textarea[name="content"], div[contenteditable="true"]').first()
-        if (await contentInput.count() > 0) {
-            await contentInput.fill('Bài viết này giới thiệu các phương pháp trồng cây bền vững, thân thiện với môi trường và mang lại hiệu quả kinh tế cao.')
-        }
+    if (!hasPost) {
+      console.log('ℹ️ Không có bài viết để kiểm tra hủy xóa – bỏ qua test')
+      return
+    }
 
-        // Look for preview button
-        const previewButton = page.getByRole('button', { name: /xem trước|preview/i })
-        const hasPreviewButton = await previewButton.count() > 0
+    // Get title before dismiss
+    const firstRow = page.locator('tbody tr').first()
+    const postTitle = await firstRow.locator('td').first().locator('.font-medium').textContent()
 
-        if (hasPreviewButton) {
-            await previewButton.click()
-            await page.waitForLoadState('networkidle')
+    // Dismiss the confirm dialog (cancel)
+    page.once('dialog', dialog => dialog.dismiss())
+    await deleteButton.click()
 
-            // Check if preview modal or new tab opened
-            const previewModal = page.locator('[role="dialog"], [class*="modal"], [class*="preview"]')
-            const hasPreviewModal = await previewModal.count() > 0
+    // Post should still be in the table
+    if (postTitle) {
+      await expect(page.getByText(postTitle, { exact: true })).toBeVisible({ timeout: 3000 })
+    }
+  })
+})
 
-            if (hasPreviewModal) {
-                console.log('✅ Preview modal opened')
+test.describe('[P2] Admin Blog – Tags', () => {
+  test('thêm và xóa tag trong form tạo bài', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
 
-                // Verify preview content is visible
-                await expect(previewModal.getByText('Preview Test - Phương pháp trồng cây bền vững')).toBeVisible({ timeout: 5000 })
-                console.log('✅ Preview content displayed correctly')
+    const tagInput = page.getByPlaceholder('Nhập tag rồi nhấn Enter hoặc dấu phẩy...')
 
-                // Close preview
-                const closeButton = page.getByRole('button', { name: /đóng|close/i })
-                if (await closeButton.count() > 0) {
-                    await closeButton.click()
-                }
-            } else {
-                // Check if new window/tab opened (for external preview)
-                const pages = page.context().pages()
-                if (pages.length > 1) {
-                    console.log('✅ Preview opened in new tab')
-                    const previewPage = pages[pages.length - 1]
-                    await previewPage.close()
-                }
-            }
+    // Add tag via Enter
+    await tagInput.fill('trồng-cây')
+    await tagInput.press('Enter')
 
-            console.log('✅ Blog post preview functionality working')
-        } else {
-            console.log('ℹ️ Preview button not found - may not be implemented yet')
-        }
+    // Tag chip should appear
+    await expect(page.getByText('trồng-cây')).toBeVisible({ timeout: 3000 })
 
-        await page.screenshot({
-            path: 'e2e-results/admin-blog-preview.png',
-            fullPage: true
-        })
-    })
+    // Add second tag via comma
+    await tagInput.fill('môi-trường,')
+    await tagInput.press('Enter')
+    await expect(page.getByText('môi-trường')).toBeVisible({ timeout: 3000 })
+
+    // Remove first tag by clicking ×
+    const firstTagSpan = page.locator('span').filter({ hasText: 'trồng-cây' })
+    await firstTagSpan.getByRole('button').click()
+
+    await expect(page.getByText('trồng-cây')).not.toBeVisible({ timeout: 3000 })
+    // Second tag still present
+    await expect(page.getByText('môi-trường')).toBeVisible()
+  })
+})
+
+test.describe('[P2] Admin Blog – Edit', () => {
+  test('chỉnh sửa bài viết hiện có', async ({ page }) => {
+    // Create a post first to guarantee one exists for editing
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
+
+    const ts = Date.now()
+    await page.getByPlaceholder('Nhập tiêu đề bài viết...').fill(`Edit Target – ${ts}`)
+    const editor = page.locator('.ProseMirror')
+    await editor.click()
+    await editor.pressSequentially('Nội dung bài viết dành cho test chỉnh sửa.')
+    await page.getByRole('button', { name: 'Lưu Draft' }).click()
+    await expect(page).toHaveURL(/crm\/admin\/blog\/.+\/edit/, { timeout: 15000 })
+
+    // Now we're already on the edit page — update the title
+    const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
+    await expect(titleInput).toBeVisible({ timeout: 10000 })
+    const currentTitle = await titleInput.inputValue()
+    expect(currentTitle.length).toBeGreaterThan(0)
+
+    await titleInput.fill(currentTitle + ' – Đã cập nhật')
+
+    await page.getByRole('button', { name: 'Lưu Draft' }).click()
+
+    // On edit (not create), Server Action returns without navigation → successMsg shows
+    await expect(page.getByText('Đã lưu draft!')).toBeVisible({ timeout: 10000 })
+  })
 })

@@ -169,3 +169,49 @@ inputDocuments:
 | **Overall** | **~72/100** | **~75/100 (B+)** |
 
 *Session 3 hoàn thành: 2026-04-20*
+
+---
+
+## Session 4 — New Coverage for Uncovered Actions
+
+### 📂 Files Được Tạo
+
+| File | Tests | Scope |
+|---|---|---|
+| `src/actions/__tests__/adminOrders.test.ts` | 10 | fetchAdminOrders (email search, pagination, user/referrer enrichment, DB error), verifyAdminOrder |
+| `src/actions/__tests__/adminReferrals.test.ts` | 8 | fetchAdminReferrals (aggregation, commission 10%, balance calc, sort by commission, 3x DB error paths) |
+| `src/actions/__tests__/photoUpload.test.ts` | 12 | uploadPhotoToStorage, createTreePhotoRecord, batchUploadPhotos (partial failure), getLotsForUpload |
+| `src/actions/__tests__/adminSettings.test.ts` | 12 | getAdminProfile, updateAdminProfile, getNotificationPreferences (defaults), updateNotificationPreferences |
+| `src/actions/__tests__/systemSettings.test.ts` | 13 | getSystemConfig (defaults, transform), updateSystemConfig (validation, per-key loop), getEmailTemplates, getEmailTemplatePreview |
+
+### 📊 Kết Quả
+
+| Metric | Giá trị |
+|---|---|
+| Tests mới | **55** |
+| Tests tổng cộng | **491** (all pass) |
+| Test Suites | **44** (all pass) |
+| Files mới | 5 |
+| Thời gian chạy | ~3.4s |
+
+### Coverage Gaps Đã Đóng
+
+| ID | Target | Status |
+|---|---|---|
+| N10 | `adminOrders.ts` | ✅ DONE |
+| N11 | `adminReferrals.ts` | ✅ DONE |
+| N12 | `photoUpload.ts` | ✅ DONE |
+| N13 | `admin-settings.ts` | ✅ DONE |
+| N14 | `system-settings.ts` | ✅ DONE |
+
+### Score Re-projection
+
+| Dimension | After session 3 | After session 4 |
+|---|---|---|
+| Determinism | 75 | 75 |
+| Isolation | 72 | 78 (+6: 5 new mocked unit test files, all DB-isolated) |
+| Maintainability | 75 | 78 (+3: gap closure in admin action layer) |
+| Performance | 80 | 80 |
+| **Overall** | **~75/100** | **~78/100** |
+
+*Session 4 hoàn thành: 2026-04-21*
