@@ -91,8 +91,8 @@ setup('Xác thực đăng nhập toàn cục (Global Auth)', async ({ page }) =>
     console.log(`📲 Nhập OTP: ${otp}`)
 
     const otpInputs = page.locator('input[inputmode="numeric"]')
-    await expect(otpInputs).toHaveCount(8, { timeout: 5000 })
-    for (let i = 0; i < 8; i++) {
+    await expect(otpInputs).toHaveCount(6, { timeout: 5000 })
+    for (let i = 0; i < 6; i++) {
         await otpInputs.nth(i).fill(otp[i])
     }
 

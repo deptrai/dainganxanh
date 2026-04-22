@@ -92,17 +92,17 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
         await sendOTPButton.click()
 
         // Verify OTP input form appears
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
         // Verify 8 OTP input fields
         const otpInputs = page.locator('input[inputmode="numeric"]')
-        await expect(otpInputs).toHaveCount(8)
+        await expect(otpInputs).toHaveCount(6)
 
         // Verify OTP was sent to Mailpit (real email delivery in dev environment)
         console.log('⏳ Fetching OTP from Mailpit...')
         const otpCode = await getOTPFromMailpit(testEmail)
         console.log(`✅ Got OTP: ${otpCode}`)
-        expect(otpCode).toMatch(/^\d{8}$/)
+        expect(otpCode).toMatch(/^\d{6}$/)
 
         console.log('✅ Registration OTP sent and received successfully')
     })
@@ -134,7 +134,7 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
         await sendOTPButton.click()
 
         // Wait for OTP input
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
         // Get real OTP from Mailpit
         console.log('⏳ Fetching OTP from Mailpit...')
@@ -143,7 +143,7 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
 
         // Enter OTP
         const otpInputs = page.locator('input[inputmode="numeric"]')
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
@@ -188,12 +188,12 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
         await sendOTPButton.click()
 
         // Wait for OTP input
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
         // Get and enter OTP
         const otpCode = await getOTPFromMailpit(testEmail)
         const otpInputs = page.locator('input[inputmode="numeric"]')
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
@@ -243,12 +243,12 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
         await sendOTPButton.click()
 
         // Wait for OTP input
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
         // Get and enter OTP
         const otpCode = await getOTPFromMailpit(testEmail)
         const otpInputs = page.locator('input[inputmode="numeric"]')
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
@@ -317,12 +317,12 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
         await sendOTPButton.click()
 
         // Wait for OTP input
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
         // Get and enter OTP
         const otpCode = await getOTPFromMailpit(testEmail)
         const otpInputs = page.locator('input[inputmode="numeric"]')
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
@@ -383,12 +383,12 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
         await sendOTPButton.click()
 
         // Wait for OTP input
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
         // Get and enter OTP
         const otpCode = await getOTPFromMailpit(testEmail)
         const otpInputs = page.locator('input[inputmode="numeric"]')
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
