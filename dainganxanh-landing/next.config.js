@@ -23,9 +23,8 @@ const nextConfig = {
     ],
   },
 
-  // Disable type checking during build (handled by Nx)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 }
 
