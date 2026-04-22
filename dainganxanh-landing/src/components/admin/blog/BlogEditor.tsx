@@ -80,7 +80,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     return imageCompression(file, {
       maxSizeMB: 0.8,
       maxWidthOrHeight: 1280,
-      useWebWorker: false,
+      useWebWorker: true,
       fileType: 'image/webp',
     })
   }
