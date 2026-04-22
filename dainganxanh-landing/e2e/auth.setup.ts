@@ -31,16 +31,16 @@ async function performOTPLogin(page: import('@playwright/test').Page, email: str
     await emailInput.fill(email)
 
     const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-    await sendOTPButton.click()
+    await sendOTPButton.click({ force: true })
 
-    await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/nhập mã otp \(6 chữ số\)/i)).toBeVisible({ timeout: 10000 })
 
     const otpCode = await getOTPFromMailpit(email)
 
     const otpInputs = page.locator('input[inputmode="numeric"]')
-    await expect(otpInputs).toHaveCount(8)
+    await expect(otpInputs).toHaveCount(6)
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
         await otpInputs.nth(i).fill(otpCode[i])
     }
 

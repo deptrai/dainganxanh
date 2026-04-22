@@ -272,3 +272,39 @@ export async function approveAdminOrder(orderId: string, proofUrl?: string): Pro
     return {}
 }
 
+export async function verifyAdminOrder(orderId: string): Promise<{ error?: string }> {
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return { error: 'Unauthorized' }
+    }
+
+    const serviceSupabase = createServiceRoleClient()
+
+    const { data: adminUser } = await serviceSupabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (!adminUser || !['admin', 'super_admin'].includes(adminUser.role)) {
+        return { error: 'Forbidden: admin role required' }
+    }
+
+    const { error: updateError } = await serviceSupabase
+        .from('orders')
+        .update({
+            status: 'verified',
+            verified_at: new Date().toISOString(),
+        })
+        .eq('id', orderId)
+
+    if (updateError) {
+        console.error('verifyAdminOrder update error:', updateError)
+        return { error: updateError.message }
+    }
+
+    revalidatePath('/crm/admin/orders')
+    return {}
+}
+
