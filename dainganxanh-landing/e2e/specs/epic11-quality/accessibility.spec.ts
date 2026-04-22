@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
+import { getOTPFromMailpit } from '../../fixtures/mailpit'
 import AxeBuilder from '@axe-core/playwright'
-import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsUser } from './fixtures/auth'
+import { ADMIN_EMAIL, TEST_EMAIL } from '../../fixtures/identity'
+import { loginAsUser } from '../../fixtures/auth'
 
 /**
  * Accessibility & UX E2E Test Suite (Phase 7)

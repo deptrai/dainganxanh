@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
+import { getOTPFromMailpit } from '../../fixtures/mailpit'
 
 /**
  * Registration & Authentication E2E Test Suite

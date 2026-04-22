@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { loginAsUser } from './fixtures/auth'
+import { loginAsUser } from '../../fixtures/auth'
 
 /**
  * Harvest Decision Flow E2E Test Suite

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
-import { loginAsUser } from './fixtures/auth'
+import { getOTPFromMailpit } from '../../fixtures/mailpit'
+import { loginAsUser } from '../../fixtures/auth'
 
 /**
  * Referral System E2E Test Suite

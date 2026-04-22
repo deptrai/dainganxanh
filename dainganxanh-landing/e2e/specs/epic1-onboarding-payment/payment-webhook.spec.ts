@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
+import { getOTPFromMailpit } from '../../fixtures/mailpit'
 import crypto from 'crypto'
-import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin } from './fixtures/auth'
+import { ADMIN_EMAIL, TEST_EMAIL } from '../../fixtures/identity'
+import { loginAsAdmin } from '../../fixtures/auth'
 
 /**
  * Payment Webhook E2E Test Suite

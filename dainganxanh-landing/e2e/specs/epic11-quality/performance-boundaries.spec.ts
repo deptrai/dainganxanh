@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
-import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin, loginAsUser } from './fixtures/auth'
-import { mockServerDelay } from './fixtures/timing'
+import { getOTPFromMailpit } from '../../fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from '../../fixtures/identity'
+import { loginAsAdmin, loginAsUser } from '../../fixtures/auth'
+import { mockServerDelay } from '../../fixtures/timing'
 
 /**
  * Performance & Boundary Testing E2E Test Suite

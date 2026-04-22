@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from './fixtures/mailpit'
-import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin } from './fixtures/auth'
+import { getOTPFromMailpit } from '../../fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from '../../fixtures/identity'
+import { loginAsAdmin } from '../../fixtures/auth'
 
 /**
  * Admin Users Management E2E Test Suite
