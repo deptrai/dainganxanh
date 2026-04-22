@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Shield } from "lucide-react";
+import Link from "next/link";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function UserHeader() {
     const router = useRouter();
     const [user, setUser] = useState<SupabaseUser | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -18,6 +20,16 @@ export function UserHeader() {
         const fetchUser = async () => {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             setUser(authUser);
+
+            if (authUser) {
+                const { data: profile } = await supabase
+                    .from("users")
+                    .select("role")
+                    .eq("id", authUser.id)
+                    .single();
+                setIsAdmin(profile?.role === "admin" || profile?.role === "super_admin");
+            }
+
             setLoading(false);
         };
 
@@ -64,6 +76,16 @@ export function UserHeader() {
                     <p className="text-xs text-gray-600 truncate">{displayEmail}</p>
                 </div>
             </div>
+            {isAdmin && (
+                <Link
+                    href="/crm/admin"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                    title="Quản lý"
+                >
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">Admin</span>
+                </Link>
+            )}
             <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

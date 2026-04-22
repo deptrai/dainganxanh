@@ -3,7 +3,6 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -46,14 +45,15 @@ export default function BlogEditor({ post }: BlogEditorProps) {
   const [metaDesc, setMetaDesc] = useState(post?.meta_desc ?? '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const contentImageInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3, 4] },
+        link: { openOnClick: false },
       }),
       Image.configure({ allowBase64: false }),
-      Link.configure({ openOnClick: false }),
       Placeholder.configure({ placeholder: 'Bắt đầu viết nội dung bài...' }),
     ],
     content: post?.content ?? '',
@@ -80,7 +80,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     return imageCompression(file, {
       maxSizeMB: 0.8,
       maxWidthOrHeight: 1280,
-      useWebWorker: true,
+      useWebWorker: false,
       fileType: 'image/webp',
     })
   }
@@ -103,6 +103,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
         return
       }
       editor.chain().focus().setImage({ src: result.url }).run()
+      if (contentImageInputRef.current) contentImageInputRef.current.value = ''
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload thất bại')
     } finally {
@@ -128,6 +129,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
         return
       }
       setCoverImage(result.url)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload ảnh bìa thất bại')
     } finally {
@@ -327,6 +329,8 @@ export default function BlogEditor({ post }: BlogEditorProps) {
                 className="hidden"
                 onChange={handleUploadImage}
                 disabled={uploadingImage}
+                ref={contentImageInputRef}
+                data-testid="content-image-input"
               />
             </label>
           </div>

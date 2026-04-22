@@ -277,6 +277,99 @@ test.describe('[P2] Admin Blog – Edit', () => {
   })
 })
 
+test.describe('[P1] Admin Blog – Image Upload', () => {
+  // Minimal valid 1×1 PNG (53 bytes) — avoids needing a fixture file on disk
+  const TINY_PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64'
+  )
+
+  test('upload ảnh nội dung vào editor', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
+
+    const contentInput = page.locator('[data-testid="content-image-input"]')
+    await contentInput.setInputFiles({
+      name: 'test-content.png',
+      mimeType: 'image/png',
+      buffer: TINY_PNG,
+    })
+
+    // Wait for async upload + TipTap setImage
+    await expect(page.locator('.ProseMirror img').first()).toBeVisible({ timeout: 20000 })
+
+    const imgSrc = await page.locator('.ProseMirror img').first().getAttribute('src')
+    expect(imgSrc).toContain('blog-images')
+  })
+
+  test('upload ảnh bìa', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
+
+    const coverInput = page.locator('[data-testid="cover-file-input"]')
+    await coverInput.setInputFiles({
+      name: 'test-cover.png',
+      mimeType: 'image/png',
+      buffer: TINY_PNG,
+    })
+
+    // Cover URL text input should get populated after upload
+    const coverUrlInput = page.getByPlaceholder(/https:\/\/\.\.\. hoặc upload/)
+    await expect(coverUrlInput).not.toHaveValue('', { timeout: 20000 })
+
+    const coverUrl = await coverUrlInput.inputValue()
+    expect(coverUrl).toContain('blog-images')
+  })
+
+  test('input reset sau upload cho phép upload lần 2 vào editor', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
+
+    const contentInput = page.locator('[data-testid="content-image-input"]')
+    const uploadLabel = page.locator('label:has([data-testid="content-image-input"])')
+
+    // First upload
+    await contentInput.setInputFiles({ name: 'img-1.png', mimeType: 'image/png', buffer: TINY_PNG })
+    await expect(page.locator('.ProseMirror img').first()).toBeVisible({ timeout: 20000 })
+    await expect(contentInput).not.toBeDisabled({ timeout: 5000 })
+
+    // Second upload via label click — confirms input was reset (onChange re-triggers)
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      uploadLabel.click(),
+    ])
+    await fileChooser.setFiles({ name: 'img-2.png', mimeType: 'image/png', buffer: TINY_PNG })
+    // Verify second upload completes (input goes disabled then enabled)
+    await expect(contentInput).not.toBeDisabled({ timeout: 20000 })
+  })
+
+  test('re-upload cùng file ảnh bìa (test input reset)', async ({ page }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
+
+    const coverInput = page.locator('[data-testid="cover-file-input"]')
+    const filePayload = {
+      name: 'test-cover-reupload.png',
+      mimeType: 'image/png',
+      buffer: TINY_PNG,
+    }
+
+    await coverInput.setInputFiles(filePayload)
+    const coverUrlInput = page.getByPlaceholder(/https:\/\/\.\.\. hoặc upload/)
+    await expect(coverUrlInput).not.toHaveValue('', { timeout: 20000 })
+    const firstUrl = await coverUrlInput.inputValue()
+
+    // Upload again — should get a new URL (different filename due to Date.now())
+    await coverInput.setInputFiles(filePayload)
+    await page.waitForTimeout(3000) // give time for second upload
+    const secondUrl = await coverUrlInput.inputValue()
+    expect(secondUrl).not.toBe('')
+    expect(secondUrl).toContain('blog-images')
+    // URLs differ because each upload uses a unique timestamp filename
+    expect(secondUrl).not.toBe(firstUrl)
+  })
+})
+
 // Cleanup: xóa tất cả blog posts được tạo trong test suite này
 test.afterAll(async () => {
   const TEST_TITLE_PATTERNS = [
