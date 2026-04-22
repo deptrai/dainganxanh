@@ -15,14 +15,6 @@ import { loginAsAdmin } from './fixtures/auth'
 
 test.describe('[P0] Admin Withdrawals Management E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
 
     /**

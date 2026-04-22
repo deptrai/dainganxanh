@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 import { TEST_ORDER_ID, navigateToOrderDetail } from './fixtures/tree-detail'
 
 /**
@@ -21,21 +21,13 @@ import { TEST_ORDER_ID, navigateToOrderDetail } from './fixtures/tree-detail'
 
 test.describe('[P1] Tree Detail — Photo Gallery & Timeline E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
     /**
      * Test 5: User browses tree growth photo gallery
      */
     test('user browses tree growth photo gallery', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock photo gallery API
         await page.route('**/api/orders/*/photos', route => route.fulfill({
@@ -113,7 +105,7 @@ test.describe('[P1] Tree Detail — Photo Gallery & Timeline E2E', () => {
      */
     test('user filters photos by growth phase', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock photo gallery API with multiple phases
         await page.route('**/api/orders/*/photos*', route => {
@@ -202,7 +194,7 @@ test.describe('[P1] Tree Detail — Photo Gallery & Timeline E2E', () => {
      */
     test('user views tree timeline with key events', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock timeline events API
         await page.route('**/api/orders/*/timeline', route => route.fulfill({
@@ -286,7 +278,7 @@ test.describe('[P1] Tree Detail — Photo Gallery & Timeline E2E', () => {
      */
     test('user clicks timeline event for detail popup', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock timeline events API
         await page.route('**/api/orders/*/timeline', route => route.fulfill({

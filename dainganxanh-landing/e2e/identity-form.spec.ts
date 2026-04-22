@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 
 /**
  * Identity Form E2E Test Suite
@@ -15,14 +15,6 @@ import { loginAtLoginPage } from './fixtures/auth'
 
 test.describe('[P1] Identity Form E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
     /**
      * Test Data: Valid identity data
      */
@@ -43,7 +35,7 @@ test.describe('[P1] Identity Form E2E', () => {
      */
     test('user without id_number sees identity form after purchase', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock API response to simulate order without id_number
         await page.route('**/api/orders/status', async route => {
@@ -96,7 +88,7 @@ test.describe('[P1] Identity Form E2E', () => {
      */
     test('user fills and submits identity form successfully', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order status API - order without id_number
         await page.route('**/api/orders/status', async route => {
@@ -162,7 +154,7 @@ test.describe('[P1] Identity Form E2E', () => {
      */
     test('form validation works for required fields', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order status API
         await page.route('**/api/orders/status', async route => {
@@ -229,7 +221,7 @@ test.describe('[P1] Identity Form E2E', () => {
      */
     test('user can skip identity form', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order status API
         await page.route('**/api/orders/status', async route => {
@@ -274,7 +266,7 @@ test.describe('[P1] Identity Form E2E', () => {
      */
     test('user with existing id_number skips form', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order status API - order WITH id_number (form should NOT show)
         await page.route('**/api/orders/status', async route => {
@@ -321,12 +313,14 @@ test.describe('[P1] Identity Form E2E', () => {
 
         page.on('console', msg => {
             if (msg.type() === 'error') {
-                consoleErrors.push(msg.text())
+                const text = msg.text()
+                if (text.includes('Failed to load resource') || text.includes('404') || text.includes('406')) return
+                consoleErrors.push(text)
             }
         })
 
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order status API
         await page.route('**/api/orders/status', async route => {

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 import { TEST_ORDER_ID, navigateToOrderDetail } from './fixtures/tree-detail'
 
 /**
@@ -21,21 +21,13 @@ import { TEST_ORDER_ID, navigateToOrderDetail } from './fixtures/tree-detail'
 
 test.describe('[P1] Tree Detail — Map & Camera E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
     /**
      * Test 1: User views tree GPS location on map
      */
     test('user views tree GPS location on map', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock Google Maps API
         await page.route('**/maps.googleapis.com/**', route => route.fulfill({
@@ -109,7 +101,7 @@ test.describe('[P1] Tree Detail — Map & Camera E2E', () => {
      */
     test('map displays multiple tree locations for multi-tree orders', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock Google Maps API
         await page.route('**/maps.googleapis.com/**', route => route.fulfill({
@@ -195,7 +187,7 @@ test.describe('[P1] Tree Detail — Map & Camera E2E', () => {
      */
     test('user views farm camera section', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock camera stream API
         await page.route('**/api/camera/stream/**', route => route.fulfill({
@@ -262,7 +254,7 @@ test.describe('[P1] Tree Detail — Map & Camera E2E', () => {
      */
     test('user switches between multiple farm cameras', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock multiple cameras API
         await page.route('**/api/camera/list/**', route => route.fulfill({

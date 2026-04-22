@@ -3,7 +3,7 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
+import { loginAsAdmin, loginAsUser } from './fixtures/auth'
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
@@ -28,14 +28,6 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') })
 
 test.describe('[P0] Withdrawal Flow E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
     const TEST_EMAIL = 'test@test.com'
 
 
@@ -50,7 +42,7 @@ test.describe('[P0] Withdrawal Flow E2E', () => {
      * This test verifies the withdrawal UI exists and adapts based on balance
      */
     test('user can view referrals page and withdrawal section', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')

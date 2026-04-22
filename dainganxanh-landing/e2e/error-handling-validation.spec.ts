@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
+import { loginAsAdmin, loginAsUser } from './fixtures/auth'
 
 /**
  * Error Handling — Form Validation & Data Integrity E2E
@@ -21,14 +21,6 @@ import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
 
 test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
     /**
      * ============================================
@@ -85,7 +77,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
      * Test 2: Identity form with invalid CCCD format
      */
     test('identity form rejects invalid CCCD format', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order status - no id_number to trigger form
         await page.route('**/api/orders/status', async route => {
@@ -147,7 +139,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
      * SKIPPED: Current schema only validates min length, not character restrictions
      */
     test.skip('identity form rejects name with numbers or special characters', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         await page.route('**/api/orders/status', async route => {
             await route.fulfill({
@@ -212,7 +204,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
      * To seed test data, run: npx tsx e2e/seed-withdrawal-test-data.ts
      */
     test('withdrawal form rejects amount below 200k minimum', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         await page.goto('/crm/referrals')
         await page.waitForLoadState('networkidle')
@@ -230,7 +222,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
         }
 
         await withdrawButton.click()
-        await page.waitForLoadState('networkidle')
+        await page.waitForSelector('select', { timeout: 10000 })
 
         // Fill required fields
         await page.selectOption('select', { label: 'Vietcombank' })
@@ -243,7 +235,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
         // Submit to trigger client-side validation
         const submitButton = page.getByRole('button', { name: /gửi yêu cầu/i })
         await submitButton.click()
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
 
         // Verify error message from client-side validation
         await expect(page.getByText(/số tiền rút tối thiểu là 200,000 VNĐ/i))
@@ -263,7 +255,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
      * Prerequisites: Same as Test 4
      */
     test('withdrawal form rejects amount exceeding available balance', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         await page.goto('/crm/referrals')
         await page.waitForLoadState('networkidle')
@@ -280,7 +272,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
         }
 
         await withdrawButton.click()
-        await page.waitForLoadState('networkidle')
+        await page.waitForSelector('select', { timeout: 10000 })
 
         // Fill required fields
         await page.selectOption('select', { label: 'Vietcombank' })
@@ -293,7 +285,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
         // Submit to trigger validation
         const submitButton = page.getByRole('button', { name: /gửi yêu cầu/i })
         await submitButton.click()
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
 
         // Verify error message
         await expect(page.getByText(/số tiền vượt quá số dư khả dụng/i))
@@ -359,7 +351,7 @@ test.describe('[P1] Error Handling — Form Validation & Data Integrity E2E', ()
      * Test 17: Negative order amount rejected
      */
     test('negative order amount is rejected', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock order creation API with validation
         await page.route('**/api/orders/create', async route => {

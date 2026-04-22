@@ -35,12 +35,12 @@ test.describe('[P0] Payment Webhook E2E', () => {
      */
     function createWebhookPayload(orderCode: string, amount: number) {
         return {
-            id: `txn-${Date.now()}`,
+            id: `txn-${require('crypto').randomBytes(4).toString('hex')}`,
             amount: amount,
             description: `${orderCode} - Thanh toan cay xanh`,
             when: new Date().toISOString(),
             bank_sub_acc_id: 'CASSO_ACCOUNT',
-            tid: `TXN${Date.now()}`
+            tid: `TXN${require('crypto').randomBytes(4).toString('hex')}`
         }
     }
 

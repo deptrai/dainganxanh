@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 
 /**
  * Referral Tracking E2E Test Suite
@@ -15,26 +15,24 @@ import { loginAtLoginPage } from './fixtures/auth'
 
 test.describe('[P2] Referral Tracking E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
     /**
      * Test 1: Landing page with ref parameter sets cookie
      */
     test('landing page with ref parameter sets cookie', async ({ page }) => {
+        // Clear existing cookies so ReferralTracker sets the new ref cookie
+        await page.context().clearCookies()
+
         // ============================================
         // Phase 1: Navigate to landing page with ref parameter
         // ============================================
         await page.goto('/?ref=TESTCODE123')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
-        // Wait for ReferralTracker component to set cookie
-        await page.waitForLoadState('networkidle')
+        // Wait for ReferralTracker component (React) to set cookie after hydration
+        await page.waitForFunction(
+            () => document.cookie.includes('ref='),
+            { timeout: 10000 }
+        ).catch(() => {})
 
         // ============================================
         // Phase 2: Read cookies and verify ref cookie
@@ -66,6 +64,9 @@ test.describe('[P2] Referral Tracking E2E', () => {
      * Test 2: Referral click is tracked via API
      */
     test('referral click is tracked in database', async ({ page }) => {
+        // Clear existing ref cookie so tracker fires
+        await page.context().clearCookies()
+
         let trackingApiCalled = false
         let requestPayload: any = null
 
@@ -90,10 +91,13 @@ test.describe('[P2] Referral Tracking E2E', () => {
         // Phase 2: Navigate with ref parameter
         // ============================================
         await page.goto('/?ref=TRACKTEST456')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
-        // Wait for tracking call
-        await page.waitForLoadState('networkidle')
+        // Wait for ReferralTracker component to set cookie and fire tracking
+        await page.waitForFunction(
+            () => document.cookie.includes('ref='),
+            { timeout: 10000 }
+        ).catch(() => {})
 
         // ============================================
         // Phase 3: Verify API was called
@@ -112,6 +116,9 @@ test.describe('[P2] Referral Tracking E2E', () => {
      * Test 3: Registration form auto-fills referral code from cookie
      */
     test('registration form auto-fills referral code from cookie', async ({ page }) => {
+        // Clear auth state so /register page is accessible (not redirected)
+        await page.context().clearCookies()
+
         // ============================================
         // Phase 1: Set ref cookie before navigation
         // ============================================
@@ -129,7 +136,7 @@ test.describe('[P2] Referral Tracking E2E', () => {
         // Phase 2: Navigate to registration page
         // ============================================
         await page.goto('/register?quantity=3')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // ============================================
         // Phase 3: Verify referral code field pre-filled
@@ -155,7 +162,7 @@ test.describe('[P2] Referral Tracking E2E', () => {
         )
 
         // Wait a bit for pre-fill to happen
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Verify referral input has the cookie value
         const refValue = await page.locator('input[placeholder*="dainganxanh"]').inputValue()
@@ -171,7 +178,7 @@ test.describe('[P2] Referral Tracking E2E', () => {
         // ============================================
         // Phase 1: Login
         // ============================================
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // ============================================
         // Phase 2: Set ref cookie to simulate referral
@@ -240,10 +247,10 @@ test.describe('[P2] Referral Tracking E2E', () => {
         // Phase 4: Navigate to checkout
         // ============================================
         await page.goto('/checkout?quantity=5')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Wait for order creation
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // ============================================
         // Phase 5: Verify commission calculation (5% of 1,300,000 = 65,000)
@@ -271,7 +278,7 @@ test.describe('[P2] Referral Tracking E2E', () => {
         // Phase 2: Navigate to registration page
         // ============================================
         await page.goto('/register?quantity=2')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // ============================================
         // Phase 3: Verify no ref cookie initially
@@ -297,7 +304,7 @@ test.describe('[P2] Referral Tracking E2E', () => {
         await useDefaultButton.click()
 
         // Wait for refInput to be filled with default value
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Verify refInput now has "dainganxanh" value
         const refValue = await refInput.inputValue()
@@ -323,7 +330,7 @@ test.describe('[P2] Referral Tracking E2E', () => {
         }
 
         // Wait for verification to complete and default ref to be set
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // ============================================
         // Phase 5: Verify default ref cookie is set

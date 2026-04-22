@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 import { TEST_ORDER_ID, navigateToOrderDetail } from './fixtures/tree-detail'
 
 /**
@@ -21,21 +21,13 @@ import { TEST_ORDER_ID, navigateToOrderDetail } from './fixtures/tree-detail'
 
 test.describe('[P1] Tree Detail — Quarterly Reports E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
     /**
      * Test 9: User views quarterly report section
      */
     test('user views quarterly report section', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock reports list API
         await page.route('**/api/orders/*/reports', route => route.fulfill({
@@ -121,7 +113,7 @@ test.describe('[P1] Tree Detail — Quarterly Reports E2E', () => {
      */
     test('user downloads quarterly PDF report', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock reports list API
         await page.route('**/api/orders/*/reports', route => route.fulfill({

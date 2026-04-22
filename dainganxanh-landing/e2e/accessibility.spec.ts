@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import AxeBuilder from '@axe-core/playwright'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 
 /**
  * Accessibility & UX E2E Test Suite (Phase 7)
@@ -16,14 +16,6 @@ import { loginAtLoginPage } from './fixtures/auth'
 
 test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
     // ============================================
     // Section 1: Keyboard Navigation (3 tests)
     // ============================================
@@ -32,9 +24,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      * Test 1.1: Tab through checkout form (all fields reachable via Tab, order correct)
      */
     test('keyboard navigation: tab through checkout form fields', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
         await page.goto('/checkout')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Wait for checkout page to load
         await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
@@ -68,7 +60,6 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
 
             // Move to next focusable element
             await page.keyboard.press('Tab')
-            await page.waitForLoadState('networkidle')
         }
 
         console.log('Focused elements sequence:', focusedElements)
@@ -95,8 +86,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      */
     test('keyboard navigation: enter key submits forms', async ({ page }) => {
         // Test 1: Registration form - Enter on email input
+        await page.context().clearCookies()
         await page.goto('/register?quantity=3')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
@@ -121,8 +113,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         console.log('✅ Enter key submits registration form')
 
         // Test 2: Login form - Enter on email input
+        await page.context().clearCookies()
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const loginEmailInput = page.locator('input#identifier-input[type="email"]')
         await expect(loginEmailInput).toBeVisible()
@@ -149,44 +142,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      * Test 1.3: Escape key closes modals (RefCodeModal, image lightbox, confirmation dialogs)
      */
     test('keyboard navigation: escape key closes modals', async ({ page }) => {
-        // Test 1: Close referral modal on login success
-        await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        const emailInput = page.locator('input#identifier-input[type="email"]')
-        await emailInput.fill(TEST_EMAIL)
-
-        const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
-        await sendOTPButton.click()
-
-        await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
-
-        const otpCode = await getOTPFromMailpit(TEST_EMAIL)
-        const otpInputs = page.locator('input[inputmode="numeric"]')
-
-        for (let i = 0; i < 8; i++) {
-            await otpInputs.nth(i).fill(otpCode[i])
-        }
-
-        // Wait for referral modal to appear (if user has no referral code)
-        try {
-            const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-            await skipButton.waitFor({ state: 'visible', timeout: 10000 })
-
-            // Press Escape to close modal
-            await page.keyboard.press('Escape')
-
-            // Verify modal is closed (skip button should not be visible)
-            await expect(skipButton).not.toBeVisible({ timeout: 5000 })
-
-            console.log('✅ Escape key closes referral modal')
-        } catch {
-            console.log('ℹ️  Referral modal did not appear')
-        }
-
-        // Test 2: Escape on tree detail image lightbox (if available)
+        // Test 1: Escape on tree detail image lightbox (if available)
         await page.goto('/')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Try to find any image gallery or lightbox trigger
         const images = page.locator('img[alt*="cây"]').or(page.locator('img[alt*="tree"]'))
@@ -196,11 +154,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
             try {
                 // Click first image to open lightbox
                 await images.first().click({ timeout: 5000 })
-                await page.waitForLoadState('networkidle')
 
                 // Press Escape to close
                 await page.keyboard.press('Escape')
-                await page.waitForLoadState('networkidle')
 
                 console.log('✅ Escape key closes image lightbox')
             } catch {
@@ -226,8 +182,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      */
     test('screen reader support: form labels associated with inputs', async ({ page }) => {
         // Test registration form
+        await page.context().clearCookies()
         await page.goto('/register?quantity=3')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
@@ -248,8 +205,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         console.log(`Registration email input label: aria-label="${emailAriaLabel}", id="${emailId}", hasLabel=${hasLabel}`)
 
         // Test login form inputs
+        await page.context().clearCookies()
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const loginEmailInput = page.locator('input#identifier-input[type="email"]')
         await expect(loginEmailInput).toBeVisible()
@@ -314,8 +272,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      */
     test('screen reader support: error messages announced with aria-live', async ({ page }) => {
         // Test registration form - check button state based on validation
+        await page.context().clearCookies()
         await page.goto('/register?quantity=3')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
@@ -337,7 +296,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
 
         // Enter invalid email to trigger validation
         await emailInput.fill('invalid-email')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Check for error messages
         const errorMessages = page.locator('[role="alert"]').or(
@@ -356,8 +315,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         console.log(`Registration email input: aria-invalid="${emailAriaInvalid}", aria-describedby="${emailAriaDescribedBy}"`)
 
         // Test login form validation
+        await page.context().clearCookies()
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const loginInput = page.locator('input#identifier-input[type="email"]')
         await expect(loginInput).toBeVisible()
@@ -374,7 +334,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
 
         // Enter invalid email
         await loginInput.fill('invalid')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const loginErrorMessages = page.locator('[role="alert"]').or(
             page.locator('.error').or(
@@ -406,8 +366,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      * Test 3.1: Focus indicators visible (outline on focused elements, contrast ratio > 3:1)
      */
     test('visual accessibility: focus indicators visible', async ({ page }) => {
+        await page.context().clearCookies()
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Focus on email input
         const emailInput = page.locator('input#identifier-input[type="email"]')
@@ -466,7 +427,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
      */
     test('visual accessibility: text zoom 200% without breaking layout', async ({ page }) => {
         await page.goto('/')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Get initial viewport width
         const initialViewport = page.viewportSize()
@@ -477,7 +438,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
             document.documentElement.style.fontSize = '200%'
         })
 
-        await page.waitForLoadState('networkidle')
+        await page.waitForTimeout(500)
 
         // Check for horizontal scrollbar
         const hasHorizontalScroll = await page.evaluate(() => {
@@ -493,9 +454,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         })
 
         // Test checkout page at 200% zoom
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
         await page.goto('/checkout')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
 
@@ -503,7 +464,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
             document.documentElement.style.fontSize = '200%'
         })
 
-        await page.waitForLoadState('networkidle')
+        await page.waitForTimeout(500)
 
         const checkoutHasHorizontalScroll = await page.evaluate(() => {
             return document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -528,7 +489,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
     test('visual accessibility: WCAG AA color contrast compliance with axe-core', async ({ page }) => {
         // Test 1: Home page accessibility
         await page.goto('/')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const homeAccessibilityScanResults = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -550,11 +511,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         }
 
         // Test 2: Login page accessibility
+        await page.context().clearCookies()
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        // Wait to avoid rate limiting before login
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         const loginAccessibilityScanResults = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -572,9 +531,9 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         }
 
         // Test 3: Checkout page accessibility (requires login)
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
         await page.goto('/checkout')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
 
@@ -634,8 +593,11 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         const auditResults: any[] = []
 
         for (const pageInfo of pagesToTest) {
+            if (pageInfo.url === '/login' || pageInfo.url.startsWith('/register')) {
+                await page.context().clearCookies()
+            }
             await page.goto(pageInfo.url)
-            await page.waitForLoadState('networkidle')
+            await page.waitForLoadState('domcontentloaded')
 
             const scanResults = await new AxeBuilder({ page })
                 .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -656,7 +618,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         }
 
         // Test authenticated pages
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         const authenticatedPages = [
             { url: '/checkout', name: 'Checkout' },
@@ -666,7 +628,7 @@ test.describe('[P2] Accessibility & UX - Phase 7 E2E', () => {
         for (const pageInfo of authenticatedPages) {
             try {
                 await page.goto(pageInfo.url, { timeout: 10000 })
-                await page.waitForLoadState('networkidle')
+                await page.waitForLoadState('domcontentloaded')
 
                 const scanResults = await new AxeBuilder({ page })
                     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

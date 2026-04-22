@@ -15,14 +15,6 @@ import { loginAsAdmin } from './fixtures/auth'
 
 test.describe('[P2] Admin Referrals Management E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
 
     /**
@@ -64,7 +56,7 @@ test.describe('[P2] Admin Referrals Management E2E', () => {
             const rowCount = await referralRows.count()
             console.log(`✅ Found ${rowCount} referral records`)
         } else {
-            await expect(page.getByText(/không có dữ liệu|no referrals/i)).toBeVisible()
+            await expect(page.getByText(/chưa có hoa hồng|không có dữ liệu|no referrals/i)).toBeVisible()
             console.log('ℹ️ No referral records found')
         }
 

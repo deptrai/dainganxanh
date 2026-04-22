@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
+import { loginAsAdmin, loginAsUser } from './fixtures/auth'
 import { mockServerDelay } from './fixtures/timing'
 
 /**
@@ -22,14 +22,6 @@ import { mockServerDelay } from './fixtures/timing'
 
 test.describe('[P1] Error Handling — External Service Failures E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
     /**
      * ============================================
@@ -132,7 +124,7 @@ test.describe('[P1] Error Handling — External Service Failures E2E', () => {
         let queuedForRetry = false
         let timeoutOccurred = false
 
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock email API with timeout then queue
         await page.route('**/api/email/send-order-confirmation', async route => {

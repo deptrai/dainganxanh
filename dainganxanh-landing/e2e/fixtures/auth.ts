@@ -124,6 +124,19 @@ export async function loginAsUser(
  * The caller is expected to `await page.goto(...)` afterwards.
  */
 export async function loginAtLoginPage(page: Page): Promise<void> {
+    // Clear any existing auth state so we always land on the actual login form.
+    // Tests that call this function explicitly want a fresh OTP login session.
+    await page.context().clearCookies()
+    // Clear localStorage before Supabase client initializes so storageState
+    // from chromium-admin/chromium-user project doesn't bypass the login form.
+    // Use sessionStorage as a one-shot flag: clears localStorage only on the FIRST
+    // page load in this tab; subsequent navigations (after OTP login) keep the session.
+    await page.addInitScript(() => {
+        if (!sessionStorage.getItem('__auth_cleared')) {
+            sessionStorage.setItem('__auth_cleared', '1')
+            localStorage.clear()
+        }
+    })
     await page.goto('/login')
     await page.waitForLoadState('networkidle')
 
@@ -134,7 +147,7 @@ export async function loginAtLoginPage(page: Page): Promise<void> {
     const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
     await sendOTPButton.click()
 
-    await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/nhập mã otp \(8 chữ số\)/i)).toBeVisible({ timeout: 20000 })
 
     const otpCode = await getOTPFromMailpit(TEST_EMAIL)
 

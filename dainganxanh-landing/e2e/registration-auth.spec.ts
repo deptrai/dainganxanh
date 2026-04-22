@@ -13,22 +13,14 @@ import { getOTPFromMailpit } from './fixtures/mailpit'
 
 test.describe('[P0] Registration & Authentication Flow E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
     const BASE_EMAIL = 'test-registration'
     const DEFAULT_REF_CODE = 'DNG895075'
 
     // Generate unique email for each test to avoid OTP conflicts
     function getTestEmail(testName: string): string {
-        const timestamp = Date.now()
+        const uid = require('crypto').randomBytes(4).toString('hex')
         const sanitized = testName.replace(/[^a-z0-9]/gi, '').toLowerCase()
-        return `${BASE_EMAIL}-${sanitized}-${timestamp}@test.local`
+        return `${BASE_EMAIL}-${sanitized}-${uid}@test.local`
     }
 
     /**
@@ -310,7 +302,7 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
 
         // Navigate to login page
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
 
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
@@ -334,18 +326,18 @@ test.describe('[P0] Registration & Authentication Flow E2E', () => {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
-        // Form auto-submits — wait for navigation or redirect
+        // Wait for any navigation away from login (OTP success triggers redirect or modal)
+        await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 20000 }).catch(async () => {
+            // Handle referral modal if it appears (blocks navigation)
+            const skipButton = page.getByRole('button', { name: /bỏ qua/i })
+            const visible = await skipButton.isVisible().catch(() => false)
+            if (visible) {
+                await skipButton.click()
+                await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 10000 }).catch(() => {})
+            }
+        })
 
-        // Handle referral modal if it appears (after OTP success)
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        try {
-            await skipButton.waitFor({ state: 'visible', timeout: 5000 })
-            await skipButton.click()
-            await page.waitForLoadState('networkidle')
-        } catch {
-            // No referral modal - may have redirected directly
-            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
-        }
+        await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {})
 
         // Verify we're no longer on the login page (authentication succeeded)
         const currentUrl = page.url()

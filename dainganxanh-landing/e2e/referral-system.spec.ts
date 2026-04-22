@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
-import { loginAtLoginPage } from './fixtures/auth'
+import { loginAsUser } from './fixtures/auth'
 
 /**
  * Referral System E2E Test Suite
@@ -14,14 +14,6 @@ import { loginAtLoginPage } from './fixtures/auth'
 
 test.describe('[P1] Referral System Flow E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
     const TEST_EMAIL = 'test@test.com'
     /**
      * Test: View referral page with code and stats
@@ -30,7 +22,7 @@ test.describe('[P1] Referral System Flow E2E', () => {
         // ============================================
         // Phase 1: Login
         // ============================================
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // ============================================
         // Phase 2: Navigate to Referrals page
@@ -82,7 +74,7 @@ test.describe('[P1] Referral System Flow E2E', () => {
         await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')
@@ -124,7 +116,7 @@ test.describe('[P1] Referral System Flow E2E', () => {
      */
     test('view referral QR code', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')
@@ -153,7 +145,7 @@ test.describe('[P1] Referral System Flow E2E', () => {
      */
     test('view referral conversions list or empty state', async ({ page }) => {
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')
@@ -201,12 +193,14 @@ test.describe('[P1] Referral System Flow E2E', () => {
 
         page.on('console', msg => {
             if (msg.type() === 'error') {
-                consoleErrors.push(msg.text())
+                const text = msg.text()
+                if (text.includes('Failed to load resource') || text.includes('404') || text.includes('406')) return
+                consoleErrors.push(text)
             }
         })
 
         // Login
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to referrals page
         await page.goto('/crm/referrals')

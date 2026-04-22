@@ -73,7 +73,7 @@ test.describe('[P1] Notification System E2E', () => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
-                    body: JSON.stringify({ message_id: `msg-${Date.now()}` })
+                    body: JSON.stringify({ message_id: `msg-${require('crypto').randomBytes(4).toString('hex')}` })
                 })
             } else {
                 await route.continue()
@@ -149,7 +149,7 @@ test.describe('[P1] Notification System E2E', () => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
-                    body: JSON.stringify({ message_id: `msg-${Date.now()}` })
+                    body: JSON.stringify({ message_id: `msg-${require('crypto').randomBytes(4).toString('hex')}` })
                 })
             } else {
                 await route.continue()
@@ -227,7 +227,7 @@ test.describe('[P1] Notification System E2E', () => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
-                    body: JSON.stringify({ message_id: `msg-${Date.now()}` })
+                    body: JSON.stringify({ message_id: `msg-${require('crypto').randomBytes(4).toString('hex')}` })
                 })
             } else {
                 await route.continue()
@@ -300,7 +300,7 @@ test.describe('[P1] Notification System E2E', () => {
                 await route.fulfill({
                     status: 200,
                     contentType: 'application/json',
-                    body: JSON.stringify({ message_id: `msg-${Date.now()}` })
+                    body: JSON.stringify({ message_id: `msg-${require('crypto').randomBytes(4).toString('hex')}` })
                 })
             } else {
                 await route.continue()

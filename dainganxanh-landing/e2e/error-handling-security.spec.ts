@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { getOTPFromMailpit } from './fixtures/mailpit'
 import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
-import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
+import { loginAsAdmin, loginAsUser } from './fixtures/auth'
 
 /**
  * Error Handling — Authorization & Race Conditions E2E
@@ -21,14 +21,6 @@ import { loginAsAdmin, loginAtLoginPage } from './fixtures/auth'
 
 test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () => {
 
-    test.afterAll(async ({ browser }) => {
-        // Clean up: close all pages and reset browser state
-        const contexts = browser.contexts()
-        for (const ctx of contexts) {
-            await ctx.clearCookies()
-            await ctx.clearPermissions()
-        }
-    })
 
     /**
      * ============================================
@@ -60,7 +52,7 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
      * Test 8: User attempts to view another user's order detail
      */
     test('user cannot access another user\'s order detail (403 forbidden)', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Try to access someone else's order (or non-existent order)
         // Server Component checks user_id ownership and renders forbidden UI
@@ -85,7 +77,7 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
      * SKIPPED: Checkout flow auto-creates order on load, no explicit confirm button
      */
     test.skip('session expired during checkout requires re-login', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to checkout
         await page.goto('/checkout?quantity=5')
@@ -123,7 +115,7 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
     test('withdrawal submission without CSRF token is rejected', async ({ page }) => {
         let csrfCheckFailed = false
 
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock withdrawal API to check for CSRF token
         await page.route('**/api/referrals/withdraw', async route => {
@@ -189,7 +181,7 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
     test('concurrent purchase of last tree - second request fails gracefully', async ({ page }) => {
         let purchaseAttempts = 0
 
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         // Mock the actual order creation endpoint (not the non-existent /api/orders/create)
         await page.route('**/api/orders/pending', async route => {
@@ -349,7 +341,7 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
      * Prerequisites: Same as Test 4
      */
     test('rapid withdrawal submission prevented by debounce', async ({ page }) => {
-        await loginAtLoginPage(page)
+        await loginAsUser(page, '/my-garden')
 
         await page.goto('/crm/referrals')
         await page.waitForLoadState('networkidle')
@@ -366,7 +358,7 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
         }
 
         await withdrawButton.click()
-        await page.waitForLoadState('networkidle')
+        await page.waitForSelector('select', { timeout: 10000 })
 
         // Fill valid withdrawal form
         await page.selectOption('select', { label: 'Vietcombank' })
@@ -386,11 +378,10 @@ test.describe('[P0] Error Handling — Authorization & Race Conditions E2E', () 
         // Rapid click 4 more times while in loading state
         for (let i = 0; i < 4; i++) {
             await submitButton.click({ force: true })
-            await page.waitForLoadState('networkidle')
         }
 
         // Wait for processing
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
 
         // The button was disabled (isSubmitting=true), so multiple clicks didn't trigger new submissions
         // Verify via UI: button returned to normal state or showed success/error

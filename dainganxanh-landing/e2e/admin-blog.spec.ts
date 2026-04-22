@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { loginAsAdmin } from './fixtures/auth'
+import { createClient } from '@supabase/supabase-js'
 
 /**
  * Admin Blog Management E2E Test Suite
@@ -32,7 +33,7 @@ test.describe('[P0] Admin Blog – Create', () => {
     await page.waitForLoadState('networkidle')
 
     // Use timestamp suffix to avoid slug collision on retry
-    const ts = Date.now()
+    const ts = require('crypto').randomBytes(4).toString('hex')
     const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
     await titleInput.fill(`Bài kiểm tra E2E – Trồng cây ${ts}`)
 
@@ -52,7 +53,7 @@ test.describe('[P0] Admin Blog – Create', () => {
     await loginAsAdmin(page, '/crm/admin/blog/new')
     await page.waitForLoadState('networkidle')
 
-    const ts = Date.now()
+    const ts = require('crypto').randomBytes(4).toString('hex')
     const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
     await titleInput.fill(`Draft Test – Bền vững ${ts}`)
 
@@ -250,13 +251,14 @@ test.describe('[P2] Admin Blog – Edit', () => {
     await loginAsAdmin(page, '/crm/admin/blog/new')
     await page.waitForLoadState('networkidle')
 
-    const ts = Date.now()
+    const ts = require('crypto').randomBytes(4).toString('hex')
     await page.getByPlaceholder('Nhập tiêu đề bài viết...').fill(`Edit Target – ${ts}`)
     const editor = page.locator('.ProseMirror')
     await editor.click()
     await editor.pressSequentially('Nội dung bài viết dành cho test chỉnh sửa.')
     await page.getByRole('button', { name: 'Lưu Draft' }).click()
     await expect(page).toHaveURL(/crm\/admin\/blog\/.+\/edit/, { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
 
     // Now we're already on the edit page — update the title
     const titleInput = page.getByPlaceholder('Nhập tiêu đề bài viết...')
@@ -269,36 +271,31 @@ test.describe('[P2] Admin Blog – Edit', () => {
     await page.getByRole('button', { name: 'Lưu Draft' }).click()
 
     // On edit (not create), Server Action returns without navigation → successMsg shows
-    await expect(page.getByText('Đã lưu draft!')).toBeVisible({ timeout: 10000 })
+    // Check success message first (appears while isPending is still true, then button re-enables)
+    await expect(page.getByText(/Đã lưu draft/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('button', { name: 'Lưu Draft' })).toBeEnabled({ timeout: 15000 })
   })
 })
 
 // Cleanup: xóa tất cả blog posts được tạo trong test suite này
-test.afterAll(async ({ browser }) => {
+test.afterAll(async () => {
   const TEST_TITLE_PATTERNS = [
     'Bài kiểm tra E2E – Trồng cây',
     'Draft Test – Bền vững',
     'Edit Target –',
   ]
 
-  const context = await browser.newContext()
-  const page = await context.newPage()
-  try {
-    await loginAsAdmin(page, '/crm/admin/blog')
-    await page.waitForLoadState('networkidle')
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54331',
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU',
+  )
 
-    for (const pattern of TEST_TITLE_PATTERNS) {
-      // Loop in case multiple matching posts were created (e.g. retries)
-      for (let attempt = 0; attempt < 10; attempt++) {
-        const row = page.locator('tbody tr').filter({ hasText: pattern }).first()
-        if ((await row.count()) === 0) break
-
-        page.once('dialog', (dialog) => dialog.accept())
-        await row.getByRole('button', { name: 'Xóa' }).click()
-        await page.waitForLoadState('networkidle')
-      }
-    }
-  } finally {
-    await context.close()
+  for (const pattern of TEST_TITLE_PATTERNS) {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .ilike('title', `${pattern}%`)
+    if (error) console.warn(`⚠️ [afterAll] cleanup failed for "${pattern}":`, error.message)
+    else console.log(`🧹 [afterAll] Deleted posts matching "${pattern}"`)
   }
 })
