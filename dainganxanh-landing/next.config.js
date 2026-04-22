@@ -1,3 +1,6 @@
+// @ts-check
+const { withSentryConfig } = require('@sentry/nextjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -28,5 +31,13 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withSentryConfig(nextConfig, {
+    // Suppress source map upload when DSN is not configured (local dev)
+    silent: !process.env.SENTRY_DSN,
+    disableServerWebpackPlugin: !process.env.SENTRY_DSN,
+    disableClientWebpackPlugin: !process.env.SENTRY_DSN,
+    widenClientFileUpload: true,
+    hideSourceMaps: true,
+    automaticVercelMonitors: false,
+})
 
