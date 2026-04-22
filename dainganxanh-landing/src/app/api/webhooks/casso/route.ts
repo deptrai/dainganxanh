@@ -4,6 +4,7 @@ import { notifyPaymentSuccess, notifyContractFailure } from '@/lib/utils/telegra
 import { createReferralClick } from '@/actions/createReferralClick'
 import { createHmac } from 'crypto'
 import { revalidatePath } from 'next/cache'
+import { rateLimit } from '@/lib/rate-limit'
 
 const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
 
@@ -40,6 +41,14 @@ async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 100, windowMs: 60_000, keyPrefix: 'casso' })
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfterSec) },
+    })
+  }
+
   // Guard: env var must be configured
   if (!process.env.CASSO_SECURE_TOKEN) {
     console.error('CASSO_SECURE_TOKEN is not configured')

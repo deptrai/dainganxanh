@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyNewOrder } from '@/lib/utils/telegram'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
+import { rateLimit } from '@/lib/rate-limit'
 
 const identityFieldsSchema = z.object({
   dob: z.string().min(1).optional().nullable(),
@@ -57,6 +58,14 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 30, windowMs: 60_000, keyPrefix: 'pending-order' })
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Too many requests' }, {
+      status: 429,
+      headers: { 'Retry-After': String(rl.retryAfterSec) },
+    })
+  }
+
   try {
     const effectiveUser = await getEffectiveUser()
     if (!effectiveUser) {
