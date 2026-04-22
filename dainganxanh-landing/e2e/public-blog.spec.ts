@@ -186,6 +186,38 @@ test.describe('[P2] Public Blog — Detail Page (/blog/[slug])', () => {
         expect(page.url()).toContain('tag=')
     })
 
+    test('images in post content render without broken icons', async ({ page }) => {
+        await page.goto('/blog')
+        await page.waitForLoadState('networkidle')
+
+        const firstPostLink = page.locator('a[href^="/blog/"]').first()
+        if (await firstPostLink.count() === 0) {
+            test.skip()
+            return
+        }
+
+        const href = await firstPostLink.getAttribute('href')
+        await page.goto(href!)
+        await page.waitForLoadState('networkidle')
+
+        const images = await page.locator('article img').all()
+        if (images.length === 0) {
+            // Post has no images — acceptable
+            test.skip()
+            return
+        }
+
+        for (const img of images) {
+            const dims = await img.evaluate((el: HTMLImageElement) => ({
+                naturalWidth: el.naturalWidth,
+                complete: el.complete,
+                src: el.src,
+            }))
+            expect(dims.complete, `Image not complete: ${dims.src}`).toBe(true)
+            expect(dims.naturalWidth, `Image broken (naturalWidth=0): ${dims.src}`).toBeGreaterThan(0)
+        }
+    })
+
     test('"Xem thêm bài viết" bottom link navigates to /blog', async ({ page }) => {
         await page.goto('/blog')
         await page.waitForLoadState('networkidle')

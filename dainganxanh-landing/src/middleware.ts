@@ -96,7 +96,7 @@ export async function middleware(request: NextRequest) {
         `default-src 'self'`,
         `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
         `style-src 'self' 'unsafe-inline'`,
-        `img-src 'self' data: blob: https://www.transparenttextures.com https://*.supabase.co https://img.vietqr.io`,
+        `img-src 'self' data: blob: https://www.transparenttextures.com https://*.supabase.co ${supabaseUrl} https://img.vietqr.io`,
         `font-src 'self' data:`,
         `connect-src 'self' ${supabaseUrl} ${supabaseHost ? `wss://${supabaseHost} ws://${supabaseHost}` : ''} https://api.vietqr.io`,
         `worker-src blob:`,

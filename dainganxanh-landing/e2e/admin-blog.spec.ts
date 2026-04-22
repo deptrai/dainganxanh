@@ -277,12 +277,13 @@ test.describe('[P2] Admin Blog – Edit', () => {
   })
 })
 
+// Minimal valid 1×1 PNG (53 bytes) — avoids needing a fixture file on disk
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64'
+)
+
 test.describe('[P1] Admin Blog – Image Upload', () => {
-  // Minimal valid 1×1 PNG (53 bytes) — avoids needing a fixture file on disk
-  const TINY_PNG = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-    'base64'
-  )
 
   test('upload ảnh nội dung vào editor', async ({ page }) => {
     await loginAsAdmin(page, '/crm/admin/blog/new')
@@ -370,12 +371,73 @@ test.describe('[P1] Admin Blog – Image Upload', () => {
   })
 })
 
+test.describe('[P1] Admin Blog – Image Upload Full Flow', () => {
+  test('upload ảnh bìa + nội dung → publish → guest thấy đủ ảnh', async ({ page, browser }) => {
+    await loginAsAdmin(page, '/crm/admin/blog/new')
+    await page.waitForLoadState('networkidle')
+
+    const ts = require('crypto').randomBytes(4).toString('hex')
+    await page.getByPlaceholder('Nhập tiêu đề bài viết...').fill(`Upload Full Flow – ${ts}`)
+
+    // Upload cover image
+    const coverInput = page.locator('[data-testid="cover-file-input"]')
+    await coverInput.setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: TINY_PNG })
+    const coverUrlInput = page.getByPlaceholder(/https:\/\/\.\.\. hoặc upload/)
+    await expect(coverUrlInput).not.toHaveValue('', { timeout: 20000 })
+    const coverUrl = await coverUrlInput.inputValue()
+    expect(coverUrl).toContain('blog-images')
+
+    // Upload content image into TipTap editor
+    const contentInput = page.locator('[data-testid="content-image-input"]')
+    await contentInput.setInputFiles({ name: 'content.png', mimeType: 'image/png', buffer: TINY_PNG })
+    await expect(page.locator('.ProseMirror img').first()).toBeVisible({ timeout: 20000 })
+
+    // Publish
+    await page.getByRole('button', { name: 'Publish ngay' }).click()
+    await expect(page).toHaveURL(/crm\/admin\/blog\/.+\/edit/, { timeout: 15000 })
+    await page.waitForLoadState('networkidle')
+
+    // Read the slug from the slug input on the edit page
+    const slugInput = page.getByPlaceholder('url-slug-bai-viet')
+    await expect(slugInput).not.toHaveValue('', { timeout: 5000 })
+    const slug = await slugInput.inputValue()
+
+    // Open isolated (unauthenticated) context to simulate guest visit
+    const guestContext = await browser.newContext()
+    const guestPage = await guestContext.newPage()
+    try {
+      await guestPage.goto(`http://localhost:3001/blog/${slug}`)
+      await guestPage.waitForLoadState('networkidle')
+
+      // Article must be visible
+      await expect(guestPage.getByRole('article')).toBeVisible({ timeout: 10000 })
+
+      // Check all images on the page load (naturalWidth > 0 = not broken)
+      const imgHandles = await guestPage.locator('article img').all()
+      expect(imgHandles.length).toBeGreaterThan(0)
+
+      for (const img of imgHandles) {
+        const dims = await img.evaluate((el: HTMLImageElement) => ({
+          naturalWidth: el.naturalWidth,
+          complete: el.complete,
+          src: el.src,
+        }))
+        expect(dims.complete, `Image not complete: ${dims.src}`).toBe(true)
+        expect(dims.naturalWidth, `Image broken (naturalWidth=0): ${dims.src}`).toBeGreaterThan(0)
+      }
+    } finally {
+      await guestContext.close()
+    }
+  })
+})
+
 // Cleanup: xóa tất cả blog posts được tạo trong test suite này
 test.afterAll(async () => {
   const TEST_TITLE_PATTERNS = [
     'Bài kiểm tra E2E – Trồng cây',
     'Draft Test – Bền vững',
     'Edit Target –',
+    'Upload Full Flow –',
   ]
 
   const supabase = createClient(
