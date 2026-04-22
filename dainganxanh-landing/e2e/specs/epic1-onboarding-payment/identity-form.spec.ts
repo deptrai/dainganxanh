@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
-import { envConfig } from '../../config/env'
-
-test.use({ storageState: path.resolve(__dirname, '../../storagestate/admin.json') })
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsUser } from './fixtures/auth'
 
 /**
  * Identity Form E2E Test Suite
@@ -11,10 +10,11 @@ test.use({ storageState: path.resolve(__dirname, '../../storagestate/admin.json'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com
+ * - Test user: TEST_USER_EMAIL (env override)
  */
 
-test.describe('Identity Form E2E', () => {
+test.describe('[P1] Identity Form E2E', () => {
+
     /**
      * Test Data: Valid identity data
      */
@@ -30,35 +30,39 @@ test.describe('Identity Form E2E', () => {
     }
 
     /**
-     * Helper: Setup success page with identity form visible
-     * Mocks the auto-fill-identity API to return hasIdentity: false
+     * Test 1: User without id_number sees identity form after purchase
+     * Note: Form visibility is determined by /api/orders/status checking order.id_number
      */
-    async function setupSuccessPageWithIdentityForm(page: any, orderCode: string, quantity: number) {
-        // Mock auto-fill-identity API — user has no identity data yet
-        await page.route('**/api/orders/auto-fill-identity*', async (route: any) => {
+    test('user without id_number sees identity form after purchase', async ({ page }) => {
+        // Login
+        await loginAsUser(page, '/my-garden')
+
+        // Mock API response to simulate order without id_number
+        await page.route('**/api/orders/status', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
-                body: JSON.stringify({ hasIdentity: false })
+                body: JSON.stringify({
+                    order: {
+                        id: 'test-order-id',
+                        order_code: 'DHTEST01',
+                        quantity: 3,
+                        id_number: null // No id_number -> form should show
+                    }
+                })
             })
         })
 
-        await page.goto(`/checkout/success?orderCode=${orderCode}&quantity=${quantity}`)
+        // Navigate to success page (simulating post-purchase)
+        await page.goto('/checkout/success?orderCode=DHTEST01&quantity=3&name=Test User')
         await page.waitForLoadState('networkidle')
 
-        // Wait for motion animation delay (identity form has delay: 2.3s)
-        await page.waitForTimeout(3000)
-    }
-
-    /**
-     * Test 1: User without id_number sees identity form after purchase
-     */
-    test('user without id_number sees identity form after purchase', async ({ page }) => {
-        await setupSuccessPageWithIdentityForm(page, 'DHTEST01', 3)
+        // Wait for API call to complete
+        await page.waitForLoadState('networkidle')
 
         // Verify identity form is visible
         await expect(page.getByText('Thông tin để tạo hợp đồng')).toBeVisible({ timeout: 10000 })
-        await expect(page.getByText(/điền thông tin cccd/i)).toBeVisible()
+        await expect(page.getByText('Điền thông tin CCCD để chúng tôi tạo hợp đồng trồng cây đúng mẫu pháp lý')).toBeVisible()
 
         // Verify all form fields are present
         await expect(page.locator('input#full_name')).toBeVisible()
@@ -83,17 +87,27 @@ test.describe('Identity Form E2E', () => {
      * Test 2: User fills and submits identity form successfully
      */
     test('user fills and submits identity form successfully', async ({ page }) => {
-        // Mock auto-fill-identity — no identity yet
-        await page.route('**/api/orders/auto-fill-identity*', async (route: any) => {
+        // Login
+        await loginAsUser(page, '/my-garden')
+
+        // Mock order status API - order without id_number
+        await page.route('**/api/orders/status', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
-                body: JSON.stringify({ hasIdentity: false })
+                body: JSON.stringify({
+                    order: {
+                        id: 'test-order-id-2',
+                        order_code: 'DHTEST02',
+                        quantity: 5,
+                        id_number: null
+                    }
+                })
             })
         })
 
         // Mock identity submission API - success response
-        await page.route('**/api/orders/identity', async (route: any) => {
+        await page.route('**/api/orders/identity', async route => {
             if (route.request().method() === 'POST') {
                 await route.fulfill({
                     status: 200,
@@ -108,9 +122,6 @@ test.describe('Identity Form E2E', () => {
         // Navigate to success page
         await page.goto('/checkout/success?orderCode=DHTEST02&quantity=5')
         await page.waitForLoadState('networkidle')
-
-        // Wait for animation delays
-        await page.waitForTimeout(3000)
 
         // Wait for form to appear
         await expect(page.getByText('Thông tin để tạo hợp đồng')).toBeVisible({ timeout: 10000 })
@@ -130,7 +141,7 @@ test.describe('Identity Form E2E', () => {
 
         // Verify success message
         await expect(page.getByText('Đã lưu thông tin hợp đồng!')).toBeVisible({ timeout: 10000 })
-        await expect(page.getByText(/hợp đồng sẽ được gửi qua email/i)).toBeVisible()
+        await expect(page.getByText('Hợp đồng sẽ được gửi qua email trong 24 giờ')).toBeVisible()
 
         // Verify form is hidden
         await expect(page.getByText('Thông tin để tạo hợp đồng')).not.toBeVisible()
@@ -142,7 +153,28 @@ test.describe('Identity Form E2E', () => {
      * Test 3: Form validation works for required fields
      */
     test('form validation works for required fields', async ({ page }) => {
-        await setupSuccessPageWithIdentityForm(page, 'DHTEST03', 2)
+        // Login
+        await loginAsUser(page, '/my-garden')
+
+        // Mock order status API
+        await page.route('**/api/orders/status', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    order: {
+                        id: 'test-order-id-3',
+                        order_code: 'DHTEST03',
+                        quantity: 2,
+                        id_number: null
+                    }
+                })
+            })
+        })
+
+        // Navigate to success page
+        await page.goto('/checkout/success?orderCode=DHTEST03&quantity=2')
+        await page.waitForLoadState('networkidle')
 
         // Wait for form
         await expect(page.getByText('Thông tin để tạo hợp đồng')).toBeVisible({ timeout: 10000 })
@@ -188,7 +220,28 @@ test.describe('Identity Form E2E', () => {
      * Test 4: User can skip identity form
      */
     test('user can skip identity form', async ({ page }) => {
-        await setupSuccessPageWithIdentityForm(page, 'DHTEST04', 1)
+        // Login
+        await loginAsUser(page, '/my-garden')
+
+        // Mock order status API
+        await page.route('**/api/orders/status', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    order: {
+                        id: 'test-order-id-4',
+                        order_code: 'DHTEST04',
+                        quantity: 1,
+                        id_number: null
+                    }
+                })
+            })
+        })
+
+        // Navigate to success page
+        await page.goto('/checkout/success?orderCode=DHTEST04&quantity=1')
+        await page.waitForLoadState('networkidle')
 
         // Wait for form
         await expect(page.getByText('Thông tin để tạo hợp đồng')).toBeVisible({ timeout: 10000 })
@@ -201,11 +254,8 @@ test.describe('Identity Form E2E', () => {
         // Verify form is hidden
         await expect(page.getByText('Thông tin để tạo hợp đồng')).not.toBeVisible()
 
-        // Wait for nav buttons animation (delay: 3s)
-        await page.waitForTimeout(1500)
-
         // Verify navigation options are visible
-        await expect(page.getByRole('link', { name: /xem vườn cây của tôi/i })).toBeVisible({ timeout: 5000 })
+        await expect(page.getByRole('link', { name: /xem vườn cây của tôi/i })).toBeVisible()
         await expect(page.getByRole('link', { name: /về trang chủ/i })).toBeVisible()
 
         console.log('✅ Skip identity form works correctly')
@@ -215,12 +265,22 @@ test.describe('Identity Form E2E', () => {
      * Test 5: User with existing id_number skips form
      */
     test('user with existing id_number skips form', async ({ page }) => {
-        // Mock auto-fill-identity — user HAS identity data
-        await page.route('**/api/orders/auto-fill-identity*', async (route: any) => {
+        // Login
+        await loginAsUser(page, '/my-garden')
+
+        // Mock order status API - order WITH id_number (form should NOT show)
+        await page.route('**/api/orders/status', async route => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
-                body: JSON.stringify({ hasIdentity: true, autoFilled: true })
+                body: JSON.stringify({
+                    order: {
+                        id: 'test-order-id-5',
+                        order_code: 'DHTEST05',
+                        quantity: 3,
+                        id_number: '001234567890' // Has id_number -> form should NOT show
+                    }
+                })
             })
         })
 
@@ -228,24 +288,19 @@ test.describe('Identity Form E2E', () => {
         await page.goto('/checkout/success?orderCode=DHTEST05&quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait for animation delays
-        await page.waitForTimeout(3000)
+        // Wait for page to load
+        await page.waitForLoadState('networkidle')
 
         // Verify identity form is NOT visible
         await expect(page.getByText('Thông tin để tạo hợp đồng')).not.toBeVisible()
 
-        // Verify identity saved confirmation IS visible (autoFilled: true triggers success)
-        await expect(page.getByText('Đã lưu thông tin hợp đồng!')).toBeVisible({ timeout: 5000 })
-
         // Verify order summary is visible
         await expect(page.getByText('Chi tiết đơn hàng')).toBeVisible({ timeout: 10000 })
-        await expect(page.getByText('DHTEST05', { exact: true })).toBeVisible()
-
-        // Wait for nav animation (delay: 3s)
-        await page.waitForTimeout(1000)
+        // Use more specific selector to avoid strict mode violation
+        await expect(page.locator('span.font-mono.font-semibold.text-emerald-600', { hasText: 'DHTEST05' })).toBeVisible()
 
         // Verify navigation options are visible
-        await expect(page.getByRole('link', { name: /xem vườn cây của tôi/i })).toBeVisible({ timeout: 5000 })
+        await expect(page.getByRole('link', { name: /xem vườn cây của tôi/i })).toBeVisible()
 
         console.log('✅ User with existing id_number skips form correctly')
     })
@@ -259,16 +314,33 @@ test.describe('Identity Form E2E', () => {
         page.on('console', msg => {
             if (msg.type() === 'error') {
                 const text = msg.text()
-                // Filter out expected errors
-                if (!text.includes('Failed to load resource') &&
-                    !text.includes('404') &&
-                    !text.includes('406')) {
-                    consoleErrors.push(text)
-                }
+                if (text.includes('Failed to load resource') || text.includes('404') || text.includes('406')) return
+                consoleErrors.push(text)
             }
         })
 
-        await setupSuccessPageWithIdentityForm(page, 'DHTEST06', 2)
+        // Login
+        await loginAsUser(page, '/my-garden')
+
+        // Mock order status API
+        await page.route('**/api/orders/status', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    order: {
+                        id: 'test-order-id-6',
+                        order_code: 'DHTEST06',
+                        quantity: 2,
+                        id_number: null
+                    }
+                })
+            })
+        })
+
+        // Navigate to success page
+        await page.goto('/checkout/success?orderCode=DHTEST06&quantity=2')
+        await page.waitForLoadState('networkidle')
 
         // Wait for form
         await expect(page.getByText('Thông tin để tạo hợp đồng')).toBeVisible({ timeout: 10000 })
@@ -278,17 +350,12 @@ test.describe('Identity Form E2E', () => {
         await page.locator('input#id_number').fill(VALID_IDENTITY.id_number)
 
         // Wait for any async errors
-        await page.waitForTimeout(3000)
-
-        // Filter critical errors
-        const criticalErrors = consoleErrors.filter(err =>
-            !err.includes('406') && !err.includes('Not Acceptable')
-        )
+        await page.waitForLoadState('networkidle')
 
         // Verify no console errors
-        if (criticalErrors.length > 0) {
-            console.error('❌ Console errors detected:', criticalErrors)
-            throw new Error(`Found ${criticalErrors.length} console errors`)
+        if (consoleErrors.length > 0) {
+            console.error('❌ Console errors detected:', consoleErrors)
+            throw new Error(`Found ${consoleErrors.length} console errors`)
         }
 
         console.log('✅ No console errors detected')

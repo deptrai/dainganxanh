@@ -56,7 +56,7 @@ max_client_conn = 100
 enabled = false
 # Specifies an ordered list of schema files that describe your database.
 # Supports glob patterns relative to supabase directory: "./schemas/*.sql"
-schema_paths = ["./schemas/production_snapshot.sql"]
+schema_paths = []
 
 [db.seed]
 # If enabled, seeds the database after migrations during a db reset.
@@ -382,27 +382,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.cleanup-pending-orders]
-verify_jwt = false
-
-[functions.check-harvest-ready]
-verify_jwt = false
-
-[functions.process-sellback]
-verify_jwt = false
-
-[functions.generate-certificate]
-verify_jwt = false
-
-[functions.generate-contract]
-verify_jwt = false
-
-[functions.notify-tree-health]
-verify_jwt = false
-
-[functions.notify-tree-update]
-verify_jwt = false
-
-[functions.checklist-reminder]
 verify_jwt = false
 
 [analytics]

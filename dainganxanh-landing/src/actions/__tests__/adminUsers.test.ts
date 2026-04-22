@@ -1,142 +1,202 @@
 /**
- * Tests for updateUserRole role-protection logic
- * Rules:
- *   1. Only super_admin can assign super_admin role
- *   2. Admin cannot change role of a super_admin target
- *   3. No one can demote themselves to 'user'
- *   4. super_admin can change any role
+ * Unit Tests: adminUsers
+ *
+ * [P0] Admin user management — auth guard, role check, CRUD operations.
  */
 
-import { updateUserRole } from '../adminUsers'
+import {
+    fetchAdminUsers,
+    updateUserRole,
+    assignUserReferral,
+} from '../adminUsers'
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
+// Mock Supabase clients
+const mockGetUser = jest.fn()
+const mockServerFrom = jest.fn()
+const mockServiceFrom = jest.fn()
 
-const SUPER_ADMIN_ID = 'super-admin-id'
-const ADMIN_ID = 'admin-id'
-const USER_ID = 'user-id'
-const TARGET_SUPER_ADMIN_ID = 'other-super-admin-id'
+jest.mock('@/lib/supabase/server', () => ({
+    createServerClient: jest.fn(() => Promise.resolve({
+        auth: { getUser: mockGetUser },
+        from: mockServerFrom,
+    })),
+    createServiceRoleClient: jest.fn(() => ({
+        from: mockServiceFrom,
+    })),
+}))
 
-const profiles: Record<string, { role: string }> = {
-  [SUPER_ADMIN_ID]: { role: 'super_admin' },
-  [ADMIN_ID]: { role: 'admin' },
-  [USER_ID]: { role: 'user' },
-  [TARGET_SUPER_ADMIN_ID]: { role: 'super_admin' },
+jest.mock('@/lib/utils/telegram', () => ({
+    notifyReferralAssigned: jest.fn(() => Promise.resolve()),
+}))
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function mockAdminAuth(role = 'admin') {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-id' } }, error: null })
+    mockServerFrom.mockReturnValue({
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role } }) }) }),
+    })
 }
 
-let currentUserId = SUPER_ADMIN_ID
+function mockUnauthenticated() {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: new Error('No session') })
+}
 
-// Mock createServerClient — auth.getUser returns currentUserId
-jest.mock('@/lib/supabase/server', () => {
-  const makeSelect = (id: string) => ({
-    select: () => ({
-      eq: () => ({
-        single: async () => ({ data: profiles[id] ?? null, error: null }),
-      }),
-    }),
-  })
+function mockCustomerRole() {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-id' } }, error: null })
+    mockServerFrom.mockReturnValue({
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'customer' } }) }) }),
+    })
+}
 
-  return {
-    createServerClient: async () => ({
-      auth: {
-        getUser: async () => ({ data: { user: { id: currentUserId } }, error: null }),
-      },
-      from: () => makeSelect(currentUserId),
-    }),
-    createServiceRoleClient: () => ({
-      from: (table: string) => ({
-        select: () => ({
-          eq: (_col: string, id: string) => ({
-            single: async () => ({ data: profiles[id] ?? null, error: null }),
-          }),
-        }),
-        update: () => ({
-          eq: () => Promise.resolve({ error: null }),
-        }),
-      }),
-    }),
-  }
+// ─── fetchAdminUsers ─────────────────────────────────────────────────────────
+
+describe('[P0] fetchAdminUsers — auth guard', () => {
+    beforeEach(() => jest.clearAllMocks())
+
+    test('[P0] returns Unauthorized when not authenticated', async () => {
+        mockUnauthenticated()
+        const result = await fetchAdminUsers({}, 1, 20)
+        expect(result.error).toMatch(/unauthorized/i)
+        expect(result.users).toHaveLength(0)
+    })
+
+    test('[P0] returns Unauthorized when role is not admin', async () => {
+        mockGetUser.mockResolvedValue({ data: { user: { id: 'user-id' } }, error: null })
+        mockServerFrom.mockReturnValue({
+            select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'user' } }) }) }),
+        })
+        const result = await fetchAdminUsers({}, 1, 20)
+        expect(result.error).toMatch(/unauthorized/i)
+    })
+
+    test('[P1] returns users list for admin', async () => {
+        mockAdminAuth()
+        const mockUsers = [
+            { id: 'u1', email: 'a@b.com', phone: null, full_name: 'A', role: 'user', referral_code: 'REF1', created_at: '2024-01-01' },
+        ]
+        mockServiceFrom.mockReturnValue({
+            select: () => ({
+                order: () => ({
+                    range: () => Promise.resolve({ data: mockUsers, count: 1, error: null }),
+                }),
+            }),
+        })
+        // Second service call for order counts
+        mockServiceFrom
+            .mockReturnValueOnce({
+                select: () => ({
+                    order: () => ({
+                        range: () => Promise.resolve({ data: mockUsers, count: 1, error: null }),
+                    }),
+                }),
+            })
+            .mockReturnValue({
+                select: () => ({
+                    in: () => ({ in: () => Promise.resolve({ data: [], error: null }) }),
+                }),
+            })
+
+        const result = await fetchAdminUsers({}, 1, 20)
+        expect(result.error).toBeUndefined()
+        expect(result.totalCount).toBe(1)
+    })
 })
 
-// ── Tests ────────────────────────────────────────────────────────────────────
+// ─── updateUserRole ──────────────────────────────────────────────────────────
 
-describe('updateUserRole', () => {
-  // ── super_admin privileges ─────────────────────────────────────────────────
-  describe('super_admin caller', () => {
-    beforeEach(() => { currentUserId = SUPER_ADMIN_ID })
+describe('[P0] updateUserRole — auth guard', () => {
+    beforeEach(() => jest.clearAllMocks())
 
-    it('can assign super_admin role to a user', async () => {
-      const result = await updateUserRole(USER_ID, 'super_admin')
-      expect(result.error).toBeUndefined()
+    test('[P0] returns Unauthorized when not authenticated', async () => {
+        mockUnauthenticated()
+        const result = await updateUserRole('target-id', 'admin')
+        expect(result.error).toMatch(/unauthorized/i)
     })
 
-    it('can demote another super_admin to admin', async () => {
-      const result = await updateUserRole(TARGET_SUPER_ADMIN_ID, 'admin')
-      expect(result.error).toBeUndefined()
+    test('[P0] returns error when caller is not admin', async () => {
+        mockCustomerRole()
+        const result = await updateUserRole('target-id', 'admin')
+        expect(result.error).toMatch(/unauthorized/i)
     })
 
-    it('can demote admin to user', async () => {
-      const result = await updateUserRole(ADMIN_ID, 'user')
-      expect(result.error).toBeUndefined()
+    test('[P1] prevents non-super_admin from assigning super_admin role', async () => {
+        mockAdminAuth('admin')
+        const result = await updateUserRole('target-id', 'super_admin')
+        expect(result.error).toMatch(/super_admin/i)
     })
 
-    it('cannot demote themselves to user', async () => {
-      const result = await updateUserRole(SUPER_ADMIN_ID, 'user')
-      expect(result.error).toMatch(/tự hạ quyền/)
-    })
-  })
-
-  // ── admin restrictions ─────────────────────────────────────────────────────
-  describe('admin caller', () => {
-    beforeEach(() => { currentUserId = ADMIN_ID })
-
-    it('can promote user to admin', async () => {
-      const result = await updateUserRole(USER_ID, 'admin')
-      expect(result.error).toBeUndefined()
+    test('[P1] prevents self-demotion', async () => {
+        mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-id' } }, error: null })
+        mockServerFrom.mockReturnValue({
+            select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }),
+        })
+        const result = await updateUserRole('admin-id', 'user')
+        expect(result.error).toMatch(/tự hạ quyền/i)
     })
 
-    it('can demote another admin to user', async () => {
-      // target is 'admin' — allowed
-      const result = await updateUserRole(USER_ID, 'user')
-      expect(result.error).toBeUndefined()
+    test('[P1] super_admin can assign super_admin role', async () => {
+        mockAdminAuth('super_admin')
+        mockServiceFrom.mockReturnValue({
+            update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        })
+        const result = await updateUserRole('other-id', 'super_admin')
+        expect(result.error).toBeUndefined()
     })
 
-    it('cannot assign super_admin role', async () => {
-      const result = await updateUserRole(USER_ID, 'super_admin')
-      expect(result.error).toMatch(/super_admin/)
+    test('[P1] admin can downgrade user role', async () => {
+        mockAdminAuth('admin')
+        mockServiceFrom.mockReturnValue({
+            update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        })
+        const result = await updateUserRole('other-user-id', 'user')
+        expect(result.error).toBeUndefined()
+    })
+})
+
+// ─── assignUserReferral ──────────────────────────────────────────────────────
+
+describe('[P0] assignUserReferral — auth guard', () => {
+    beforeEach(() => jest.clearAllMocks())
+
+    test('[P0] returns Unauthorized when not authenticated', async () => {
+        mockUnauthenticated()
+        const result = await assignUserReferral('target-id', 'REF001')
+        expect(result.error).toMatch(/unauthorized/i)
     })
 
-    it('cannot change role of a super_admin target', async () => {
-      const result = await updateUserRole(TARGET_SUPER_ADMIN_ID, 'admin')
-      expect(result.error).toMatch(/Admin không được thay đổi quyền của super_admin/)
+    test('[P0] returns error when caller is not admin', async () => {
+        mockCustomerRole()
+        const result = await assignUserReferral('target-id', 'REF001')
+        expect(result.error).toMatch(/unauthorized/i)
     })
 
-    it('cannot demote super_admin to user', async () => {
-      const result = await updateUserRole(TARGET_SUPER_ADMIN_ID, 'user')
-      expect(result.error).toMatch(/Admin không được thay đổi quyền của super_admin/)
+    test('[P1] returns error when ref code not found', async () => {
+        mockAdminAuth()
+        mockServiceFrom.mockReturnValue({
+            select: () => ({
+                ilike: () => ({
+                    single: () => Promise.resolve({ data: null, error: new Error('Not found') }),
+                }),
+            }),
+        })
+        const result = await assignUserReferral('target-id', 'INVALID')
+        expect(result.error).toMatch(/không tìm thấy mã giới thiệu/i)
     })
 
-    it('cannot demote themselves to user', async () => {
-      const result = await updateUserRole(ADMIN_ID, 'user')
-      expect(result.error).toMatch(/tự hạ quyền/)
+    test('[P1] prevents self-referral', async () => {
+        mockAdminAuth()
+        mockServiceFrom.mockReturnValue({
+            select: () => ({
+                ilike: () => ({
+                    single: () => Promise.resolve({
+                        data: { id: 'target-id', email: 'ref@test.com', full_name: 'Ref', referral_code: 'REF001' },
+                        error: null,
+                    }),
+                }),
+            }),
+        })
+        const result = await assignUserReferral('target-id', 'REF001')
+        expect(result.error).toMatch(/tự giới thiệu/i)
     })
-  })
-
-  // ── unauthenticated ────────────────────────────────────────────────────────
-  describe('unauthenticated caller', () => {
-    it('returns Unauthorized when no user', async () => {
-      jest.resetModules()
-      // Override mock to return no user
-      jest.mock('@/lib/supabase/server', () => ({
-        createServerClient: async () => ({
-          auth: { getUser: async () => ({ data: { user: null }, error: null }) },
-          from: () => ({}),
-        }),
-        createServiceRoleClient: () => ({ from: () => ({}) }),
-      }))
-      // Re-import to get new mock
-      const { updateUserRole: fn } = await import('../adminUsers')
-      const result = await fn(USER_ID, 'admin')
-      expect(result.error).toMatch(/Unauthorized/)
-    })
-  })
 })

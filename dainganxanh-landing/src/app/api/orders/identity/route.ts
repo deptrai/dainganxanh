@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getEffectiveUser } from '@/lib/getEffectiveUser'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 const identitySchema = z.object({
   orderCode: z.string().min(1),
@@ -17,8 +17,18 @@ const identitySchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const effectiveUser = await getEffectiveUser()
-    if (!effectiveUser) {
+    // Rate limit: 30 identity submissions per minute per IP
+    const rl = rateLimit(req, { limit: 30, windowMs: 60_000, keyPrefix: 'identity' })
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      )
+    }
+
+    const supabase = await createServerClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -37,17 +47,14 @@ export async function POST(req: NextRequest) {
       .from('orders')
       .select('id, code, user_id, status')
       .eq('code', orderCode)
-      .eq('user_id', effectiveUser.userId)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !order) {
       return NextResponse.json({ error: 'Không tìm thấy đơn hàng' }, { status: 404 })
     }
 
-    // Parse DOB to Date format for users table
-    const dobDate = new Date(identityFields.dob)
-
-    // 1. Update identity fields on the order
+    // Update identity fields + user_name on the order
     const { error: updateError } = await serviceSupabase
       .from('orders')
       .update({
@@ -63,39 +70,11 @@ export async function POST(req: NextRequest) {
       .eq('id', order.id)
 
     if (updateError) {
-      console.error('Failed to update identity fields on order:', updateError)
+      console.error('Failed to update identity fields:', updateError)
       return NextResponse.json({ error: 'Không thể lưu thông tin. Vui lòng thử lại.' }, { status: 500 })
     }
 
-    // 2. ALSO save identity to users profile for future reuse (best-effort)
-    const userProfileData: Record<string, string> = {
-      full_name: full_name,
-      phone: identityFields.phone,
-    }
-    // Try saving all identity fields; gracefully handle missing columns
-    const fullProfileData = {
-      ...userProfileData,
-      id_number: identityFields.id_number,
-      date_of_birth: dobDate.toISOString().split('T')[0],
-    }
-    let { error: userUpdateError } = await serviceSupabase
-      .from('users')
-      .update(fullProfileData)
-      .eq('id', effectiveUser.userId)
-
-    if (userUpdateError) {
-      // Columns may not exist yet — fallback to basic fields only
-      console.warn('Warning: Failed to update full user profile:', userUpdateError.message)
-      await serviceSupabase
-        .from('users')
-        .update(userProfileData)
-        .eq('id', effectiveUser.userId)
-        .then(({ error }) => {
-          if (error) console.warn('Warning: Failed to update basic user profile:', error.message)
-        })
-    }
-
-    // 3. Trigger contract generation in background (non-blocking) for completed orders
+    // Trigger contract generation in background (non-blocking) for completed orders
     if (order.status === 'completed') {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3001}`
       fetch(`${baseUrl}/api/contracts/generate`, {
@@ -105,7 +84,7 @@ export async function POST(req: NextRequest) {
       }).catch((err) => console.error('[Contract] generation trigger failed:', err))
     }
 
-    return NextResponse.json({ success: true, message: 'Đã lưu thông tin hợp đồng. Các lần mua tiếp theo sẽ tự động điền.' })
+    return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Unexpected error in POST /api/orders/identity:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -70,6 +70,7 @@ development_status:
   5-4-casso-transaction-sync: done  # ✅ Added 2026-03-28
   5-5-order-cancellation: done  # ✅ Added 2026-03-28
   5-6-casso-hmac-v2-verification: done  # ✅ Added 2026-03-28
+  5-7-order-refund-completed: done  # ✅ Implemented 2026-04-20
   epic-5-retrospective: backlog
 
   # Epic 6: SEO Optimization (Sprint 1)
@@ -109,4 +110,4 @@ summary:
   stories_review: 0
   stories_done: 47
   current_velocity: 11
-  last_updated: "2026-03-29"  # Epic 10 complete — all stories done
+  last_updated: "2026-04-20"  # Story 5-7 complete (+ code review patches)

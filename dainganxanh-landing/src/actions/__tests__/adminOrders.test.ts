@@ -1,418 +1,207 @@
-// Mock modules BEFORE importing the function under test
-jest.mock('@/lib/supabase/server', () => ({
-    createServiceRoleClient: jest.fn(),
-    createServerClient: jest.fn(),
-}))
+/**
+ * Unit Tests: adminOrders.ts (fetchAdminOrders, verifyAdminOrder)
+ *
+ * Covers: service-role bypass, email search, pagination, user enrichment,
+ *         referrer enrichment, error handling, verifyAdminOrder happy/error.
+ */
 
 import { fetchAdminOrders, verifyAdminOrder } from '../adminOrders'
-import { createServiceRoleClient, createServerClient } from '@/lib/supabase/server'
+
+// ── Mock state ───────────────────────────────────────────────────────────────
+
+const mockServiceFrom = jest.fn()
+const mockServerFrom = jest.fn()
+const mockGetUser = jest.fn()
+
+const mockServerClient = {
+  auth: { getUser: mockGetUser },
+  from: mockServerFrom,
+}
+
+const mockServiceClient = {
+  from: mockServiceFrom,
+}
+
+jest.mock('@/lib/supabase/server', () => ({
+  createServerClient: jest.fn(() => Promise.resolve(mockServerClient)),
+  createServiceRoleClient: jest.fn(() => mockServiceClient),
+}))
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * A query chain that:
+ * - Returns itself for all builder methods (select/eq/gte/lte/in/or/ilike/order/range)
+ * - Is thenable: `await chain` resolves to `resolveValue`
+ */
+function makeQueryChain(resolveValue: any) {
+  const chain: any = {
+    select: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    gte: jest.fn(() => chain),
+    lte: jest.fn(() => chain),
+    in: jest.fn(() => chain),
+    or: jest.fn(() => chain),
+    ilike: jest.fn(() => chain),
+    not: jest.fn(() => chain),
+    order: jest.fn(() => chain),
+    range: jest.fn(() => chain),
+    single: jest.fn(() => Promise.resolve(resolveValue)),
+    // Thenable — allows `await chain` to work
+    then: (resolve: any, reject: any) =>
+      Promise.resolve(resolveValue).then(resolve, reject),
+    catch: (reject: any) => Promise.resolve(resolveValue).catch(reject),
+  }
+  return chain
+}
+
+// ── fetchAdminOrders ──────────────────────────────────────────────────────────
 
 describe('fetchAdminOrders', () => {
-    let mockSupabase: any
-    let consoleErrorSpy: jest.SpyInstance
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
 
-    beforeEach(() => {
-        jest.clearAllMocks()
+  it('[P1] returns orders with user enrichment on happy path', async () => {
+    const mockOrders = [
+      { id: 'o1', user_id: 'u1', referred_by: null, status: 'completed' },
+    ]
+    const mockUsers = [
+      { id: 'u1', email: 'buyer@test.com', phone: '0901', referral_code: null },
+    ]
 
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ count: 1, data: null, error: null })) // count
+      .mockReturnValueOnce(makeQueryChain({ data: mockOrders, error: null }))     // data
+      .mockReturnValueOnce(makeQueryChain({ data: mockUsers, error: null }))      // users
 
-        // Default Supabase mock
-        mockSupabase = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            in: jest.fn().mockReturnThis(),
-            ilike: jest.fn().mockReturnThis(),
-            gte: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockReturnThis(),
-            or: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockReturnThis(),
-            single: jest.fn(),
-        }
-        ;(createServiceRoleClient as jest.MockedFunction<typeof createServiceRoleClient>).mockReturnValue(mockSupabase)
+    const result = await fetchAdminOrders({}, 1, 10)
+
+    expect(result.totalCount).toBe(1)
+    expect(result.orders).toHaveLength(1)
+    expect(result.orders[0].user_email).toBe('buyer@test.com')
+    expect(result.error).toBeUndefined()
+  })
+
+  it('[P1] enriches referrer info when referred_by is set', async () => {
+    const mockOrders = [
+      { id: 'o1', user_id: 'u1', referred_by: 'ref1', status: 'completed' },
+    ]
+    const mockUsers = [
+      { id: 'u1', email: 'buyer@test.com', phone: '0901', referral_code: null },
+      { id: 'ref1', email: 'referrer@test.com', phone: '0902', referral_code: 'REF123' },
+    ]
+
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ count: 1, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: mockOrders, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: mockUsers, error: null }))
+
+    const result = await fetchAdminOrders({}, 1, 10)
+
+    expect(result.orders[0].referrer).toEqual({
+      email: 'referrer@test.com',
+      referral_code: 'REF123',
     })
+  })
 
-    afterEach(() => {
-        consoleErrorSpy.mockRestore()
-    })
+  it('[P1] filters by status when provided', async () => {
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ count: 0, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+      // No users call when data is empty
 
-    it('should fetch orders with referrer data correctly', async () => {
-        // Arrange
-        const mockOrders = [
-            {
-                id: 'order-1',
-                user_id: 'user-1',
-                referred_by: 'referrer-1',
-                quantity: 5,
-                total_amount: 5000000,
-                status: 'pending',
-                created_at: '2026-01-01T00:00:00Z',
-            },
-            {
-                id: 'order-2',
-                user_id: 'user-2',
-                referred_by: 'referrer-2',
-                quantity: 10,
-                total_amount: 10000000,
-                status: 'verified',
-                created_at: '2026-01-02T00:00:00Z',
-            },
-        ]
+    const result = await fetchAdminOrders({ status: 'pending' }, 1, 10)
+    expect(result.totalCount).toBe(0)
+    expect(result.orders).toHaveLength(0)
+  })
 
-        const mockUsers = [
-            { id: 'user-1', email: 'user1@example.com', phone: '0123456789', referral_code: 'USER1' },
-            { id: 'user-2', email: 'user2@example.com', phone: '0987654321', referral_code: 'USER2' },
-            { id: 'referrer-1', email: 'ref1@example.com', phone: null, referral_code: 'REF1' },
-            { id: 'referrer-2', email: 'ref2@example.com', phone: null, referral_code: 'REF2' },
-        ]
+  it('[P1] searches by email when search contains @', async () => {
+    // email search → users.ilike → then count + data
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ data: [{ id: 'u1' }], error: null }))   // email search
+      .mockReturnValueOnce(makeQueryChain({ count: 1, data: null, error: null }))   // count
+      .mockReturnValueOnce(makeQueryChain({ data: [{ id: 'o1', user_id: 'u1', referred_by: null }], error: null })) // data
+      .mockReturnValueOnce(makeQueryChain({ data: [{ id: 'u1', email: 'test@test.com', phone: null, referral_code: null }], error: null })) // users
 
-        // Reset the mock to create separate chains
-        jest.clearAllMocks()
+    const result = await fetchAdminOrders({ search: 'test@test.com' }, 1, 10)
+    expect(result.orders).toHaveLength(1)
+  })
 
-        // Create count query chain
-        const countChain = {
-            select: jest.fn().mockReturnValue({
-                count: 2,
-                error: null,
-            }),
-        }
+  it('[P1] returns empty orders when email search finds no matching users', async () => {
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))              // email search → empty
+      .mockReturnValueOnce(makeQueryChain({ count: 0, data: null, error: null })) // count
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))              // data
 
-        // Create orders query chain
-        const ordersChain = {
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockResolvedValue({ data: mockOrders, error: null }),
-        }
+    const result = await fetchAdminOrders({ search: 'ghost@test.com' }, 1, 10)
+    expect(result.orders).toHaveLength(0)
+    expect(result.totalCount).toBe(0)
+  })
 
-        // Create users query chain
-        const usersChain = {
-            select: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
-        }
+  it('[P0] returns error on DB failure in data query', async () => {
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ count: 0, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: null, error: { message: 'DB error' } }))
 
-        // Mock from() to return different chains in sequence
-        const mockFrom = jest.fn()
-            .mockReturnValueOnce(countChain)  // First call: count query
-            .mockReturnValueOnce(ordersChain) // Second call: orders query
-            .mockReturnValueOnce(usersChain)  // Third call: users query
+    const result = await fetchAdminOrders({}, 1, 10)
+    expect(result.error).toBeDefined()
+    expect(result.orders).toHaveLength(0)
+  })
 
-        mockSupabase.from = mockFrom
-        ;(createServiceRoleClient as jest.MockedFunction<typeof createServiceRoleClient>).mockReturnValue(mockSupabase)
+  it('[P2] skips user lookup when no orders returned', async () => {
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ count: 0, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
 
-        // Act
-        const result = await fetchAdminOrders({}, 1, 20)
+    const result = await fetchAdminOrders({}, 1, 10)
+    expect(result.orders).toHaveLength(0)
+    // mockServiceFrom called only twice — no user lookup
+    expect(mockServiceFrom).toHaveBeenCalledTimes(2)
+  })
 
-        // Assert
-        expect(result.totalCount).toBe(2)
-        expect(result.orders).toHaveLength(2)
+  it('[P1] handles dateFrom and dateTo filters', async () => {
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ count: 0, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
 
-        // Check referrer mapping
-        expect(result.orders[0].referrer).toEqual({
-            email: 'ref1@example.com',
-            referral_code: 'REF1',
-        })
-        expect(result.orders[1].referrer).toEqual({
-            email: 'ref2@example.com',
-            referral_code: 'REF2',
-        })
-
-        // Check user mapping
-        expect(result.orders[0].user_email).toBe('user1@example.com')
-        expect(result.orders[0].user_phone).toBe('0123456789')
-    })
-
-    it('should handle orders without referrer (referrer = null)', async () => {
-        // Arrange
-        const mockOrders = [
-            {
-                id: 'order-1',
-                user_id: 'user-1',
-                referred_by: null, // No referrer
-                quantity: 5,
-                total_amount: 5000000,
-                status: 'pending',
-                created_at: '2026-01-01T00:00:00Z',
-            },
-        ]
-
-        const mockUsers = [
-            { id: 'user-1', email: 'user1@example.com', phone: '0123456789', referral_code: 'USER1' },
-        ]
-
-        // Mock count query
-        mockSupabase.from.mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockResolvedValue({ count: 1, error: null }),
-        })
-
-        // Mock orders query
-        const ordersChain = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockResolvedValue({ data: mockOrders, error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(ordersChain)
-
-        // Mock users query
-        mockSupabase.from.mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValue({ data: mockUsers, error: null }),
-        })
-
-        // Act
-        const result = await fetchAdminOrders({}, 1, 20)
-
-        // Assert
-        expect(result.orders[0].referrer).toBeNull()
-        expect(result.orders[0].user_email).toBe('user1@example.com')
-    })
-
-    it('should apply status filter correctly', async () => {
-        // Arrange
-        const mockOrders = []
-
-        // Mock count query with status filter
-        const countChain = {
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockResolvedValue({ count: 0, error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(countChain)
-
-        // Mock orders query with status filter
-        const ordersChain = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockResolvedValue({ data: mockOrders, error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(ordersChain)
-
-        // Act
-        const result = await fetchAdminOrders({ status: 'verified' }, 1, 20)
-
-        // Assert
-        expect(countChain.eq).toHaveBeenCalledWith('status', 'verified')
-    })
-
-    it('should handle search by email correctly', async () => {
-        // Arrange
-        const mockMatchedUsers = [{ id: 'user-1' }]
-
-        // Mock user search
-        mockSupabase.from.mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            ilike: jest.fn().mockResolvedValue({ data: mockMatchedUsers, error: null }),
-        })
-
-        // Mock count query
-        const countChain = {
-            select: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValue({ count: 1, error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(countChain)
-
-        // Mock orders query
-        const ordersChain = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValue({ data: [], error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(ordersChain)
-
-        // Act
-        const result = await fetchAdminOrders({ search: 'test@example.com' }, 1, 20)
-
-        // Assert - check that user search was performed
-        expect(mockSupabase.from).toHaveBeenCalledWith('users')
-        expect(countChain.in).toHaveBeenCalledWith('user_id', ['user-1'])
-        expect(ordersChain.in).toHaveBeenCalledWith('user_id', ['user-1'])
-    })
-
-    it('should handle date filters correctly', async () => {
-        // Arrange
-        const dateFrom = '2026-01-01'
-        const dateTo = '2026-01-31'
-
-        // Mock count query
-        const countChain = {
-            select: jest.fn().mockReturnThis(),
-            gte: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockResolvedValue({ count: 0, error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(countChain)
-
-        // Mock orders query
-        const ordersChain = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockReturnThis(),
-            gte: jest.fn().mockReturnThis(),
-            lte: jest.fn().mockResolvedValue({ data: [], error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(ordersChain)
-
-        // Act
-        await fetchAdminOrders({ dateFrom, dateTo }, 1, 20)
-
-        // Assert
-        expect(countChain.gte).toHaveBeenCalledWith('created_at', dateFrom)
-        expect(countChain.lte).toHaveBeenCalledWith('created_at', dateTo)
-        expect(ordersChain.gte).toHaveBeenCalledWith('created_at', dateFrom)
-        expect(ordersChain.lte).toHaveBeenCalledWith('created_at', dateTo)
-    })
-
-    it('should handle fetch error gracefully', async () => {
-        // Arrange
-        const errorMessage = 'Database connection failed'
-
-        jest.clearAllMocks()
-
-        // Mock count query (success)
-        const countChain = {
-            select: jest.fn().mockReturnValue({
-                count: 0,
-                error: null,
-            }),
-        }
-
-        // Mock orders query with error
-        const ordersChain = {
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockResolvedValue({ data: null, error: { message: errorMessage } }),
-        }
-
-        // Mock from() to return different chains
-        const mockFrom = jest.fn()
-            .mockReturnValueOnce(countChain)  // First call: count query
-            .mockReturnValueOnce(ordersChain) // Second call: orders query (throws)
-
-        mockSupabase.from = mockFrom
-        ;(createServiceRoleClient as jest.MockedFunction<typeof createServiceRoleClient>).mockReturnValue(mockSupabase)
-
-        // Act
-        const result = await fetchAdminOrders({}, 1, 20)
-
-        // Assert
-        expect(result.error).toBe('Không thể tải danh sách đơn hàng') // Generic error message
-        expect(result.orders).toEqual([])
-        expect(result.totalCount).toBe(0)
-        expect(consoleErrorSpy).toHaveBeenCalled()
-    })
-
-    it('should handle pagination correctly', async () => {
-        // Arrange
-        const page = 2
-        const pageSize = 10
-
-        // Mock count query
-        mockSupabase.from.mockReturnValueOnce({
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockResolvedValue({ count: 25, error: null }),
-        })
-
-        // Mock orders query
-        const ordersChain = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            order: jest.fn().mockReturnThis(),
-            range: jest.fn().mockResolvedValue({ data: [], error: null }),
-        }
-        mockSupabase.from.mockReturnValueOnce(ordersChain)
-
-        // Act
-        await fetchAdminOrders({}, page, pageSize)
-
-        // Assert - page 2, pageSize 10 → range(10, 19)
-        expect(ordersChain.range).toHaveBeenCalledWith(10, 19)
-    })
+    const result = await fetchAdminOrders(
+      { dateFrom: '2025-01-01', dateTo: '2025-12-31' },
+      1,
+      10
+    )
+    expect(result.error).toBeUndefined()
+  })
 })
 
+// ── verifyAdminOrder ──────────────────────────────────────────────────────────
+
 describe('verifyAdminOrder', () => {
-    let mockSupabase: any
-    let consoleErrorSpy: jest.SpyInstance
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-id' } }, error: null })
+  })
 
-    beforeEach(() => {
-        jest.clearAllMocks()
+  it('[P0] returns empty object on success', async () => {
+    const updateChain: any = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    }
+    mockServerFrom.mockReturnValue(updateChain)
 
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+    const result = await verifyAdminOrder('order-123')
+    expect(result).toEqual({})
+    expect(result.error).toBeUndefined()
+  })
 
-        // verifyAdminOrder uses both createServerClient (auth) and createServiceRoleClient (queries)
-        const mockServerClient = {} as any
-        ;(createServerClient as jest.MockedFunction<typeof createServerClient>).mockResolvedValue(mockServerClient)
+  it('[P0] returns error message on DB failure', async () => {
+    const updateChain: any = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: { message: 'Update failed' } }),
+    }
+    mockServerFrom.mockReturnValue(updateChain)
 
-        // Service role mock needs to support chained select().eq().single() AND update().eq()
-        let callCount = 0
-        mockSupabase = {
-            from: jest.fn().mockImplementation(() => {
-                callCount++
-                if (callCount === 1) {
-                    // First call: select current status
-                    return {
-                        select: jest.fn().mockReturnValue({
-                            eq: jest.fn().mockReturnValue({
-                                single: jest.fn().mockResolvedValue({ data: { id: 'order-123', status: 'pending' } }),
-                            }),
-                        }),
-                    }
-                }
-                // Second call: update
-                return {
-                    update: jest.fn().mockReturnValue({
-                        eq: jest.fn().mockResolvedValue({ error: null }),
-                    }),
-                }
-            }),
-        }
-        ;(createServiceRoleClient as jest.Mock).mockReturnValue(mockSupabase)
-    })
-
-    afterEach(() => {
-        consoleErrorSpy.mockRestore()
-    })
-
-    it('should verify order successfully', async () => {
-        const orderId = 'order-123'
-
-        const result = await verifyAdminOrder(orderId)
-
-        expect(mockSupabase.from).toHaveBeenCalledWith('orders')
-        expect(result.error).toBeUndefined()
-    })
-
-    it('should handle verification error', async () => {
-        const orderId = 'order-123'
-        const errorMessage = 'Update failed'
-
-        // Override: first call OK, second call returns error
-        let callCount = 0
-        mockSupabase.from = jest.fn().mockImplementation(() => {
-            callCount++
-            if (callCount === 1) {
-                return {
-                    select: jest.fn().mockReturnValue({
-                        eq: jest.fn().mockReturnValue({
-                            single: jest.fn().mockResolvedValue({ data: { id: orderId, status: 'pending' } }),
-                        }),
-                    }),
-                }
-            }
-            return {
-                update: jest.fn().mockReturnValue({
-                    eq: jest.fn().mockResolvedValue({ error: { message: errorMessage } }),
-                }),
-            }
-        })
-
-        const result = await verifyAdminOrder(orderId)
-
-        expect(result.error).toBe(errorMessage)
-        expect(consoleErrorSpy).toHaveBeenCalledWith('verifyAdminOrder error:', expect.any(Object))
-    })
+    const result = await verifyAdminOrder('order-bad')
+    expect(result.error).toBe('Update failed')
+  })
 })

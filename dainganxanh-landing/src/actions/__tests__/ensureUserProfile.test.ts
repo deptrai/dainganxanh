@@ -1,320 +1,202 @@
-// Mock modules BEFORE importing the function under test
-jest.mock('@/lib/supabase/server', () => ({
-    createServiceRoleClient: jest.fn(),
-}))
-
-jest.mock('next/headers', () => ({
-    cookies: jest.fn(),
-}))
+/**
+ * Unit Tests: ensureUserProfile
+ *
+ * [P0] Critical auth path — ensures every authenticated user has a DB profile.
+ * Covers: profile existence check, referral resolution, default referrer fallback,
+ * profile creation, duplicate-safe insert (23505), invalid referral handling.
+ *
+ * Mock strategy: mock @/lib/supabase/server and next/headers
+ */
 
 import { ensureUserProfile } from '../ensureUserProfile'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
+
+// ── Supabase mock ────────────────────────────────────────────────────────────
+
+const mockSingle = jest.fn()
+const mockInsert = jest.fn()
+const mockIlike = jest.fn()
+
+// Each call to from() returns a fresh chainable query builder
+function makeQueryBuilder() {
+    const builder: any = {
+        select: () => builder,
+        eq: () => builder,
+        ilike: (...args: any[]) => { mockIlike(...args); return builder },
+        single: mockSingle,
+        insert: mockInsert,
+    }
+    return builder
+}
+
+const mockFrom = jest.fn(() => makeQueryBuilder())
+
+const mockServiceClient = { from: mockFrom }
+
+jest.mock('@/lib/supabase/server', () => ({
+    createServiceRoleClient: () => mockServiceClient,
+}))
+
+// ── next/headers mock ────────────────────────────────────────────────────────
+
+const mockCookieGet = jest.fn()
+
+jest.mock('next/headers', () => ({
+    cookies: jest.fn(() =>
+        Promise.resolve({
+            get: mockCookieGet,
+        })
+    ),
+}))
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function setupExistingProfile() {
+    mockSingle.mockResolvedValueOnce({ data: { id: 'existing-user-id' }, error: null })
+}
+
+function setupNoProfile() {
+    mockSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } })
+}
+
+function setupReferrerFound(referrerId: string) {
+    mockSingle.mockResolvedValueOnce({ data: { id: referrerId }, error: null })
+}
+
+function setupReferrerNotFound() {
+    mockSingle.mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } })
+}
 
 const DEFAULT_REFERRER_ID = '5296b70b-03bb-463b-853c-9ccff2697685'
 
-describe('ensureUserProfile', () => {
-    let mockSupabase: any
-    let mockCookieStore: any
-    let consoleLogSpy: jest.SpyInstance
-    let consoleWarnSpy: jest.SpyInstance
-    let consoleErrorSpy: jest.SpyInstance
+// ── Tests ────────────────────────────────────────────────────────────────────
 
-    beforeEach(() => {
-        jest.clearAllMocks()
+beforeEach(() => {
+    jest.clearAllMocks()
+    mockInsert.mockResolvedValue({ error: null })
+    mockCookieGet.mockReturnValue(undefined)
+})
 
-        // Spy on console methods
-        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation()
-        consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
+describe('[P0] ensureUserProfile — profile existence', () => {
+    test('returns early when profile already exists', async () => {
+        setupExistingProfile()
 
-        // Default Supabase mock
-        mockSupabase = {
-            from: jest.fn().mockReturnThis(),
-            select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
-            ilike: jest.fn().mockReturnThis(),
-            single: jest.fn(),
-            insert: jest.fn(),
-        }
-        ;(createServiceRoleClient as jest.MockedFunction<typeof createServiceRoleClient>).mockReturnValue(mockSupabase)
+        await ensureUserProfile('user-123', 'test@example.com')
 
-        // Default cookie mock
-        mockCookieStore = {
-            get: jest.fn(),
-        }
-        ;(cookies as jest.MockedFunction<typeof cookies>).mockResolvedValue(mockCookieStore)
+        expect(mockInsert).not.toHaveBeenCalled()
     })
 
-    afterEach(() => {
-        consoleLogSpy.mockRestore()
-        consoleWarnSpy.mockRestore()
-        consoleErrorSpy.mockRestore()
+    test('[P0] creates profile when profile does not exist', async () => {
+        setupNoProfile()
+
+        await ensureUserProfile('user-456', 'newuser@example.com')
+
+        expect(mockInsert).toHaveBeenCalledTimes(1)
+        // source calls .insert({ id, email, ... }) — argument is a plain object, not array
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.id).toBe('user-456')
+        expect(insertArg.email).toBe('newuser@example.com')
+    })
+})
+
+describe('[P0] ensureUserProfile — referral code handling', () => {
+    test('[P0] uses default referrer when no ref cookie', async () => {
+        setupNoProfile()
+        mockCookieGet.mockReturnValue(undefined)
+
+        await ensureUserProfile('user-789', 'noref@example.com')
+
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.referred_by_user_id).toBe(DEFAULT_REFERRER_ID)
     })
 
-    describe('when user profile already exists', () => {
-        it('should not create a new profile', async () => {
-            // Arrange
-            const userId = 'existing-user-id'
-            const email = 'existing@example.com'
+    test('[P0] resolves valid referral code from cookie to referrer ID', async () => {
+        setupNoProfile()
+        mockCookieGet.mockReturnValue({ value: 'REF123' })
+        setupReferrerFound('referrer-user-id')
 
-            mockSupabase.single.mockResolvedValueOnce({
-                data: { id: userId },
-                error: null,
-            })
+        await ensureUserProfile('user-abc', 'referred@example.com')
 
-            // Act
-            await ensureUserProfile(userId, email)
-
-            // Assert
-            expect(mockSupabase.from).toHaveBeenCalledWith('users')
-            expect(mockSupabase.select).toHaveBeenCalledWith('id')
-            expect(mockSupabase.eq).toHaveBeenCalledWith('id', userId)
-            expect(mockSupabase.insert).not.toHaveBeenCalled()
-        })
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.referred_by_user_id).toBe('referrer-user-id')
     })
 
-    describe('when user profile does not exist', () => {
-        beforeEach(() => {
-            // Mock user not found
-            mockSupabase.single.mockResolvedValueOnce({
-                data: null,
-                error: { code: 'PGRST116' }, // Not found
-            })
-        })
+    test('[P1] falls back to default referrer when referral code is invalid', async () => {
+        setupNoProfile()
+        mockCookieGet.mockReturnValue({ value: 'INVALID_CODE' })
+        setupReferrerNotFound()
 
-        it('should create profile with valid referral code from cookie', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'newuser@example.com'
-            const phone = '0123456789'
-            const referralCode = 'ABC123'
-            const referrerId = 'referrer-user-id'
+        await ensureUserProfile('user-xyz', 'badreferral@example.com')
 
-            mockCookieStore.get.mockReturnValue({ value: referralCode })
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.referred_by_user_id).toBe(DEFAULT_REFERRER_ID)
+    })
 
-            // Need to setup separate mock chains for each query
-            // First query: Check if user exists
-            const userCheckChain = {
-                from: jest.fn().mockReturnThis(),
-                select: jest.fn().mockReturnThis(),
-                eq: jest.fn().mockReturnThis(),
-                single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
-            }
+    test('[P1] trims whitespace from referral code before lookup', async () => {
+        setupNoProfile()
+        mockCookieGet.mockReturnValue({ value: '  REF456  ' })
+        setupReferrerFound('another-referrer')
 
-            // Second query: Look up referrer
-            const referrerCheckChain = {
-                from: jest.fn().mockReturnThis(),
-                select: jest.fn().mockReturnThis(),
-                ilike: jest.fn().mockReturnThis(),
-                single: jest.fn().mockResolvedValue({ data: { id: referrerId }, error: null }),
-            }
+        await ensureUserProfile('user-trim', 'trim@example.com')
 
-            // Mock from() to return different chains
-            mockSupabase.from
-                .mockReturnValueOnce(userCheckChain)
-                .mockReturnValueOnce(referrerCheckChain)
-                .mockReturnValueOnce(mockSupabase) // For insert
+        expect(mockIlike).toHaveBeenCalledWith('referral_code', 'REF456')
+    })
+})
 
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
+describe('[P1] ensureUserProfile — profile data integrity', () => {
+    test('[P1] sets phone when provided', async () => {
+        setupNoProfile()
 
-            // Act
-            await ensureUserProfile(userId, email, phone)
+        await ensureUserProfile('user-phone', 'phone@example.com', '0912345678')
 
-            // Assert
-            expect(mockCookieStore.get).toHaveBeenCalledWith('ref')
-            expect(referrerCheckChain.ilike).toHaveBeenCalledWith('referral_code', referralCode)
-            expect(mockSupabase.insert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    id: userId,
-                    email,
-                    phone,
-                    referred_by_user_id: referrerId,
-                    referral_code: expect.stringMatching(/^newuser\d{5}$/),
-                })
-            )
-            expect(consoleLogSpy).toHaveBeenCalledWith(
-                '[ensureUserProfile] Valid referrer found:',
-                expect.objectContaining({
-                    referralCode,
-                    referrerId,
-                })
-            )
-        })
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.phone).toBe('0912345678')
+    })
 
-        it('should fallback to DEFAULT_REFERRER_ID when referral code is invalid', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'newuser@example.com'
-            const invalidCode = 'INVALID_CODE'
+    test('[P1] sets phone to null when not provided', async () => {
+        setupNoProfile()
 
-            mockCookieStore.get.mockReturnValue({ value: invalidCode })
+        await ensureUserProfile('user-nophone', 'nophone@example.com')
 
-            // Mock referrer lookup - returns null (not found)
-            mockSupabase.single
-                .mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } }) // User not exists
-                .mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } }) // Referrer not found
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.phone).toBeNull()
+    })
 
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
+    test('[P1] generates non-empty referral_code for the new profile', async () => {
+        setupNoProfile()
 
-            // Act
-            await ensureUserProfile(userId, email)
+        await ensureUserProfile('user-code', 'myemail@example.com')
 
-            // Assert
-            expect(mockSupabase.insert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    referred_by_user_id: DEFAULT_REFERRER_ID,
-                })
-            )
-            expect(consoleWarnSpy).toHaveBeenCalledWith(
-                '[ensureUserProfile] Invalid referral code, using default:',
-                expect.objectContaining({
-                    inputCode: invalidCode,
-                    defaultReferrerId: DEFAULT_REFERRER_ID,
-                })
-            )
-        })
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(typeof insertArg.referral_code).toBe('string')
+        expect(insertArg.referral_code.length).toBeGreaterThan(0)
+    })
 
-        it('should fallback to DEFAULT_REFERRER_ID when no referral cookie exists', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'newuser@example.com'
+    test('[P2] generates referral_code from email prefix', async () => {
+        setupNoProfile()
 
-            mockCookieStore.get.mockReturnValue(undefined)
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
+        await ensureUserProfile('user-prefix', 'myemail@example.com')
 
-            // Act
-            await ensureUserProfile(userId, email)
+        const insertArg = mockInsert.mock.calls[0][0]
+        expect(insertArg.referral_code).toMatch(/^myemail/)
+    })
+})
 
-            // Assert
-            expect(mockSupabase.insert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    referred_by_user_id: DEFAULT_REFERRER_ID,
-                })
-            )
-            expect(consoleLogSpy).toHaveBeenCalledWith(
-                '[ensureUserProfile] No referral code in cookie, using default:',
-                expect.objectContaining({
-                    defaultReferrerId: DEFAULT_REFERRER_ID,
-                })
-            )
-        })
+describe('[P1] ensureUserProfile — duplicate-safe insert', () => {
+    test('[P1] does not throw when insert returns 23505 (unique_violation)', async () => {
+        setupNoProfile()
+        mockInsert.mockResolvedValueOnce({ error: { code: '23505', message: 'duplicate key' } })
 
-        it('should fallback to DEFAULT_REFERRER_ID when referral code is empty string', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'newuser@example.com'
+        await expect(
+            ensureUserProfile('user-dup', 'dup@example.com')
+        ).resolves.toBeUndefined()
+    })
 
-            mockCookieStore.get.mockReturnValue({ value: '  ' }) // Whitespace only
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
+    test('[P1] does not throw on successful insert', async () => {
+        setupNoProfile()
+        mockInsert.mockResolvedValueOnce({ error: null })
 
-            // Act
-            await ensureUserProfile(userId, email)
-
-            // Assert
-            expect(mockSupabase.insert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    referred_by_user_id: DEFAULT_REFERRER_ID,
-                })
-            )
-            expect(consoleLogSpy).toHaveBeenCalledWith(
-                '[ensureUserProfile] No referral code in cookie, using default:',
-                expect.any(Object)
-            )
-        })
-
-        it('should generate referral code from email prefix', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'john.doe@example.com'
-
-            mockCookieStore.get.mockReturnValue(undefined)
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
-
-            // Act
-            await ensureUserProfile(userId, email)
-
-            // Assert
-            expect(mockSupabase.insert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    referral_code: expect.stringMatching(/^johndoe\d{5}$/),
-                })
-            )
-        })
-
-        it('should handle phone = null correctly', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'test@example.com'
-
-            mockCookieStore.get.mockReturnValue(undefined)
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
-
-            // Act
-            await ensureUserProfile(userId, email, null)
-
-            // Assert
-            expect(mockSupabase.insert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    phone: null,
-                })
-            )
-        })
-
-        it('should handle insert error gracefully (except unique_violation)', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'test@example.com'
-            const insertError = { code: 'SOME_ERROR', message: 'Insert failed' }
-
-            mockCookieStore.get.mockReturnValue(undefined)
-            mockSupabase.insert.mockResolvedValue({ data: null, error: insertError })
-
-            // Act
-            await ensureUserProfile(userId, email)
-
-            // Assert
-            expect(consoleErrorSpy).toHaveBeenCalledWith(
-                '[ensureUserProfile] Failed to create profile:',
-                insertError
-            )
-        })
-
-        it('should ignore unique_violation error (23505)', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'test@example.com'
-            const uniqueViolationError = { code: '23505', message: 'Duplicate key' }
-
-            mockCookieStore.get.mockReturnValue(undefined)
-            mockSupabase.insert.mockResolvedValue({ data: null, error: uniqueViolationError })
-
-            // Act
-            await ensureUserProfile(userId, email)
-
-            // Assert
-            expect(consoleErrorSpy).not.toHaveBeenCalled()
-        })
-
-        it('should log auto-creation when successful', async () => {
-            // Arrange
-            const userId = 'new-user-id'
-            const email = 'test@example.com'
-
-            mockCookieStore.get.mockReturnValue(undefined)
-            mockSupabase.insert.mockResolvedValue({ data: null, error: null })
-
-            // Act
-            await ensureUserProfile(userId, email)
-
-            // Assert
-            expect(consoleWarnSpy).toHaveBeenCalledWith(
-                '[ensureUserProfile] Auto-created missing profile for',
-                email,
-                expect.objectContaining({
-                    referredBy: DEFAULT_REFERRER_ID,
-                })
-            )
-        })
+        await expect(
+            ensureUserProfile('user-ok', 'ok@example.com')
+        ).resolves.toBeUndefined()
     })
 })

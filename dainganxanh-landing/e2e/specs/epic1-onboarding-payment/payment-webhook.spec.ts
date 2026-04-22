@@ -1,10 +1,8 @@
 import { test, expect } from '@playwright/test'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 import crypto from 'crypto'
-import * as path from 'path'
-
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
-})
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Payment Webhook E2E Test Suite
@@ -12,11 +10,11 @@ test.use({
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running
- * - Auth setup via storageState (admin.json)
+ * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe.serial('Payment Webhook E2E', () => {
+test.describe('[P0] Payment Webhook E2E', () => {
     const WEBHOOK_SECRET = process.env.CASSO_WEBHOOK_SECRET || 'test-webhook-secret'
 
     /**
@@ -28,17 +26,21 @@ test.describe.serial('Payment Webhook E2E', () => {
         return hmac.digest('hex')
     }
 
+
+    /**
+     * Helper: Complete admin login flow
+     */
     /**
      * Helper: Mock Casso webhook payload
      */
     function createWebhookPayload(orderCode: string, amount: number) {
         return {
-            id: `txn-${Date.now()}`,
+            id: `txn-${require('crypto').randomBytes(4).toString('hex')}`,
             amount: amount,
             description: `${orderCode} - Thanh toan cay xanh`,
             when: new Date().toISOString(),
             bank_sub_acc_id: 'CASSO_ACCOUNT',
-            tid: `TXN${Date.now()}`
+            tid: `TXN${require('crypto').randomBytes(4).toString('hex')}`
         }
     }
 
@@ -52,8 +54,7 @@ test.describe.serial('Payment Webhook E2E', () => {
     test('webhook with valid HMAC signature is accepted', async ({ page }) => {
         let webhookAccepted = false
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         // Mock webhook endpoint
         await page.route('**/api/webhooks/casso', async route => {
@@ -117,8 +118,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         let webhookRejected = false
         let securityLogCreated = false
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         // Mock webhook endpoint
         await page.route('**/api/webhooks/casso', async route => {
@@ -180,8 +180,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         let transactionCreated = false
         let orderUpdated = false
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         const orderCode = 'DH789012'
         const orderAmount = 2600000
@@ -253,8 +252,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         let noMatchTransactionCreated = false
         let adminNotified = false
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         const orderCode = 'DH345678'
         const orderAmount = 2600000
@@ -324,7 +322,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         expect(noMatchTransactionCreated).toBe(true)
 
         // Admin notification may be async - wait briefly
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         console.log('✅ Mismatched amount created no_match transaction')
         if (adminNotified) {
@@ -339,8 +337,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         let noMatchTransactionCreated = false
         let errorLogged = false
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         const invalidOrderCode = 'DH999999'
 
@@ -407,8 +404,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         let treesGenerated = false
         let contractGenerated = false
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         const orderCode = 'DH456789'
         const orderAmount = 1300000
@@ -524,7 +520,7 @@ test.describe.serial('Payment Webhook E2E', () => {
             })
         }, { orderCode })
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         expect(contractGenerated).toBe(true)
 
         await page.screenshot({
@@ -544,8 +540,7 @@ test.describe.serial('Payment Webhook E2E', () => {
         let telegramNotificationSent = false
         let emailPayload: any = null
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page)
 
         const orderCode = 'DH567890'
         const orderAmount = 2600000
@@ -634,7 +629,7 @@ test.describe.serial('Payment Webhook E2E', () => {
             })
         }, { orderCode, customerEmail, orderAmount, treeQuantity })
 
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
 
         // Verify email sent with correct payload
         expect(emailSent).toBe(true)

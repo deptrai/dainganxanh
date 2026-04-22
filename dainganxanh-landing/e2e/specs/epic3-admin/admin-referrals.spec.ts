@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
-
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
-})
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Referrals Management E2E Test Suite
@@ -11,17 +9,22 @@ test.use({
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running
- * - Auth setup via storageState (admin.json)
+ * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe('Admin Referrals Management E2E', () => {
+test.describe('[P2] Admin Referrals Management E2E', () => {
+
+
+
+    /**
+     * Helper: Complete admin login flow and navigate to target page
+     */
     /**
      * Test 1: Admin views referral management page
      */
     test('admin views referral management at /crm/admin/referrals', async ({ page }) => {
-        await page.goto('/crm/admin/referrals')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/referrals')
 
         // ============================================
         // Phase 1: Verify admin referrals page loaded
@@ -34,7 +37,7 @@ test.describe('Admin Referrals Management E2E', () => {
         // ============================================
         // Phase 2: Verify referrals table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if referrals table exists
         const referralsTable = page.locator('table, div[class*="referral"]').first()
@@ -53,7 +56,7 @@ test.describe('Admin Referrals Management E2E', () => {
             const rowCount = await referralRows.count()
             console.log(`✅ Found ${rowCount} referral records`)
         } else {
-            await expect(page.getByText(/không có dữ liệu|no referrals/i)).toBeVisible()
+            await expect(page.getByText(/chưa có hoa hồng|không có dữ liệu|no referrals/i)).toBeVisible()
             console.log('ℹ️ No referral records found')
         }
 
@@ -80,8 +83,7 @@ test.describe('Admin Referrals Management E2E', () => {
      * Test 2: Admin manually assigns referral code to user without one
      */
     test('admin manually assigns referral code to user without one', async ({ page }) => {
-        await page.goto('/crm/admin/referrals')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/referrals')
 
         await expect(page.getByText(/referral|giới thiệu|quản lý mã giới thiệu/i).first()).toBeVisible({ timeout: 10000 })
 
@@ -122,7 +124,7 @@ test.describe('Admin Referrals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for "assign referral code" button or section
         const assignButton = page.getByRole('button', { name: /gán mã|assign|tạo mã/i }).first()
@@ -131,7 +133,7 @@ test.describe('Admin Referrals Management E2E', () => {
         if (hasAssignButton) {
             console.log('📝 Attempting to assign referral code to user...')
             await assignButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Look for user selection (could be dropdown or search)
             const userSelect = page.locator('select[name*="user"], input[placeholder*="tìm người dùng"]')
@@ -139,7 +141,7 @@ test.describe('Admin Referrals Management E2E', () => {
 
             if (hasUserSelect) {
                 await userSelect.first().fill('noref@example.com')
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
 
                 // Select from dropdown if available
                 const userOption = page.getByText('noref@example.com')
@@ -154,7 +156,7 @@ test.describe('Admin Referrals Management E2E', () => {
 
             if (hasConfirmButton) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success message
                 const successMessage = page.locator('text=/thành công|success|đã gán/i')
@@ -182,8 +184,7 @@ test.describe('Admin Referrals Management E2E', () => {
     test('telegram notification mock on referral assignment (notifyReferralAssigned)', async ({ page }) => {
         let telegramApiCalled = false
 
-        await page.goto('/crm/admin/referrals')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/referrals')
 
         await expect(page.getByText(/referral|giới thiệu|quản lý mã giới thiệu/i).first()).toBeVisible({ timeout: 10000 })
 
@@ -223,7 +224,7 @@ test.describe('Admin Referrals Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for assign button
         const assignButton = page.getByRole('button', { name: /gán mã|assign|tạo mã/i }).first()
@@ -231,20 +232,20 @@ test.describe('Admin Referrals Management E2E', () => {
 
         if (hasAssignButton) {
             await assignButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Fill user selection if available
             const userSelect = page.locator('select[name*="user"], input[placeholder*="tìm người dùng"]')
             if (await userSelect.count() > 0) {
                 await userSelect.first().fill('test@example.com')
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
             }
 
             // Click confirm
             const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|gán mã|assign/i }).last()
             if (await confirmButton.count() > 0) {
                 await confirmButton.click()
-                await page.waitForTimeout(3000)
+                await page.waitForLoadState('networkidle')
 
                 // Verify Telegram API was called
                 if (telegramApiCalled) {

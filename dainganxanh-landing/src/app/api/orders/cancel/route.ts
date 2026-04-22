@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getEffectiveUser } from '@/lib/getEffectiveUser'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
+import { captureError, trackLatency } from '@/lib/monitoring'
 
 export async function POST(req: NextRequest) {
+  const _start = Date.now()
   try {
-    const effectiveUser = await getEffectiveUser()
-    if (!effectiveUser) {
+    // Rate limit: 10 cancel attempts per minute per IP
+    const rl = rateLimit(req, { limit: 10, windowMs: 60_000, keyPrefix: 'cancel' })
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+      )
+    }
+
+    // Auth check with user session
+    const supabase = await createServerClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -17,12 +30,82 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid order code format' }, { status: 400 })
     }
 
-    // Use service role to bypass RLS (user authenticated above)
     const serviceSupabase = createServiceRoleClient()
+
+    // Fetch caller role (needed for admin refund path)
+    // P7: log lookup errors instead of swallowing — silent admin downgrade is operationally invisible
+    const { data: callerProfile, error: roleLookupError } = await serviceSupabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (roleLookupError) {
+      console.error('Role lookup failed for user', user.id, roleLookupError)
+    }
+
+    const isAdmin = ['admin', 'super_admin'].includes(callerProfile?.role ?? '')
+
+    // P4: only admins can probe orders by id alone. Non-admins fall straight through
+    // to the user-scoped pending-cancel path, so they cannot use this route to
+    // distinguish "completed-order-id" from "non-existent-id".
+    if (isAdmin && orderId) {
+      const { data: existingOrder } = await serviceSupabase
+        .from('orders')
+        .select('id, code, total_amount, user_id, status')
+        .eq('id', orderId)
+        .single()
+
+      if (existingOrder?.status === 'completed') {
+        // P1 (TOCTOU): use .select('id') so a concurrent refund (which flips status
+        // before our UPDATE runs) results in 0 rows → 404, not a false success
+        // with a spurious audit log row.
+        const { data: updatedRows, error: updateError } = await serviceSupabase
+          .from('orders')
+          .update({ status: 'cancelled_refunded' })
+          .eq('id', orderId)
+          .eq('status', 'completed')
+          .select('id')
+
+        if (updateError) {
+          console.error('Failed to refund order:', updateError)
+          return NextResponse.json({ error: 'Không thể hoàn tiền đơn hàng' }, { status: 500 })
+        }
+
+        if (!updatedRows || updatedRows.length === 0) {
+          // Lost the race — another admin already refunded this order.
+          return NextResponse.json({ error: 'Đơn hàng đã được xử lý' }, { status: 404 })
+        }
+
+        // Non-blocking audit log
+        // P8: Supabase returns soft errors as { error } — try/catch alone misses them.
+        try {
+          const { error: auditError } = await serviceSupabase.from('admin_audit_log').insert({
+            admin_id: user.id,
+            action: 'order_refund_initiated',
+            target_id: existingOrder.id,
+            metadata: {
+              order_code: existingOrder.code,
+              amount: existingOrder.total_amount,
+              user_id: existingOrder.user_id,
+            },
+          })
+          if (auditError) {
+            console.error('Audit log insert returned error (non-blocking):', auditError)
+          }
+        } catch (auditErr) {
+          console.error('Audit log failed (non-blocking):', auditErr)
+        }
+
+        return NextResponse.json({ success: true, refundStatus: 'manual_pending' })
+      }
+    }
+
+    // Regular cancel path: user cancels own pending order (existing behavior)
     let query = serviceSupabase
       .from('orders')
       .update({ status: 'cancelled' })
-      .eq('user_id', effectiveUser.userId)
+      .eq('user_id', user.id)
       .eq('status', 'pending')
 
     if (orderId) query = query.eq('id', orderId)
@@ -39,9 +122,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Đơn hàng không tìm thấy hoặc đã xử lý' }, { status: 404 })
     }
 
+    trackLatency('/api/orders/cancel', Date.now() - _start)
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Unexpected error in /api/orders/cancel:', err)
+    captureError(err, { route: '/api/orders/cancel' })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

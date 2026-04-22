@@ -2,15 +2,16 @@
 
 import { useState, Fragment } from 'react'
 import { Order } from '@/hooks/useAdminOrders'
+import VerifyOrderButton from './VerifyOrderButton'
 import LotAssignmentModal from './LotAssignmentModal'
-import ApprovePaymentModal from './ApprovePaymentModal'
 import { assignOrderToLot } from '@/actions/assignOrderToLot'
 import { ContractActions } from '@/components/admin/ContractActions'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface OrderTableProps {
     orders: Order[]
-    approveOrder?: (orderId: string, proofUrl?: string) => Promise<void>
+    verifyOrder: (orderId: string) => Promise<void>
+    refundOrder?: (orderId: string) => Promise<void>
 }
 
 type SortField = 'created_at' | 'total_amount' | 'quantity'
@@ -19,28 +20,33 @@ type SortDirection = 'asc' | 'desc'
 const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
     paid: 'bg-blue-100 text-blue-800',
-    manual_payment_claimed: 'bg-orange-100 text-orange-800',
+    verified: 'bg-green-100 text-green-800',
     assigned: 'bg-purple-100 text-purple-800',
     completed: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800',
+    cancelled_refunded: 'bg-orange-100 text-orange-800',
 }
 
 const statusLabels = {
-    pending: 'Chờ thanh toán',
+    pending: 'Chờ xác minh',
     paid: 'Đã thanh toán',
-    manual_payment_claimed: 'Khách báo đã chuyển',
+    verified: 'Đã xác minh',
     assigned: 'Đã gán cây',
     completed: 'Hoàn thành',
     cancelled: 'Đã hủy',
+    cancelled_refunded: 'Hoàn tiền',
 }
 
-export default function OrderTable({ orders, approveOrder }: OrderTableProps) {
+export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTableProps) {
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
     const [assigningOrder, setAssigningOrder] = useState<Order | null>(null)
     const [assignError, setAssignError] = useState<string | null>(null)
-    const [approvingOrder, setApprovingOrder] = useState<Order | null>(null)
+    const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null)
+    const [refundConfirmOrder, setRefundConfirmOrder] = useState<Order | null>(null)
+    const [refundConfirmInput, setRefundConfirmInput] = useState('')
+    const [refundError, setRefundError] = useState<string | null>(null)
 
     const handleAssignToLot = async (lotId: string) => {
         if (!assigningOrder) return
@@ -96,67 +102,8 @@ export default function OrderTable({ orders, approveOrder }: OrderTableProps) {
         )
     }
 
-    const renderActionButtons = (order: Order) => (
-        <div className="flex gap-2 flex-wrap">
-            {(order.status === 'pending' || order.status === 'paid' || order.status === 'manual_payment_claimed') ? (
-                <>
-                    {approveOrder && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setApprovingOrder(order)
-                            }}
-                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium"
-                        >
-                            Duyệt thanh toán
-                        </button>
-                    )}
-                </>
-            ) : order.status === 'completed' ? (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        setAssigningOrder(order)
-                    }}
-                    className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-medium"
-                >
-                    Gán lô cây
-                </button>
-            ) : (
-                <span className="text-gray-400">-</span>
-            )}
-        </div>
-    )
-
-    const renderExpandedDetails = (order: Order) => (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div><strong>Full Order ID:</strong> {order.id}</div>
-                <div><strong>User ID:</strong> {order.user_id}</div>
-                {order.verified_at && (
-                    <div><strong>Verified At:</strong> {formatDate(order.verified_at)}</div>
-                )}
-                {(order as any).claimed_at && (
-                    <div><strong>Claimed At:</strong> {formatDate((order as any).claimed_at)}</div>
-                )}
-                <div><strong>Contract:</strong> {order.contract_url ? 'Yes' : 'No'}</div>
-            </div>
-            {(order.status === 'completed' || order.contract_url) && (
-                <div className="border-t pt-4">
-                    <h4 className="text-sm font-semibold mb-2">Hợp Đồng & In Ấn</h4>
-                    <ContractActions
-                        orderId={order.id}
-                        contractUrl={order.contract_url}
-                        orderCode={order.order_code || order.id.substring(0, 8)}
-                        onSuccess={() => window.location.reload()}
-                    />
-                </div>
-            )}
-        </div>
-    )
-
     return (
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-lg shadow overflow-hidden">
             {/* Error Toast */}
             {assignError && (
                 <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between">
@@ -169,194 +116,247 @@ export default function OrderTable({ orders, approveOrder }: OrderTableProps) {
                     </button>
                 </div>
             )}
-
-            {/* Mobile Card View */}
-            <div className="block lg:hidden divide-y divide-gray-200">
-                {sortedOrders.map((order) => (
-                    <div key={order.id} className="p-4 space-y-3">
-                        {/* Header: Order code + Status */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-gray-900">
-                                {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
-                            </span>
-                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[order.status]}`}>
-                                {statusLabels[order.status]}
-                            </span>
-                        </div>
-
-                        {/* Info rows */}
-                        <div className="text-sm text-gray-600 space-y-1">
-                            <div className="flex justify-between">
-                                <span>User:</span>
-                                <span className="text-gray-900 font-medium truncate ml-2">{order.user_email || order.user_phone || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Số lượng:</span>
-                                <span className="text-gray-900">{order.quantity} cây</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Tổng tiền:</span>
-                                <span className="text-gray-900 font-medium">{formatCurrency(order.total_amount)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Ngày tạo:</span>
-                                <span className="text-gray-500">{formatDate(order.created_at)}</span>
-                            </div>
-                            {order.referrer && (
-                                <div className="flex justify-between">
-                                    <span>Giới thiệu:</span>
-                                    <span className="text-gray-900">{order.referrer.referral_code}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Action Buttons - always visible */}
-                        <div className="pt-2 border-t border-gray-100">
-                            {renderActionButtons(order)}
-                        </div>
-
-                        {/* Expand for details */}
-                        <button
-                            onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800"
+            <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Order ID
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            User
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Người Giới Thiệu
+                        </th>
+                        <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('quantity')}
                         >
-                            {expandedRow === order.id ? 'Thu gọn' : 'Xem chi tiết'}
-                        </button>
-                        {expandedRow === order.id && (
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                {renderExpandedDetails(order)}
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Order ID
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                User
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Người Giới Thiệu
-                            </th>
-                            <th
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleSort('quantity')}
+                            Số lượng <SortIcon field="quantity" />
+                        </th>
+                        <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('total_amount')}
+                        >
+                            Tổng tiền <SortIcon field="total_amount" />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Thanh toán
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Trạng thái
+                        </th>
+                        <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort('created_at')}
+                        >
+                            Ngày tạo <SortIcon field="created_at" />
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hành động
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {sortedOrders.map((order) => (
+                        <Fragment key={order.id}>
+                            <tr
+                                className="hover:bg-gray-50 cursor-pointer"
+                                onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
                             >
-                                Số lượng <SortIcon field="quantity" />
-                            </th>
-                            <th
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleSort('total_amount')}
-                            >
-                                Tổng tiền <SortIcon field="total_amount" />
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Thanh toán
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Trạng thái
-                            </th>
-                            <th
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                onClick={() => handleSort('created_at')}
-                            >
-                                Ngày tạo <SortIcon field="created_at" />
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Hành động
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {sortedOrders.map((order) => (
-                            <Fragment key={order.id}>
-                                <tr
-                                    className="hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <div>{order.user_email || order.user_phone || 'N/A'}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {order.referrer ? (
-                                            <div>
-                                                <span className="font-medium">{order.referrer.referral_code}</span>
-                                                <br />
-                                                <span className="text-xs text-gray-500">{order.referrer.email}</span>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div>{order.user_email || order.user_phone || 'N/A'}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.referrer ? (
+                                        <div>
+                                            <span className="font-medium">{order.referrer.referral_code}</span>
+                                            <br />
+                                            <span className="text-xs text-gray-500">{order.referrer.email}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400">Không có</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.quantity} cây
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {formatCurrency(order.total_amount)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.payment_method}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[order.status]}`}>
+                                        {statusLabels[order.status]}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {formatDate(order.created_at)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div className="flex gap-2">
+                                        {order.status === 'pending' || order.status === 'paid' ? (
+                                            <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
+                                        ) : order.status === 'verified' || order.status === 'completed' ? (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setAssigningOrder(order)
+                                                    }}
+                                                    className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs"
+                                                >
+                                                    Gán lô cây
+                                                </button>
+                                                {order.status === 'completed' && refundOrder && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setRefundConfirmOrder(order)
+                                                            setRefundConfirmInput('')
+                                                            setRefundError(null)
+                                                        }}
+                                                        disabled={refundingOrderId === order.id}
+                                                        className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-xs disabled:opacity-50"
+                                                    >
+                                                        {refundingOrderId === order.id ? '...' : 'Hoàn tiền'}
+                                                    </button>
+                                                )}
                                             </div>
                                         ) : (
-                                            <span className="text-gray-400">Không có</span>
+                                            <span className="text-gray-400">-</span>
                                         )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {order.quantity} cây
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {formatCurrency(order.total_amount)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {order.payment_method}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[order.status]}`}>
-                                            {statusLabels[order.status]}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {formatDate(order.created_at)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        {renderActionButtons(order)}
+                                    </div>
+                                </td>
+                            </tr>
+                            {expandedRow === order.id && (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-4 bg-gray-50">
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div><strong>Full Order ID:</strong> {order.id}</div>
+                                                <div><strong>User ID:</strong> {order.user_id}</div>
+                                                {order.verified_at && (
+                                                    <div><strong>Verified At:</strong> {formatDate(order.verified_at)}</div>
+                                                )}
+                                                <div><strong>Contract:</strong> {order.contract_url ? 'Yes' : 'No'}</div>
+                                            </div>
+
+                                            {/* Contract Actions */}
+                                            {order.contract_url && (
+                                                <div className="border-t pt-4">
+                                                    <h4 className="text-sm font-semibold mb-2">Hợp Đồng & In Ấn</h4>
+                                                    <ContractActions
+                                                        orderId={order.id}
+                                                        contractUrl={order.contract_url}
+                                                        orderCode={order.order_code || order.id.substring(0, 8)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
-                                {expandedRow === order.id && (
-                                    <tr>
-                                        <td colSpan={9} className="px-6 py-4 bg-gray-50">
-                                            {renderExpandedDetails(order)}
-                                        </td>
-                                    </tr>
-                                )}
-                            </Fragment>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                            )}
+                        </Fragment>
+                    ))}
+                </tbody>
+            </table>
 
             {/* Assignment Modal */}
-            {assigningOrder && (
-                <LotAssignmentModal
-                    orderId={assigningOrder.id}
-                    quantity={assigningOrder.quantity}
-                    onClose={() => {
-                        setAssigningOrder(null)
-                        setAssignError(null)
-                    }}
-                    onAssign={handleAssignToLot}
-                />
-            )}
+            {
+                assigningOrder && (
+                    <LotAssignmentModal
+                        orderId={assigningOrder.id}
+                        quantity={assigningOrder.quantity}
+                        onClose={() => {
+                            setAssigningOrder(null)
+                            setAssignError(null)
+                        }}
+                        onAssign={handleAssignToLot}
+                    />
+                )
+            }
 
-            {/* Approve Payment Modal */}
-            {approvingOrder && approveOrder && (
-                <ApprovePaymentModal
-                    order={approvingOrder}
-                    onClose={() => setApprovingOrder(null)}
-                    onApprove={async (orderId, proofUrl) => {
-                        await approveOrder(orderId, proofUrl)
-                        setApprovingOrder(null)
-                        window.location.reload()
+            {/* Refund confirmation modal — requires typing the order code to prevent misclicks on money flow */}
+            {refundConfirmOrder && refundOrder && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                    onClick={() => {
+                        if (refundingOrderId) return
+                        setRefundConfirmOrder(null)
                     }}
-                />
+                >
+                    <div
+                        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            Xác nhận hoàn tiền đơn hàng
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Hành động này sẽ chuyển đơn hàng sang trạng thái{' '}
+                            <span className="font-semibold text-orange-700">Hoàn tiền</span>.
+                            Nhập mã đơn hàng{' '}
+                            <code className="px-1 py-0.5 bg-gray-100 text-orange-700 rounded font-mono text-xs">
+                                {refundConfirmOrder.order_code || refundConfirmOrder.id}
+                            </code>{' '}
+                            để xác nhận.
+                        </p>
+                        <input
+                            type="text"
+                            value={refundConfirmInput}
+                            onChange={(e) => setRefundConfirmInput(e.target.value)}
+                            placeholder="Nhập mã đơn hàng"
+                            autoFocus
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            disabled={!!refundingOrderId}
+                        />
+                        {refundError && (
+                            <p className="mt-2 text-sm text-red-600">{refundError}</p>
+                        )}
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                onClick={() => setRefundConfirmOrder(null)}
+                                disabled={!!refundingOrderId}
+                                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    const expected = refundConfirmOrder.order_code || refundConfirmOrder.id
+                                    if (refundConfirmInput !== expected) {
+                                        setRefundError('Mã đơn hàng không khớp')
+                                        return
+                                    }
+                                    setRefundingOrderId(refundConfirmOrder.id)
+                                    setRefundError(null)
+                                    try {
+                                        await refundOrder(refundConfirmOrder.id)
+                                        setRefundConfirmOrder(null)
+                                    } catch (err) {
+                                        setRefundError(err instanceof Error ? err.message : 'Lỗi không xác định')
+                                    } finally {
+                                        setRefundingOrderId(null)
+                                    }
+                                }}
+                                disabled={
+                                    !!refundingOrderId ||
+                                    refundConfirmInput !== (refundConfirmOrder.order_code || refundConfirmOrder.id)
+                                }
+                                className="px-4 py-2 text-sm text-white bg-orange-600 rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {refundingOrderId ? 'Đang xử lý...' : 'Xác nhận hoàn tiền'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
-        </div>
+        </div >
     )
 }

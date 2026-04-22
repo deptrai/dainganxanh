@@ -16,11 +16,31 @@ function makeRequest(stream?: string): NextRequest {
     return new NextRequest(url)
 }
 
-function mockFetch(data: Record<string, unknown>, ok = true) {
-    global.fetch = jest.fn().mockResolvedValue({
-        ok,
-        json: async () => data,
-    } as Response)
+/**
+ * Mock 2 sequential fetch calls made by route.ts:
+ *   1st: GET /api/streams  → returns streamsData
+ *   2nd: GET /api/frame.jpeg → returns frameOk + optional content-length
+ */
+function mockFetchSequence({
+    streamsData,
+    streamsOk = true,
+    frameOk = false,
+    frameContentLength = '0',
+}: {
+    streamsData: Record<string, unknown>
+    streamsOk?: boolean
+    frameOk?: boolean
+    frameContentLength?: string
+}) {
+    global.fetch = jest.fn()
+        .mockResolvedValueOnce({
+            ok: streamsOk,
+            json: async () => streamsData,
+        } as Response)
+        .mockResolvedValueOnce({
+            ok: frameOk,
+            headers: { get: (h: string) => h === 'content-length' ? frameContentLength : null },
+        } as unknown as Response)
 }
 
 describe('GET /api/camera/status', () => {
@@ -28,33 +48,32 @@ describe('GET /api/camera/status', () => {
         jest.restoreAllMocks()
     })
 
-    it('returns { online: true, streaming: false } when stream exists but no active producer', async () => {
-        mockFetch({
-            farm: {
-                producers: [{ bytes_recv: 0 }],
-            },
+    it('returns { online: true, streaming: false } when stream exists but frame not available', async () => {
+        mockFetchSequence({
+            streamsData: { farm: { producers: [] } },
+            frameOk: false,
         })
         const res = await GET(makeRequest('farm'))
         const body = await res.json()
         expect(body).toEqual({ online: true, streaming: false })
     })
 
-    it('returns { online: true, streaming: true } when producer has bytes_recv > 0', async () => {
-        mockFetch({
-            farm: {
-                producers: [{ bytes_recv: 1024 }],
-            },
+    it('returns { online: true, streaming: true } when frame endpoint returns content', async () => {
+        mockFetchSequence({
+            streamsData: { farm: { producers: [] } },
+            frameOk: true,
+            frameContentLength: '12345',
         })
         const res = await GET(makeRequest('farm'))
         const body = await res.json()
         expect(body).toEqual({ online: true, streaming: true })
     })
 
-    it('returns { online: true, streaming: false } when producers array is empty', async () => {
-        mockFetch({
-            farm: {
-                producers: [],
-            },
+    it('returns { online: true, streaming: false } when frame returns ok but content-length is 0', async () => {
+        mockFetchSequence({
+            streamsData: { farm: { producers: [] } },
+            frameOk: true,
+            frameContentLength: '0',
         })
         const res = await GET(makeRequest('farm'))
         const body = await res.json()
@@ -62,17 +81,16 @@ describe('GET /api/camera/status', () => {
     })
 
     it('returns { online: false } when stream does not exist in go2rtc', async () => {
-        mockFetch({
-            other_stream: { producers: [] },
+        mockFetchSequence({
+            streamsData: { other_stream: {} },
         })
         const res = await GET(makeRequest('farm'))
         const body = await res.json()
-        // streaming is always present in response; false when stream config missing
         expect(body).toEqual({ online: false, streaming: false })
     })
 
-    it('returns { online: false } when go2rtc returns non-ok status', async () => {
-        mockFetch({}, false)
+    it('returns { online: false } when go2rtc /api/streams returns non-ok status', async () => {
+        global.fetch = jest.fn().mockResolvedValueOnce({ ok: false } as Response)
         const res = await GET(makeRequest('farm'))
         const body = await res.json()
         expect(body).toMatchObject({ online: false })
@@ -86,8 +104,10 @@ describe('GET /api/camera/status', () => {
     })
 
     it('defaults to "farm" stream when no stream param provided', async () => {
-        mockFetch({
-            farm: { producers: [{ bytes_recv: 512 }] },
+        mockFetchSequence({
+            streamsData: { farm: {} },
+            frameOk: true,
+            frameContentLength: '512',
         })
         const res = await GET(makeRequest())
         const body = await res.json()
@@ -95,36 +115,40 @@ describe('GET /api/camera/status', () => {
     })
 
     it('accepts custom stream name via query param', async () => {
-        mockFetch({
-            'custom-cam': { producers: [{ bytes_recv: 100 }] },
+        mockFetchSequence({
+            streamsData: { 'custom-cam': {} },
+            frameOk: true,
+            frameContentLength: '100',
         })
         const res = await GET(makeRequest('custom-cam'))
         const body = await res.json()
         expect(body).toEqual({ online: true, streaming: true })
     })
 
-    it('streaming is false when producer has no bytes_recv field', async () => {
-        mockFetch({
-            farm: {
-                producers: [{ connected: true }], // bytes_recv absent
-            },
-        })
+    it('streaming is false when frame endpoint returns no content-length header', async () => {
+        global.fetch = jest.fn()
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ farm: {} }),
+            } as Response)
+            .mockResolvedValueOnce({
+                ok: true,
+                headers: { get: () => null },
+            } as unknown as Response)
         const res = await GET(makeRequest('farm'))
         const body = await res.json()
         expect(body).toEqual({ online: true, streaming: false })
     })
 
-    it('streaming is true when at least one of multiple producers has bytes_recv > 0', async () => {
-        mockFetch({
-            farm: {
-                producers: [
-                    { bytes_recv: 0 },
-                    { bytes_recv: 2048 },
-                ],
-            },
+    it('calls /api/streams then /api/frame.jpeg with correct stream name', async () => {
+        mockFetchSequence({
+            streamsData: { farm: {} },
+            frameOk: true,
+            frameContentLength: '1024',
         })
-        const res = await GET(makeRequest('farm'))
-        const body = await res.json()
-        expect(body).toEqual({ online: true, streaming: true })
+        await GET(makeRequest('farm'))
+        const calls = (global.fetch as jest.Mock).mock.calls
+        expect(calls[0][0]).toMatch(/\/api\/streams$/)
+        expect(calls[1][0]).toMatch(/\/api\/frame\.jpeg\?src=farm/)
     })
 })

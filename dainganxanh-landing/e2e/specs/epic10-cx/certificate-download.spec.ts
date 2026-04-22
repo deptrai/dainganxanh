@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsUser } from './fixtures/auth'
 
 /**
  * Certificate Download E2E Test Suite
@@ -8,18 +10,15 @@ import * as path from 'path'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Test user: phanquochoipt@gmail.com
+ * - Test user: TEST_USER_EMAIL (env override)
  */
 
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json')
-})
+test.describe('[P1] Certificate Download E2E', () => {
 
-test.describe('Certificate Download E2E', () => {
+
     // Use serial mode to prevent OTP conflicts when running in parallel
     test.describe.configure({ mode: 'serial' })
     test.setTimeout(60000) // 60 seconds per test
-
     /**
      * Main Test: Complete certificate download flow
      */
@@ -33,7 +32,12 @@ test.describe('Certificate Download E2E', () => {
             consoleMessages.push(`[PAGE ERROR] ${err.message}`)
         })
         // ============================================
-        // Phase 1: Navigate to My Garden (already authenticated via storageState)
+        // Phase 1: Login
+        // ============================================
+        await loginAsUser(page, '/my-garden')
+
+        // ============================================
+        // Phase 2: Navigate to My Garden
         // ============================================
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -52,8 +56,7 @@ test.describe('Certificate Download E2E', () => {
         const orderId = orderHref?.split('/').pop()
 
         if (!orderId) {
-            test.skip(true, 'No orders found for admin user')
-            return
+            throw new Error('Could not extract order ID from order link')
         }
 
         console.log(`Found order ID: ${orderId}`)
@@ -69,11 +72,15 @@ test.describe('Certificate Download E2E', () => {
         // Phase 4: Verify certificate button
         // ============================================
         const downloadButton = page.getByRole('button', { name: /tải chứng chỉ/i })
-        const hasDownloadButton = await downloadButton.isVisible({ timeout: 10000 }).catch(() => false)
-        if (!hasDownloadButton) {
-            console.warn('⚠ No "tải chứng chỉ" button found — order may not be in completed/paid status. Skipping.')
+        const buttonVisible = await downloadButton.isVisible().catch(() => false)
+
+        if (!buttonVisible) {
+            console.log('⚠️  Certificate download button not visible — order may not be completed with lot_id assigned')
+            console.log('   This is expected for orders with status != completed or no lot_id')
+            await page.screenshot({ path: 'e2e-results/before-download.png', fullPage: true })
             return
         }
+
         await expect(downloadButton).toBeEnabled({ timeout: 5000 })
 
         // Debug: Log page title and URL
@@ -165,6 +172,9 @@ test.describe('Certificate Download E2E', () => {
      * Test: Verify QR code verification URL
      */
     test('verify QR code redirects to verification page', async ({ page }) => {
+        // Login
+        await loginAsUser(page, '/my-garden')
+
         // Navigate to My Garden
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -175,8 +185,7 @@ test.describe('Certificate Download E2E', () => {
         const orderId = orderHref?.split('/').pop()
 
         if (!orderId) {
-            test.skip(true, 'No orders found for admin user')
-            return
+            throw new Error('Could not extract order ID')
         }
 
         // Navigate to verify URL (simulating QR code scan)
@@ -198,6 +207,9 @@ test.describe('Certificate Download E2E', () => {
      * Test: Certificate button disabled during generation
      */
     test('certificate button disabled during generation', async ({ page }) => {
+        // Login
+        await loginAsUser(page, '/my-garden')
+
         // Navigate to order detail
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
@@ -208,11 +220,6 @@ test.describe('Certificate Download E2E', () => {
 
         // Click download button
         const downloadButton = page.getByRole('button', { name: /tải chứng chỉ/i })
-        const hasButton = await downloadButton.isVisible({ timeout: 5000 }).catch(() => false)
-        if (!hasButton) {
-            console.warn('⚠ No "tải chứng chỉ" button found — skipping.')
-            return
-        }
         await downloadButton.click()
 
         // Wait for either button to become disabled OR for an error message to appear
@@ -260,6 +267,9 @@ test.describe('Certificate Download E2E', () => {
                 consoleWarnings.push(msg.text())
             }
         })
+
+        // Login
+        await loginAsUser(page, '/my-garden')
 
         // Navigate to order detail
         await page.goto('/crm/my-garden')

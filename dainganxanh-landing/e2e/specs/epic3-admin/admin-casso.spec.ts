@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
-
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
-})
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Casso Transaction History E2E Test Suite
@@ -11,17 +9,22 @@ test.use({
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running
- * - Auth setup via storageState (admin.json)
+ * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe('Admin Casso Transaction History E2E', () => {
+test.describe('[P1] Admin Casso Transaction History E2E', () => {
+
+
+
+    /**
+     * Helper: Complete admin login flow and navigate to target page
+     */
     /**
      * Test 1: Admin views Casso transaction history
      */
     test('admin views Casso transaction history at /crm/admin/casso', async ({ page }) => {
-        await page.goto('/crm/admin/casso')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/casso')
 
         // ============================================
         // Phase 1: Verify admin Casso page loaded
@@ -29,12 +32,12 @@ test.describe('Admin Casso Transaction History E2E', () => {
         await expect(page).toHaveURL(/crm\/admin\/casso/)
 
         // Check for page title
-        await expect(page.locator('h1').filter({ hasText: /casso|transaction/i })).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/casso|transaction|giao dịch|lịch sử thanh toán/i).first()).toBeVisible({ timeout: 10000 })
 
         // ============================================
         // Phase 2: Verify transactions table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if transactions table exists
         const transactionsTable = page.locator('table, div[class*="transaction"]').first()
@@ -80,10 +83,9 @@ test.describe('Admin Casso Transaction History E2E', () => {
      * Test 2: Admin filters transactions by status
      */
     test('admin filters transactions by status (processed/no_match/function_error)', async ({ page }) => {
-        await page.goto('/crm/admin/casso')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/casso')
 
-        await expect(page.locator('h1').filter({ hasText: /casso|transaction/i })).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/casso|transaction|giao dịch|lịch sử thanh toán/i).first()).toBeVisible({ timeout: 10000 })
 
         // Mock API response for filtered transactions
         await page.route('**/api/admin/casso**', async route => {
@@ -152,7 +154,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for status filter dropdown
         const statusFilter = page.locator('select[name*="status"], select:has(option[value*="processed"])')
@@ -161,7 +163,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         if (hasStatusFilter) {
             // Test filtering by "processed"
             await statusFilter.selectOption({ value: 'processed' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Verify "processed" results
             const processedBadge = page.locator('text=/processed|đã xử lý/i')
@@ -171,7 +173,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
 
             // Test filtering by "no_match"
             await statusFilter.selectOption({ value: 'no_match' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             const noMatchBadge = page.locator('text=/no_match|không khớp/i')
             if (await noMatchBadge.count() > 0) {
@@ -180,7 +182,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
 
             // Test filtering by "function_error"
             await statusFilter.selectOption({ value: 'function_error' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             const errorBadge = page.locator('text=/function_error|lỗi|error/i')
             if (await errorBadge.count() > 0) {
@@ -197,10 +199,9 @@ test.describe('Admin Casso Transaction History E2E', () => {
      * Test 3: Admin manually reprocesses failed transaction
      */
     test('admin manually reprocesses failed transaction', async ({ page }) => {
-        await page.goto('/crm/admin/casso')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/casso')
 
-        await expect(page.locator('h1').filter({ hasText: /casso|transaction/i })).toBeVisible({ timeout: 10000 })
+        await expect(page.getByText(/casso|transaction|giao dịch|lịch sử thanh toán/i).first()).toBeVisible({ timeout: 10000 })
 
         // Mock API response for transaction list with failed transaction
         await page.route('**/api/admin/casso', async route => {
@@ -246,7 +247,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for reprocess button
         const reprocessButton = page.getByRole('button', { name: /reprocess|xử lý lại|thử lại/i }).first()
@@ -255,7 +256,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
         if (hasReprocessButton) {
             console.log('📝 Attempting to reprocess failed transaction...')
             await reprocessButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Check for confirmation dialog
             const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|đồng ý/i })
@@ -263,7 +264,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
 
             if (hasConfirmDialog) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success message
                 const successMessage = page.locator('text=/thành công|success|đã xử lý/i')
@@ -274,7 +275,7 @@ test.describe('Admin Casso Transaction History E2E', () => {
                 }
             } else {
                 // No confirmation dialog - direct reprocess
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
                 const successMessage = page.locator('text=/thành công|success|đã xử lý/i')
                 if (await successMessage.isVisible({ timeout: 5000 })) {
                     console.log('✅ Transaction reprocessed successfully (no confirmation dialog)')

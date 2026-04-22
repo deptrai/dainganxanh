@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from 'react'
-import { fetchAdminOrders, approveAdminOrder } from '@/actions/adminOrders'
+import { fetchAdminOrders, verifyAdminOrder } from '@/actions/adminOrders'
 
 export interface Order {
     id: string
@@ -9,9 +9,8 @@ export interface Order {
     quantity: number
     total_amount: number
     payment_method: string
-    status: 'pending' | 'paid' | 'manual_payment_claimed' | 'assigned' | 'completed' | 'cancelled'
+    status: 'pending' | 'paid' | 'verified' | 'assigned' | 'completed' | 'cancelled' | 'cancelled_refunded'
     verified_at: string | null
-    claimed_at?: string | null
     created_at: string
     // Joined from users table
     user_email?: string
@@ -47,7 +46,8 @@ interface UseAdminOrdersReturn {
     setFilters: (filters: OrderFilters) => void
     pagination: PaginationInfo
     setPage: (page: number) => void
-    approveOrder: (orderId: string, proofUrl?: string) => Promise<void>
+    verifyOrder: (orderId: string) => Promise<void>
+    refundOrder: (orderId: string) => Promise<void>
     refetch: () => Promise<void>
 }
 
@@ -58,7 +58,7 @@ export function useAdminOrders(): UseAdminOrdersReturn {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filters, setFilters] = useState<OrderFilters>({
-        status: 'all',
+        status: 'pending', // Default to pending verification
     })
     const [pagination, setPagination] = useState<PaginationInfo>({
         page: 1,
@@ -106,8 +106,8 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         setPagination(prev => ({ ...prev, page: 1 }))
     }, [])
 
-    const approveOrder = useCallback(async (orderId: string, proofUrl?: string) => {
-        const result = await approveAdminOrder(orderId, proofUrl)
+    const verifyOrder = useCallback(async (orderId: string) => {
+        const result = await verifyAdminOrder(orderId)
 
         if (result.error) {
             throw new Error(result.error)
@@ -117,7 +117,27 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         setOrders((prev) =>
             prev.map((order) =>
                 order.id === orderId
-                    ? { ...order, status: 'completed' as const }
+                    ? { ...order, status: 'verified' as const, verified_at: new Date().toISOString() }
+                    : order
+            )
+        )
+    }, [])
+
+    const refundOrder = useCallback(async (orderId: string) => {
+        const res = await fetch('/api/orders/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Không thể hoàn tiền đơn hàng')
+        }
+        // Optimistic update
+        setOrders((prev) =>
+            prev.map((order) =>
+                order.id === orderId
+                    ? { ...order, status: 'cancelled_refunded' as const }
                     : order
             )
         )
@@ -140,7 +160,8 @@ export function useAdminOrders(): UseAdminOrdersReturn {
         setFilters: handleSetFilters,
         pagination,
         setPage,
-        approveOrder,
+        verifyOrder,
+        refundOrder,
         refetch,
     }
 }

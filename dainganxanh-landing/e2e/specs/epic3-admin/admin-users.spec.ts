@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
-
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json'),
-})
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Users Management E2E Test Suite
@@ -11,18 +9,23 @@ test.use({
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running
- * - Auth setup via storageState (admin.json)
+ * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.describe('Admin Users Management E2E', () => {
+test.describe('[P1] Admin Users Management E2E', () => {
+
+
+
+    /**
+     * Helper: Complete admin login flow and navigate to target page
+     */
     /**
      * Test 1: Admin views user list
      */
     test('admin views user list at /crm/admin/users', async ({ page }) => {
         // Login as admin and navigate to users page
-        await page.goto('/crm/admin/users')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/users')
 
         // ============================================
         // Phase 1: Verify admin users page loaded
@@ -35,7 +38,7 @@ test.describe('Admin Users Management E2E', () => {
         // ============================================
         // Phase 2: Verify users table/list
         // ============================================
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if users table exists
         const usersTable = page.locator('table, div[class*="user"]').first()
@@ -74,8 +77,7 @@ test.describe('Admin Users Management E2E', () => {
      * Test 2: Admin searches user by email with mock API response
      */
     test('admin searches user by email with mock API response', async ({ page }) => {
-        await page.goto('/crm/admin/users')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/users')
 
         await expect(page.getByText(/user management|quản lý người dùng|danh sách người dùng/i).first()).toBeVisible({ timeout: 10000 })
 
@@ -110,7 +112,7 @@ test.describe('Admin Users Management E2E', () => {
 
         if (hasSearchInput) {
             await searchInput.fill('test@example.com')
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Verify search results
             await expect(page.getByText('test@example.com')).toBeVisible({ timeout: 5000 })
@@ -124,8 +126,7 @@ test.describe('Admin Users Management E2E', () => {
      * Test 3: Admin changes user role (user → admin) with confirmation dialog
      */
     test('admin changes user role with confirmation dialog', async ({ page }) => {
-        await page.goto('/crm/admin/users')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/users')
 
         await expect(page.getByText(/user management|quản lý người dùng|danh sách người dùng/i).first()).toBeVisible({ timeout: 10000 })
 
@@ -142,7 +143,7 @@ test.describe('Admin Users Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for role change dropdown or button
         const roleSelect = page.locator('select[name*="role"], button[class*="role"]').first()
@@ -151,7 +152,7 @@ test.describe('Admin Users Management E2E', () => {
         if (hasRoleControl) {
             // Click role control
             await roleSelect.click()
-            await page.waitForTimeout(500)
+            await page.waitForLoadState('networkidle')
 
             // Try to select admin role
             const adminOption = page.getByRole('option', { name: /admin/i }).or(page.getByText(/admin/i).and(page.locator('[role="menuitem"]')))
@@ -159,7 +160,7 @@ test.describe('Admin Users Management E2E', () => {
 
             if (hasAdminOption) {
                 await adminOption.first().click()
-                await page.waitForTimeout(500)
+                await page.waitForLoadState('networkidle')
 
                 // Check for confirmation dialog
                 const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|đồng ý/i })
@@ -167,7 +168,7 @@ test.describe('Admin Users Management E2E', () => {
 
                 if (hasConfirmDialog) {
                     await confirmButton.click()
-                    await page.waitForTimeout(1000)
+                    await page.waitForLoadState('networkidle')
 
                     // Check for success message
                     const successMessage = page.locator('text=/thành công|success|đã cập nhật/i')
@@ -191,8 +192,7 @@ test.describe('Admin Users Management E2E', () => {
      * Test 4: Admin impersonation flow (switch to user view)
      */
     test('admin impersonation flow switches to user view', async ({ page }) => {
-        await page.goto('/crm/admin/users')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/users')
 
         await expect(page.getByText(/user management|quản lý người dùng|danh sách người dùng/i).first()).toBeVisible({ timeout: 10000 })
 
@@ -213,7 +213,7 @@ test.describe('Admin Users Management E2E', () => {
             }
         })
 
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for impersonate button
         const impersonateButton = page.getByRole('button', { name: /impersonate|hỗ trợ|xem như/i }).first()
@@ -222,7 +222,7 @@ test.describe('Admin Users Management E2E', () => {
         if (hasImpersonateButton) {
             console.log('📝 Attempting to impersonate user...')
             await impersonateButton.click()
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Check for confirmation dialog
             const confirmButton = page.getByRole('button', { name: /xác nhận|confirm|tiếp tục/i })
@@ -230,7 +230,7 @@ test.describe('Admin Users Management E2E', () => {
 
             if (hasConfirmDialog) {
                 await confirmButton.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
             }
 
             // Check if redirected or impersonation banner appeared

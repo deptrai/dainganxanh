@@ -25,7 +25,7 @@ function hashIP(ip: string): string {
 /**
  * Track a referral link click with deduplication
  */
-export async function trackReferralClick(refCode: string, requestHeaders: Headers) {
+export async function trackReferralClick(refCode: string, requestHeaders?: Headers) {
     try {
         const supabase = await createServerClient()
 
@@ -41,8 +41,8 @@ export async function trackReferralClick(refCode: string, requestHeaders: Header
         }
 
         // Get IP and user agent
-        const ip = requestHeaders.get('x-forwarded-for') || requestHeaders.get('x-real-ip') || 'unknown'
-        const userAgent = requestHeaders.get('user-agent') || 'unknown'
+        const ip = requestHeaders?.get('x-forwarded-for') || requestHeaders?.get('x-real-ip') || 'unknown'
+        const userAgent = requestHeaders?.get('user-agent') || 'unknown'
 
         // Hash IP for privacy
         const ipHash = hashIP(ip)

@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin } from './fixtures/auth'
 
 /**
  * Admin Order Management E2E Test Suite
@@ -8,21 +10,22 @@ import * as path from 'path'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
- * - Admin user: phanquochoipt@gmail.com (must have admin role)
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json')
-})
+test.describe('[P0] Admin Order Management E2E', () => {
 
-test.describe('Admin Order Management E2E', () => {
 
+
+    /**
+     * Helper: Complete admin login flow and navigate to target page
+     */
     /**
      * Test: View admin orders dashboard
      */
     test('view admin orders dashboard', async ({ page }) => {
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        // Login as admin and navigate to orders page
+        await loginAsAdmin(page, '/crm/admin/orders')
 
         // ============================================
         // Phase 1: Verify admin orders page loaded
@@ -36,7 +39,7 @@ test.describe('Admin Order Management E2E', () => {
         // Phase 2: Verify orders table/list
         // ============================================
         // Wait for orders to load (either table or empty state)
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Check if orders table exists
         const ordersTable = page.locator('table, div[class*="order"]').first()
@@ -86,8 +89,7 @@ test.describe('Admin Order Management E2E', () => {
      * Test: Filter orders by status
      */
     test('filter orders by status', async ({ page }) => {
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/orders')
 
         // Wait for page to load
         await expect(page.getByText(/order management|quản lý đơn hàng/i).first()).toBeVisible({ timeout: 10000 })
@@ -97,12 +99,12 @@ test.describe('Admin Order Management E2E', () => {
 
         if (await statusFilter.isVisible()) {
             // Get initial order count
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
             const initialRows = await page.locator('tr[class*="order"], div[class*="order-row"]').count()
 
             // Select "paid" status
             await statusFilter.selectOption({ value: 'paid' })
-            await page.waitForTimeout(1000)
+            await page.waitForLoadState('networkidle')
 
             // Verify filtered results
             const filteredRows = await page.locator('tr[class*="order"], div[class*="order-row"]').count()
@@ -114,44 +116,44 @@ test.describe('Admin Order Management E2E', () => {
     })
 
     /**
-     * Test: Approve payment for a paid order
+     * Test: Verify order action
      */
-    test('approve payment from orders table', async ({ page }) => {
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+    test('verify order from orders table', async ({ page }) => {
+        await loginAsAdmin(page, '/crm/admin/orders')
 
         await expect(page.getByText(/order management|quản lý đơn hàng/i).first()).toBeVisible({ timeout: 10000 })
 
         // Wait for orders to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
-        // Find first "Approve" / "Duyệt" button (for paid orders)
-        const approveButton = page.getByRole('button', { name: /approve|duyệt thanh toán/i }).first()
-        const hasApproveButton = await approveButton.count() > 0
+        // Find first "Verify" button (for paid orders)
+        const verifyButton = page.getByRole('button', { name: /verify|xác nhận|xác minh/i }).first()
+        const hasVerifyButton = await verifyButton.count() > 0
 
-        if (hasApproveButton) {
+        if (hasVerifyButton) {
+            // Try to get order code, but with timeout
             try {
-                const orderCodeElement = approveButton.locator('..').locator('text=/DH[A-Z0-9]{6}/i').first()
+                const orderCodeElement = verifyButton.locator('..').locator('text=/DH[A-Z0-9]{6}/i').first()
                 const orderCode = await orderCodeElement.textContent({ timeout: 5000 })
-                console.log(`Attempting to approve order: ${orderCode}`)
+                console.log(`📝 Attempting to verify order: ${orderCode}`)
 
-                await approveButton.click()
+                await verifyButton.click()
 
                 // Wait for success message or status change
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Check for success indicator
-                const successMessage = page.locator('text=/thành công|success|approved/i')
+                const successMessage = page.locator('text=/thành công|success|verified/i')
                 if (await successMessage.isVisible()) {
-                    console.log(`Order approved successfully`)
+                    console.log(`✅ Order verified successfully`)
                 } else {
-                    console.log('Approve action executed (no visible confirmation)')
+                    console.log('ℹ️ Verify action executed (no visible confirmation)')
                 }
             } catch {
-                console.log('Could not find order code or approve button not actionable')
+                console.log('ℹ️ Could not find order code or verify button not actionable')
             }
         } else {
-            console.log('No orders available to approve')
+            console.log('ℹ️ No orders available to verify')
         }
     })
 
@@ -159,8 +161,7 @@ test.describe('Admin Order Management E2E', () => {
      * Test: Navigate to lots assignment page
      */
     test('navigate to tree lot assignment page', async ({ page }) => {
-        await page.goto('/crm/admin/lots')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/lots')
 
         // ============================================
         // Phase 1: Verify lots page loaded
@@ -196,13 +197,12 @@ test.describe('Admin Order Management E2E', () => {
      * Test: Pagination controls work
      */
     test('pagination controls work on orders page', async ({ page }) => {
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/orders')
 
         await expect(page.getByText(/order management|quản lý đơn hàng/i).first()).toBeVisible({ timeout: 10000 })
 
         // Wait for orders to load
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Look for pagination buttons (use more specific selector to avoid Next.js DevTools button)
         const nextButton = page.locator('button:has-text("Sau"), button:has-text("Next")').and(page.locator('[class*="pagination"], [class*="page"]')).first()
@@ -222,7 +222,7 @@ test.describe('Admin Order Management E2E', () => {
             const isNextEnabled = await nextButton.isEnabled()
             if (isNextEnabled) {
                 await nextButton.click()
-                await page.waitForTimeout(1000)
+                await page.waitForLoadState('networkidle')
 
                 console.log(`✅ Pagination next button works`)
 
@@ -230,7 +230,7 @@ test.describe('Admin Order Management E2E', () => {
                 const isPrevEnabled = await prevButton.isEnabled()
                 if (isPrevEnabled) {
                     await prevButton.click()
-                    await page.waitForTimeout(1000)
+                    await page.waitForLoadState('networkidle')
                     console.log(`✅ Pagination previous button works`)
                 }
             } else {
@@ -253,11 +253,10 @@ test.describe('Admin Order Management E2E', () => {
             }
         })
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/orders')
 
         // Wait for page to fully render
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Verify no console errors
         if (consoleErrors.length > 0) {

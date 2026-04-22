@@ -66,7 +66,7 @@ describe('Realtime Notification Helpers', () => {
                 body: 'Test body',
                 data: null,
                 read: false,
-                created_at: new Date().toISOString(),
+                created_at: '2026-04-20T12:00:00.000Z',
             }
 
             let onCallback: any
@@ -96,7 +96,7 @@ describe('Realtime Notification Helpers', () => {
                     body: null,
                     data: null,
                     read: false,
-                    created_at: new Date().toISOString(),
+                    created_at: '2026-04-20T12:00:00.000Z',
                 },
             ]
 

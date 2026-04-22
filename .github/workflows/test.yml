@@ -1,0 +1,486 @@
+name: CI — Test Suite
+
+on:
+  push:
+    branches: [main, develop, production]
+  pull_request:
+    branches: [main, develop, production]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: dainganxanh-landing
+
+jobs:
+  # ─── Lint ──────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+  # ─── Unit / Integration tests (Jest) ──────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (Jest) — Shard ${{ matrix.shard }}/${{ matrix.total }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+        total: [3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Jest (shard ${{ matrix.shard }}/${{ matrix.total }})
+        run: |
+          npx jest \
+            --shard=${{ matrix.shard }}/${{ matrix.total }} \
+            --ci \
+            --forceExit \
+            --coverage \
+            --coverageDirectory=coverage/shard-${{ matrix.shard }} \
+            --reporters=default --reporters=jest-junit
+        env:
+          # Security: pass test env as data, not commands
+          CI: true
+          JEST_JUNIT_OUTPUT_DIR: test-results/jest
+          JEST_JUNIT_OUTPUT_NAME: results-shard-${{ matrix.shard }}.xml
+
+      - name: Upload Jest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-results-shard-${{ matrix.shard }}
+          path: |
+            dainganxanh-landing/test-results/jest/
+            dainganxanh-landing/coverage/shard-${{ matrix.shard }}/
+          retention-days: 7
+
+  # ─── E2E tests (Playwright) ────────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase local stack
+        run: supabase start
+        working-directory: ${{ github.workspace }}
+
+      - name: Apply migrations
+        run: supabase db reset --no-verify-jwt
+        working-directory: ${{ github.workspace }}
+
+      - name: Extract Supabase local credentials
+        id: supabase
+        working-directory: ${{ github.workspace }}
+        run: |
+          STATUS_ENV=$(supabase status -o env 2>&1)
+          echo "$STATUS_ENV"
+          ANON_KEY=$(echo "$STATUS_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          SERVICE_ROLE_KEY=$(echo "$STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)
+          if [ -z "$ANON_KEY" ]; then
+            ANON_KEY=$(supabase status 2>&1 | grep '│ Publishable' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
+          if [ -z "$SERVICE_ROLE_KEY" ]; then
+            SERVICE_ROLE_KEY=$(supabase status 2>&1 | grep '│ Secret' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
+          if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "ERROR: Could not extract Supabase keys"
+            supabase status 2>&1
+            exit 1
+          fi
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Seed CI test users
+        env:
+          SUPABASE_SRK: ${{ steps.supabase.outputs.service_role_key }}
+        run: |
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-admin@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "UPDATE public.users SET role='admin', full_name='CI Admin' WHERE email='ci-admin@test.local';"
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-user@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "INSERT INTO public.posts (title, slug, excerpt, content, status, published_at, tags)
+                VALUES (
+                  'CI Test Post — Cây Dó Đen',
+                  'ci-test-post-cay-do-den',
+                  'Bài viết dùng để kiểm thử tự động trong CI pipeline.',
+                  '<p>Nội dung bài viết kiểm thử.</p>',
+                  'published',
+                  now() - interval ''1 hour'',
+                  ARRAY[''carbon-credit'', ''ci-test'']
+                ) ON CONFLICT (slug) DO NOTHING;"
+
+      - name: Run Playwright
+        run: npx playwright test --reporter=html,junit
+        env:
+          CI: true
+          PLAYWRIGHT_JUNIT_OUTPUT_NAME: results.xml
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          MAILPIT_URL: http://127.0.0.1:54334
+          TEST_ADMIN_EMAIL: ci-admin@test.local
+          TEST_USER_EMAIL: ci-user@test.local
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            dainganxanh-landing/playwright-report/
+            dainganxanh-landing/test-results/
+          retention-days: 7
+
+  # ─── Burn-in (flaky detection) ────────────────────────────────────────────
+  burn-in:
+    name: Burn-in (Flaky Detection)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [unit-tests, e2e-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dainganxanh-landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase local stack
+        run: supabase start
+        working-directory: ${{ github.workspace }}
+
+      - name: Apply migrations
+        run: supabase db reset --no-verify-jwt
+        working-directory: ${{ github.workspace }}
+
+      - name: Extract Supabase local credentials
+        id: supabase
+        working-directory: ${{ github.workspace }}
+        run: |
+          STATUS_ENV=$(supabase status -o env 2>&1)
+          echo "$STATUS_ENV"
+          ANON_KEY=$(echo "$STATUS_ENV" | grep '^ANON_KEY=' | cut -d= -f2-)
+          SERVICE_ROLE_KEY=$(echo "$STATUS_ENV" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)
+          if [ -z "$ANON_KEY" ]; then
+            ANON_KEY=$(supabase status 2>&1 | grep '│ Publishable' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
+          if [ -z "$SERVICE_ROLE_KEY" ]; then
+            SERVICE_ROLE_KEY=$(supabase status 2>&1 | grep '│ Secret' | awk -F'│' '{gsub(/ /,"",$3); print $3}')
+          fi
+          if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+            echo "ERROR: Could not extract Supabase keys. supabase status output:"
+            supabase status 2>&1
+            exit 1
+          fi
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Seed CI test users
+        env:
+          SUPABASE_SRK: ${{ steps.supabase.outputs.service_role_key }}
+        run: |
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-admin@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "UPDATE public.users SET role='admin', full_name='CI Admin' WHERE email='ci-admin@test.local';"
+          curl -sf -X POST "http://127.0.0.1:54331/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SRK" \
+            -H "Authorization: Bearer $SUPABASE_SRK" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"ci-user@test.local","email_confirm":true}' \
+            | jq -c '{id:.id,email:.email}'
+          psql "postgresql://postgres:postgres@127.0.0.1:54332/postgres" \
+            -c "INSERT INTO public.posts (title, slug, excerpt, content, status, published_at, tags)
+                VALUES (
+                  'CI Test Post — Cây Dó Đen',
+                  'ci-test-post-cay-do-den',
+                  'Bài viết dùng để kiểm thử tự động trong CI pipeline.',
+                  '<p>Nội dung bài viết kiểm thử.</p>',
+                  'published',
+                  now() - interval ''1 hour'',
+                  ARRAY[''carbon-credit'', ''ci-test'']
+                ) ON CONFLICT (slug) DO NOTHING;"
+
+      - name: Burn-in — repeat E2E x3
+        run: |
+          for i in 1 2 3; do
+            echo "=== Burn-in run $i/3 ==="
+            npx playwright test --reporter=list || exit 1
+          done
+        env:
+          CI: true
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          MAILPIT_URL: http://127.0.0.1:54334
+          TEST_ADMIN_EMAIL: ci-admin@test.local
+          TEST_USER_EMAIL: ci-user@test.local
+
+      - name: Upload burn-in artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: burn-in-failure-artifacts
+          path: |
+            dainganxanh-landing/playwright-report/
+            dainganxanh-landing/test-results/
+          retention-days: 14
+
+  # ─── Report (aggregate) ───────────────────────────────────────────────────
+  report:
+    name: Test Report
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, e2e-tests]
+    if: always()
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Merge Jest JUnit reports
+        run: |
+          echo "=== Jest Shards ==="
+          find all-artifacts -name "*.xml" -path "*/jest/*" | sort
+          echo "=== Coverage ==="
+          find all-artifacts -name "coverage-summary.json" | sort
+
+      - name: Merge Playwright HTML reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-test-results
+          path: all-artifacts/
+          retention-days: 14
+
+      - name: Summarize test results
+        if: always()
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      # Quality gate: block if any critical jobs failed
+      - name: Quality gate — fail if P0 jobs failed
+        if: |
+          needs.lint.result == 'failure' ||
+          needs.unit-tests.result == 'failure'
+        run: |
+          echo "❌ Quality gate FAILED: one or more critical jobs did not pass."
+          echo "  Lint:        ${{ needs.lint.result }}"
+          echo "  Unit Tests:  ${{ needs.unit-tests.result }}"
+          echo "  E2E Tests:   ${{ needs.e2e-tests.result }} (informational — requires Mailpit+Supabase)"
+          exit 1
+
+  # ─── R1: Coverage Ratchet Gate ───────────────────────────────────────────
+  coverage-gate:
+    name: Coverage Gate (Ratchet)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download current coverage shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jest-results-shard-*
+          path: all-artifacts
+          merge-multiple: false
+
+      - name: Merge shard coverage → current summary
+        run: |
+          node dainganxanh-landing/scripts/ci/merge-coverage.js \
+            --input \
+              all-artifacts/jest-results-shard-1/coverage/shard-1/coverage-summary.json \
+              all-artifacts/jest-results-shard-2/coverage/shard-2/coverage-summary.json \
+              all-artifacts/jest-results-shard-3/coverage/shard-3/coverage-summary.json \
+            --output current-coverage-summary.json
+
+      - name: Download baseline coverage from main
+        id: baseline
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ARTIFACT_URL=$(gh api \
+            "repos/${{ github.repository }}/actions/artifacts?name=coverage-summary-main&per_page=5" \
+            --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].archive_download_url // empty')
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "no_baseline=true" >> $GITHUB_OUTPUT
+            echo "⚠️  No baseline artifact found — gate will be skipped for this run."
+          else
+            curl -L -H "Authorization: Bearer $GH_TOKEN" "$ARTIFACT_URL" -o baseline.zip
+            unzip -q baseline.zip -d baseline/
+            echo "no_baseline=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare coverage — fail if regression > 2%
+        if: steps.baseline.outputs.no_baseline == 'false'
+        run: |
+          node dainganxanh-landing/scripts/ci/compare-coverage.js \
+            --baseline baseline/coverage-summary.json \
+            --current  current-coverage-summary.json \
+            --threshold 2.0
+
+      - name: Skip gate (no baseline yet)
+        if: steps.baseline.outputs.no_baseline == 'true'
+        run: echo "ℹ️  First PR — baseline not yet established. Gate skipped."
+
+  # ─── R1: Upload coverage baseline on main merge ───────────────────────────
+  coverage-baseline-upload:
+    name: Upload Coverage Baseline (main)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download current coverage shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: jest-results-shard-*
+          path: all-artifacts
+          merge-multiple: false
+
+      - name: Merge shard coverage → baseline summary
+        run: |
+          node dainganxanh-landing/scripts/ci/merge-coverage.js \
+            --input \
+              all-artifacts/jest-results-shard-1/coverage/shard-1/coverage-summary.json \
+              all-artifacts/jest-results-shard-2/coverage/shard-2/coverage-summary.json \
+              all-artifacts/jest-results-shard-3/coverage/shard-3/coverage-summary.json \
+            --output coverage-summary.json
+
+      - name: Upload as main baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary-main
+          path: coverage-summary.json
+          retention-days: 90
+          overwrite: true
+
+  # ─── Notify on failure ────────────────────────────────────────────────────
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests]
+    defaults:
+      run:
+        working-directory: .
+    if: |
+      failure() &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
+    steps:
+      - name: Notify Telegram on CI failure
+        env:
+          # Security: inputs passed through env: to prevent script injection
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          UNIT_RESULT: ${{ needs.unit-tests.result }}
+          E2E_RESULT: ${{ needs.e2e-tests.result }}
+        run: |
+          MESSAGE="$(printf '❌ *CI Pipeline Failed*\nBranch: `%s`\nCommit: `%s`\nAuthor: %s\n\nLint: %s\nUnit Tests: %s\nE2E Tests: %s\n\n🔗 [View Run](%s)' \
+            "$BRANCH" "${SHA:0:7}" "$ACTOR" \
+            "$LINT_RESULT" "$UNIT_RESULT" "$E2E_RESULT" \
+            "$RUN_URL")"
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${CHAT_ID}\", \"text\": \"${MESSAGE}\", \"parse_mode\": \"Markdown\"}"

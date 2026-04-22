@@ -52,7 +52,7 @@ describe('ChecklistItem', () => {
             ...mockItem,
             completed: true,
             completed_by: 'admin',
-            completed_at: new Date().toISOString(),
+            completed_at: '2026-04-20T12:00:00.000Z',
         }
 
         render(
@@ -89,6 +89,7 @@ describe('ChecklistItem', () => {
     })
 
     it('shows loading state during toggle', async () => {
+        jest.useFakeTimers()
         const slowToggle = jest.fn(
             () => new Promise((resolve) => setTimeout(resolve, 100))
         )
@@ -109,9 +110,11 @@ describe('ChecklistItem', () => {
         // Should show loading spinner
         expect(checkbox).toHaveClass('opacity-50')
 
+        jest.runAllTimers()
         await waitFor(() => {
             expect(slowToggle).toHaveBeenCalled()
         })
+        jest.useRealTimers()
     })
 
     it('displays completed_by and completed_at when item is completed', () => {

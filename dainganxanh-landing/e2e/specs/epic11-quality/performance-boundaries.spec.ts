@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test'
-import * as path from 'path'
+import { getOTPFromMailpit } from './fixtures/mailpit'
+import { ADMIN_EMAIL, TEST_EMAIL } from './fixtures/identity'
+import { loginAsAdmin, loginAsUser } from './fixtures/auth'
+import { mockServerDelay } from './fixtures/timing'
 
 /**
  * Performance & Boundary Testing E2E Test Suite
@@ -7,31 +10,41 @@ import * as path from 'path'
  *
  * Prerequisites:
  * - Dev server running at http://localhost:3001
- * - Supabase local running
- * - storagestate/admin.json must be populated (run auth.setup.ts first)
+ * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ * - Admin user: TEST_ADMIN_EMAIL (env override, must have admin role)
  */
 
-test.use({
-    storageState: path.resolve(__dirname, '../../storagestate/admin.json')
-})
-
-test.describe('Performance & Boundary Testing E2E', () => {
+test.describe('[P3] Performance & Boundary Testing E2E', () => {
 
     /**
      * Helper: Generate mock orders for pagination testing
      */
+    /**
+     * Deterministic pseudo-RNG so generated test datasets are reproducible
+     * across runs. Uses a tiny LCG seeded by an index, not Math.random().
+     */
+    function det(seed: number, max: number): number {
+        // Linear congruential — same input always yields same output.
+        const v = (seed * 1103515245 + 12345) & 0x7fffffff
+        return v % max
+    }
+
+    /** Fixed reference timestamp for any "N days ago" mock data. */
+    const FIXED_NOW = new Date('2026-04-20T12:00:00Z').getTime()
+
     function generateMockOrders(count: number) {
-        const statuses = ['pending', 'paid', 'assigned', 'completed']
+        const statuses = ['pending', 'paid', 'verified', 'assigned', 'completed']
         const orders = []
 
         for (let i = 0; i < count; i++) {
+            const ageDays = det(i, 30)
             orders.push({
                 id: `order-${i + 1}`,
                 order_code: `DH${String(i + 1).padStart(6, '0')}`,
-                quantity: Math.floor(Math.random() * 50) + 1,
-                total_amount: (Math.floor(Math.random() * 50) + 1) * 260000,
-                status: statuses[Math.floor(Math.random() * statuses.length)],
-                created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+                quantity: det(i + 1, 50) + 1,
+                total_amount: (det(i + 2, 50) + 1) * 260000,
+                status: statuses[det(i + 3, statuses.length)],
+                created_at: new Date(FIXED_NOW - ageDays * 24 * 60 * 60 * 1000).toISOString(),
                 user_email: `user${i + 1}@example.com`
             })
         }
@@ -76,16 +89,15 @@ test.describe('Performance & Boundary Testing E2E', () => {
             })
         })
 
-        await page.goto('/crm/admin/orders')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/orders')
 
         // Verify page loaded
         await expect(page.getByText(/order management|quản lý đơn hàng/i).first()).toBeVisible({ timeout: 10000 })
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Measure initial load time
         const loadStartTime = await page.evaluate(() => performance.now())
-        await page.waitForTimeout(1000)
+        await page.waitForLoadState('networkidle')
         const loadEndTime = await page.evaluate(() => performance.now())
         const loadTime = loadEndTime - loadStartTime
         console.log(`📊 Initial load time: ${loadTime.toFixed(2)}ms`)
@@ -119,7 +131,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 const isNextEnabled = await nextButton.isEnabled()
                 if (isNextEnabled) {
                     await nextButton.click()
-                    await page.waitForTimeout(500)
+                    await page.waitForLoadState('networkidle')
                 } else {
                     console.log(`  ⚠️ Next button disabled at page ${i}`)
                     break
@@ -149,7 +161,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                     order_code: `DH${String(Math.floor(i / 5) + 1).padStart(6, '0')}`,
                     status: 'active',
                     location: `Lô ${Math.floor(i / 10) + 1}`,
-                    planted_date: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString()
+                    planted_date: new Date(FIXED_NOW - det(i, 365) * 24 * 60 * 60 * 1000).toISOString()
                 })
             }
 
@@ -159,6 +171,8 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 body: JSON.stringify({ data: trees })
             })
         })
+
+        await loginAsUser(page, '/my-garden')
 
         // Measure page load time
         const startTime = await page.evaluate(() => performance.now())
@@ -174,7 +188,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
         // Verify page loaded
         await expect(page).toHaveURL(/crm\/my-garden/)
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('networkidle')
 
         // Verify order cards are displayed
         const orderCards = page.locator('a[href*="/crm/my-garden/"]')
@@ -186,7 +200,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
             // Scroll through the page to trigger virtual scroll
             for (let i = 0; i < 5; i++) {
                 await page.evaluate(() => window.scrollBy(0, 500))
-                await page.waitForTimeout(300)
+                await page.waitForLoadState('networkidle')
             }
 
             console.log('✅ Virtual scroll tested successfully')
@@ -206,11 +220,11 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * SKIP: Photo gallery UI not yet implemented or requires specific order state
      */
     test.skip('large dataset: photo gallery with 500+ images lazy loading', async ({ page }) => {
+        await loginAsUser(page, '/my-garden')
+
         // Navigate to my garden first
         await page.goto('/crm/my-garden')
         await page.waitForLoadState('networkidle')
-        await page.waitForTimeout(2000)
-
         // Try to find and click first order card to get to detail page
         const firstOrderCard = page.locator('a[href*="/crm/my-garden/"]').first()
         if (await firstOrderCard.count() > 0) {
@@ -229,7 +243,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                         id: `photo-${i + 1}`,
                         url: `https://picsum.photos/400/300?random=${i + 1}`,
                         thumbnail_url: `https://picsum.photos/200/150?random=${i + 1}`,
-                        taken_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                        taken_at: new Date(FIXED_NOW - det(i, 365) * 24 * 60 * 60 * 1000).toISOString(),
                         description: `Photo ${i + 1}`
                     })
                 }
@@ -250,7 +264,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
             const photoSection = page.locator('text=/thư viện ảnh|photos/i').first()
             if (await photoSection.isVisible()) {
                 await photoSection.click()
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle')
 
                 // Count initially loaded images
                 const initialImages = await page.locator('img[src*="picsum"], img[alt*="photo"]').count()
@@ -266,7 +280,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                             window.scrollBy(0, 500)
                         }
                     })
-                    await page.waitForTimeout(800) // Wait for lazy load
+                    await page.waitForLoadState('networkidle') // Wait for lazy load
 
                     const currentImages = await page.locator('img[src*="picsum"], img[alt*="photo"]').count()
                     console.log(`  After scroll ${scroll + 1}: ${currentImages} images loaded`)
@@ -306,14 +320,14 @@ test.describe('Performance & Boundary Testing E2E', () => {
             let allTransactions = []
 
             for (let i = 0; i < 5000; i++) {
-                const type = types[Math.floor(Math.random() * types.length)]
+                const type = types[det(i, types.length)]
                 if (filter === 'all' || filter === type) {
                     allTransactions.push({
                         id: `txn-${i + 1}`,
                         type: type,
-                        amount: Math.floor(Math.random() * 10000000) + 10000,
+                        amount: det(i + 1, 10000000) + 10000,
                         description: `Transaction ${i + 1}`,
-                        created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+                        created_at: new Date(FIXED_NOW - det(i + 2, 365) * 24 * 60 * 60 * 1000).toISOString(),
                         status: 'completed'
                     })
                 }
@@ -340,11 +354,10 @@ test.describe('Performance & Boundary Testing E2E', () => {
             })
         })
 
-        await page.goto('/crm/admin/transactions')
-        await page.waitForLoadState('networkidle')
+        await loginAsAdmin(page, '/crm/admin/transactions')
 
         // Wait for page to load
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Measure query time with timeout protection
         const queryStartTime = await page.evaluate(() => performance.now())
@@ -371,7 +384,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
                 // Apply filter
                 await filterDropdown.selectOption({ value: 'deposit' })
-                await page.waitForTimeout(1000)
+                await page.waitForLoadState('networkidle')
 
                 const filteredRows = await page.locator('tr[class*="transaction"], div[class*="transaction-row"]').count()
                 console.log(`📊 Filtered transactions (deposit): ${filteredRows}`)
@@ -405,11 +418,11 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
         const loginPromises = contexts.map(async (context, index) => {
             const page = await context.newPage()
-            const testEmail = index === 0 ? 'phanquochoipt@gmail.com' : `testuser${index}@example.com`
+            const testEmail = index === 0 ? ADMIN_EMAIL : `testuser${index}@example.com`
 
             try {
                 await page.goto('/login')
-                await page.waitForLoadState('load', { timeout: 30000 })
+                await page.waitForLoadState('networkidle', { timeout: 15000 })
 
                 const emailInput = page.locator('input#identifier-input[type="email"]')
                 await emailInput.fill(testEmail)
@@ -417,7 +430,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                 const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
                 await sendOTPButton.click()
 
-                await page.waitForTimeout(2000)
+                await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
 
                 console.log(`✅ User ${index + 1} (${testEmail}): Login request sent successfully`)
 
@@ -439,7 +452,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
         const successCount = results.filter(r => r.success).length
         console.log(`📊 Successful login requests: ${successCount}/10`)
 
-        expect(successCount).toBeGreaterThanOrEqual(8) // At least 8/10 users should send login requests successfully
+        expect(successCount).toBeGreaterThanOrEqual(8) // At least 8/10 users should send login requests successfully (local dev tolerance)
 
         console.log('✅ Concurrent login test passed - no race conditions detected')
     })
@@ -472,7 +485,7 @@ test.describe('Performance & Boundary Testing E2E', () => {
                         contentType: 'application/json',
                         body: JSON.stringify({
                             success: true,
-                            order_code: `DH${String(Date.now()).slice(-6)}`,
+                            order_code: `DH${require('crypto').randomBytes(3).toString('hex').toUpperCase()}`,
                             message: 'Purchase successful'
                         })
                     })
@@ -542,8 +555,9 @@ test.describe('Performance & Boundary Testing E2E', () => {
 
             // Mock approval API
             await page.route(`**/api/withdrawals/${withdrawalId}/approve`, async route => {
-                // Simulate processing delay
-                await new Promise(resolve => setTimeout(resolve, 500))
+                // Mock-server side: simulates ~500ms backend processing latency
+                // for batch-approval throughput test. Named helper documents intent.
+                await mockServerDelay(500)
 
                 await route.fulfill({
                     status: 200,
@@ -612,6 +626,8 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies format displays correctly and validation passes
      */
     test('boundary value: maximum withdrawal amount 999,999,999 VNĐ', async ({ page }) => {
+        await loginAsUser(page, '/my-garden')
+
         // Navigate to withdrawal page (if exists)
         await page.goto('/crm/withdrawal')
         await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
@@ -680,26 +696,20 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies checkout allows and price is calculated correctly
      */
     test('boundary value: minimum tree quantity 1', async ({ page }) => {
+        await loginAsUser(page, '/my-garden')
+
         // Navigate to checkout with quantity = 1
         await page.goto('/checkout?quantity=1')
         await page.waitForLoadState('networkidle')
 
-        // Wait for confirm step, place order to get to payment step with OrderSummary
-        const confirmStep = page.getByText('Xác nhận đơn hàng')
-        const paymentStep = page.getByText('Đơn hàng của bạn')
-        await expect(confirmStep.or(paymentStep)).toBeVisible({ timeout: 10000 })
-
-        // If in confirm step, place order
-        if (await confirmStep.isVisible()) {
-            await page.getByRole('button', { name: /đặt đơn ngay/i }).click()
-            await expect(paymentStep).toBeVisible({ timeout: 10000 })
-        }
+        // Wait for checkout page to load
+        await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
 
         // Verify quantity = 1 is displayed
         const orderSummary = page.locator('.bg-white.rounded-2xl').filter({ hasText: 'Đơn hàng của bạn' })
         await expect(orderSummary.getByText('1 cây').first()).toBeVisible()
 
-        // Verify total = 1 * 260000 = 260,000
+        // Verify total = 1 * 260000 = 260,000 (use .first() to avoid strict mode violation)
         const expectedTotal = (1 * 260000).toLocaleString('vi-VN')
         await expect(orderSummary.locator(`text=${expectedTotal} ₫`).first()).toBeVisible()
 
@@ -721,19 +731,14 @@ test.describe('Performance & Boundary Testing E2E', () => {
      * Verifies validation accepts and cart is updated correctly
      */
     test('boundary value: maximum tree quantity 100 per order', async ({ page }) => {
+        await loginAsUser(page, '/my-garden')
+
         // Navigate to checkout with quantity = 100
         await page.goto('/checkout?quantity=100')
         await page.waitForLoadState('networkidle')
 
-        // Wait for confirm or payment step
-        const confirmStep = page.getByText('Xác nhận đơn hàng')
-        const paymentStep = page.getByText('Đơn hàng của bạn')
-        await expect(confirmStep.or(paymentStep)).toBeVisible({ timeout: 10000 })
-
-        if (await confirmStep.isVisible()) {
-            await page.getByRole('button', { name: /đặt đơn ngay/i }).click()
-            await expect(paymentStep).toBeVisible({ timeout: 10000 })
-        }
+        // Wait for checkout page to load
+        await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
 
         // Verify quantity = 100 is displayed
         const orderSummary = page.locator('.bg-white.rounded-2xl').filter({ hasText: 'Đơn hàng của bạn' })

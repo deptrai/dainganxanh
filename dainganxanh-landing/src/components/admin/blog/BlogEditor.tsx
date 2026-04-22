@@ -3,12 +3,12 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { generateSlug } from '@/lib/utils/slug'
 import { createPost, updatePost, uploadBlogImage } from '@/actions/blog'
+import imageCompression from 'browser-image-compression'
 
 interface Post {
   id: string
@@ -45,14 +45,15 @@ export default function BlogEditor({ post }: BlogEditorProps) {
   const [metaDesc, setMetaDesc] = useState(post?.meta_desc ?? '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const contentImageInputRef = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3, 4] },
+        link: { openOnClick: false },
       }),
       Image.configure({ allowBase64: false }),
-      Link.configure({ openOnClick: false }),
       Placeholder.configure({ placeholder: 'Bắt đầu viết nội dung bài...' }),
     ],
     content: post?.content ?? '',
@@ -75,6 +76,15 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     }
   }
 
+  async function compressImage(file: File): Promise<File> {
+    return imageCompression(file, {
+      maxSizeMB: 0.8,
+      maxWidthOrHeight: 1280,
+      useWebWorker: true,
+      fileType: 'image/webp',
+    })
+  }
+
   async function handleUploadImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !editor) return
@@ -82,18 +92,23 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     setUploadingImage(true)
     setError(null)
 
-    const fd = new FormData()
-    fd.append('file', file)
+    try {
+      const compressed = await compressImage(file)
+      const fd = new FormData()
+      fd.append('file', compressed)
 
-    const result = await uploadBlogImage(fd)
-    setUploadingImage(false)
-
-    if (!result.success || !result.url) {
-      setError(result.error ?? 'Upload thất bại')
-      return
+      const result = await uploadBlogImage(fd)
+      if (!result.success || !result.url) {
+        setError(result.error ?? 'Upload thất bại')
+        return
+      }
+      editor.chain().focus().setImage({ src: result.url }).run()
+      if (contentImageInputRef.current) contentImageInputRef.current.value = ''
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload thất bại')
+    } finally {
+      setUploadingImage(false)
     }
-
-    editor.chain().focus().setImage({ src: result.url }).run()
   }
 
   async function handleCoverImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -103,18 +118,23 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     setUploadingImage(true)
     setError(null)
 
-    const fd = new FormData()
-    fd.append('file', file)
+    try {
+      const compressed = await compressImage(file)
+      const fd = new FormData()
+      fd.append('file', compressed)
 
-    const result = await uploadBlogImage(fd)
-    setUploadingImage(false)
-
-    if (!result.success || !result.url) {
-      setError(result.error ?? 'Upload ảnh bìa thất bại')
-      return
+      const result = await uploadBlogImage(fd)
+      if (!result.success || !result.url) {
+        setError(result.error ?? 'Upload ảnh bìa thất bại')
+        return
+      }
+      setCoverImage(result.url)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload ảnh bìa thất bại')
+    } finally {
+      setUploadingImage(false)
     }
-
-    setCoverImage(result.url)
   }
 
   // ─── Tags ────────────────────────────────────────────────────────────────
@@ -309,6 +329,8 @@ export default function BlogEditor({ post }: BlogEditorProps) {
                 className="hidden"
                 onChange={handleUploadImage}
                 disabled={uploadingImage}
+                ref={contentImageInputRef}
+                data-testid="content-image-input"
               />
             </label>
           </div>
@@ -354,6 +376,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
                 onChange={handleCoverImageUpload}
                 disabled={uploadingImage}
                 ref={fileInputRef}
+                data-testid="cover-file-input"
               />
             </label>
           </div>
@@ -465,6 +488,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={`px-2 py-1 text-xs rounded border transition-colors ${
         active
           ? 'bg-green-600 text-white border-green-600'

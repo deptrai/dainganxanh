@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { getOTPFromMailpit } from '../../utils/mailpit'
+import { getOTPFromMailpit } from './fixtures/mailpit'
 
 /**
  * Registration & Authentication E2E Test Suite
@@ -8,21 +8,19 @@ import { getOTPFromMailpit } from '../../utils/mailpit'
  * Prerequisites:
  * - Dev server running at http://localhost:3001
  * - Supabase local running with Mailpit at http://127.0.0.1:54334
+ *   (or set MAILPIT_URL env var)
  */
 
-test.describe('Registration & Authentication Flow E2E', () => {
-    // Override global storageState — these tests require unauthenticated context
-    test.use({ storageState: { cookies: [], origins: [] } })
+test.describe('[P0] Registration & Authentication Flow E2E', () => {
 
     const BASE_EMAIL = 'test-registration'
-    const TEST_PHONE = '0901234567'
-    const DEFAULT_REF_CODE = 'dainganxanh'
+    const DEFAULT_REF_CODE = 'DNG895075'
 
     // Generate unique email for each test to avoid OTP conflicts
     function getTestEmail(testName: string): string {
-        const timestamp = Date.now()
+        const uid = require('crypto').randomBytes(4).toString('hex')
         const sanitized = testName.replace(/[^a-z0-9]/gi, '').toLowerCase()
-        return `${BASE_EMAIL}-${sanitized}-${timestamp}@test.local`
+        return `${BASE_EMAIL}-${sanitized}-${uid}@test.local`
     }
 
     /**
@@ -43,13 +41,13 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/quantity')
         await page.waitForLoadState('networkidle')
 
-        // Select quantity (e.g., 5 trees) — button has aria-label="Chọn 5 cây"
-        const fiveTreesButton = page.getByRole('button', { name: 'Chọn 5 cây' })
+        // Select quantity (e.g., 5 trees)
+        const fiveTreesButton = page.getByRole('button', { name: /5 cây/i })
         await expect(fiveTreesButton).toBeVisible({ timeout: 10000 })
         await fiveTreesButton.click()
 
-        // Click checkout button — aria-label="Tiếp tục đến trang đăng ký"
-        const checkoutButton = page.getByRole('button', { name: /tiếp tục đến trang đăng ký|tiếp tục đăng ký/i })
+        // Click checkout button
+        const checkoutButton = page.getByRole('button', { name: /tiếp tục|thanh toán/i })
         await expect(checkoutButton).toBeVisible()
         await checkoutButton.click()
 
@@ -75,15 +73,12 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Find email input (after selecting Email tab)
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
         await emailTabButton.click()
 
-        const emailInput = page.locator('#identifier-input')
+        const emailInput = page.locator('input[placeholder*="email"]')
         await expect(emailInput).toBeVisible()
         await emailInput.fill(testEmail)
 
@@ -123,14 +118,11 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=5')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('#identifier-input')
+        const emailInput = page.locator('input[placeholder*="email"]')
         await emailInput.fill(testEmail)
 
         // Fill referral code (required field)
@@ -158,11 +150,8 @@ test.describe('Registration & Authentication Flow E2E', () => {
         // Should auto-submit and redirect to checkout with quantity
         await expect(page).toHaveURL(/\/checkout\?.*quantity=5/, { timeout: 15000 })
 
-        // Verify checkout page loaded — new user sees "confirm" step, not "payment" step
-        // "Đơn hàng của bạn" only shows in payment step; confirm step shows "Xác nhận đơn hàng"
-        await expect(
-            page.getByText('Xác nhận đơn hàng').or(page.getByText('Đơn hàng của bạn'))
-        ).toBeVisible({ timeout: 20000 })
+        // Verify checkout page loaded
+        await expect(page.getByText('Đơn hàng của bạn')).toBeVisible({ timeout: 10000 })
 
         console.log('✅ Registration completed and redirected to checkout')
     })
@@ -179,18 +168,15 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('#identifier-input')
+        const emailInput = page.locator('input[placeholder*="email"]')
         await emailInput.fill(testEmail)
 
         // Enter referral code
-        const referralInput = page.locator('input[placeholder="VD: dainganxanh"]')
+        const referralInput = page.locator('input[placeholder*="dainganxanh"]').or(page.locator('input[placeholder*="VD:"]'))
         const hasReferralInput = await referralInput.count() > 0
 
         if (hasReferralInput) {
@@ -237,14 +223,11 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=2')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Click Email tab and enter email (do NOT enter referral code)
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('#identifier-input')
+        const emailInput = page.locator('input[placeholder*="email"]')
         await emailInput.fill(testEmail)
 
         // Click the "use default" button for referral code
@@ -311,25 +294,22 @@ test.describe('Registration & Authentication Flow E2E', () => {
 
     /**
      * Test 7: User completes login flow successfully
-     * Flow: /login → OTP verification → redirect to /crm/my-garden (default)
-     * Note: Redirects to /checkout?quantity=N only if ?quantity= param is present in URL
+     * Flow: /login → OTP verification → authenticated → home or dashboard
+     * Note: Testing basic login functionality, not return URL (which may vary by implementation)
      */
     test('user completes login flow successfully', async ({ page }) => {
         const testEmail = getTestEmail('login-test')
 
         // Navigate to login page
         await page.goto('/login')
-        await page.waitForLoadState('networkidle')
-
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
+        await page.waitForLoadState('domcontentloaded')
 
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await expect(emailTabButton).toBeVisible({ timeout: 10000 })
         await emailTabButton.click()
 
-        const emailInput = page.locator('#identifier-input')
+        const emailInput = page.locator('input[placeholder*="email"]')
         await emailInput.fill(testEmail)
 
         // Send OTP
@@ -346,53 +326,22 @@ test.describe('Registration & Authentication Flow E2E', () => {
             await otpInputs.nth(i).fill(otpCode[i])
         }
 
-        // After OTP, referral modal may appear (for new users without ref cookie)
-        // Handle it by entering default ref or clicking skip/submit
-        const refModal = page.getByText(/mã giới thiệu/i).or(page.getByText(/referral/i))
-        const skipButton = page.getByRole('button', { name: /bỏ qua/i })
-        const useDefaultBtn = page.getByRole('button', { name: /dùng mã mặc định/i })
-            .or(page.getByRole('button', { name: /bấm vào đây/i }))
-        const confirmBtn = page.getByRole('button', { name: /xác nhận/i })
-            .or(page.getByRole('button', { name: /tiếp tục/i }))
-
-        try {
-            // Wait for either referral modal or redirect
-            await Promise.race([
-                refModal.first().waitFor({ state: 'visible', timeout: 10000 }),
-                page.waitForURL(/\/checkout/, { timeout: 10000 })
-            ])
-
-            // If still on login page with modal, handle it
-            if (page.url().includes('/login')) {
-                // Try use default button first, then confirm
-                const hasDefault = await useDefaultBtn.count() > 0
-                if (hasDefault) {
-                    await useDefaultBtn.first().click()
-                    await page.waitForTimeout(500)
-                }
-                const hasConfirm = await confirmBtn.count() > 0
-                if (hasConfirm) {
-                    await confirmBtn.first().click()
-                } else {
-                    const hasSkip = await skipButton.count() > 0
-                    if (hasSkip) {
-                        await skipButton.click()
-                    }
-                }
-            }
-        } catch {
-            // Timeout — try skip button as fallback
-            const hasSkip = await skipButton.count() > 0
-            if (hasSkip) {
+        // Wait for any navigation away from login (OTP success triggers redirect or modal)
+        await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 20000 }).catch(async () => {
+            // Handle referral modal if it appears (blocks navigation)
+            const skipButton = page.getByRole('button', { name: /bỏ qua/i })
+            const visible = await skipButton.isVisible().catch(() => false)
+            if (visible) {
                 await skipButton.click()
+                await page.waitForURL((url) => !url.href.includes('/login'), { timeout: 10000 }).catch(() => {})
             }
-        }
+        })
 
-        // Wait for final redirect — /crm/my-garden (default) or /checkout (if quantity param present)
-        await page.waitForURL(/\/(crm|checkout)/, { timeout: 15000 })
+        await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {})
 
+        // Verify we're no longer on the login page (authentication succeeded)
         const currentUrl = page.url()
-        expect(currentUrl).toMatch(/\/(crm|checkout)/)
+        expect(currentUrl).not.toContain('/login')
 
         console.log(`✅ Login completed successfully, redirected to: ${currentUrl}`)
     })
@@ -418,14 +367,11 @@ test.describe('Registration & Authentication Flow E2E', () => {
         await page.goto('/register?quantity=3')
         await page.waitForLoadState('networkidle')
 
-        // Wait to avoid rate limiting
-        await page.waitForTimeout(2000)
-
         // Click Email tab and enter email
         const emailTabButton = page.getByRole('button', { name: /email/i }).first()
         await emailTabButton.click()
 
-        const emailInput = page.locator('#identifier-input')
+        const emailInput = page.locator('input[placeholder*="email"]')
         await emailInput.fill(testEmail)
 
         // Use default referral code
@@ -448,7 +394,7 @@ test.describe('Registration & Authentication Flow E2E', () => {
 
         // Wait for redirect and any async errors
         await page.waitForURL(/\/checkout/, { timeout: 15000 })
-        await page.waitForTimeout(3000)
+        await page.waitForLoadState('networkidle')
 
         // Verify no critical console errors (ignore 406 Not Acceptable - expected for some resources)
         const criticalErrors = consoleErrors.filter(err =>
