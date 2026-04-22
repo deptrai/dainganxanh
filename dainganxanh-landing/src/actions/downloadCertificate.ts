@@ -20,18 +20,6 @@ export async function downloadCertificate(orderId: string): Promise<{
             return { success: false, error: 'Chưa đăng nhập' }
         }
 
-        console.log('[Certificate Download] User authenticated:', {
-            userId: user.id,
-            email: user.email,
-        })
-
-        // Check environment variables
-        console.log('[Certificate Download] Env check:', {
-            hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-            keyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length,
-            hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        })
-
         // Create service role client to bypass RLS (auth already verified above)
         const supabaseAdmin = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,13 +31,6 @@ export async function downloadCertificate(orderId: string): Promise<{
                 },
             }
         )
-
-        console.log('[Certificate Download] Service role client created')
-
-        console.log('[Certificate Download] Querying order:', {
-            orderId,
-            userId: user.id,
-        })
 
         // Fetch order with explicit user_id filter (RLS bypassed but still secure)
         const { data: order, error: orderError } = await supabaseAdmin
@@ -68,15 +49,7 @@ export async function downloadCertificate(orderId: string): Promise<{
             .eq('user_id', user.id)
             .single()
 
-        console.log('[Certificate Download] Order query result:', {
-            found: !!order,
-            error: orderError?.message,
-            orderId: order?.id,
-            orderUserId: order?.user_id,
-        })
-
         if (orderError || !order) {
-            console.error('Order fetch error:', orderError)
             return { success: false, error: 'Không tìm thấy đơn hàng' }
         }
 
@@ -117,7 +90,6 @@ export async function downloadCertificate(orderId: string): Promise<{
 
         if (!response.ok) {
             const errorData = await response.json()
-            console.error('Edge function error:', errorData)
             return { success: false, error: 'Không thể tạo chứng chỉ' }
         }
 
@@ -129,13 +101,11 @@ export async function downloadCertificate(orderId: string): Promise<{
             .createSignedUrl(filePath, 86400) // 24 hours
 
         if (signedUrlError || !signedUrlData) {
-            console.error('Signed URL error:', signedUrlError)
             return { success: false, error: 'Không thể tạo liên kết tải xuống' }
         }
 
         return { success: true, pdfUrl: signedUrlData.signedUrl }
     } catch (error) {
-        console.error('Download certificate error:', error)
         return {
             success: false,
             error: 'Có lỗi xảy ra. Vui lòng thử lại sau.',
