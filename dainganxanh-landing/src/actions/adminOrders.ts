@@ -291,6 +291,17 @@ export async function verifyAdminOrder(orderId: string): Promise<{ error?: strin
         return { error: 'Forbidden: admin role required' }
     }
 
+    // Get order details for notification
+    const { data: order, error: orderError } = await serviceSupabase
+        .from('orders')
+        .select('id, code, user_email, user_name, quantity, total_amount')
+        .eq('id', orderId)
+        .single()
+
+    if (orderError || !order) {
+        return { error: 'Đơn hàng không tồn tại' }
+    }
+
     const { error: updateError } = await serviceSupabase
         .from('orders')
         .update({
@@ -303,6 +314,16 @@ export async function verifyAdminOrder(orderId: string): Promise<{ error?: strin
         console.error('verifyAdminOrder update error:', updateError)
         return { error: updateError.message }
     }
+
+    // Send Telegram notification to admin group
+    notifyAdminApproval({
+        orderCode: order.code || orderId.substring(0, 8),
+        userName: order.user_name || 'N/A',
+        userEmail: order.user_email || '',
+        quantity: order.quantity,
+        totalAmount: Number(order.total_amount),
+        adminEmail: user.email || '',
+    }).catch((err) => console.error('[Telegram] verify notification failed:', err))
 
     revalidatePath('/crm/admin/orders')
     return {}
