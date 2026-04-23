@@ -6,8 +6,8 @@ module.exports = {
       startServerReadyPattern: 'Ready on',
       startServerReadyTimeout: 30000,
       url: [
-        'http://localhost:3000/blog',
-        'http://localhost:3000/blog/ci-test-post-cay-do-den',
+        'http://localhost:3001/blog',
+        'http://localhost:3001/blog/ci-test-post-cay-do-den',
       ],
       numberOfRuns: 3,
       settings: {
