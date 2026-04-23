@@ -9,7 +9,7 @@ export interface Order {
     quantity: number
     total_amount: number
     payment_method: string
-    status: 'pending' | 'paid' | 'verified' | 'assigned' | 'completed' | 'cancelled' | 'cancelled_refunded'
+    status: 'pending' | 'manual_payment_claimed' | 'paid' | 'verified' | 'assigned' | 'completed' | 'cancelled' | 'cancelled_refunded'
     verified_at: string | null
     created_at: string
     // Joined from users table
@@ -58,7 +58,7 @@ export function useAdminOrders(): UseAdminOrdersReturn {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [filters, setFilters] = useState<OrderFilters>({
-        status: 'pending', // Default to pending verification
+        status: 'all',
     })
     const [pagination, setPagination] = useState<PaginationInfo>({
         page: 1,

@@ -19,6 +19,7 @@ type SortDirection = 'asc' | 'desc'
 
 const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
+    manual_payment_claimed: 'bg-sky-100 text-sky-800',
     paid: 'bg-blue-100 text-blue-800',
     verified: 'bg-green-100 text-green-800',
     assigned: 'bg-purple-100 text-purple-800',
@@ -28,7 +29,8 @@ const statusColors = {
 }
 
 const statusLabels = {
-    pending: 'Chờ xác minh',
+    pending: 'Chờ thanh toán',
+    manual_payment_claimed: 'Khách báo đã chuyển',
     paid: 'Đã thanh toán',
     verified: 'Đã xác minh',
     assigned: 'Đã gán cây',
@@ -116,6 +118,7 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                     </button>
                 </div>
             )}
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
@@ -166,7 +169,7 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                             >
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex gap-2">
-                                        {order.status === 'pending' || order.status === 'paid' ? (
+                                        {order.status === 'pending' || order.status === 'manual_payment_claimed' || order.status === 'paid' ? (
                                             <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                                         ) : order.status === 'verified' || order.status === 'completed' ? (
                                             <div className="flex gap-2">
@@ -266,6 +269,7 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                     ))}
                 </tbody>
             </table>
+            </div>
 
             {/* Assignment Modal */}
             {
