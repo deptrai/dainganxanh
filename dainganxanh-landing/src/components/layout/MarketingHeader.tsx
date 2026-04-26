@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import { Home, TreePine, Share2, Package, User, LogIn, BookOpen, UserCircle } from "lucide-react";
 import { UserHeader } from "./UserHeader";
 import { cn } from "@/lib/utils";
@@ -38,10 +39,10 @@ export function MarketingHeader() {
     useEffect(() => {
         const supabase = createBrowserClient();
 
-        // Get initial session
+        // Get initial session from localStorage (no network call)
         const fetchUser = async () => {
-            const { data: { user: authUser } } = await supabase.auth.getUser();
-            setUser(authUser);
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
             setLoading(false);
         };
 
@@ -72,9 +73,7 @@ export function MarketingHeader() {
                     <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
                         {/* Brand */}
                         <Link href="/" className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                                <TreePine className="w-5 h-5 text-emerald-600" />
-                            </div>
+                            <Image src="/logo.png" alt="Đại Ngàn Xanh" width={32} height={40} className="object-contain" />
                             <span className="font-bold text-lg text-emerald-800">Đại Ngàn Xanh</span>
                         </Link>
                         
