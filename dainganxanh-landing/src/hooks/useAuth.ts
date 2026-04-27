@@ -19,7 +19,7 @@ interface UseAuthReturn {
     setMode: (mode: AuthMode) => void;
     setIdentifier: (value: string) => void;
     sendOTP: () => Promise<void>;
-    verifyOTP: (code: string) => Promise<void>;
+    verifyOTP: (code: string, referralCode?: string) => Promise<void>;
     resendOTP: () => Promise<void>;
 }
 
@@ -74,7 +74,7 @@ export function useAuth(): UseAuthReturn {
         }
     }, [mode, identifier]);
 
-    const verifyOTP = useCallback(async (code: string) => {
+    const verifyOTP = useCallback(async (code: string, referralCode?: string) => {
         setLoading(true);
         setError(null);
         const supabase = createBrowserClient();
@@ -105,9 +105,8 @@ export function useAuth(): UseAuthReturn {
                         refresh_token: bypassData.session.refresh_token,
                     });
 
-                    // Đảm bảo profile tồn tại trong public.users
                     if (bypassData.user) {
-                        await ensureUserProfile(bypassData.user.id, bypassData.user.email ?? email, bypassData.user.phone).catch(() => {});
+                        await ensureUserProfile(bypassData.user.id, bypassData.user.email ?? email, bypassData.user.phone, referralCode).catch(() => {});
                     }
 
                     console.log("DEV BYPASS: Session created successfully");
@@ -129,25 +128,20 @@ export function useAuth(): UseAuthReturn {
                 throw new Error("Không thể tạo phiên đăng nhập");
             }
 
-            // CRITICAL FIX: Force session to be saved to localStorage
-            // This ensures session persists across page refreshes
             await supabase.auth.setSession({
                 access_token: data.session.access_token,
                 refresh_token: data.session.refresh_token,
             });
 
-            // Double-check session was saved
             const { data: { session: savedSession } } = await supabase.auth.getSession();
             if (!savedSession) {
                 throw new Error("Session không được lưu. Vui lòng thử lại.");
             }
 
-            // Đảm bảo profile tồn tại trong public.users (lưới an toàn nếu trigger bị miss)
             if (data.user) {
-                await ensureUserProfile(data.user.id, data.user.email ?? identifier, data.user.phone).catch(() => {});
+                await ensureUserProfile(data.user.id, data.user.email ?? identifier, data.user.phone, referralCode).catch(() => {});
             }
 
-            // Success - session created and persisted
             console.log("OTP verified successfully, session persisted", savedSession);
         } catch (err) {
             console.error("Verify OTP error:", err);
@@ -160,7 +154,7 @@ export function useAuth(): UseAuthReturn {
         } finally {
             setLoading(false);
         }
-    }, [mode, identifier]);
+    }, [mode, identifier]);;
 
     const resendOTP = useCallback(async () => {
         if (!canResend) return;

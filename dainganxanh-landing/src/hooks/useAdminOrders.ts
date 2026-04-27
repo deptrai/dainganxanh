@@ -22,6 +22,7 @@ export interface Order {
         email?: string
         referral_code?: string
     } | null
+    is_phantom?: boolean
 }
 
 export interface OrderFilters {

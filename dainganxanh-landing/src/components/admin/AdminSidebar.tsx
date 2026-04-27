@@ -14,6 +14,7 @@ import {
     DocumentTextIcon,
     UsersIcon,
     GiftIcon,
+    UserPlusIcon,
     Bars3Icon,
     XMarkIcon,
 } from '@heroicons/react/24/outline'
@@ -25,6 +26,7 @@ const navigation = [
     { name: 'Hoa hồng', href: '/crm/admin/referrals', icon: GiftIcon },
     { name: 'Withdrawals', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
     { name: 'Casso Logs', href: '/crm/admin/casso', icon: ArrowPathIcon },
+    { name: 'Phantom', href: '/crm/admin/phantom', icon: UserPlusIcon },
     { name: 'Blog', href: '/crm/admin/blog', icon: DocumentTextIcon },
     { name: 'Analytics', href: '/crm/admin/analytics', icon: ChartBarIcon },
     { name: 'Settings', href: '/crm/admin/settings', icon: Cog6ToothIcon },

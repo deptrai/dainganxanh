@@ -204,6 +204,11 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
+                                    {order.is_phantom && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">
+                                            Phantom
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     <div>{order.user_email || order.user_phone || 'N/A'}</div>

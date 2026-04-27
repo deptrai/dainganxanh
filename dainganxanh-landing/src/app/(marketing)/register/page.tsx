@@ -55,11 +55,19 @@ function RegisterContent() {
             const supabase = createBrowserClient();
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
+                // Set ref cookie trước khi redirect để ensureUserProfile có thể đọc
+                const refToSave = refFromUrl.toLowerCase() || Cookies.get('ref') || '';
+                if (refToSave) {
+                    Cookies.set('ref', refToSave, { expires: 90, path: '/', sameSite: 'lax', secure: window.location.protocol === 'https:' });
+                    // Gọi ensureUserProfile để update referrer nếu chưa có
+                    const { ensureUserProfile } = await import('@/actions/ensureUserProfile');
+                    await ensureUserProfile(session.user.id, session.user.email ?? '', session.user.phone ?? null, refToSave).catch(() => {});
+                }
                 router.replace(hasQuantityParam ? `/checkout?quantity=${quantity}` : '/crm/my-garden');
             }
         };
         checkSession();
-    }, [router, quantity]);
+    }, [router, quantity, refFromUrl]);
 
     const handleSendOTP = async () => {
         // Validate referral code is entered
@@ -92,7 +100,7 @@ function RegisterContent() {
                 secure: window.location.protocol === "https:",
             });
 
-            await verifyOTP(otpCode);
+            await verifyOTP(otpCode, refToUse);
             router.push(`/checkout?quantity=${quantity}`);
         } catch (err) {
             console.error("Verification failed:", err);

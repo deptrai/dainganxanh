@@ -7,8 +7,10 @@ import { ReferralTracker } from '@/components/ReferralTracker'
 import { VideoButton } from '@/components/marketing/VideoButton'
 import { HeroVideo } from '@/components/marketing/HeroVideo'
 import { TreeCounter } from '@/components/marketing/TreeCounter'
+import { SocialProofWidget } from '@/components/marketing/SocialProofWidget'
 import { CTAButton } from '@/components/marketing/CTAButton'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { fetchRecentOrders, fetchActiveOrderCount } from '@/actions/socialProof'
 
 export const dynamic = 'force-dynamic'; // Tree counter cần real-time, không cache
 
@@ -33,9 +35,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         console.error('[TreeCounter] exception:', err)
     }
 
+    const [recentOrders, activeOrderCount] = await Promise.all([
+        fetchRecentOrders(10),
+        fetchActiveOrderCount(),
+    ])
+
     return (
         <main className="overflow-x-hidden">
             <ReferralTracker refCode={refCode} />
+            <SocialProofWidget orders={recentOrders} activeCount={activeOrderCount} />
             <AuthCallbackHandler />
             {/* Navbar - Glassmorphism */}
             <nav className="fixed w-full z-50 transition-all duration-300 top-0 py-4">

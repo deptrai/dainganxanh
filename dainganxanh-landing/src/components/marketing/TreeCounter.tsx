@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { motion, useSpring, useTransform } from 'framer-motion'
-import { createBrowserClient } from '@/lib/supabase/client'
 
 const GOAL = 1_000_000
 
@@ -29,41 +28,6 @@ export function TreeCounter({ initialCount }: { initialCount?: number }) {
             setCount(initialCount)
         }
     }, [initialCount])
-
-    useEffect(() => {
-        const supabase = createBrowserClient()
-
-        // Fetch current count from completed orders
-        async function fetchCount() {
-            const { data } = await supabase
-                .from('orders')
-                .select('quantity')
-                .eq('status', 'completed')
-
-            if (data) {
-                const total = data.reduce((sum, row) => sum + (row.quantity ?? 0), 0)
-                setCount(total)
-            }
-        }
-
-        fetchCount()
-
-        // Subscribe to realtime: re-fetch when any order is updated
-        const channel = supabase
-            .channel('tree-counter')
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'orders' },
-                () => {
-                    fetchCount()
-                }
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [])
 
     return (
         <div className="px-5 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white mb-8 shadow-lg">
