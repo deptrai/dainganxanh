@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { PACKAGE_PRICE, formatVND } from "@/lib/constants";
 
+
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 1000;
 
@@ -19,7 +20,7 @@ interface UsePriceCalculatorReturn {
     formattedUnitPrice: string;
 }
 
-export function usePriceCalculator(initialQuantity: number = 1): UsePriceCalculatorReturn {
+export function usePriceCalculator(initialQuantity: number = 1, unitPrice: number = PACKAGE_PRICE): UsePriceCalculatorReturn {
     const [quantity, setQuantityState] = useState<number>(
         Math.max(MIN_QUANTITY, Math.min(MAX_QUANTITY, initialQuantity))
     );
@@ -103,7 +104,7 @@ export function usePriceCalculator(initialQuantity: number = 1): UsePriceCalcula
         validateQuantity(numValue);
     }, [validateQuantity]);
 
-    const totalPrice = quantity * PACKAGE_PRICE;
+    const totalPrice = quantity * unitPrice;
     const isValid = error === null && quantity >= MIN_QUANTITY && quantity <= MAX_QUANTITY;
 
     return {
@@ -116,6 +117,6 @@ export function usePriceCalculator(initialQuantity: number = 1): UsePriceCalcula
         decrement,
         handleInputChange,
         formattedTotal: formatVND(totalPrice),
-        formattedUnitPrice: formatVND(PACKAGE_PRICE),
+        formattedUnitPrice: formatVND(unitPrice),
     };
 }

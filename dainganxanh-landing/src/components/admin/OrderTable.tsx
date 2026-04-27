@@ -226,6 +226,11 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {order.quantity} cây
+                                    {order.has_insurance && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">
+                                            BH
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {formatCurrency(order.total_amount)}

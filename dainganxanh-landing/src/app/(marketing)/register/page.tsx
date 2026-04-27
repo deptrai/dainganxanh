@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
+import { PACKAGES, isValidPackageType, type PackageType } from "@/lib/constants";
 import Cookies from "js-cookie";
 import { checkUserExists } from "@/actions/checkUserExists";
 
@@ -19,6 +20,9 @@ function RegisterContent() {
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
     const hasQuantityParam = !!searchParams.get("quantity");
+    const packageParam = searchParams.get("package") || "standard";
+    const packageType: PackageType = isValidPackageType(packageParam) ? packageParam : "standard";
+    const unitPrice = PACKAGES[packageType].price;
     const refFromUrl = searchParams.get("ref") || "";
     const [refInput, setRefInput] = useState(refFromUrl.toLowerCase());
     const [refError, setRefError] = useState("");
@@ -63,7 +67,7 @@ function RegisterContent() {
                     const { ensureUserProfile } = await import('@/actions/ensureUserProfile');
                     await ensureUserProfile(session.user.id, session.user.email ?? '', session.user.phone ?? null, refToSave).catch(() => {});
                 }
-                router.replace(hasQuantityParam ? `/checkout?quantity=${quantity}` : '/crm/my-garden');
+                router.replace(hasQuantityParam ? `/checkout?quantity=${quantity}&package=${packageType}` : '/crm/my-garden');
             }
         };
         checkSession();
@@ -101,7 +105,7 @@ function RegisterContent() {
             });
 
             await verifyOTP(otpCode, refToUse);
-            router.push(`/checkout?quantity=${quantity}`);
+            router.push(`/checkout?quantity=${quantity}&package=${packageType}`);
         } catch (err) {
             console.error("Verification failed:", err);
         }
@@ -171,7 +175,7 @@ function RegisterContent() {
                                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
                                     Tài khoản này đã được đăng ký. Vui lòng{" "}
                                     <Link
-                                        href={`/login?quantity=${quantity}`}
+                                        href={`/login?quantity=${quantity}&package=${packageType}`}
                                         className="font-semibold text-amber-900 underline hover:text-amber-700"
                                     >
                                         đăng nhập
@@ -238,7 +242,7 @@ function RegisterContent() {
                         <p className="text-center text-sm text-gray-600">
                             Đã có tài khoản?{" "}
                             <Link
-                                href={`/login?quantity=${quantity}`}
+                                href={`/login?quantity=${quantity}&package=${packageType}`}
                                 className="text-emerald-600 font-semibold hover:underline"
                             >
                                 Đăng nhập ngay
@@ -263,7 +267,7 @@ function RegisterContent() {
                         <div className="flex items-center justify-between text-sm mt-1">
                             <span className="text-gray-600">Tổng tiền:</span>
                             <span className="font-semibold text-emerald-600">
-                                {(parseInt(quantity) * 260000).toLocaleString('vi-VN')} ₫
+                                {(parseInt(quantity) * unitPrice).toLocaleString('vi-VN')} ₫
                             </span>
                         </div>
                     </div>

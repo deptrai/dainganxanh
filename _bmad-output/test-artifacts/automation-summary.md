@@ -346,3 +346,91 @@ inputDocuments:
 - Justification: maximize ROI — close 0%-coverage P0 component + 3 specific action branches + 3 public components without redundant E2E
 
 ### Step 2 Status: ✅ Complete → Load `step-03-generate-tests.md`
+
+---
+
+## Session 6 — Multi-Package Pricing (Gói Bảo Hiểm 410k) — 2026-04-28
+
+### Context
+Feature: thêm **Gói Có Bảo Hiểm** (410.000đ/cây, `has_insurance=true`) song song với Gói Cá Nhân (260.000đ/cây).
+URL param `&package=standard|insurance` thread qua toàn bộ funnel: `/pricing` → `/quantity` → `/register` → `/checkout`.
+Server-side validation: `VALID_UNIT_PRICES = [260000, 410000]`, reject any tampered unit_price or mismatched total_amount.
+
+### Mode: **Create** (gap coverage — zero existing tests for dual-package, unit_price, has_insurance)
+
+### Files Generated / Updated
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `e2e/specs/api/orders-multi-package-api.spec.ts` | **NEW** | API validation: unit_price, has_insurance, tamper protection |
+| `e2e/specs/epic1-onboarding-payment/multi-package-pricing-flow.spec.ts` | **NEW** | Full E2E: pricing cards, quantity page, checkout (standard + insurance) |
+| `e2e/specs/epic1-onboarding-payment/pricing-quantity-flow.spec.ts` | **UPDATED** | Regressed tests fixed for dual-card layout |
+
+### Test Coverage Added
+
+#### `orders-multi-package-api.spec.ts` (11 tests)
+
+| Priority | Test | Validates |
+|----------|------|-----------|
+| P0 | Create standard order (unit_price=260000, has_insurance=false) | Happy path |
+| P1 | Omit unit_price → defaults to 260000 | Backward compat |
+| P0 | Reject total_amount mismatch (standard) | Server validation |
+| P0 | Create insurance order (unit_price=410000, has_insurance=true) | Happy path |
+| P0 | Reject total_amount mismatch (insurance) | Server validation |
+| P0 | Reject unit_price=100000 | Tamper protection |
+| P0 | Reject unit_price=0 | Tamper protection |
+| P0 | Reject unit_price=999999 | Tamper protection |
+| P0 | Reject tampered total_amount | Tamper protection |
+| P0 | POST without auth → 401 | Auth enforcement |
+
+#### `multi-package-pricing-flow.spec.ts` (14 tests)
+
+| Priority | Test | Validates |
+|----------|------|-----------|
+| P0 | Pricing page shows both 260k + 410k cards | UI layout |
+| P0 | Insurance card has "Kèm Bảo Hiểm" badge | Visual branding |
+| P0 | Insurance card shows 150k breakdown | Pricing transparency |
+| P1 | Insurance card shows 6 features | Feature completeness |
+| P1 | Standard card breakdown: 40k + 194k + 26k | Pricing breakdown |
+| P0 | Standard CTA → /quantity?package=standard | URL threading |
+| P0 | Insurance CTA → /quantity?package=insurance | URL threading |
+| P0 | ?package=standard shows Gói Cá Nhân + 260k | Package awareness |
+| P0 | ?package=insurance shows Gói Có Bảo Hiểm + 410k | Package awareness |
+| P1 | Insurance price updates on quantity change | Dynamic calculation |
+| P0 | Tiếp tục from insurance → URL has &package=insurance | URL threading |
+| P1 | back link → /pricing | Navigation |
+| P0 | Standard checkout: 5 cây × 260k = 1.300.000đ | Order confirmation |
+| P0 | Insurance checkout: 2 cây × 410k = 820.000đ | Order creation |
+| P1 | Cancel insurance order → redirect quantity?package=insurance | Cancel flow |
+| P2 | No console errors on insurance flow | Regression |
+
+#### `pricing-quantity-flow.spec.ts` Regression Fixes (3 tests fixed)
+
+| Fix | Old (broken) | New (correct) |
+|-----|-------------|---------------|
+| Test title | "displays individual package" | "displays both packages: 260k standard and 410k insurance" |
+| CTA test | No `.first()`, expects `/quantity` | `.first()` for standard, expects `?package=standard` |
+| beforeEach | `/quantity` | `/quantity?package=standard` |
+| Continue button | No package assertion | Asserts `url.match(/package=standard/)` |
+
+### Validation Checklist
+
+- [x] TypeScript compiles clean (`npx tsc --noEmit`)
+- [x] `[P0]`/`[P1]` priority convention in test titles
+- [x] API tests use `envConfig.BASE_URL` (no hardcoded URLs)
+- [x] Auth state from storagestate (no OTP re-flow per test)
+- [x] Tamper protection: 4 cases (invalid prices + amount mismatch)
+- [x] Backward compat: omit unit_price → defaults to 260000
+- [x] Cancel flow preserves package param
+- [x] No console errors regression test included
+- [x] Existing spec fixed for dual-card layout
+
+### Run Commands
+
+```bash
+npx playwright test e2e/specs/api/orders-multi-package-api.spec.ts
+npx playwright test e2e/specs/epic1-onboarding-payment/multi-package-pricing-flow.spec.ts
+npx playwright test e2e/specs/epic1-onboarding-payment/pricing-quantity-flow.spec.ts
+```
+
+*Session 6 hoàn thành: 2026-04-28*

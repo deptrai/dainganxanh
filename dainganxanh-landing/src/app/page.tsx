@@ -299,7 +299,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             },
                             {
                                 question: 'Tại sao lại là 260.000 VNĐ?',
-                                answer: 'Đó là chi phí trọn gói cho: cây giống, đất được thuê để trồng cây và 10 năm (120 tháng) công và phí chăm sóc, phân bón, bảo vệ và công nghệ quản lý cho cây của bạn. Chỉ với chưa đến 150 đồng mỗi ngày để nuôi dưỡng một sự sống.'
+                                answer: '260.000 VNĐ là chi phí trọn gói cho Gói Cá Nhân: cây giống, đất thuê và 10 năm chăm sóc. Chúng tôi còn có Gói Có Bảo Hiểm với giá 410.000 VNĐ/cây — bao gồm thêm phí bảo hiểm cam kết bao tiêu 60 tháng (2.500đ/tháng). Nếu sau 60 tháng công ty không thực hiện cam kết, bảo hiểm hoàn lại 325.000đ/cây.'
                             }
                         ].map((faq, index) => (
                             <StaggerItem key={index} className="border border-brand-100 rounded-2xl p-6 hover:shadow-soft transition-all duration-300 bg-brand-50/30 hover:bg-white cursor-pointer group">

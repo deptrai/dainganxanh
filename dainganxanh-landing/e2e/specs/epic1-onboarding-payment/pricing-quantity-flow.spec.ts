@@ -21,19 +21,21 @@ test.describe('Pricing & Quantity Flow E2E', () => {
         })
 
         /**
-         * Test: Pricing page displays package with 260k/tree
+         * Test: Pricing page displays both packages (260k standard + 410k insurance)
          */
-        test('displays individual package at 260.000 VND per tree', async ({ page }) => {
+        test('displays both packages: 260k standard and 410k insurance', async ({ page }) => {
             // Verify page heading
             await expect(page.getByText(/chọn gói trồng cây/i)).toBeVisible({ timeout: 10000 })
 
-            // Verify package name
+            // Standard package
             await expect(page.getByText(/gói cá nhân/i)).toBeVisible()
-
-            // Verify price 260.000
             await expect(page.getByText(/260\.000/)).toBeVisible()
 
-            console.log('Pricing page displays 260k/tree package')
+            // Insurance package
+            await expect(page.getByText(/gói có bảo hiểm/i)).toBeVisible()
+            await expect(page.getByText(/410\.000/)).toBeVisible()
+
+            console.log('Pricing page displays both 260k and 410k packages')
         })
 
         /**
@@ -81,15 +83,14 @@ test.describe('Pricing & Quantity Flow E2E', () => {
         /**
          * Test: CTA button navigates to quantity page
          */
-        test('CTA navigates to quantity page', async ({ page }) => {
-            const ctaButton = page.getByRole('link', { name: /tùy chỉnh số lượng/i })
-                .or(page.getByRole('button', { name: /tùy chỉnh số lượng/i }))
+        test('CTA navigates to quantity page with standard package', async ({ page }) => {
+            const ctaButton = page.getByRole('button', { name: /tùy chỉnh số lượng/i }).first()
             await expect(ctaButton).toBeVisible({ timeout: 10000 })
             await ctaButton.click()
 
-            await expect(page).toHaveURL(/\/quantity/, { timeout: 10000 })
+            await expect(page).toHaveURL(/\/quantity.*package=standard/, { timeout: 10000 })
 
-            console.log('Pricing CTA navigates to /quantity')
+            console.log('Pricing standard CTA navigates to /quantity?package=standard')
         })
 
         /**
@@ -131,7 +132,7 @@ test.describe('Pricing & Quantity Flow E2E', () => {
     test.describe('Quantity Page', () => {
 
         test.beforeEach(async ({ page }) => {
-            await page.goto('/quantity')
+            await page.goto('/quantity?package=standard')
             await page.waitForLoadState('networkidle')
         })
 
@@ -243,25 +244,23 @@ test.describe('Pricing & Quantity Flow E2E', () => {
         /**
          * Test: Continue button exists and requires auth
          */
-        test('continue button navigates to register or checkout', async ({ page }) => {
+        test('continue button navigates to register or checkout with package param', async ({ page }) => {
             await expect(page.getByText(/chọn số lượng cây/i)).toBeVisible({ timeout: 10000 })
 
-            // Select quantity
             const btn5 = page.getByRole('button', { name: /^5$/ })
                 .or(page.locator('button:has-text("5")').first())
             await btn5.click()
 
-            // Click continue button
             const continueBtn = page.getByRole('button', { name: /tiếp tục/i })
                 .or(page.getByRole('link', { name: /tiếp tục/i }))
             await expect(continueBtn).toBeVisible()
             await continueBtn.click()
 
-            // Should navigate to register or checkout (depends on auth state)
             await page.waitForURL(/\/(register|checkout|login)\?.*quantity=5/, { timeout: 10000 })
 
             const url = page.url()
             expect(url).toMatch(/quantity=5/)
+            expect(url).toMatch(/package=standard/)
 
             console.log(`Continue button navigated to: ${url}`)
         })

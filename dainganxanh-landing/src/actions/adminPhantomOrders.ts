@@ -1,9 +1,8 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { PACKAGES, isValidPackageType, type PackageType } from '@/lib/constants'
 import { revalidatePath } from 'next/cache'
-
-const PRICE_PER_TREE = 260_000
 
 async function requireAdmin() {
     const supabase = await createServerClient()
@@ -74,10 +73,12 @@ export async function createPhantomOrder({
     phantomUserId,
     quantity,
     userName,
+    packageType = 'standard',
 }: {
     phantomUserId: string
     quantity: number
     userName: string
+    packageType?: PackageType
 }) {
     const auth = await requireAdmin()
     if ('error' in auth) return { error: auth.error }
@@ -92,6 +93,9 @@ export async function createPhantomOrder({
         return { error: 'User không phải phantom user' }
     }
 
+    const validType: PackageType = isValidPackageType(packageType) ? packageType : 'standard'
+    const pkg = PACKAGES[validType]
+
     const { error } = await auth.serviceSupabase
         .from('orders')
         .insert({
@@ -100,7 +104,9 @@ export async function createPhantomOrder({
             user_email: phantomUser.email,
             user_name: userName,
             quantity,
-            total_amount: quantity * PRICE_PER_TREE,
+            total_amount: quantity * pkg.price,
+            unit_price: pkg.price,
+            has_insurance: pkg.hasInsurance,
             payment_method: 'banking',
             status: 'completed',
             is_phantom: true,

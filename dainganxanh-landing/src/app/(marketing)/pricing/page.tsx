@@ -3,7 +3,7 @@ import { PricingPageClient } from "@/components/marketing/PricingPageClient";
 
 export const metadata: Metadata = {
     title: 'Chọn Gói Trồng Cây',
-    description: 'Chọn gói trồng cây Dó Đen bản địa phù hợp. Chỉ 260.000 VNĐ/cây, theo dõi minh bạch qua dashboard online.',
+    description: 'Chọn gói trồng cây Dó Đen bản địa phù hợp. Từ 260.000 VNĐ/cây, theo dõi minh bạch qua dashboard online.',
     alternates: {
         canonical: 'https://dainganxanh.com.vn/pricing',
     },
@@ -12,17 +12,19 @@ export const metadata: Metadata = {
 const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: 'Cây Dó Đen — Gói Cá Nhân',
-    description: 'Trồng 1 cây Dó Đen bản địa tại Việt Nam. Theo dõi minh bạch qua dashboard. Thu hoạch trầm hương sau 10 năm.',
+    name: 'Cây Dó Đen — Trồng Rừng Đại Ngàn Xanh',
+    description: 'Trồng cây Dó Đen bản địa tại Việt Nam. Theo dõi minh bạch qua dashboard. Thu hoạch trầm hương sau 10 năm.',
     image: 'https://dainganxanh.com.vn/opengraph-image',
     brand: {
         '@type': 'Organization',
         name: 'Đại Ngàn Xanh',
     },
     offers: {
-        '@type': 'Offer',
+        '@type': 'AggregateOffer',
         priceCurrency: 'VND',
-        price: '260000',
+        lowPrice: '260000',
+        highPrice: '410000',
+        offerCount: '2',
         availability: 'https://schema.org/InStock',
         url: 'https://dainganxanh.com.vn/pricing',
         seller: { '@type': 'Organization', name: 'Đại Ngàn Xanh' },

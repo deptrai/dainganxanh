@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { BankingPayment } from "@/components/checkout/BankingPayment";
+import { PACKAGES, isValidPackageType, type PackageType } from "@/lib/constants";
 import { createBrowserClient } from "@/lib/supabase/client";
 import Cookies from "js-cookie";
 import { validateReferralCode } from "@/actions/validateReferralCode";
@@ -87,7 +88,10 @@ function CheckoutContent() {
     const router = useRouter();
     const raw = parseInt(searchParams.get("quantity") || "1");
     const quantity = Math.max(1, Math.min(raw || 1, 1000));
-    const unitPrice = 260000;
+    const packageParam = searchParams.get("package") || "standard";
+    const packageType: PackageType = isValidPackageType(packageParam) ? packageParam : "standard";
+    const unitPrice = PACKAGES[packageType].price;
+    const hasInsurance = PACKAGES[packageType].hasInsurance;
     const total = quantity * unitPrice;
 
     const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("loading");
@@ -183,6 +187,8 @@ function CheckoutContent() {
                     user_name: user.user_metadata?.full_name ?? user.email?.split("@")[0],
                     quantity: Math.round(orderAmount / unitPrice),
                     total_amount: orderAmount,
+                    unit_price: unitPrice,
+                    has_insurance: hasInsurance,
                     payment_method: "banking",
                     referred_by: referredBy,
                 }),
@@ -210,7 +216,7 @@ function CheckoutContent() {
                 setCancelling(false);
                 return;
             }
-            router.push(`/quantity?quantity=${quantity}`);
+            router.push(`/quantity?quantity=${quantity}&package=${packageType}`);
         } catch {
             setCancelError("Lỗi kết nối. Vui lòng thử lại.");
             setCancelling(false);
@@ -221,7 +227,7 @@ function CheckoutContent() {
         <div>
             <nav className="container mx-auto px-4 py-4">
                 <Link
-                    href={`/quantity?quantity=${quantity}`}
+                    href={`/quantity?quantity=${quantity}&package=${packageType}`}
                     className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
@@ -283,7 +289,7 @@ function CheckoutContent() {
                                 {placing ? "Đang tạo đơn..." : "🌳 Đặt đơn ngay"}
                             </button>
                             <Link
-                                href={`/quantity?quantity=${quantity}`}
+                                href={`/quantity?quantity=${quantity}&package=${packageType}`}
                                 className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
                             >
                                 Quay lại chọn số lượng
@@ -302,6 +308,7 @@ function CheckoutContent() {
                             <BankingPayment
                                 orderCode={orderCode}
                                 amount={orderAmount}
+                                quantity={pendingOrder ? pendingOrder.quantity : quantity}
                                 onCancel={handleCancel}
                                 cancelling={cancelling}
                                 cancelError={cancelError}

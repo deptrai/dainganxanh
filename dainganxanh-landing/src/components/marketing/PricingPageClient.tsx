@@ -1,17 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { PackageCard } from "@/components/marketing/PackageCard";
+import { PACKAGES } from "@/lib/constants";
 
 export function PricingPageClient() {
     const router = useRouter();
 
-    const handleSelectPackage = () => {
-        // Navigate to quantity selector (Story 1.3) with default quantity
-        const defaultQuantity = 10; // Default to 10 trees
-        router.push(`/quantity?initial=${defaultQuantity}`);
+    const handleSelectPackage = (packageType: string) => {
+        const defaultQuantity = 10;
+        router.push(`/quantity?initial=${defaultQuantity}&package=${packageType}`);
     };
 
     return (
@@ -27,9 +25,19 @@ export function PricingPageClient() {
                     </p>
                 </div>
 
-                {/* Package Card */}
-                <div className="max-w-2xl mx-auto">
-                    <PackageCard onSelectPackage={handleSelectPackage} />
+                {/* Package Cards — 2-column grid */}
+                <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <PackageCard
+                        packageData={PACKAGES.standard}
+                        packageType="standard"
+                        onSelectPackage={() => handleSelectPackage("standard")}
+                    />
+                    <PackageCard
+                        packageData={PACKAGES.insurance}
+                        packageType="insurance"
+                        highlighted
+                        onSelectPackage={() => handleSelectPackage("insurance")}
+                    />
                 </div>
 
                 {/* Trust Indicators */}

@@ -9,6 +9,7 @@ import { createBrowserClient } from "@/lib/supabase/client";
 interface BankingPaymentProps {
     orderCode: string;
     amount: number;
+    quantity: number;
     onCancel?: () => void;
     cancelling?: boolean;
     cancelError?: string;
@@ -23,7 +24,7 @@ const BANK_INFO = {
 const POLL_INTERVAL = 5000;
 const POLL_TIMEOUT = 30 * 60 * 1000;
 
-export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancelError }: BankingPaymentProps) {
+export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelling, cancelError }: BankingPaymentProps) {
     const router = useRouter();
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -49,12 +50,11 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
 
                 const supabase = createBrowserClient();
                 const { data: { user } } = await supabase.auth.getUser();
-                const quantity = Math.round(amount / 260000);
                 const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
 
                 setTimeout(() => {
                     router.push(
-                        `/checkout/success?orderCode=${orderCode}&quantity=${quantity}&name=${encodeURIComponent(userName)}`
+                        `/checkout/success?orderCode=${orderCode}&quantity=${quantity}&amount=${amount}&name=${encodeURIComponent(userName)}`
                     );
                 }, 2000);
             }
@@ -122,8 +122,6 @@ export function BankingPayment({ orderCode, amount, onCancel, cancelling, cancel
             if (timerRef.current) clearInterval(timerRef.current);
 
             // Redirect to waiting page
-            const quantity = Math.round(amount / 260000);
-
             setTimeout(() => {
                 router.push(
                     `/checkout/waiting?orderCode=${orderCode}&quantity=${quantity}`

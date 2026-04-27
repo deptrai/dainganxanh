@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { VALID_UNIT_PRICES } from '@/lib/constants'
 import { notifyNewOrder } from '@/lib/utils/telegram'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
 import { rateLimit } from '@/lib/rate-limit'
@@ -21,6 +22,8 @@ interface PendingOrderRequest {
   user_name?: string
   quantity: number
   total_amount: number
+  unit_price?: number
+  has_insurance?: boolean
   payment_method: 'banking'
   referred_by?: string | null
   // Customer identity fields (optional, for contract generation)
@@ -85,11 +88,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid order code format' }, { status: 400 })
     }
     // Validate total_amount matches expected server-side calculation
-    const UNIT_PRICE = 260000
-    const expectedAmount = body.quantity * UNIT_PRICE
+    const unitPrice = body.unit_price ?? 260000
+    if (!VALID_UNIT_PRICES.includes(unitPrice)) {
+      return NextResponse.json({ error: 'Invalid unit_price' }, { status: 400 })
+    }
+    const expectedAmount = body.quantity * unitPrice
     if (body.total_amount !== expectedAmount) {
       return NextResponse.json({ error: 'Invalid total_amount' }, { status: 400 })
     }
+    const hasInsurance = body.has_insurance ?? (unitPrice === 410000)
 
     const serviceSupabase = createServiceRoleClient()
 
@@ -115,6 +122,8 @@ export async function POST(req: NextRequest) {
           user_name: body.user_name ?? effectiveUser.name,
           quantity: body.quantity,
           total_amount: body.total_amount,
+          unit_price: unitPrice,
+          has_insurance: hasInsurance,
           payment_method: body.payment_method,
           referred_by: referredBy,
           status: 'pending',
@@ -207,13 +216,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Missing orderId' }, { status: 400 })
     }
 
-    const { quantity, total_amount } = await req.json()
+    const { quantity, total_amount, unit_price } = await req.json()
     if (!quantity || !total_amount || quantity <= 0) {
       return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 })
     }
 
-    const UNIT_PRICE = 260000
-    if (total_amount !== quantity * UNIT_PRICE) {
+    const patchUnitPrice = unit_price ?? 260000
+    if (!VALID_UNIT_PRICES.includes(patchUnitPrice)) {
+      return NextResponse.json({ error: 'Invalid unit_price' }, { status: 400 })
+    }
+    if (total_amount !== quantity * patchUnitPrice) {
       return NextResponse.json({ error: 'Invalid total_amount' }, { status: 400 })
     }
 

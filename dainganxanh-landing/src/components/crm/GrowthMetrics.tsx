@@ -7,11 +7,12 @@ interface GrowthMetricsProps {
     ageInMonths: number
     quantity: number
     progressToHarvest: number
+    unitPrice?: number
 }
 
-export default function GrowthMetrics({ co2Total, ageInMonths, quantity, progressToHarvest }: GrowthMetricsProps) {
-    // Estimate value (simple calculation: 260k initial + growth over time)
-    const estimatedValue = quantity * PACKAGE_PRICE * (1 + (ageInMonths / HARVEST_MONTHS) * 0.5)
+export default function GrowthMetrics({ co2Total, ageInMonths, quantity, progressToHarvest, unitPrice = PACKAGE_PRICE }: GrowthMetricsProps) {
+    // Estimate value (simple calculation: unit cost initial + growth over time)
+    const estimatedValue = quantity * unitPrice * (1 + (ageInMonths / HARVEST_MONTHS) * 0.5)
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

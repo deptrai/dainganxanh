@@ -46,7 +46,8 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
             co2_absorbed,
             latest_photo_url,
             created_at,
-            lot_id
+            lot_id,
+            unit_price
         `)
         .eq('id', orderId)
         .eq('user_id', effectiveUserId)
@@ -161,6 +162,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
                     ageInMonths={ageInMonths}
                     quantity={order.quantity}
                     progressToHarvest={progressToHarvest}
+                    unitPrice={order.unit_price ?? undefined}
                 />
 
                 {/* GPS Map */}

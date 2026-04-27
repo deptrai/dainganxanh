@@ -22,7 +22,7 @@ export const metadata: Metadata = {
         default: 'Đại Ngàn Xanh - Gieo Hạt Lành, Gặt Phước Báu',
         template: '%s | Đại Ngàn Xanh',
     },
-    description: 'Trồng 1.000.000 cây Dó Đen bản địa cho Việt Nam. Chỉ 260.000 VNĐ/cây, theo dõi minh bạch qua dashboard online.',
+    description: 'Trồng 1.000.000 cây Dó Đen bản địa cho Việt Nam. Từ 260.000 VNĐ/cây, theo dõi minh bạch qua dashboard online.',
     keywords: ['trồng cây', 'dó đen', 'môi trường', 'carbon credit', 'trầm hương', 'Việt Nam'],
     authors: [{ name: 'Đại Ngàn Xanh' }],
     alternates: {

@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { usePriceCalculator } from "@/hooks/usePriceCalculator";
+import { PACKAGES, isValidPackageType, type PackageType } from "@/lib/constants";
 import { QuantitySelector } from "@/components/checkout/QuantitySelector";
 import { PriceSummary } from "@/components/checkout/PriceSummary";
 import { QuantityErrorBoundary } from "@/components/checkout/QuantityErrorBoundary";
@@ -20,6 +21,12 @@ function QuantityPageContent() {
     const initialQuantity = parseInt(searchParams.get("initial") || "1", 10);
     const validInitialQuantity = Math.max(1, Math.min(1000, initialQuantity));
 
+    // Read package type from URL (default 'standard')
+    const packageParam = searchParams.get("package") || "standard";
+    const packageType: PackageType = isValidPackageType(packageParam) ? packageParam : "standard";
+    const unitPrice = PACKAGES[packageType].price;
+    const packageName = PACKAGES[packageType].name;
+
     const {
         quantity,
         error,
@@ -29,7 +36,7 @@ function QuantityPageContent() {
         handleInputChange,
         formattedTotal,
         formattedUnitPrice,
-    } = usePriceCalculator(validInitialQuantity);
+    } = usePriceCalculator(validInitialQuantity, unitPrice);
 
     const handleContinue = async () => {
         if (isValid) {
@@ -37,9 +44,9 @@ function QuantityPageContent() {
             const { data: { session } } = await supabase.auth.getSession();
 
             if (session) {
-                router.push(`/checkout?quantity=${quantity}`);
+                router.push(`/checkout?quantity=${quantity}&package=${packageType}`);
             } else {
-                router.push(`/register?quantity=${quantity}`);
+                router.push(`/register?quantity=${quantity}&package=${packageType}`);
             }
         }
     };
@@ -70,7 +77,7 @@ function QuantityPageContent() {
                             Chọn Số Lượng Cây
                         </h1>
                         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                            Mỗi cây Dó Đen sẽ được chăm sóc trong 10 năm và bạn có thể theo dõi minh bạch qua GPS
+                            {packageName} — Mỗi cây Dó Đen sẽ được chăm sóc trong 10 năm và bạn có thể theo dõi minh bạch qua GPS
                         </p>
                     </motion.div>
 

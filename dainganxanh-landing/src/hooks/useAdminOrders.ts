@@ -17,6 +17,8 @@ export interface Order {
     user_phone?: string
     contract_url?: string | null
     order_code?: string
+    unit_price?: number
+    has_insurance?: boolean
     referred_by?: string | null
     referrer?: {
         email?: string
