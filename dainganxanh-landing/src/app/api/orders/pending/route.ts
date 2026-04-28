@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid order code format' }, { status: 400 })
     }
     // Validate total_amount matches expected server-side calculation
-    const unitPrice = body.unit_price ?? 260000
+    const unitPrice = body.unit_price ?? 410000
     if (!VALID_UNIT_PRICES.includes(unitPrice)) {
       return NextResponse.json({ error: 'Invalid unit_price' }, { status: 400 })
     }
@@ -221,7 +221,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 })
     }
 
-    const patchUnitPrice = unit_price ?? 260000
+    const patchUnitPrice = unit_price ?? 410000
     if (!VALID_UNIT_PRICES.includes(patchUnitPrice)) {
       return NextResponse.json({ error: 'Invalid unit_price' }, { status: 400 })
     }

@@ -19,81 +19,79 @@ export interface CostBreakdown {
     icon: string;
 }
 
-const BASE_BREAKDOWN: CostBreakdown[] = [
+const INSURANCE_PACKAGE_BREAKDOWN: CostBreakdown[] = [
     {
         label: "Cây giống chất lượng cao",
-        amount: 40000,
-        description: "Giống Dó Đen (Aquilaria) chất lượng cao",
+        amount: 40_000,
+        description: "Cam kết giống Dó đen chuẩn Việt 100%",
         icon: "Sprout"
     },
     {
-        label: "Phí chăm sóc 10 năm",
-        amount: 194000,
-        description: "Chăm sóc chuyên nghiệp, báo cáo hàng quý",
+        label: "Quỹ Đại sứ Xanh",
+        amount: 41_000,
+        description: "Chia sẻ cộng đồng đại sứ",
+        icon: "Users"
+    },
+    {
+        label: "Chi phí cho cây trong 10 năm",
+        amount: 229_000,
+        description: "Chi phí đất, phân bón, nước, hệ thống tưới tiêu, vi sinh...",
         icon: "Heart"
     },
     {
-        label: "Quỹ đại sứ xanh",
-        amount: 26000,
-        description: "Hỗ trợ cộng đồng địa phương và bảo vệ môi trường",
-        icon: "Users"
-    }
+        label: "Công chăm sóc và bảo hiểm 10 năm",
+        amount: 100_000,
+        description: "Công chăm sóc và bảo hiểm cây chết trong 10 năm",
+        icon: "Shield"
+    },
 ];
 
-const BASE_FEATURES = [
-    "Chứng nhận sở hữu cây",
-    "Báo cáo hàng quý với ảnh thực tế",
-    "Theo dõi GPS vị trí cây",
-    "3 lựa chọn thu hoạch sau 10 năm"
+const INSURANCE_PACKAGE_FEATURES = [
+    "Hợp đồng Chứng nhận quyền sở hữu cây",
+    "Hệ thống camera giám sát cây 24/7",
+    "Hệ thống GPS vị trí cây",
+    "Quyền thăm quan vườn, cây",
+    "Quyền lợi lưu trú tại farm miễn phí",
+    "Quyền lựa chọn phương án thu hoạch cây",
+    "Được bao tiêu khi thu hoạch cây trưởng thành",
 ];
-
-const INSURANCE_BREAKDOWN: CostBreakdown = {
-    label: "Bảo hiểm cam kết bao tiêu",
-    amount: 150000,
-    description: "2.500đ/tháng × 60 tháng. Hoàn 325.000đ/cây nếu công ty không thực hiện cam kết",
-    icon: "Shield"
-};
 
 export const PACKAGES: Record<PackageType, PackageInfo> = {
+    // Kept for type compatibility — no longer shown on pricing page
     standard: {
         type: 'standard',
-        name: 'Gói Cá Nhân',
-        price: 260_000,
-        breakdown: BASE_BREAKDOWN,
-        features: BASE_FEATURES,
-        hasInsurance: false,
+        name: 'Gói Cơ Bản',
+        price: 410_000,
+        breakdown: INSURANCE_PACKAGE_BREAKDOWN,
+        features: INSURANCE_PACKAGE_FEATURES,
+        hasInsurance: true,
     },
     insurance: {
         type: 'insurance',
-        name: 'Gói Có Bảo Hiểm',
+        name: 'Gói Trồng Cây Dó Đen',
         price: 410_000,
-        breakdown: [...BASE_BREAKDOWN, INSURANCE_BREAKDOWN],
-        features: [
-            ...BASE_FEATURES,
-            "Bảo hiểm cam kết bao tiêu 60 tháng",
-            "Hoàn 325.000đ/cây nếu vi phạm cam kết",
-        ],
+        breakdown: INSURANCE_PACKAGE_BREAKDOWN,
+        features: INSURANCE_PACKAGE_FEATURES,
         hasInsurance: true,
     },
 };
 
-export const VALID_UNIT_PRICES = [260_000, 410_000]
+export const VALID_UNIT_PRICES = [410_000]
 
-export const getPackageByPrice = (price: number): PackageType =>
-    price === 410_000 ? 'insurance' : 'standard'
+export const getPackageByPrice = (price: number): PackageType => 'insurance'
 
 export const isValidPackageType = (type: string): type is PackageType =>
     type === 'standard' || type === 'insurance'
 
 // ─── Backward-compatible aliases ─────────────────────────────────
-export const PACKAGE_PRICE = 260_000;
-export const COST_BREAKDOWN = BASE_BREAKDOWN;
+export const PACKAGE_PRICE = 410_000;
+export const COST_BREAKDOWN = INSURANCE_PACKAGE_BREAKDOWN;
 export const PACKAGE_INFO = {
-    name: PACKAGES.standard.name,
-    price: PACKAGES.standard.price,
+    name: PACKAGES.insurance.name,
+    price: PACKAGES.insurance.price,
     unit: "cây",
-    breakdown: PACKAGES.standard.breakdown,
-    features: PACKAGES.standard.features,
+    breakdown: PACKAGES.insurance.breakdown,
+    features: PACKAGES.insurance.features,
 };
 
 // ─── Business logic thresholds ───────────────────────────────────

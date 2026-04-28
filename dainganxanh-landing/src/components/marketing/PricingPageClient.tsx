@@ -7,9 +7,9 @@ import { PACKAGES } from "@/lib/constants";
 export function PricingPageClient() {
     const router = useRouter();
 
-    const handleSelectPackage = (packageType: string) => {
+    const handleSelectPackage = () => {
         const defaultQuantity = 10;
-        router.push(`/quantity?initial=${defaultQuantity}&package=${packageType}`);
+        router.push(`/quantity?initial=${defaultQuantity}&package=insurance`);
     };
 
     return (
@@ -18,25 +18,20 @@ export function PricingPageClient() {
             <div className="container mx-auto px-4 py-8">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Chọn Gói Trồng Cây
+                        Gói Trồng Cây Dó Đen
                     </h1>
                     <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                         Mỗi cây bạn trồng là một đóng góp cho tương lai xanh của Việt Nam
                     </p>
                 </div>
 
-                {/* Package Cards — 2-column grid */}
-                <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                    <PackageCard
-                        packageData={PACKAGES.standard}
-                        packageType="standard"
-                        onSelectPackage={() => handleSelectPackage("standard")}
-                    />
+                {/* Single Package Card — centered */}
+                <div className="max-w-lg mx-auto">
                     <PackageCard
                         packageData={PACKAGES.insurance}
                         packageType="insurance"
                         highlighted
-                        onSelectPackage={() => handleSelectPackage("insurance")}
+                        onSelectPackage={handleSelectPackage}
                     />
                 </div>
 
