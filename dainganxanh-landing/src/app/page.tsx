@@ -25,7 +25,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         const { data, error } = await supabase
             .from('orders')
             .select('quantity')
-            .eq('status', 'completed')
+            .in('status', ['paid', 'verified', 'assigned', 'completed'])
         if (error) console.error('[TreeCounter] fetch error:', error.message)
         if (data) {
             treeCount = data.reduce((sum, row) => sum + (row.quantity ?? 0), 0)
