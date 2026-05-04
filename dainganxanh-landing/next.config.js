@@ -31,13 +31,18 @@ const nextConfig = {
   },
 }
 
-module.exports = withSentryConfig(nextConfig, {
-    // Suppress source map upload when DSN is not configured (local dev)
-    silent: !process.env.SENTRY_DSN,
-    disableServerWebpackPlugin: !process.env.SENTRY_DSN,
-    disableClientWebpackPlugin: !process.env.SENTRY_DSN,
+const sentryOptions = {
+    silent: true,
     widenClientFileUpload: true,
     hideSourceMaps: true,
     automaticVercelMonitors: false,
-})
+    sourcemaps: {
+        // Skip source map upload when no DSN configured (local dev / CI)
+        disable: !process.env.SENTRY_DSN,
+    },
+}
+
+module.exports = process.env.SENTRY_DSN
+    ? withSentryConfig(nextConfig, sentryOptions)
+    : nextConfig
 
