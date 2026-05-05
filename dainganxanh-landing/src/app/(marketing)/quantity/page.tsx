@@ -19,7 +19,7 @@ function QuantityPageContent() {
 
     // Read initial quantity from URL params (e.g., /quantity?initial=10)
     const initialQuantity = parseInt(searchParams.get("initial") || "1", 10);
-    const validInitialQuantity = Math.max(1, Math.min(1000, initialQuantity));
+    const validInitialQuantity = Math.max(1, Math.min(1000000, initialQuantity));
 
     // Read package type from URL (default 'standard')
     const packageParam = searchParams.get("package") || "standard";
@@ -97,7 +97,7 @@ function QuantityPageContent() {
                                 onInputChange={handleInputChange}
                                 error={error}
                                 min={1}
-                                max={1000}
+                                max={1000000}
                             />
 
                             {/* Quick Select Buttons */}

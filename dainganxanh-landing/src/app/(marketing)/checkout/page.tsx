@@ -87,7 +87,7 @@ function CheckoutContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const raw = parseInt(searchParams.get("quantity") || "1");
-    const quantity = Math.max(1, Math.min(raw || 1, 1000));
+    const quantity = Math.max(1, Math.min(raw || 1, 1000000));
     const packageParam = searchParams.get("package") || "standard";
     const packageType: PackageType = isValidPackageType(packageParam) ? packageParam : "standard";
     const unitPrice = PACKAGES[packageType].price;
