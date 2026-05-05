@@ -9,12 +9,18 @@ jest.mock('@/lib/supabase/client', () => ({
       getUser: jest.fn().mockResolvedValue({
         data: {
           user: {
+            id: 'user-123',
             user_metadata: { full_name: 'Nguyễn Văn A' },
             email: 'test@example.com',
           },
         },
       }),
     },
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    })),
   })),
 }))
 

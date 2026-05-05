@@ -96,7 +96,7 @@ describe('FarmCamera', () => {
             render(<FarmCamera streamName="farm" />)
         })
         await waitFor(() => {
-            expect(screen.getByText('Camera đang ngoại tuyến')).toBeInTheDocument()
+            expect(screen.getByText('Camera Vườn Sắp Ra Mắt')).toBeInTheDocument()
         })
         expect(screen.queryByTitle('Camera vườn trực tiếp')).not.toBeInTheDocument()
     })
@@ -117,7 +117,7 @@ describe('FarmCamera', () => {
             render(<FarmCamera streamName="farm" />)
         })
         await waitFor(() => {
-            expect(screen.getByText('Camera đang ngoại tuyến')).toBeInTheDocument()
+            expect(screen.getByText('Camera Vườn Sắp Ra Mắt')).toBeInTheDocument()
         })
     })
 

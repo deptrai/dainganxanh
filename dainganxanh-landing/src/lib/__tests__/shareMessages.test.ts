@@ -33,7 +33,7 @@ describe('shareMessages', () => {
             })
 
             expect(result.title).toBe('Thu hoạch trầm hương')
-            expect(result.text).toContain('5 năm')
+            expect(result.text).toContain('10 năm')
             expect(result.text).toContain('🎉')
             expect(result.url).toContain('DNG123456')
         })

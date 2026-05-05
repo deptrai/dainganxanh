@@ -21,7 +21,11 @@ jest.mock('js-cookie', () => ({
 jest.mock('framer-motion', () => ({
     motion: {
         div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+        p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+        button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+        input: ({ children, ...props }: any) => <input {...props}>{children}</input>,
     },
+    AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
@@ -241,7 +245,7 @@ describe('RegisterPage', () => {
             render(<RegisterPage />)
 
             await waitFor(() => {
-                expect(mockRouter.replace).toHaveBeenCalledWith('/checkout?quantity=5')
+                expect(mockRouter.replace).toHaveBeenCalledWith('/checkout?quantity=5&package=standard')
             })
         })
 
@@ -269,8 +273,8 @@ describe('RegisterPage', () => {
             render(<RegisterPage />)
 
             await waitFor(() => {
-                // 5 cây × 260,000 = 1,300,000
-                expect(screen.getByText('1.300.000 ₫')).toBeInTheDocument()
+                // 5 cây × 410,000 = 2,050,000
+                expect(screen.getByText('2.050.000 ₫')).toBeInTheDocument()
             })
         })
 

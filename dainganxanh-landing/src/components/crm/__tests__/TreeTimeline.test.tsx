@@ -15,7 +15,7 @@ describe('TreeTimeline', () => {
         expect(screen.getByText('Đặt hàng thành công')).toBeInTheDocument()
         expect(screen.getByText('Đang ươm giống')).toBeInTheDocument()
         expect(screen.getByText('Trồng xuống đất')).toBeInTheDocument()
-        expect(screen.getByText('Năm 5: Thu hoạch')).toBeInTheDocument()
+        expect(screen.getByText('Năm 5: Tích tụ hương')).toBeInTheDocument()
     })
 
     it('shows current position indicator for young trees', () => {
@@ -159,7 +159,7 @@ describe('TreeTimeline', () => {
 
             // Check for role="list" and role="listitem"
             expect(screen.getByRole('list', { name: /giai đoạn phát triển/i })).toBeInTheDocument()
-            expect(screen.getAllByRole('listitem').length).toBe(9)
+            expect(screen.getAllByRole('listitem').length).toBe(11)
         })
 
         it('handles photos prop as undefined', () => {
