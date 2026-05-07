@@ -1,7 +1,7 @@
 /**
  * Component Tests: OTPInput
  *
- * [P0] Auth core UI — 8-digit OTP entry with auto-advance, paste, resend.
+ * [P0] Auth core UI — 6-digit OTP entry with auto-advance, paste, resend.
  * Uses @testing-library/react + jest-dom.
  */
 
@@ -40,9 +40,9 @@ beforeEach(() => {
 })
 
 describe('[P0] OTPInput — rendering', () => {
-    test('[P0] renders 8 digit inputs by default', () => {
+    test('[P0] renders 6 digit inputs by default', () => {
         renderOTPInput()
-        expect(getOTPInputs()).toHaveLength(8)
+        expect(getOTPInputs()).toHaveLength(6)
     })
 
     test('[P1] renders custom length inputs', () => {
@@ -84,17 +84,17 @@ describe('[P0] OTPInput — digit entry', () => {
         expect(inputs[0]).toHaveValue('')
     })
 
-    test('[P0] calls onComplete when all 8 digits entered', async () => {
+    test('[P0] calls onComplete when all 6 digits entered', async () => {
         const onComplete = jest.fn()
         renderOTPInput({ onComplete })
         const inputs = getOTPInputs()
 
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
             await userEvent.type(inputs[i], String(i + 1))
         }
 
         await waitFor(() => {
-            expect(onComplete).toHaveBeenCalledWith('12345678')
+            expect(onComplete).toHaveBeenCalledWith('123456')
         })
     })
 
@@ -124,17 +124,17 @@ describe('[P0] OTPInput — keyboard navigation', () => {
 })
 
 describe('[P0] OTPInput — paste', () => {
-    test('[P0] pastes full 8-digit code across inputs', async () => {
+    test('[P0] pastes full 6-digit code across inputs', async () => {
         const onComplete = jest.fn()
         renderOTPInput({ onComplete })
         const inputs = getOTPInputs()
 
         fireEvent.paste(inputs[0], {
-            clipboardData: { getData: () => '12345678' },
+            clipboardData: { getData: () => '123456' },
         })
 
         await waitFor(() => {
-            expect(onComplete).toHaveBeenCalledWith('12345678')
+            expect(onComplete).toHaveBeenCalledWith('123456')
         })
     })
 

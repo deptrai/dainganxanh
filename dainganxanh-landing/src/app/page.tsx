@@ -7,8 +7,10 @@ import { ReferralTracker } from '@/components/ReferralTracker'
 import { VideoButton } from '@/components/marketing/VideoButton'
 import { HeroVideo } from '@/components/marketing/HeroVideo'
 import { TreeCounter } from '@/components/marketing/TreeCounter'
+import { SocialProofWidget } from '@/components/marketing/SocialProofWidget'
 import { CTAButton } from '@/components/marketing/CTAButton'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { fetchRecentOrders, fetchActiveOrderCount } from '@/actions/socialProof'
 
 export const dynamic = 'force-dynamic'; // Tree counter cần real-time, không cache
 
@@ -23,7 +25,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         const { data, error } = await supabase
             .from('orders')
             .select('quantity')
-            .eq('status', 'completed')
+            .in('status', ['paid', 'verified', 'assigned', 'completed'])
         if (error) console.error('[TreeCounter] fetch error:', error.message)
         if (data) {
             treeCount = data.reduce((sum, row) => sum + (row.quantity ?? 0), 0)
@@ -33,9 +35,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         console.error('[TreeCounter] exception:', err)
     }
 
+    const [recentOrders, activeOrderCount] = await Promise.all([
+        fetchRecentOrders(10),
+        fetchActiveOrderCount(),
+    ])
+
     return (
         <main className="overflow-x-hidden">
             <ReferralTracker refCode={refCode} />
+            <SocialProofWidget orders={recentOrders} activeCount={activeOrderCount} />
             <AuthCallbackHandler />
             {/* Navbar - Glassmorphism */}
             <nav className="fixed w-full z-50 transition-all duration-300 top-0 py-4">
@@ -290,8 +298,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                                 answer: 'Luôn có những rủi ro và những biến cố bất ngờ. Tuy nhiên, chúng tôi cam kết rằng nếu không phải vì nguyên nhân do thiên tai, dịch bệnh thì trong suốt 10 năm, Bạn trồng 1 cây, chắc chắn sẽ có 1 cây trưởng thành.'
                             },
                             {
-                                question: 'Tại sao lại là 260.000 VNĐ?',
-                                answer: 'Đó là chi phí trọn gói cho: cây giống, đất được thuê để trồng cây và 10 năm (120 tháng) công và phí chăm sóc, phân bón, bảo vệ và công nghệ quản lý cho cây của bạn. Chỉ với chưa đến 150 đồng mỗi ngày để nuôi dưỡng một sự sống.'
+                                question: 'Tại sao lại là 410.000 VNĐ?',
+                                answer: '410.000 VNĐ là chi phí trọn gói: cây giống, đất thuê và 10 năm chăm sóc chuyên nghiệp. Đây là mức giá minh bạch, không phát sinh thêm bất kỳ chi phí nào khác trong suốt hành trình đồng hành cùng cây của bạn.'
                             }
                         ].map((faq, index) => (
                             <StaggerItem key={index} className="border border-brand-100 rounded-2xl p-6 hover:shadow-soft transition-all duration-300 bg-brand-50/30 hover:bg-white cursor-pointer group">

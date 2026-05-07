@@ -1,7 +1,7 @@
 ---
 stepsCompleted: ['step-01-load-context', 'step-02-define-thresholds', 'step-03-gather-evidence', 'step-04-evaluate-and-score', 'step-04a-subagent-security', 'step-04b-subagent-performance', 'step-04c-subagent-reliability', 'step-04d-subagent-scalability', 'step-04e-aggregate-nfr', 'step-05-generate-report']
 lastStep: 'step-05-generate-report'
-lastSaved: '2026-04-21'
+lastSaved: '2026-04-22'
 workflowType: 'testarch-nfr'
 executionMode: 'sequential'
 inputDocuments:
@@ -12,8 +12,12 @@ inputDocuments:
   - dainganxanh-landing/src/app/api/orders/cancel/route.ts
   - dainganxanh-landing/Dockerfile
   - dainganxanh-landing/e2e/performance-boundaries.spec.ts
+  - dainganxanh-landing/e2e/auth.setup.ts
+  - dainganxanh-landing/jest.setup.ts
   - _bmad-output/test-artifacts/test-review.md
   - _bmad-output/test-artifacts/traceability-report.md
+  - _bmad-output/test-artifacts/automation-summary.md
+  - _bmad-output/test-artifacts/ci-recommendations.md
 ---
 
 # NFR Assessment: dainganxanh-landing
@@ -264,3 +268,143 @@ Session 6 shipped the blog CMS (FR-31) + public blog routes (FR-30 SEO). This ap
 ---
 
 **Blog NFR verdict**: Production-ready for marketing launch once G13 + Lighthouse CI land (~2.5h work). SEO posture (95/A) is a strong asset — FR-30 is the most mature NFR dimension in this codebase.
+
+---
+
+## NFR Assessment Run: 2026-04-22 — Delta Assessment
+
+**Date**: 2026-04-22  
+**Assessor**: TEA Agent (Master Test Architect)  
+**Scope**: CI fix delta + E2E auth refactor (no production code changes)  
+**Execution mode**: SEQUENTIAL  
+**Baseline**: 2026-04-21 assessment (Overall 🟡 MEDIUM)
+
+### Change Inventory (2026-04-21 → 2026-04-22)
+
+| File | Change | Domain Impact |
+|---|---|---|
+| `src/components/auth/__tests__/OTPInput.test.tsx` | 8-digit → 6-digit sync with component | Maintainability |
+| `jest.setup.ts` | Added TextEncoder/TextDecoder polyfill | Maintainability |
+| `e2e/auth.setup.ts` | Refactor: Mailpit OTP, 6-digit, admin+user separation | Test Reliability |
+| `e2e/fixtures/auth.setup.ts` | Mailpit OTP integration | Test Reliability |
+| `e2e/specs/epic1-onboarding-payment/registration-auth.spec.ts` | Updated to match refactored setup | Test Reliability |
+
+> **Production code unchanged.** Security, Performance, Reliability, Scalability domain findings from 2026-04-21 carry forward without change.
+
+---
+
+### Step 02 — NFR Threshold Matrix (2026-04-22)
+
+Thresholds unchanged from 2026-04-21 baseline. Reproduced for completeness.
+
+| Domain | Category | Threshold | Source |
+|---|---|---|---|
+| Security | Auth (server-side) | `getUser()` validated server-side only | Architecture |
+| Security | RBAC | `['admin','super_admin']` on all admin routes | PRD |
+| Security | Webhook | HMAC-SHA512 Casso signature | Tech spec |
+| Performance | Page load | LCP ≤ 3s @ p75 | E2E perf spec |
+| Performance | API response | P95 ≤ 500ms under normal load | Architecture |
+| Reliability | Error handling | All API routes: structured try/catch + typed response | Architecture |
+| Reliability | Health check | `/api/health` returns 200 | Ops standard |
+| Scalability | Connection pooling | PgBouncer active | Supabase config |
+| Maintainability | Test sync | Unit test assertions match component behavior | CI gate |
+| Maintainability | E2E setup | Real OTP from Mailpit; no hardcoded bypass in CI | CI best practice |
+
+---
+
+### Step 03 — Evidence Delta
+
+#### Evidence: OTPInput digit-count sync ✅ FIXED
+- `OTPInput.test.tsx` previously asserted 8 inputs; component renders 6
+- Fix: `expect(getOTPInputs()).toHaveLength(6)` — test now matches component
+- CI gate: jest now passes this assertion
+
+#### Evidence: TextEncoder polyfill ✅ FIXED
+- `jest.setup.ts` now imports `TextEncoder`/`TextDecoder` from `util` and assigns to `global`
+- Fixes fetch/supabase dependency failures in jsdom environment
+- Required for any test that uses Supabase client in jest context
+
+#### Evidence: E2E auth.setup.ts refactor ✅ IMPROVED
+- **Before**: Single admin-only auth, hardcoded OTP path, fragile session reuse
+- **After**:
+  - `getOTPFromMailpit(email)` for real OTP retrieval from local mail server
+  - Separate `setup()` blocks for `ADMIN_EMAIL` and `TEST_EMAIL`
+  - Correctly expects 6 OTP inputs: `expect(otpInputs).toHaveCount(6)`
+  - Handles referral-code modal + skip-identity modal flows
+  - Saves separate storage states: `.auth/admin.json` and `.auth/user.json`
+- Impact: E2E tests are now isolated per role; auth setup is production-realistic
+
+#### Evidence: No production code changes ✅ CONFIRMED
+- Git status (2026-04-22): only `e2e/` and test files modified
+- No changes to `src/app/api/`, `src/components/` (outside `__tests__/`), `src/middleware.ts`, `next.config.js`, or `Dockerfile`
+- All 2026-04-21 domain findings (Security/Performance/Reliability/Scalability) remain valid
+
+---
+
+### Step 04 — Domain Re-evaluation (Sequential)
+
+#### 🔒 Security — LOW Risk (UNCHANGED)
+No security-relevant code changed. 2026-04-21 findings carry forward.
+
+**Delta**: Test coverage for OTPInput auth flow is now correctly synchronized with component behavior — test suite can detect future regressions in OTP digit count.
+
+#### ⚡ Performance — MEDIUM Risk (UNCHANGED)
+No performance-relevant code changed. 2026-04-21 findings carry forward.
+
+**Delta**: None.
+
+#### 🔄 Reliability — MEDIUM Risk (UNCHANGED)
+No production reliability code changed. 2026-04-21 findings carry forward.
+
+**Test Reliability delta**: E2E auth setup now uses real Mailpit OTP and separate role storage states — E2E test suite is more reliable and less prone to false positives from auth state bleed.
+
+#### 📈 Scalability — MEDIUM Risk (UNCHANGED)
+No scalability-relevant code changed. 2026-04-21 findings carry forward.
+
+**Delta**: None.
+
+#### 🛠 Maintainability — IMPROVED
+
+| Check | 2026-04-21 | 2026-04-22 | Delta |
+|---|---|---|---|
+| OTPInput test sync | ❌ 8-digit mismatch | ✅ 6-digit synchronized | +1 |
+| jest polyfill completeness | ❌ TextEncoder missing | ✅ Polyfill present | +1 |
+| E2E auth coverage | ⚠️ Admin-only, fragile OTP | ✅ Admin+user, Mailpit OTP | +1 |
+| TypeScript build errors | ⚠️ `ignoreBuildErrors: true` | ⚠️ Unchanged | 0 |
+
+---
+
+### Step 05 — Gate Decision Update (2026-04-22)
+
+#### Overall Risk Level: 🟡 MEDIUM (UNCHANGED)
+
+Domain scores carry forward from 2026-04-21. Maintainability sub-domain improves.
+
+#### Updated Priority Action Summary
+
+> P0 (`/api/health`) and P1 (rate limiting, security headers, DB indexes) from 2026-04-21 remain open. No new P0/P1 items introduced.
+
+| Priority | Action | Status | Notes |
+|---|---|---|---|
+| P0 | Add `/api/health` endpoint | 🔴 OPEN | Still missing |
+| P1 | Rate limiting on API routes | 🔴 OPEN | Still missing |
+| P1 | Security headers (CSP, HSTS) | 🔴 OPEN | Still missing |
+| P1 | Composite DB indexes | 🔴 OPEN | Still missing |
+| ✅ | OTPInput test sync | ✅ DONE | Fixed 2026-04-22 |
+| ✅ | TextEncoder jest polyfill | ✅ DONE | Fixed 2026-04-22 |
+| ✅ | E2E auth refactor (Mailpit) | ✅ DONE | Staged 2026-04-22 |
+
+#### Gate Recommendation (2026-04-22)
+
+| Launch Phase | Status | Conditions |
+|---|---|---|
+| Dev / Staging | ✅ GO | CI now passing after test fixes |
+| Soft launch / Beta (<500 users) | ✅ GO | Unchanged |
+| Marketing launch (1K–10K users) | 🟡 GO with actions | P0/P1 items still required |
+| Scale launch (10K+ users) | 🟡 Plan needed | Unchanged |
+
+**Verdict**: No regression. Test quality improved in 3 areas. 2026-04-21 gate recommendation stands — P0 `/api/health` remains the highest-ROI open item before marketing launch.
+
+---
+
+*Delta scope: test/CI layer only. Production code unchanged. Full baseline: 2026-04-21 assessment above.*

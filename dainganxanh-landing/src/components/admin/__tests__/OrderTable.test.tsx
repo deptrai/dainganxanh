@@ -56,11 +56,10 @@ describe('OrderTable', () => {
     })
 
     /**
-     * Helper: returns the desktop table container (hidden lg:block).
+     * Helper: returns the table element.
      */
     function getDesktopTable(container: HTMLElement) {
-        // The desktop wrapper is the div with class "hidden lg:block ..."
-        return container.querySelector('.hidden.lg\\:block') as HTMLElement
+        return container.querySelector('table') as HTMLElement
     }
 
     it('renders desktop table with correct column headers', () => {
@@ -104,8 +103,8 @@ describe('OrderTable', () => {
     it('shows status badges with correct colors', () => {
         render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
-        // Both mobile and desktop render status badges — grab all and verify at least one has correct classes
-        const pendingBadges = screen.getAllByText('Chờ xác minh')
+        // Grab status badge elements and verify at least one has correct classes
+        const pendingBadges = screen.getAllByText('Chờ thanh toán')
         const verifiedBadges = screen.getAllByText('Đã xác minh')
 
         expect(pendingBadges.some((el) => el.classList.contains('bg-yellow-100') && el.classList.contains('text-yellow-800'))).toBe(true)
@@ -116,10 +115,8 @@ describe('OrderTable', () => {
         render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
         // VerifyOrderButton renders "Xác minh" for the pending order
-        // Both mobile and desktop views render it, so expect 2 (one per view)
         const verifyButtons = screen.getAllByText('Xác minh')
-        // There is 1 pending order, rendered in 2 views = 2 buttons
-        expect(verifyButtons).toHaveLength(2)
+        expect(verifyButtons).toHaveLength(1)
     })
 
     it('formats currency correctly', () => {

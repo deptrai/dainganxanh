@@ -77,7 +77,8 @@ function SuccessContent() {
 
     // Calculate impact
     const co2Impact = quantity * 20;
-    const totalAmount = quantity * 260000;
+    const totalAmountParam = searchParams.get("amount");
+    const totalAmount = totalAmountParam ? parseInt(totalAmountParam) : null;
 
     if (!orderCode) {
         return (
@@ -118,7 +119,7 @@ function SuccessContent() {
                         <div className="flex justify-between">
                             <span className="text-gray-600">Tổng tiền:</span>
                             <span className="font-semibold text-emerald-600">
-                                {totalAmount.toLocaleString("vi-VN")} ₫
+                                {totalAmount ? `${totalAmount.toLocaleString("vi-VN")} ₫` : "—"}
                             </span>
                         </div>
                         <div className="pt-3 border-t border-gray-100">

@@ -146,9 +146,13 @@ describe('[P0] updateUserRole — auth guard', () => {
 
     test('[P1] admin can downgrade user role', async () => {
         mockAdminAuth('admin')
-        mockServiceFrom.mockReturnValue({
-            update: () => ({ eq: () => Promise.resolve({ error: null }) }),
-        })
+        mockServiceFrom
+            .mockReturnValueOnce({
+                select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'user' }, error: null }) }) }),
+            })
+            .mockReturnValue({
+                update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+            })
         const result = await updateUserRole('other-user-id', 'user')
         expect(result.error).toBeUndefined()
     })

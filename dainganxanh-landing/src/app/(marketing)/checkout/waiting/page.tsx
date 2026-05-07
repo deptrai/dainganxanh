@@ -28,9 +28,9 @@ function WaitingContent() {
     const [orderStatus, setOrderStatus] = useState("manual_payment_claimed");
     const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
 
-    // Get total_amount from fetched order data, fallback to URL quantity * unit price
+    // Get total_amount from fetched order data; fallback to URL quantity * standard price
     const currentOrder = pendingOrders.find((o) => o.code === orderCode);
-    const totalAmount = currentOrder ? Number(currentOrder.total_amount) : quantity * 260000;
+    const totalAmount = currentOrder ? Number(currentOrder.total_amount) : null;
 
     // Check identity status from server on mount
     useEffect(() => {
@@ -153,7 +153,7 @@ function WaitingContent() {
                         <div className="flex justify-between">
                             <span className="text-gray-600">Tổng tiền:</span>
                             <span className="font-semibold text-amber-600">
-                                {totalAmount.toLocaleString("vi-VN")} VND
+                                {totalAmount ? `${totalAmount.toLocaleString("vi-VN")} VND` : "—"}
                             </span>
                         </div>
                     </div>

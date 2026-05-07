@@ -27,6 +27,11 @@ jest.mock('@/lib/supabase/server', () => ({
   createServiceRoleClient: jest.fn(() => mockServiceClient),
 }))
 
+jest.mock('@/lib/utils/telegram', () => ({
+  notifyAdminApproval: jest.fn(() => Promise.resolve()),
+  notifyContractFailure: jest.fn(() => Promise.resolve()),
+}))
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
@@ -183,11 +188,11 @@ describe('verifyAdminOrder', () => {
   })
 
   it('[P0] returns empty object on success', async () => {
-    const updateChain: any = {
-      update: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockResolvedValue({ error: null }),
-    }
-    mockServerFrom.mockReturnValue(updateChain)
+    const mockOrder = { id: 'order-123', code: 'CODE123', user_id: 'u1', user_email: 'test@test.com', user_name: 'Test', quantity: 5, total_amount: 5000000, status: 'pending', referred_by: null }
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))  // admin role check
+      .mockReturnValueOnce(makeQueryChain({ data: mockOrder, error: null }))           // get order
+      .mockReturnValueOnce({ update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }) }) // update order
 
     const result = await verifyAdminOrder('order-123')
     expect(result).toEqual({})
@@ -195,11 +200,11 @@ describe('verifyAdminOrder', () => {
   })
 
   it('[P0] returns error message on DB failure', async () => {
-    const updateChain: any = {
-      update: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockResolvedValue({ error: { message: 'Update failed' } }),
-    }
-    mockServerFrom.mockReturnValue(updateChain)
+    const mockOrder = { id: 'order-bad', code: 'CODE999', user_id: 'u1', user_email: 'test@test.com', user_name: 'Test', quantity: 5, total_amount: 5000000, status: 'pending', referred_by: null }
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))  // admin role check
+      .mockReturnValueOnce(makeQueryChain({ data: mockOrder, error: null }))           // get order
+      .mockReturnValueOnce({ update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: { message: 'Update failed' } }) }) }) // update order
 
     const result = await verifyAdminOrder('order-bad')
     expect(result.error).toBe('Update failed')

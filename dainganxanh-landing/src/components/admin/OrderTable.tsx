@@ -19,6 +19,7 @@ type SortDirection = 'asc' | 'desc'
 
 const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
+    manual_payment_claimed: 'bg-sky-100 text-sky-800',
     paid: 'bg-blue-100 text-blue-800',
     verified: 'bg-green-100 text-green-800',
     assigned: 'bg-purple-100 text-purple-800',
@@ -28,7 +29,8 @@ const statusColors = {
 }
 
 const statusLabels = {
-    pending: 'Chờ xác minh',
+    pending: 'Chờ thanh toán',
+    manual_payment_claimed: 'Khách báo đã chuyển',
     paid: 'Đã thanh toán',
     verified: 'Đã xác minh',
     assigned: 'Đã gán cây',
@@ -116,9 +118,13 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                     </button>
                 </div>
             )}
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hành động
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Order ID
                         </th>
@@ -152,9 +158,6 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                         >
                             Ngày tạo <SortIcon field="created_at" />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Hành động
-                        </th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -164,43 +167,9 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                                 className="hover:bg-gray-50 cursor-pointer"
                                 onClick={() => setExpandedRow(expandedRow === order.id ? null : order.id)}
                             >
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div>{order.user_email || order.user_phone || 'N/A'}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {order.referrer ? (
-                                        <div>
-                                            <span className="font-medium">{order.referrer.referral_code}</span>
-                                            <br />
-                                            <span className="text-xs text-gray-500">{order.referrer.email}</span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-gray-400">Không có</span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {order.quantity} cây
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {formatCurrency(order.total_amount)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {order.payment_method}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[order.status]}`}>
-                                        {statusLabels[order.status]}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatDate(order.created_at)}
-                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex gap-2">
-                                        {order.status === 'pending' || order.status === 'paid' ? (
+                                        {order.status === 'pending' || order.status === 'manual_payment_claimed' || order.status === 'paid' ? (
                                             <VerifyOrderButton orderId={order.id} verifyOrder={verifyOrder} />
                                         ) : order.status === 'verified' || order.status === 'completed' ? (
                                             <div className="flex gap-2">
@@ -232,6 +201,50 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                                             <span className="text-gray-400">-</span>
                                         )}
                                     </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {order.order_code || `PKG-${new Date(order.created_at).getFullYear()}-${order.id.slice(0, 6).toUpperCase()}`}
+                                    {order.is_phantom && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded">
+                                            Phantom
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div>{order.user_email || order.user_phone || 'N/A'}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.referrer ? (
+                                        <div>
+                                            <span className="font-medium">{order.referrer.referral_code}</span>
+                                            <br />
+                                            <span className="text-xs text-gray-500">{order.referrer.email}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400">Không có</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.quantity} cây
+                                    {order.has_insurance && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded">
+                                            BH
+                                        </span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {formatCurrency(order.total_amount)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {order.payment_method}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[order.status]}`}>
+                                        {statusLabels[order.status]}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {formatDate(order.created_at)}
                                 </td>
                             </tr>
                             {expandedRow === order.id && (
@@ -266,6 +279,7 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
                     ))}
                 </tbody>
             </table>
+            </div>
 
             {/* Assignment Modal */}
             {

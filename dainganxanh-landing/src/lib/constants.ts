@@ -1,11 +1,103 @@
 // Package pricing constants for Đại Ngàn Xanh
 
-export const PACKAGE_PRICE = 260000; // VNĐ per tree
+// ─── Package Types ───────────────────────────────────────────────
+export type PackageType = 'standard' | 'insurance'
 
-// Business logic thresholds
-export const HARVEST_MONTHS = 120; // trees must be 120 months old to harvest
-export const PHOTO_PLACEHOLDER_MONTHS = 9; // show placeholder before 9 months
-export const MIN_WITHDRAWAL = 200_000; // minimum withdrawal amount in VNĐ
+export interface PackageInfo {
+    type: PackageType
+    name: string
+    price: number
+    breakdown: CostBreakdown[]
+    features: string[]
+    hasInsurance: boolean
+}
+
+export interface CostBreakdown {
+    label: string;
+    amount: number;
+    description: string;
+    icon: string;
+}
+
+const INSURANCE_PACKAGE_BREAKDOWN: CostBreakdown[] = [
+    {
+        label: "Cây giống chất lượng cao",
+        amount: 40_000,
+        description: "Cam kết giống Dó đen chuẩn Việt 100%",
+        icon: "Sprout"
+    },
+    {
+        label: "Quỹ Đại sứ Xanh",
+        amount: 41_000,
+        description: "Chia sẻ cộng đồng đại sứ",
+        icon: "Users"
+    },
+    {
+        label: "Chi phí cho cây trong 10 năm",
+        amount: 229_000,
+        description: "Chi phí đất, phân bón, nước, hệ thống tưới tiêu, vi sinh...",
+        icon: "Heart"
+    },
+    {
+        label: "Công chăm sóc và bảo hiểm 10 năm",
+        amount: 100_000,
+        description: "Công chăm sóc và bảo hiểm cây chết trong 10 năm",
+        icon: "Shield"
+    },
+];
+
+const INSURANCE_PACKAGE_FEATURES = [
+    "Hợp đồng Chứng nhận quyền sở hữu cây",
+    "Hệ thống camera giám sát cây 24/7",
+    "Hệ thống GPS vị trí cây",
+    "Quyền thăm quan vườn, cây",
+    "Quyền lợi lưu trú tại farm miễn phí",
+    "Quyền lựa chọn phương án thu hoạch cây",
+    "Được bao tiêu khi thu hoạch cây trưởng thành",
+];
+
+export const PACKAGES: Record<PackageType, PackageInfo> = {
+    // Kept for type compatibility — no longer shown on pricing page
+    standard: {
+        type: 'standard',
+        name: 'Gói Cơ Bản',
+        price: 410_000,
+        breakdown: INSURANCE_PACKAGE_BREAKDOWN,
+        features: INSURANCE_PACKAGE_FEATURES,
+        hasInsurance: true,
+    },
+    insurance: {
+        type: 'insurance',
+        name: 'Gói Trồng Cây Dó Đen',
+        price: 410_000,
+        breakdown: INSURANCE_PACKAGE_BREAKDOWN,
+        features: INSURANCE_PACKAGE_FEATURES,
+        hasInsurance: true,
+    },
+};
+
+export const VALID_UNIT_PRICES = [410_000]
+
+export const getPackageByPrice = (price: number): PackageType => 'insurance'
+
+export const isValidPackageType = (type: string): type is PackageType =>
+    type === 'standard' || type === 'insurance'
+
+// ─── Backward-compatible aliases ─────────────────────────────────
+export const PACKAGE_PRICE = 410_000;
+export const COST_BREAKDOWN = INSURANCE_PACKAGE_BREAKDOWN;
+export const PACKAGE_INFO = {
+    name: PACKAGES.insurance.name,
+    price: PACKAGES.insurance.price,
+    unit: "cây",
+    breakdown: PACKAGES.insurance.breakdown,
+    features: PACKAGES.insurance.features,
+};
+
+// ─── Business logic thresholds ───────────────────────────────────
+export const HARVEST_MONTHS = 120;
+export const PHOTO_PLACEHOLDER_MONTHS = 9;
+export const MIN_WITHDRAWAL = 200_000;
 
 // Tree status config — shared across PackageCard, PackageDetailHeader, TreeCard
 export const TREE_STATUS_CONFIG = {
@@ -18,47 +110,6 @@ export const TREE_STATUS_CONFIG = {
     dead: { label: 'Chết', emoji: '⚫', color: 'bg-gray-100 text-gray-800' },
 } as const;
 
-export interface CostBreakdown {
-    label: string;
-    amount: number;
-    description: string;
-    icon: string; // Lucide icon name
-}
-
-export const COST_BREAKDOWN: CostBreakdown[] = [
-    {
-        label: "Cây giống chất lượng cao",
-        amount: 40000,
-        description: "Giống Dó Đen (Aquilaria) chất lượng cao",
-        icon: "Sprout"
-    },
-    {
-        label: "Phí chăm sóc 10 năm",
-        amount: 194000,
-        description: "Chăm sóc chuyên nghiệp, báo cáo hàng quý",
-        icon: "Heart"
-    },
-    {
-        label: "Quỹ đại sứ xanh",
-        amount: 26000,
-        description: "Hỗ trợ cộng đồng địa phương và bảo vệ môi trường",
-        icon: "Users"
-    }
-];
-
-export const PACKAGE_INFO = {
-    name: "Gói Cá nhân",
-    price: PACKAGE_PRICE,
-    unit: "cây",
-    breakdown: COST_BREAKDOWN,
-    features: [
-        "Chứng nhận sở hữu cây",
-        "Báo cáo hàng quý với ảnh thực tế",
-        "Theo dõi GPS vị trí cây",
-        "3 lựa chọn thu hoạch sau 10 năm"
-    ]
-};
-
 // Utility function to format VND currency
 export const formatVND = (amount: number): string => {
     return new Intl.NumberFormat('vi-VN', {
@@ -69,10 +120,12 @@ export const formatVND = (amount: number): string => {
     }).format(amount);
 };
 
-// Validate that breakdown sums to total price
-const breakdownTotal = COST_BREAKDOWN.reduce((sum, item) => sum + item.amount, 0);
-if (breakdownTotal !== PACKAGE_PRICE) {
-    console.warn(
-        `Cost breakdown (${formatVND(breakdownTotal)}) does not match package price (${formatVND(PACKAGE_PRICE)})`
-    );
+// Validate that breakdowns sum to package prices
+for (const [key, pkg] of Object.entries(PACKAGES)) {
+    const total = pkg.breakdown.reduce((sum, item) => sum + item.amount, 0);
+    if (total !== pkg.price) {
+        console.warn(
+            `[${key}] Cost breakdown (${formatVND(total)}) does not match package price (${formatVND(pkg.price)})`
+        );
+    }
 }

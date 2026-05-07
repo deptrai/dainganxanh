@@ -1,17 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { PackageCard } from "@/components/marketing/PackageCard";
+import { PACKAGES } from "@/lib/constants";
 
 export function PricingPageClient() {
     const router = useRouter();
 
     const handleSelectPackage = () => {
-        // Navigate to quantity selector (Story 1.3) with default quantity
-        const defaultQuantity = 10; // Default to 10 trees
-        router.push(`/quantity?initial=${defaultQuantity}`);
+        const defaultQuantity = 10;
+        router.push(`/quantity?initial=${defaultQuantity}&package=insurance`);
     };
 
     return (
@@ -20,16 +18,21 @@ export function PricingPageClient() {
             <div className="container mx-auto px-4 py-8">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Chọn Gói Trồng Cây
+                        Gói Trồng Cây Dó Đen
                     </h1>
                     <p className="text-lg text-gray-600 max-w-2xl mx-auto">
                         Mỗi cây bạn trồng là một đóng góp cho tương lai xanh của Việt Nam
                     </p>
                 </div>
 
-                {/* Package Card */}
-                <div className="max-w-2xl mx-auto">
-                    <PackageCard onSelectPackage={handleSelectPackage} />
+                {/* Single Package Card — centered */}
+                <div className="max-w-lg mx-auto">
+                    <PackageCard
+                        packageData={PACKAGES.insurance}
+                        packageType="insurance"
+                        highlighted
+                        onSelectPackage={handleSelectPackage}
+                    />
                 </div>
 
                 {/* Trust Indicators */}

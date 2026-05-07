@@ -22,7 +22,7 @@ export function QuantitySelector({
     onInputChange,
     error,
     min = 1,
-    max = 1000,
+    max = 1000000,
     className,
 }: QuantitySelectorProps) {
     const isMinReached = quantity <= min;

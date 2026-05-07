@@ -1,3 +1,6 @@
+// @ts-check
+const { withSentryConfig } = require('@sentry/nextjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -23,11 +26,23 @@ const nextConfig = {
     ],
   },
 
-  // Disable type checking during build (handled by Nx)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
 }
 
-module.exports = nextConfig
+const sentryOptions = {
+    silent: true,
+    widenClientFileUpload: true,
+    hideSourceMaps: true,
+    automaticVercelMonitors: false,
+    sourcemaps: {
+        // Skip source map upload when no DSN configured (local dev / CI)
+        disable: !process.env.SENTRY_DSN,
+    },
+}
+
+module.exports = process.env.SENTRY_DSN
+    ? withSentryConfig(nextConfig, sentryOptions)
+    : nextConfig
 
