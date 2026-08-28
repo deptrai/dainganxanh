@@ -6,7 +6,17 @@ import { createHmac } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 
-const ORDER_CODE_REGEX = /\b(DH[A-Z0-9]{6})\b/i
+const ORDER_CODE_REGEX = /\b((?:DH|BK|ST)[A-Z0-9]{6})\b/i
+
+interface OrderLike {
+  id: string
+  code: string
+  user_id: string | null
+  user_email?: string | null
+  user_name?: string | null
+  total_amount: number
+  status?: string
+}
 
 // Verify Casso Webhook V2 HMAC signature
 // Header: x-casso-signature: t=<timestamp>,v1=<hmac-sha512>
@@ -40,6 +50,316 @@ async function verifyCassoSignature(req: NextRequest, secret: string): Promise<{
   return { body: parsed, ok: expected === received }
 }
 
+function normalizeOrderCode(description: string): string | null {
+  const match = String(description || '').match(ORDER_CODE_REGEX)
+  return match ? match[1].toUpperCase() : null
+}
+
+function orderTypeFromCode(code: string): 'tree' | 'booking' | 'store' | null {
+  if (code.startsWith('DH')) return 'tree'
+  if (code.startsWith('BK')) return 'booking'
+  if (code.startsWith('ST')) return 'store'
+  return null
+}
+
+function isStaleTransaction(txAt: string): boolean {
+  const transactionTime = new Date(txAt).getTime()
+  return Date.now() - transactionTime > 60 * 60 * 1000 // 60 minutes
+}
+
+function formatVND(amount: number): string {
+  return new Intl.NumberFormat('vi-VN').format(amount) + 'đ'
+}
+
+async function notifyPaymentMismatch(orderCode: string, expected: number, received: number, orderType: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chatId) return
+  const typeLabel = orderType === 'tree' ? 'Cây' : orderType === 'booking' ? 'Đặt phòng' : 'Store'
+  const message =
+    `⚠️ <b>Thanh toán không đủ/khớp — ${typeLabel}</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${orderCode}</code>\n` +
+    `💰 Cần thanh toán: <b>${formatVND(expected)}</b>\n` +
+    `💳 Nhận được: <b>${formatVND(received)}</b>\n` +
+    `🔁 Còn thiếu: <b>${formatVND(Math.max(0, expected - received))}</b>\n` +
+    `⚠️ Admin cần kiểm tra và xử lý thủ công.`
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: Number(chatId), text: message, parse_mode: 'HTML' }),
+    })
+  } catch (err) {
+    console.error('[Telegram] notifyPaymentMismatch failed:', err)
+  }
+}
+
+async function notifyStoreOrderConfirmed(orderCode: string, customerName: string, totalAmount: number) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chatId) return
+  const message =
+    `🛒 <b>Đơn Store thanh toán thành công!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${orderCode}</code>\n` +
+    `👤 Khách hàng: ${customerName}\n` +
+    `💰 Số tiền: <b>${formatVND(totalAmount)}</b>`
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: Number(chatId), text: message, parse_mode: 'HTML' }),
+    })
+  } catch (err) {
+    console.error('[Telegram] notifyStoreOrderConfirmed failed:', err)
+  }
+}
+
+async function notifyBookingConfirmed(orderCode: string, guestName: string, totalAmount: number) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chatId) return
+  const message =
+    `🏡 <b>Đặt phòng thanh toán thành công!</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã booking: <code>${orderCode}</code>\n` +
+    `👤 Khách: ${guestName}\n` +
+    `💰 Số tiền: <b>${formatVND(totalAmount)}</b>`
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: Number(chatId), text: message, parse_mode: 'HTML' }),
+    })
+  } catch (err) {
+    console.error('[Telegram] notifyBookingConfirmed failed:', err)
+  }
+}
+
+async function logPaymentTransaction(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  params: {
+    orderType: string
+    orderId: string
+    orderCode: string
+    cassoTid: string
+    amount: number
+    status: 'pending' | 'matched' | 'amount_mismatch' | 'stale' | 'duplicate'
+    metadata?: Record<string, unknown>
+  }
+) {
+  const { error } = await supabase.from('payment_transactions').insert({
+    order_type: params.orderType,
+    order_id: params.orderId,
+    order_code: params.orderCode,
+    casso_tid: params.cassoTid,
+    amount: params.amount,
+    status: params.status,
+    metadata: params.metadata ?? {},
+  })
+  if (error) console.error('[payment_transactions] insert failed:', error)
+}
+
+async function processTreeOrder(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  tx: any,
+  orderCode: string,
+  order: OrderLike,
+  paymentStatus: 'matched' | 'amount_mismatch'
+): Promise<{ ok: boolean; error?: string }> {
+  if (paymentStatus === 'amount_mismatch') {
+    await supabase.from('casso_transactions')
+      .update({
+        status: 'amount_mismatch',
+        note: `Expected ${order.total_amount}, got ${tx.amount}`,
+        order_id: order.id,
+      })
+      .eq('casso_tid', String(tx.id ?? tx.tid))
+    notifyPaymentMismatch(orderCode, order.total_amount, tx.amount, 'tree')
+    return { ok: false, error: 'Amount mismatch' }
+  }
+
+  const { data: fnData, error: fnError } = await supabase.functions.invoke('process-payment', {
+    body: {
+      userId: order.user_id,
+      userEmail: order.user_email,
+      userName: order.user_name,
+      orderCode: order.code,
+      quantity: (order as any).quantity,
+      totalAmount: order.total_amount,
+      paymentMethod: 'banking',
+      referredBy: (order as any).referred_by || null,
+    },
+  })
+
+  if (fnError) {
+    await supabase.from('casso_transactions')
+      .update({ status: 'function_error', note: fnError.message, order_id: order.id })
+      .eq('casso_tid', String(tx.id ?? tx.tid))
+    notifyContractFailure({
+      orderCode: order.code,
+      userName: order.user_name ?? 'Unknown',
+      userEmail: order.user_email ?? '',
+      errorMessage: fnError.message || 'Edge Function process-payment failed',
+    })
+    return { ok: false, error: fnError.message }
+  }
+
+  await supabase.from('casso_transactions')
+    .update({ status: 'processed', order_id: order.id })
+    .eq('casso_tid', String(tx.id ?? tx.tid))
+
+  if ((order as any).referred_by) {
+    createReferralClick(order.id, (order as any).referred_by, 'casso-webhook')
+      .catch((err) => console.error('[Casso] createReferralClick failed:', err))
+  }
+
+  revalidatePath('/')
+  notifyPaymentSuccess({
+    orderCode: order.code,
+    userName: order.user_name ?? '',
+    userEmail: order.user_email ?? '',
+    quantity: (order as any).quantity ?? 0,
+    totalAmount: order.total_amount,
+    treeCodes: fnData?.treeCodes,
+  })
+  return { ok: true }
+}
+
+async function processBooking(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  tx: any,
+  orderCode: string,
+  booking: OrderLike,
+  paymentStatus: 'matched' | 'amount_mismatch'
+): Promise<{ ok: boolean; error?: string }> {
+  if (paymentStatus === 'amount_mismatch') {
+    notifyPaymentMismatch(orderCode, booking.total_amount, tx.amount, 'booking')
+    return { ok: false, error: 'Amount mismatch' }
+  }
+
+  // Double-check booking still pending to avoid race with cancel
+  const { data: current } = await supabase
+    .from('room_bookings')
+    .select('status')
+    .eq('id', booking.id)
+    .single()
+
+  if (!current || current.status !== 'pending') {
+    return { ok: false, error: 'Booking is not pending' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('room_bookings')
+    .update({ status: 'confirmed', payment_ref: String(tx.id ?? tx.tid), expires_at: null })
+    .eq('id', booking.id)
+
+  if (updateError) {
+    console.error('[Casso] Booking confirm failed:', updateError)
+    return { ok: false, error: updateError.message }
+  }
+
+  revalidatePath('/eco-tourism')
+  notifyBookingConfirmed(orderCode, (booking as any).guest_name ?? '', booking.total_amount)
+  return { ok: true }
+}
+
+async function processStoreOrder(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  tx: any,
+  orderCode: string,
+  order: OrderLike,
+  paymentStatus: 'matched' | 'amount_mismatch'
+): Promise<{ ok: boolean; error?: string }> {
+  if (paymentStatus === 'amount_mismatch') {
+    notifyPaymentMismatch(orderCode, order.total_amount, tx.amount, 'store')
+    return { ok: false, error: 'Amount mismatch' }
+  }
+
+  // Must be idempotent: if already confirmed, skip
+  const { data: current } = await supabase
+    .from('store_orders')
+    .select('status')
+    .eq('id', order.id)
+    .single()
+
+  if (!current) return { ok: false, error: 'Store order not found' }
+  if (current.status !== 'pending') return { ok: true } // already processed
+
+  // Get items and decrement reserved stock atomically
+  const { data: items } = await supabase
+    .from('store_order_items')
+    .select('id, product_id, quantity')
+    .eq('store_order_id', order.id)
+
+  if (items && items.length > 0) {
+    for (const item of items) {
+      await supabase.rpc('release_product_stock', {
+        p_product_id: item.product_id,
+        p_qty: item.quantity,
+      })
+      // release_product_stock adds stock back and removes reserved;
+      // we then want to decrement actual stock (not reserved)
+      const { error: stockError } = await supabase.rpc('reserve_product_stock', {
+        p_product_id: item.product_id,
+        p_qty: item.quantity,
+      })
+      if (stockError) {
+        console.error('[Casso] Stock finalization failed:', stockError)
+      }
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from('store_orders')
+    .update({ status: 'confirmed', payment_ref: String(tx.id ?? tx.tid), expires_at: null })
+    .eq('id', order.id)
+
+  if (updateError) {
+    console.error('[Casso] Store order confirm failed:', updateError)
+    return { ok: false, error: updateError.message }
+  }
+
+  revalidatePath('/store')
+  notifyStoreOrderConfirmed(orderCode, (order as any).customer_name ?? '', order.total_amount)
+  return { ok: true }
+}
+
+async function findPendingOrder(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  orderType: 'tree' | 'booking' | 'store',
+  orderCode: string
+): Promise<{ order: OrderLike | null; table: string }> {
+  if (orderType === 'tree') {
+    const { data: order } = await supabase
+      .from('orders')
+      .select('id, code, user_id, user_email, user_name, quantity, total_amount, referred_by, status')
+      .eq('code', orderCode)
+      .eq('status', 'pending')
+      .single()
+    return { order: order as OrderLike | null, table: 'orders' }
+  }
+
+  if (orderType === 'booking') {
+    const { data: booking } = await supabase
+      .from('room_bookings')
+      .select('id, code, user_id, guest_name, guest_email, room_id, total_amount, status')
+      .eq('code', orderCode)
+      .eq('status', 'pending')
+      .single()
+    return { order: booking as unknown as OrderLike | null, table: 'room_bookings' }
+  }
+
+  const { data: storeOrder } = await supabase
+    .from('store_orders')
+    .select('id, code, user_id, customer_name, customer_email, total_amount, status')
+    .eq('code', orderCode)
+    .eq('status', 'pending')
+    .single()
+  return { order: storeOrder as unknown as OrderLike | null, table: 'store_orders' }
+}
+
 export async function POST(req: NextRequest) {
   const rl = rateLimit(req, { limit: 100, windowMs: 60_000, keyPrefix: 'casso' })
   if (!rl.ok) {
@@ -49,52 +369,41 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Guard: env var must be configured
   if (!process.env.CASSO_SECURE_TOKEN) {
     console.error('CASSO_SECURE_TOKEN is not configured')
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
-  // AC1 — Verify Casso Webhook V2 HMAC signature
   const sig = req.headers.get('x-casso-signature') ?? '(none)'
   const { body, ok } = await verifyCassoSignature(req, process.env.CASSO_SECURE_TOKEN)
   if (!ok) {
-    console.error('[Casso] HMAC verification failed', {
-      sig,
-      contentType: req.headers.get('content-type'),
-      bodyPreview: typeof body === 'object' ? JSON.stringify(body)?.slice(0, 200) : body,
-    })
-    // Log failed attempt to DB for visibility
+    const supabase = createServiceRoleClient()
     try {
-      const supabase = createServiceRoleClient()
       await supabase.from('casso_transactions').insert({
+        casso_id: `hmac_fail_${Date.now()}`,
         casso_tid: `hmac_fail_${Date.now()}`,
         amount: 0,
         description: `HMAC fail — sig: ${sig.slice(0, 80)}`,
         status: 'hmac_failed',
         raw_payload: { sig, body },
       })
-    } catch { /* best-effort */ }
+    } catch { /* best effort */ }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!body) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
-  // Casso Webhook V2 payload: { error: 0, data: { id, reference, description, amount,
-  //   runningBalance, transactionDateTime, accountNumber, bankName, bankAbbreviation } }
-  // V1 compat: { data: { tid, amount, type, description, bank_sub_acc_id, when } }
-  const tx = (body as any)?.data
 
-  // Casso gửi test ping không có data — acknowledge và return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tx = (body as any)?.data
   const txId = tx?.id ?? tx?.tid
   if (!txId) {
     return NextResponse.json({ ok: true })
   }
 
-  // AC8 — createServiceRoleClient() bypasses RLS để ghi casso_transactions
   const supabase = createServiceRoleClient()
 
-  // AC2 — Idempotency: check casso_tid trước khi process
+  // Idempotency check
   const { data: existing } = await supabase
     .from('casso_transactions')
     .select('id, status')
@@ -102,136 +411,110 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (existing) {
-    // AC7 — Luôn trả 200 kể cả duplicate
     return NextResponse.json({ ok: true, duplicate: true })
   }
 
-  // AC3 — Log transaction ngay lập tức với status 'processing'
+  // Log raw Casso transaction
   await supabase.from('casso_transactions').insert({
-    casso_id:       String(txId),
-    casso_tid:      String(txId),
-    amount:         tx.amount,
-    description:    tx.description,
-    bank_account:   tx.accountNumber ?? tx.bank_sub_acc_id,
+    casso_id: String(txId),
+    casso_tid: String(txId),
+    amount: tx.amount,
+    description: tx.description,
+    bank_account: tx.accountNumber ?? tx.bank_sub_acc_id,
     transaction_at: tx.transactionDateTime ?? tx.when,
-    raw_payload:    tx,
-    status:         'processing',
+    raw_payload: tx,
+    status: 'processing',
   })
 
-  // Chỉ xử lý tiền vào (V2: amount > 0, V1: type !== 2)
+  // Ignore outgoing
   if (tx.amount <= 0) {
-    await supabase
-      .from('casso_transactions')
+    await supabase.from('casso_transactions')
       .update({ status: 'no_match', note: 'Outgoing transaction ignored' })
       .eq('casso_tid', String(txId))
-    // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
 
-  // AC4 — Parse orderCode từ description
-  const match = String(tx.description || '').match(ORDER_CODE_REGEX)
-  if (!match) {
-    await supabase
-      .from('casso_transactions')
+  // Parse order code
+  const orderCode = normalizeOrderCode(tx.description)
+  if (!orderCode) {
+    await supabase.from('casso_transactions')
       .update({ status: 'no_match', note: 'orderCode not found in description' })
       .eq('casso_tid', String(txId))
-    // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
-  const orderCode = match[1].toUpperCase()
 
-  // AC5 — Tìm order pending theo orderCode
-  const { data: order } = await supabase
-    .from('orders')
-    .select('id, code, user_id, user_email, user_name, quantity, total_amount, referred_by')
-    .eq('code', orderCode)
-    .eq('status', 'pending')
-    .single()
-
-  if (!order) {
-    await supabase
-      .from('casso_transactions')
-      .update({
-        status: 'order_not_found',
-        note:   `Order ${orderCode} not found or not pending`,
-      })
+  const orderType = orderTypeFromCode(orderCode)
+  if (!orderType) {
+    await supabase.from('casso_transactions')
+      .update({ status: 'no_match', note: `Unknown order prefix: ${orderCode}` })
       .eq('casso_tid', String(txId))
-    // AC7 — Luôn trả 200
     return NextResponse.json({ ok: true })
   }
 
-  // AC5 — Validate amount khớp ±1,000đ
+  // Stale check (60 minutes)
+  const txAt = tx.transactionDateTime ?? tx.when
+  if (isStaleTransaction(txAt)) {
+    await supabase.from('casso_transactions')
+      .update({ status: 'no_match', note: 'Transaction older than 60 minutes' })
+      .eq('casso_tid', String(txId))
+    await logPaymentTransaction(supabase, {
+      orderType,
+      orderId: '00000000-0000-0000-0000-000000000000',
+      orderCode,
+      cassoTid: String(txId),
+      amount: tx.amount,
+      status: 'stale',
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Find pending order
+  const { order } = await findPendingOrder(supabase, orderType, orderCode)
+  if (!order) {
+    await supabase.from('casso_transactions')
+      .update({ status: 'order_not_found', note: `${orderType} ${orderCode} not found or not pending` })
+      .eq('casso_tid', String(txId))
+    return NextResponse.json({ ok: true })
+  }
+
+  // Amount validation ±1,000đ
   const diff = Math.abs(Number(tx.amount) - Number(order.total_amount))
-  if (diff > 1000) {
-    await supabase
-      .from('casso_transactions')
+  const paymentStatus: 'matched' | 'amount_mismatch' = diff > 1000 ? 'amount_mismatch' : 'matched'
+
+  let result: { ok: boolean; error?: string }
+  switch (orderType) {
+    case 'tree':
+      result = await processTreeOrder(supabase, tx, orderCode, order, paymentStatus)
+      break
+    case 'booking':
+      result = await processBooking(supabase, tx, orderCode, order, paymentStatus)
+      break
+    case 'store':
+      result = await processStoreOrder(supabase, tx, orderCode, order, paymentStatus)
+      break
+  }
+
+  // Ledger record
+  await logPaymentTransaction(supabase, {
+    orderType,
+    orderId: order.id,
+    orderCode,
+    cassoTid: String(txId),
+    amount: tx.amount,
+    status: paymentStatus === 'amount_mismatch' ? 'amount_mismatch' : (result.ok ? 'matched' : 'amount_mismatch'),
+    metadata: { note: result.error },
+  })
+
+  // Update casso_transactions final status for non-tree (tree does it inside)
+  if (orderType !== 'tree') {
+    await supabase.from('casso_transactions')
       .update({
-        status:   'amount_mismatch',
-        note:     `Expected ${order.total_amount}, got ${tx.amount} (diff: ${diff})`,
+        status: result.ok ? 'processed' : 'function_error',
+        note: result.error ?? undefined,
         order_id: order.id,
       })
       .eq('casso_tid', String(txId))
-    // AC7 — Luôn trả 200
-    return NextResponse.json({ ok: true })
   }
 
-  // AC6 — Invoke Edge Function process-payment
-  const { data: fnData, error: fnError } = await supabase.functions.invoke('process-payment', {
-    body: {
-      userId:        order.user_id,
-      userEmail:     order.user_email,
-      userName:      order.user_name,
-      orderCode:     order.code,
-      quantity:      order.quantity,
-      totalAmount:   order.total_amount,
-      paymentMethod: 'banking',
-      referredBy:    order.referred_by || null,
-    },
-  })
-
-  // AC3 — Update log với kết quả cuối cùng
-  await supabase
-    .from('casso_transactions')
-    .update({
-      status:   fnError ? 'function_error' : 'processed',
-      note:     fnError?.message ?? null,
-      order_id: order.id,
-    })
-    .eq('casso_tid', String(txId))
-
-  // Create referral_click for commission tracking (non-blocking)
-  if (!fnError && order.referred_by) {
-    createReferralClick(order.id, order.referred_by, 'casso-webhook')
-      .catch((err) => console.error('[Casso] createReferralClick failed:', err))
-  }
-
-  // Revalidate homepage tree counter
-  if (!fnError) {
-    revalidatePath('/')
-  }
-
-  // Gửi thông báo Telegram khi thanh toán thành công (non-blocking)
-  if (!fnError) {
-    notifyPaymentSuccess({
-      orderCode:   order.code,
-      userName:    order.user_name,
-      userEmail:   order.user_email,
-      quantity:    order.quantity,
-      totalAmount: order.total_amount,
-      treeCodes:   fnData?.treeCodes,
-    }).catch((err) => console.error('[Telegram] notifyPaymentSuccess failed:', err))
-  }
-
-  // Gửi thông báo Telegram khi tạo hợp đồng thất bại (non-blocking)
-  if (fnError) {
-    notifyContractFailure({
-      orderCode:    order.code,
-      userName:     order.user_name,
-      userEmail:    order.user_email,
-      errorMessage: fnError.message || 'Edge Function process-payment failed',
-    }).catch((err) => console.error('[Telegram] notifyContractFailure failed:', err))
-  }
-
-  // AC7 — Luôn trả 200 (kể cả function_error) để Casso không retry
   return NextResponse.json({ ok: true })
 }
