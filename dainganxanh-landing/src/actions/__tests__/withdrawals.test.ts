@@ -511,8 +511,9 @@ describe('Withdrawal Actions', () => {
 
       mockService.storage.from = jest.fn().mockReturnValue({
         upload: jest.fn().mockResolvedValue({ error: uploadError }),
-        getPublicUrl: jest.fn().mockReturnValue({
-          data: { publicUrl: 'https://storage.example.com/proof.png' },
+        createSignedUrl: jest.fn().mockResolvedValue({
+          data: { signedUrl: 'https://storage.example.com/signed-proof.png?token=abc' },
+          error: null,
         }),
       })
 
@@ -577,6 +578,26 @@ describe('Withdrawal Actions', () => {
 
       // Notification inserted
       expect(mockService.from).toHaveBeenCalledWith('notifications')
+    })
+
+    it('sends email with a signed proof URL', async () => {
+      const { mockService } = setupApproveMocks()
+
+      await approveWithdrawal(makeFormData())
+
+      expect(mockService.storage.from).toHaveBeenCalledWith('withdrawals')
+      const createSignedUrl = mockService.storage.from('withdrawals').createSignedUrl
+      expect(createSignedUrl).toHaveBeenCalledWith(
+        expect.stringMatching(/^w-123\/proof\.png$/),
+        60 * 60 * 24 * 7,
+      )
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('send-withdrawal-email'),
+        expect.objectContaining({
+          body: expect.stringContaining('signed-proof.png?token=abc'),
+        }),
+      )
     })
 
     it('allows super_admin to approve', async () => {

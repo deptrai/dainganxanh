@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { approveWithdrawal, rejectWithdrawal } from '@/actions/withdrawals'
+import { useEffect, useState } from 'react'
+import { approveWithdrawal, getWithdrawalProofUrl, rejectWithdrawal } from '@/actions/withdrawals'
 
 interface Withdrawal {
     id: string
@@ -11,6 +11,7 @@ interface Withdrawal {
     bank_account_number: string
     bank_account_name: string
     status: string
+    proof_image_path: string | null
     proof_image_url: string | null
     rejection_reason: string | null
     created_at: string
@@ -32,6 +33,8 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
     const [proofImage, setProofImage] = useState<File | null>(null)
     const [rejectionReason, setRejectionReason] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
+    const [signedProofUrl, setSignedProofUrl] = useState<string | null>(null)
+    const [proofLoading, setProofLoading] = useState(false)
 
     const filteredWithdrawals = withdrawals.filter(w => {
         if (filter === 'all') return true
@@ -75,6 +78,42 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
             setIsProcessing(false)
         }
     }
+
+    // Load a fresh signed URL when the selected approved withdrawal has a private proof path
+    useEffect(() => {
+        let cancelled = false
+
+        const loadProofUrl = async () => {
+            if (selectedWithdrawal?.status !== 'approved') {
+                setSignedProofUrl(null)
+                return
+            }
+
+            if (selectedWithdrawal.proof_image_path) {
+                setProofLoading(true)
+                const result = await getWithdrawalProofUrl(selectedWithdrawal.id)
+                if (!cancelled) {
+                    if (result.success && result.signedUrl) {
+                        setSignedProofUrl(result.signedUrl)
+                    } else {
+                        setSignedProofUrl(null)
+                    }
+                    setProofLoading(false)
+                }
+            } else if (selectedWithdrawal.proof_image_url) {
+                // Backwards-compatible: legacy public URL stored in old rows
+                setSignedProofUrl(selectedWithdrawal.proof_image_url)
+            } else {
+                setSignedProofUrl(null)
+            }
+        }
+
+        loadProofUrl()
+
+        return () => {
+            cancelled = true
+        }
+    }, [selectedWithdrawal])
 
     const handleReject = async () => {
         if (!selectedWithdrawal || !rejectionReason.trim()) {
@@ -295,14 +334,22 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
                         )}
 
                         {/* Display proof image if approved */}
-                        {selectedWithdrawal.status === 'approved' && selectedWithdrawal.proof_image_url && (
+                        {selectedWithdrawal.status === 'approved' && (selectedWithdrawal.proof_image_path || selectedWithdrawal.proof_image_url) && (
                             <div className="border-t pt-6">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Ảnh chuyển khoản</label>
-                                <img
-                                    src={selectedWithdrawal.proof_image_url}
-                                    alt="Proof of transfer"
-                                    className="max-w-full rounded-lg border"
-                                />
+                                {proofLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                ) : signedProofUrl ? (
+                                    <img
+                                        src={signedProofUrl}
+                                        alt="Proof of transfer"
+                                        className="max-w-full rounded-lg border"
+                                    />
+                                ) : (
+                                    <p className="text-red-600 text-sm">Không thể tải ảnh chứng từ</p>
+                                )}
                             </div>
                         )}
 

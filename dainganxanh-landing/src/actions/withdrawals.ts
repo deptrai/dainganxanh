@@ -239,17 +239,17 @@ export async function approveWithdrawal(formData: FormData) {
         return { success: false, error: 'Không thể upload ảnh chuyển khoản' }
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = serviceSupabase.storage
-        .from('withdrawals')
-        .getPublicUrl(fileName)
+    // Store the private storage path instead of a public URL.
+    // We generate short-lived signed URLs on demand for viewing/email.
+    const proofImagePath = fileName
 
     // Update withdrawal
     const { data: withdrawal, error: updateError } = await serviceSupabase
         .from('withdrawals')
         .update({
             status: 'approved',
-            proof_image_url: publicUrl,
+            proof_image_path: proofImagePath,
+            proof_image_url: null,
             approved_by: user.id,
             approved_at: new Date().toISOString()
         })
@@ -262,10 +262,14 @@ export async function approveWithdrawal(formData: FormData) {
         return { success: false, error: 'Không thể duyệt yêu cầu' }
     }
 
-    // Send email to user
+    // Send email to user with a 7-day signed URL
     const { data: { user: withdrawalUser } } = await serviceSupabase.auth.admin.getUserById(withdrawal.user_id)
 
     if (withdrawalUser?.email) {
+        const { data: signedUrlData } = await serviceSupabase.storage
+            .from('withdrawals')
+            .createSignedUrl(proofImagePath, 60 * 60 * 24 * 7) // 7 days
+
         await sendWithdrawalEmail('request_approved', withdrawalUser.email, {
             fullName: withdrawalUser.user_metadata?.full_name || 'Người dùng',
             amount: withdrawal.amount,
@@ -273,7 +277,7 @@ export async function approveWithdrawal(formData: FormData) {
             bankAccountNumber: withdrawal.bank_account_number,
             bankAccountName: withdrawal.bank_account_name,
             withdrawalId,
-            proofImageUrl: publicUrl,
+            proofImageUrl: signedUrlData?.signedUrl ?? '',
         })
     }
 
@@ -300,6 +304,50 @@ export async function approveWithdrawal(formData: FormData) {
     })
 
     return { success: true }
+}
+
+// Generate a short-lived signed URL for viewing a withdrawal proof image.
+// Only admins can call this. Expires in 1 hour by default.
+export async function getWithdrawalProofUrl(withdrawalId: string) {
+    const supabase = await createServerClient()
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+        return { success: false, error: 'Unauthorized' }
+    }
+
+    const serviceSupabase = createServiceRoleClient()
+
+    const { data: profile } = await serviceSupabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
+        return { success: false, error: 'Unauthorized' }
+    }
+
+    const { data: withdrawal } = await serviceSupabase
+        .from('withdrawals')
+        .select('proof_image_path')
+        .eq('id', withdrawalId)
+        .single()
+
+    if (!withdrawal?.proof_image_path) {
+        return { success: false, error: 'Không tìm thấy ảnh chứng từ' }
+    }
+
+    const { data: signedUrlData, error: signedUrlError } = await serviceSupabase.storage
+        .from('withdrawals')
+        .createSignedUrl(withdrawal.proof_image_path, 60 * 60) // 1 hour
+
+    if (signedUrlError || !signedUrlData) {
+        console.error('Signed URL error:', signedUrlError)
+        return { success: false, error: 'Không thể tạo liên kết xem ảnh' }
+    }
+
+    return { success: true, signedUrl: signedUrlData.signedUrl }
 }
 
 // Admin: Reject withdrawal
