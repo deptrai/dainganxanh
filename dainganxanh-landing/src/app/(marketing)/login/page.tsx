@@ -20,7 +20,7 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
     const handleSubmit = () => {
         const code = refInput.trim().toLowerCase() || DEFAULT_REF.toLowerCase();
         Cookies.set("ref", code, {
-            expires: 90,
+            expires: 30,
             path: "/",
             sameSite: "lax",
             secure: window.location.protocol === "https:",

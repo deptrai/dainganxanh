@@ -100,8 +100,35 @@ export async function POST(req: NextRequest) {
 
     const serviceSupabase = createServiceRoleClient()
 
+    // Resolve and validate referred_by on the server — never trust client-supplied UUIDs
+    let referredBy: string | null = null
+
+    // If client sends a referral code (UUID resolved from validateReferralCode), verify it
+    // refers to an existing user, is not the current user, and is a valid UUID.
+    if (body.referred_by) {
+      const isValidUUID = z.string().uuid().safeParse(body.referred_by).success
+      if (!isValidUUID) {
+        return NextResponse.json({ error: 'Invalid referred_by' }, { status: 400 })
+      }
+
+      const { data: referrer, error: referrerError } = await serviceSupabase
+        .from('users')
+        .select('id')
+        .eq('id', body.referred_by)
+        .single()
+
+      if (referrerError || !referrer) {
+        return NextResponse.json({ error: 'Referrer not found' }, { status: 400 })
+      }
+
+      if (referrer.id === effectiveUser.userId) {
+        return NextResponse.json({ error: 'Self-referral is not allowed' }, { status: 400 })
+      }
+
+      referredBy = referrer.id
+    }
+
     // Safety net: if client didn't resolve referred_by, look up from users.referred_by_user_id
-    let referredBy = body.referred_by ?? null
     if (!referredBy) {
       const { data: profile } = await serviceSupabase
         .from('users')
@@ -109,6 +136,11 @@ export async function POST(req: NextRequest) {
         .eq('id', effectiveUser.userId)
         .single()
       referredBy = profile?.referred_by_user_id ?? null
+    }
+
+    // Final self-referral guard in case the database-stored referrer is the current user
+    if (referredBy === effectiveUser.userId) {
+      referredBy = null
     }
 
     // Step 1: Upsert base order fields (ignoreDuplicates: true preserves existing order intact)

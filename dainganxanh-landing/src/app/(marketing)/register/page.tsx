@@ -62,7 +62,7 @@ function RegisterContent() {
                 // Set ref cookie trước khi redirect để ensureUserProfile có thể đọc
                 const refToSave = refFromUrl.toLowerCase() || Cookies.get('ref') || '';
                 if (refToSave) {
-                    Cookies.set('ref', refToSave, { expires: 90, path: '/', sameSite: 'lax', secure: window.location.protocol === 'https:' });
+                    Cookies.set('ref', refToSave, { expires: 30, path: '/', sameSite: 'lax', secure: window.location.protocol === 'https:' });
                     // Gọi ensureUserProfile để update referrer nếu chưa có
                     const { ensureUserProfile } = await import('@/actions/ensureUserProfile');
                     await ensureUserProfile(session.user.id, session.user.email ?? '', session.user.phone ?? null, refToSave).catch(() => {});
@@ -95,14 +95,20 @@ function RegisterContent() {
 
     const handleVerifyComplete = async (otpCode: string) => {
         try {
-            // Save referral code as cookie — required field, always set
-            const refToUse = refInput.trim().toLowerCase() || DEFAULT_REF.toLowerCase();
-            Cookies.set("ref", refToUse, {
-                expires: 90,
-                path: "/",
-                sameSite: "lax",
-                secure: window.location.protocol === "https:",
-            });
+            // Preserve first-touch attribution from an existing affiliate cookie unless
+            // user explicitly entered a different referral code in this session.
+            const existingRef = Cookies.get("ref")?.toLowerCase() ?? null;
+            const enteredRef = refInput.trim().toLowerCase();
+            const refToUse = enteredRef || existingRef || DEFAULT_REF.toLowerCase();
+
+            if (refToUse) {
+                Cookies.set("ref", refToUse, {
+                    expires: 30,
+                    path: "/",
+                    sameSite: "lax",
+                    secure: window.location.protocol === "https:",
+                });
+            }
 
             await verifyOTP(otpCode, refToUse);
             router.push(`/checkout?quantity=${quantity}&package=${packageType}`);

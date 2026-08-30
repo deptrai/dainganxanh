@@ -173,11 +173,17 @@ function CheckoutContent() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const DEFAULT_REF_CODE = "dainganxanh";
-            const refCookie = Cookies.get("ref") || DEFAULT_REF_CODE;
-            let referredBy: string | null = await validateReferralCode(refCookie);
-            if (!referredBy && refCookie.toLowerCase() !== DEFAULT_REF_CODE.toLowerCase()) {
+            const refCookie = Cookies.get("ref");
+            let referredBy: string | null = null;
+
+            if (refCookie) {
+                referredBy = await validateReferralCode(refCookie);
+            }
+
+            if (!referredBy && refCookie?.toLowerCase() !== DEFAULT_REF_CODE.toLowerCase()) {
                 referredBy = await validateReferralCode(DEFAULT_REF_CODE);
             }
+
             await fetch("/api/orders/pending", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
