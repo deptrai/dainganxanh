@@ -392,6 +392,29 @@ Performed adversarial Senior Developer code review using Sequential Thinking MCP
 - [ ] Cookie parsing với special characters → safe handling
 - [ ] Network error during tracking → page still loads
 
+### Review Findings
+
+#### decision-needed
+(none — deferred)
+
+#### deferred (from decision-needed)
+- [x] [Review][Defer] Referral URL format — `src/components/crm/ReferralLink.tsx:15`, `src/app/crm/referrals/page.tsx:91`. Deferred: URL format is out of scope for the commission bug and requires product/UX decision. Current `/register?ref={code}` is functional.
+
+#### patch
+- [x] [Review][Patch] Commission queries filter orders by `status = 'completed'` only — `src/actions/referrals.ts:137`, `src/actions/withdrawals.ts:45`. Fixed: `COMMISSION_ELIGIBLE_ORDER_STATUSES = ['completed', 'paid', 'verified', 'assigned']` now used by both files.
+- [x] [Review][Patch] `referral_clicks` creation is fire-and-forget in Casso webhook — `src/app/api/webhooks/casso/route.ts:238-240`. Fixed: `createReferralClick` is now awaited; failures are logged.
+- [x] [Review][Patch] `trackReferralClick` uses case-sensitive `.eq` lookup — `src/actions/referrals.ts:36`. Fixed: changed to `.ilike('referral_code', refCode)`.
+- [x] [Review][Patch] Checkout silently falls back to default `dainganxanh` referrer — `src/app/(marketing)/checkout/page.tsx:182-187`. Fixed: no longer falls back to `dainganxanh` when the user has a `ref` cookie; platform default only used when no cookie exists.
+- [x] [Review][Patch] `getAvailableBalance` does not subtract pending withdrawals — `src/actions/withdrawals.ts:50-56`. Fixed: now subtracts both `approved` and `pending` withdrawals.
+- [x] [Review][Patch] Client-supplied `referred_by` is trusted in `/api/orders/pending` — `src/app/(marketing)/checkout/page.tsx:188-202`, `src/app/api/orders/pending/route.ts:104-112`. Fixed: API now validates `referred_by` UUID and verifies referrer exists.
+- [x] [Review][Patch] Self-referral check missing in `/api/orders/pending` — `src/app/api/orders/pending/route.ts:104-128`. Fixed: added self-referral guard in route and final null-out fallback.
+- [x] [Review][Patch] Vietnamese normalization does not handle `Đ/đ` — `src/actions/withdrawals.ts:23-29`. Fixed: added explicit `.replace(/[đĐ]/g, 'd')`.
+- [ ] [Review][Patch] Withdrawal proof images use public URLs — `src/actions/withdrawals.ts:239-241`. Financial documents are publicly accessible. **Deferred**: bucket is currently used by admin/notification viewers; changing to signed URLs or private bucket requires product/infra decision.
+- [x] [Review][Patch] `trackReferralClick` IP hash collision on missing proxy headers — `src/actions/referrals.ts:44-48`. Fixed: fallback combines `userAgent` with a 10-minute timestamp bucket instead of `'unknown'`.
+- [x] [Review][Patch] `getReferralConversions` query missing `users` join — `src/actions/referrals.ts:192-204`. Fixed: added `users!inner(email, full_name)` select.
+- [x] [Review][Patch] Referral cookie TTL inconsistent — `src/components/ReferralTracker.tsx:18-23`, `src/app/(marketing)/register/page.tsx:65`, `src/app/(marketing)/register/page.tsx:99-104`. Fixed: both landing and registration now use `expires: 30`.
+- [x] [Review][Patch] Registration overwrites affiliate cookie with default if input is cleared — `src/app/(marketing)/register/page.tsx:99-104`. Fixed: preserves existing `ref` cookie first, only falls back to `DEFAULT_REF` if neither URL param nor cookie exists.
+
 ## Next Steps
 1. ✅ Complete manual testing checklist above
 2. 📝 Document any bugs found

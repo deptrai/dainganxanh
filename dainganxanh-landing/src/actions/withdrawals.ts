@@ -4,6 +4,7 @@ import { createServerClient, createServiceRoleClient } from '@/lib/supabase/serv
 import { MIN_WITHDRAWAL } from '@/lib/constants'
 import { notifyWithdrawalRequest, notifyWithdrawalApproved, notifyWithdrawalRejected } from '@/lib/utils/telegram'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
+import { COMMISSION_ELIGIBLE_ORDER_STATUSES } from '@/actions/referrals'
 
 // Helper: send email via send-withdrawal-email Edge Function
 async function sendWithdrawalEmail(type: string, to: string, payload: Record<string, unknown>) {
@@ -24,6 +25,9 @@ function normalizeVietnamese(text: string): string {
     return text
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
+        // Explicitly map Vietnamese \u0110/\u0111 to D/d before removing non-ascii letters,
+        // since NFD does not decompose the standalone \u0111/\u0110 letter.
+        .replace(/[\u0111\u0110]/g, 'd')
         .toUpperCase()
         .trim()
 }
@@ -42,16 +46,16 @@ export async function getAvailableBalance(userId: string) {
         .from('orders')
         .select('total_amount')
         .eq('referred_by', userId)
-        .eq('status', 'completed')
+        .in('status', COMMISSION_ELIGIBLE_ORDER_STATUSES)
 
     const totalCommission = orders?.reduce((sum, o) => sum + Math.round(Number(o.total_amount) * 0.1), 0) || 0
 
-    // Total withdrawn (approved only)
+    // Total withdrawn (approved and pending) to prevent double-spending
     const { data: withdrawals } = await supabase
         .from('withdrawals')
         .select('amount')
         .eq('user_id', userId)
-        .eq('status', 'approved')
+        .in('status', ['approved', 'pending'])
 
     const totalWithdrawn = withdrawals?.reduce((sum, w) => sum + Number(w.amount), 0) || 0
 

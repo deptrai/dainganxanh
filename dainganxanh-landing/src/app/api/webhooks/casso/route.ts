@@ -199,10 +199,16 @@ export async function POST(req: NextRequest) {
     })
     .eq('casso_tid', String(txId))
 
-  // Create referral_click for commission tracking (non-blocking)
+  // Create referral_click for commission tracking (non-blocking but awaited for critical logging)
   if (!fnError && order.referred_by) {
-    createReferralClick(order.id, order.referred_by, 'casso-webhook')
-      .catch((err) => console.error('[Casso] createReferralClick failed:', err))
+    try {
+      const clickResult = await createReferralClick(order.id, order.referred_by, 'casso-webhook')
+      if (!clickResult.success) {
+        console.error('[Casso] createReferralClick failed:', clickResult.error)
+      }
+    } catch (err) {
+      console.error('[Casso] createReferralClick exception:', err)
+    }
   }
 
   // Revalidate homepage tree counter

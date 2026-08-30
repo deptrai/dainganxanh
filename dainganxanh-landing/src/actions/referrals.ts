@@ -7,6 +7,10 @@ import { createHash } from 'crypto'
 // Commission rate constant (10% of order value)
 const COMMISSION_RATE = 0.1
 
+// Order statuses that count as successfully paid for commission purposes.
+// Keep in sync with the CHECK constraint in supabase/migrations/20260407000000_baseline_from_remote.sql
+export const COMMISSION_ELIGIBLE_ORDER_STATUSES = ['completed', 'paid', 'verified', 'assigned']
+
 /**
  * Centralized commission calculation to ensure consistency
  * Note: Must be async because this file uses 'use server'
@@ -29,11 +33,11 @@ export async function trackReferralClick(refCode: string, requestHeaders?: Heade
     try {
         const supabase = await createServerClient()
 
-        // Find referrer by referral code
+        // Find referrer by referral code (case-insensitive to match cookie normalization)
         const { data: referrer, error: referrerError } = await supabase
             .from('users')
             .select('id')
-            .eq('referral_code', refCode)
+            .ilike('referral_code', refCode)
             .single()
 
         if (referrerError || !referrer) {
@@ -41,11 +45,14 @@ export async function trackReferralClick(refCode: string, requestHeaders?: Heade
         }
 
         // Get IP and user agent
-        const ip = requestHeaders?.get('x-forwarded-for') || requestHeaders?.get('x-real-ip') || 'unknown'
+        const rawIp = requestHeaders?.get('x-forwarded-for') || requestHeaders?.get('x-real-ip') || ''
         const userAgent = requestHeaders?.get('user-agent') || 'unknown'
 
-        // Hash IP for privacy
-        const ipHash = hashIP(ip)
+        // Hash IP for privacy. If no IP header is present (common behind some proxies),
+        // fall back to a combination of user agent and a short timestamp bucket so
+        // distinct visitors behind the same gateway are not collapsed into one hash.
+        const ipSource = rawIp || `${userAgent}-${Math.floor(Date.now() / 1000 / 60 / 10)}`
+        const ipHash = hashIP(ipSource)
 
         // DEDUPLICATION: Check if this IP already clicked this referrer's link in the last hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
@@ -130,11 +137,13 @@ export async function getReferralStats(userId: string) {
         }
 
         // Get total commission from converted orders
+        // Include all post-payment statuses, not just 'completed', so commission is
+        // not silently dropped when the order transitions through 'paid'/'verified'/'assigned'.
         const { data: convertedOrders, error: ordersError } = await supabase
             .from('orders')
             .select('total_amount')
             .eq('referred_by', userId)
-            .eq('status', 'completed')
+            .in('status', COMMISSION_ELIGIBLE_ORDER_STATUSES)
 
         if (ordersError) {
             console.error('Error getting orders:', ordersError)
@@ -196,7 +205,12 @@ export async function getReferralConversions(userId: string) {
                 orders!inner (
                     code,
                     total_amount,
-                    created_at
+                    created_at,
+                    user_id,
+                    users!inner (
+                        email,
+                        full_name
+                    )
                 )
             `)
             .eq('referrer_id', userId)
