@@ -99,6 +99,10 @@ export const HARVEST_MONTHS = 120;
 export const PHOTO_PLACEHOLDER_MONTHS = 9;
 export const MIN_WITHDRAWAL = 200_000;
 
+// Order statuses that count as successfully paid for commission purposes.
+// Keep in sync with the CHECK constraint in supabase/migrations/20260407000000_baseline_from_remote.sql
+export const COMMISSION_ELIGIBLE_ORDER_STATUSES = ['completed', 'paid', 'verified', 'assigned'] as const;
+
 // Tree status config — shared across PackageCard, PackageDetailHeader, TreeCard
 export const TREE_STATUS_CONFIG = {
     pending: { label: 'Chờ xử lý', emoji: '⏳', color: 'bg-gray-100 text-gray-800' },

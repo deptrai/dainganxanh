@@ -1,6 +1,7 @@
 'use server'
 
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { COMMISSION_ELIGIBLE_ORDER_STATUSES } from '@/lib/constants'
 
 export interface ReferredOrder {
     code: string
@@ -29,11 +30,11 @@ export async function fetchAdminReferrals(): Promise<{ data: ReferrerSummary[]; 
     const supabase = createServiceRoleClient()
 
     try {
-        // Get all completed orders that have a referrer (with buyer info)
+        // Get all eligible orders that have a referrer (with buyer info)
         const { data: orders, error: ordersError } = await supabase
             .from('orders')
             .select('id, code, referred_by, total_amount, quantity, created_at, user_email, user_name, user_id')
-            .eq('status', 'completed')
+            .in('status', COMMISSION_ELIGIBLE_ORDER_STATUSES)
             .not('referred_by', 'is', null)
             .order('created_at', { ascending: false })
 
@@ -70,12 +71,12 @@ export async function fetchAdminReferrals(): Promise<{ data: ReferrerSummary[]; 
 
         if (usersError) throw usersError
 
-        // Get withdrawals per referrer
+        // Get withdrawals per referrer (approved and pending) to match getAvailableBalance
         const { data: withdrawals, error: wError } = await supabase
             .from('withdrawals')
             .select('user_id, amount')
             .in('user_id', referrerIds)
-            .eq('status', 'approved')
+            .in('status', ['approved', 'pending'])
 
         if (wError) throw wError
 

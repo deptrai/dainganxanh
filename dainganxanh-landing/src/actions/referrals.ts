@@ -2,14 +2,11 @@
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getImpersonationContext } from '@/lib/getImpersonationContext'
+import { COMMISSION_ELIGIBLE_ORDER_STATUSES } from '@/lib/constants'
 import { createHash } from 'crypto'
 
 // Commission rate constant (10% of order value)
 const COMMISSION_RATE = 0.1
-
-// Order statuses that count as successfully paid for commission purposes.
-// Keep in sync with the CHECK constraint in supabase/migrations/20260407000000_baseline_from_remote.sql
-export const COMMISSION_ELIGIBLE_ORDER_STATUSES = ['completed', 'paid', 'verified', 'assigned']
 
 /**
  * Centralized commission calculation to ensure consistency
@@ -156,14 +153,16 @@ export async function getReferralStats(userId: string) {
             return sum + await calculateCommission(Number(order.total_amount))
         }, Promise.resolve(0)) || 0
 
-        // Calculate conversion rate
-        const conversionRate = totalClicks && totalClicks > 0
-            ? Math.round((conversions || 0) / totalClicks * 100)
+        // Calculate conversion metrics
+        const conversionCount = convertedOrders?.length || 0
+        const effectiveClicks = Math.max(totalClicks || 0, conversionCount)
+        const conversionRate = effectiveClicks > 0
+            ? Math.round((conversionCount / effectiveClicks) * 100)
             : 0
 
         return {
-            totalClicks: totalClicks || 0,
-            conversions: conversions || 0,
+            totalClicks: effectiveClicks,
+            conversions: conversionCount,
             commission: totalCommission,
             conversionRate,
         }
@@ -192,29 +191,17 @@ export async function getReferralConversions(userId: string) {
             }
         }
 
-        // Use service role for data queries — referral_clicks and orders reference
+        // Use service role for data queries — orders reference
         // OTHER users' rows, so RLS would block them with the anon client
         const supabase = createServiceRoleClient()
 
-        const { data: conversions, error } = await supabase
-            .from('referral_clicks')
-            .select(`
-                id,
-                created_at,
-                order_id,
-                orders!inner (
-                    code,
-                    total_amount,
-                    created_at,
-                    user_id,
-                    users!inner (
-                        email,
-                        full_name
-                    )
-                )
-            `)
-            .eq('referrer_id', userId)
-            .eq('converted', true)
+        // Fetch converted orders directly from orders table to ensure all eligible
+        // referred orders appear, even if referral_clicks record was omitted.
+        const { data: convertedOrders, error } = await supabase
+            .from('orders')
+            .select('id, code, total_amount, created_at, user_email, user_name, user_id')
+            .eq('referred_by', userId)
+            .in('status', COMMISSION_ELIGIBLE_ORDER_STATUSES)
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -222,32 +209,17 @@ export async function getReferralConversions(userId: string) {
             return []
         }
 
-        interface ConversionRecord {
-            id: string
-            created_at: string
-            order_id: string | null
-            orders: {
-                code: string
-                total_amount: number
-                created_at: string
-                users: {
-                    email: string
-                    full_name: string
-                } | null
-            } | null
-        }
-
         // Calculate commission for each conversion
-        return await Promise.all((conversions as unknown as ConversionRecord[])?.map(async (conv) => ({
-            id: conv.id,
-            clickedAt: conv.created_at,
-            orderCode: conv.orders?.code,
-            orderAmount: Number(conv.orders?.total_amount || 0),
-            commission: await calculateCommission(Number(conv.orders?.total_amount || 0)),
-            orderDate: conv.orders?.created_at,
-            customerEmail: conv.orders?.users?.email,
-            customerName: conv.orders?.users?.full_name,
-        })) || [])
+        return await Promise.all((convertedOrders || []).map(async (order) => ({
+            id: order.id,
+            clickedAt: order.created_at,
+            orderCode: order.code,
+            orderAmount: Number(order.total_amount || 0),
+            commission: await calculateCommission(Number(order.total_amount || 0)),
+            orderDate: order.created_at,
+            customerEmail: order.user_email || undefined,
+            customerName: order.user_name || undefined,
+        })))
     } catch (error) {
         console.error('Error in getReferralConversions:', error)
         return []

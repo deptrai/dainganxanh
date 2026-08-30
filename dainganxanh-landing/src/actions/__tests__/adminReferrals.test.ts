@@ -22,6 +22,7 @@ function makeOrdersChain(data: any[], error: any = null) {
   return {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
     not: jest.fn().mockReturnThis(),
     order: jest.fn().mockResolvedValue({ data, error }),
   }
@@ -35,11 +36,15 @@ function makeUsersChain(data: any[], error: any = null) {
 }
 
 function makeWithdrawalsChain(data: any[], error: any = null) {
-  return {
-    select: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
+  const chain: any = {
+    select: jest.fn(),
+    in: jest.fn(),
     eq: jest.fn().mockResolvedValue({ data, error }),
   }
+  chain.select.mockReturnValue(chain)
+  chain.in.mockReturnValue(chain)
+  chain.then = (resolve: any, reject: any) => Promise.resolve({ data, error }).then(resolve, reject)
+  return chain
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -161,11 +166,7 @@ describe('fetchAdminReferrals', () => {
     mockServiceFrom
       .mockReturnValueOnce(makeOrdersChain(orders))
       .mockReturnValueOnce(makeUsersChain(users))
-      .mockReturnValueOnce({
-        select: jest.fn().mockReturnThis(),
-        in: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockResolvedValue({ data: null, error: { message: 'Withdraw error' } }),
-      })
+      .mockReturnValueOnce(makeWithdrawalsChain(null, { message: 'Withdraw error' }))
 
     const result = await fetchAdminReferrals()
     expect(result.error).toBeDefined()

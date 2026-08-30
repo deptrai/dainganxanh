@@ -1,10 +1,9 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
-import { MIN_WITHDRAWAL } from '@/lib/constants'
+import { MIN_WITHDRAWAL, COMMISSION_ELIGIBLE_ORDER_STATUSES } from '@/lib/constants'
 import { notifyWithdrawalRequest, notifyWithdrawalApproved, notifyWithdrawalRejected } from '@/lib/utils/telegram'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
-import { COMMISSION_ELIGIBLE_ORDER_STATUSES } from '@/actions/referrals'
 
 // Helper: send email via send-withdrawal-email Edge Function
 async function sendWithdrawalEmail(type: string, to: string, payload: Record<string, unknown>) {
