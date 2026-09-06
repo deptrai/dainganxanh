@@ -4,11 +4,11 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
 import { rateLimit } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitoring'
+import { calculateStoreOrderPrice, PricingError } from '@/lib/pricing'
 
-const SHIPPING_FEE_DEFAULT = 0
 const PAYMENT_TIMEOUT_MINUTES = 15
 
-const createOrderSchema = z.object({
+export const createOrderSchema = z.object({
   product_slug: z.string().min(1),
   quantity: z.number().int().min(1).max(10),
   customer_name: z.string().min(1, 'Vui lòng nhập họ tên'),
@@ -18,6 +18,7 @@ const createOrderSchema = z.object({
   shipping_province: z.string().min(1, 'Vui lòng chọn tỉnh/thành phố'),
   shipping_note: z.string().optional(),
   payment_method: z.enum(['banking', 'cod']),
+  total_amount: z.number().int().positive().optional(),
 })
 
 function generateStoreOrderCode(): string {
@@ -51,26 +52,32 @@ export async function POST(req: NextRequest) {
   const data = parsed.data
   const supabase = createServiceRoleClient()
 
-  // Fetch product with lock for stock reservation
-  const { data: product, error: productError } = await supabase
-    .from('products')
-    .select('id, name, slug, price, stock_quantity, status')
-    .eq('slug', data.product_slug)
-    .eq('status', 'active')
-    .single()
-
-  if (productError || !product) {
-    return NextResponse.json({ error: 'Sản phẩm không tồn tại hoặc đã ngừng bán' }, { status: 404 })
+  // Authoritative server-side price calculation
+  let pricing
+  try {
+    pricing = await calculateStoreOrderPrice(supabase, {
+      items: [{ slug: data.product_slug, quantity: data.quantity }],
+      province: data.shipping_province,
+    })
+  } catch (err) {
+    if (err instanceof PricingError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode })
+    }
+    console.error('calculateStoreOrderPrice failed:', err)
+    return NextResponse.json({ error: 'Lỗi tính giá đơn hàng' }, { status: 500 })
   }
 
-  if (product.stock_quantity < data.quantity) {
-    return NextResponse.json({ error: 'Sản phẩm không đủ tồn kho' }, { status: 409 })
+  // Reject client tampering attempts
+  if (data.total_amount !== undefined && data.total_amount !== pricing.totalAmount) {
+    return NextResponse.json({
+      error: `Giá trị đơn hàng không khớp (client: ${data.total_amount}, server: ${pricing.totalAmount})`,
+    }, { status: 400 })
   }
 
-  // Server-side price calculation — reject client totals
-  const subtotal = product.price * data.quantity
-  const shippingFee = SHIPPING_FEE_DEFAULT
-  const totalAmount = subtotal + shippingFee
+  const pricedItem = pricing.items[0]
+  const subtotal = pricing.subtotal
+  const shippingFee = pricing.shippingFee
+  const totalAmount = pricing.totalAmount
 
   const orderCode = generateStoreOrderCode()
   const expiresAt = data.payment_method === 'banking'
@@ -79,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   // Reserve stock atomically before creating order
   const { data: reserved, error: reserveError } = await supabase.rpc('reserve_product_stock', {
-    p_product_id: product.id,
+    p_product_id: pricedItem.productId,
     p_qty: data.quantity,
   })
 
@@ -112,7 +119,7 @@ export async function POST(req: NextRequest) {
 
   if (orderError) {
     // Rollback stock reservation on order creation failure
-    await supabase.rpc('release_product_stock', { p_product_id: product.id, p_qty: data.quantity })
+    await supabase.rpc('release_product_stock', { p_product_id: pricedItem.productId, p_qty: data.quantity })
     console.error('store order creation failed:', orderError)
     captureError(orderError, {
       route: '/api/store/orders/create',
@@ -125,15 +132,15 @@ export async function POST(req: NextRequest) {
   // Create order item
   const { error: itemError } = await supabase.from('store_order_items').insert({
     store_order_id: order.id,
-    product_id: product.id,
+    product_id: pricedItem.productId,
     quantity: data.quantity,
-    unit_price: product.price,
+    unit_price: pricedItem.unitPrice,
   })
 
   if (itemError) {
     // Rollback
     await supabase.from('store_orders').delete().eq('id', order.id)
-    await supabase.rpc('release_product_stock', { p_product_id: product.id, p_qty: data.quantity })
+    await supabase.rpc('release_product_stock', { p_product_id: pricedItem.productId, p_qty: data.quantity })
     console.error('store order item creation failed:', itemError)
     captureError(itemError, {
       route: '/api/store/orders/create',
@@ -155,6 +162,6 @@ export async function POST(req: NextRequest) {
     totalAmount: order.total_amount,
     paymentMethod: order.payment_method,
     expiresAt: order.expires_at,
-    itemName: product.name,
+    itemName: pricedItem.name,
   })
 }

@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
 import { rateLimit } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitoring'
+import { calculateBookingPrice, PricingError } from '@/lib/pricing'
 
 const PAYMENT_TIMEOUT_MINUTES = 15
 
@@ -17,6 +18,7 @@ export const createBookingSchema = z.object({
   guests_count: z.number().int().min(1, 'Số lượng khách phải từ 1 trở lên'),
   special_requests: z.string().max(500, 'Yêu cầu đặc biệt không quá 500 ký tự').optional().or(z.literal('')),
   payment_method: z.literal('banking'),
+  total_amount: z.number().int().positive().optional(),
 })
 
 function generateBookingCode(): string {
@@ -67,40 +69,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ngày nhận phòng không thể ở quá khứ' }, { status: 400 })
   }
 
-  if (checkOut <= checkIn) {
-    return NextResponse.json({ error: 'Ngày trả phòng phải sau ngày nhận phòng' }, { status: 400 })
-  }
-
-  const diffDays = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays > 30) {
-    return NextResponse.json({ error: 'Thời gian lưu trú tối đa là 30 đêm' }, { status: 400 })
-  }
-
   const supabase = createServiceRoleClient()
 
-  // Fetch room information
-  const { data: room, error: roomError } = await supabase
-    .from('rooms')
-    .select('id, name, price_per_night, capacity, status')
-    .eq('id', data.room_id)
-    .single()
-
-  if (roomError || !room) {
-    return NextResponse.json({ error: 'Phòng không tồn tại' }, { status: 404 })
+  // Authoritative server-side price calculation
+  let pricing
+  try {
+    pricing = await calculateBookingPrice(supabase, {
+      roomId: data.room_id,
+      checkInDate: data.check_in_date,
+      checkOutDate: data.check_out_date,
+      guestsCount: data.guests_count,
+    })
+  } catch (err) {
+    if (err instanceof PricingError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode })
+    }
+    console.error('Unexpected error in calculateBookingPrice:', err)
+    return NextResponse.json({ error: 'Lỗi tính giá phòng' }, { status: 500 })
   }
 
-  if (room.status !== 'active') {
-    return NextResponse.json({ error: 'Phòng hiện không khả dụng để đặt' }, { status: 400 })
-  }
-
-  if (data.guests_count > room.capacity) {
+  // Reject client tampering attempts
+  if (data.total_amount !== undefined && data.total_amount !== pricing.totalAmount) {
     return NextResponse.json({
-      error: `Số lượng khách (${data.guests_count}) vượt quá sức chứa tối đa của phòng (${room.capacity} người)`,
+      error: `Giá trị đơn hàng không khớp (client: ${data.total_amount}, server: ${pricing.totalAmount})`,
     }, { status: 400 })
   }
 
-  // Server-side price calculation (rejects any client-side totals)
-  const totalAmount = Number(room.price_per_night) * diffDays
+  const totalAmount = pricing.totalAmount
+  const diffDays = pricing.nights
   const bookingCode = generateBookingCode()
   const expiresAt = new Date(Date.now() + PAYMENT_TIMEOUT_MINUTES * 60 * 1000).toISOString()
 
@@ -153,7 +149,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     bookingId: booking.id,
     bookingCode: booking.code,
-    roomName: room.name,
+    roomName: pricing.roomName,
     checkInDate: booking.check_in_date,
     checkOutDate: booking.check_out_date,
     nightsCount: diffDays,
