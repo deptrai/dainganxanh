@@ -1,5 +1,5 @@
 # Sprint Status - Đại Ngàn Xanh
-# Generated: 2026-01-10T20:33:00+07:00
+# Generated: 2026-09-05T08:15:00+07:00
 # ⚠️ DO NOT manually edit status values - use workflows to update
 
 # STATUS DEFINITIONS:
@@ -9,20 +9,27 @@
 # - review: Đang code review
 # - done: Hoàn thành tất cả AC và passed review
 
-sprint_name: "MVP Sprint 1 - User Acquisition"
-sprint_goal: "Hoàn thành flow từ Landing → Payment → Confirmation"
-start_date: "2026-01-10"
-end_date: "2026-02-10"
+generated: "2026-09-05T08:15:00+07:00"
+last_updated: "2026-09-06"
+project: "Đại Ngàn Xanh"
+project_key: "NOKEY"
+tracking_system: "file-system"
+story_location: "_bmad-output/implementation-artifacts"
+
+sprint_name: "Eco-Tourism MVP Sprint"
+sprint_goal: "Hoàn thành Shared Infrastructure + Eco-Stay + Store MVP"
+start_date: "2026-09-05"
+end_date: "2026-10-05"
 
 development_status:
   # Epic 1: User Acquisition & Onboarding (P0 - MVP Core)
   epic-1: done
-  1-1-landing-page-hero-video: done  # ✅ Deployed 2026-03-26
+  1-1-landing-page-hero-video: done
   1-2-package-selection: done
   1-3-quantity-price-calculator: done
   1-4-quick-registration-otp: done
   1-5-returning-user-login: done
-  1-6-payment-gateway: done  # ✅ Casso auto-confirm via webhook + polling UI. Deployed 2026-03-26
+  1-6-payment-gateway: done
   1-7-success-animation-share: done
   1-8-email-confirmation-contract: done
   epic-1-retrospective: backlog
@@ -34,10 +41,10 @@ development_status:
   2-3-quarterly-update-notifications: done
   2-4-timeline-placeholder-real: done
   2-5-year5-harvest-notification: done
-  2-6-harvest-sell-back: done  # ✅ Deployed 2026-03-26
-  2-7-harvest-keep-growing: done  # ✅ Deployed 2026-03-26
-  2-8-harvest-receive-product: done  # ✅ Deployed 2026-03-26
-  2-9-farm-camera-live-stream: done  # ✅ Added 2026-03-28
+  2-6-harvest-sell-back: done
+  2-7-harvest-keep-growing: done
+  2-8-harvest-receive-product: done
+  2-9-farm-camera-live-stream: done
   epic-2-retrospective: backlog
 
   # Epic 3: Admin Operations (P0/P1)
@@ -49,45 +56,46 @@ development_status:
   3-5-photo-upload-gps: done
   3-6-tree-health-status: done
   3-7-analytics-reporting: done
-  3-8-admin-user-management: done  # ✅ Added 2026-03-28
+  3-8-admin-user-management: done
+  3-9-admin-user-impersonation: done
   epic-3-retrospective: backlog
 
   # Epic 4: Viral & Growth (P1/P2)
   epic-4: done
   4-1-referral-link-generation: done
   4-2-social-share-prepopulated: done
-  4-3-withdrawal-management: done
+  4-3-referral-commission-withdrawal: done
   4-4-admin-settings-profile: done
   4-5-admin-settings-system: done
-  4-6-referral-code-improvements: done  # ✅ Added 2026-03-28
+  4-6-referral-code-improvements: done
   epic-4-retrospective: backlog
 
   # Epic 5: Payment Automation — Casso Integration (Sprint 1)
   epic-5: done
-  5-1-pending-order-at-checkout: done  # ✅ Deployed 2026-03-26
-  5-2-casso-webhook-integration: done  # ✅ Deployed 2026-03-26
-  5-3-casso-admin-transaction-log: done  # ✅ Deployed 2026-03-26
-  5-4-casso-transaction-sync: done  # ✅ Added 2026-03-28
-  5-5-order-cancellation: done  # ✅ Added 2026-03-28
-  5-6-casso-hmac-v2-verification: done  # ✅ Added 2026-03-28
-  5-7-order-refund-completed: done  # ✅ Implemented 2026-04-20
+  5-1-pending-order-at-checkout: done
+  5-2-casso-webhook-integration: done
+  5-3-casso-admin-transaction-log: done
+  5-4-casso-transaction-sync: done
+  5-5-order-cancellation: done
+  5-6-casso-hmac-v2-verification: done
+  5-7-order-refund-completed: done
   epic-5-retrospective: backlog
 
   # Epic 6: SEO Optimization (Sprint 1)
   epic-6: done
-  6-1-seo-core-setup: done  # ✅ Deployed 2026-03-26
-  6-2-seo-structured-data: done  # ✅ Deployed 2026-03-26
+  6-1-seo-core-setup: done
+  6-2-seo-structured-data: done
   epic-6-retrospective: backlog
 
   # Epic 7: Blog System (Sprint 2)
   epic-7: done
-  7-1-blog-schema-public-pages: done  # ✅ Deployed 2026-03-26
-  7-2-blog-admin-cms: done  # ✅ Deployed 2026-03-26
+  7-1-blog-schema-public-pages: done
+  7-2-blog-admin-cms: done
   epic-7-retrospective: backlog
 
   # Epic 8: Notifications & Alerts (2026-03-28)
   epic-8: done
-  8-1-telegram-group-notifications: done  # ✅ Added 2026-03-28
+  8-1-telegram-group-notifications: done
   epic-8-retrospective: backlog
 
   # Epic 9: Admin Operations Extended (2026-03-28)
@@ -96,18 +104,54 @@ development_status:
 
   # Epic 10: Auto Contract Generation (2026-03-28)
   epic-10: done
-  10-1-customer-identity-checkout: done  # ✅ Review complete 2026-03-29
-  10-2-docx-contract-generation: done  # ✅ Review complete 2026-03-29
-  10-3-auto-send-contract-email: done  # ✅ Review complete + patches applied 2026-03-29
+  10-1-customer-identity-checkout: done
+  10-2-docx-contract-generation: done
+  10-3-auto-send-contract-email: done
   epic-10-retrospective: backlog
+
+  # Epic 11: Eco-Stay (Room Booking) - Added 2026-09-05
+  epic-11: backlog
+  11-1-browse-gardens: backlog
+  11-2-view-garden-and-room-details: backlog
+  11-3-create-booking-reservation: backlog
+  11-4-confirm-booking-payment: backlog
+  11-5-cancel-booking: backlog
+  11-6-view-my-bookings-crm: backlog
+  11-7-admin-booking-management: backlog
+  11-8-admin-room-calendar: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Trầm Hương Store - Added 2026-09-05
+  epic-12: backlog
+  12-1-browse-products: backlog
+  12-2-view-product-detail: backlog
+  12-3-store-checkout-form: backlog
+  12-4-create-store-order: backlog
+  12-5-confirm-store-payment: backlog
+  12-6-view-my-store-orders: backlog
+  12-7-admin-product-crud: backlog
+  12-8-admin-store-order-fulfillment: backlog
+  12-9-multi-item-persistent-cart-deferred: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Shared Payment & Inventory Infrastructure - Added 2026-09-05
+  epic-13: in-progress
+  13-1-polymorphic-casso-webhook: done
+  13-2-secure-order-creation-apis: backlog
+  13-3-inventory-reservation-and-release: backlog
+  13-4-server-side-price-validation: backlog
+  13-5-transactional-email-templates: backlog
+  13-6-lot-scoped-admin-roles: backlog
+  epic-13-retrospective: optional
 
 # Summary
 summary:
-  total_epics: 10
-  total_stories: 47
+  total_epics: 13
+  total_stories: 68
   stories_ready: 0
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 47
+  stories_done: 48
+  stories_backlog: 21
   current_velocity: 11
-  last_updated: "2026-04-20"  # Story 5-7 complete (+ code review patches)
+  last_updated: "2026-09-06"

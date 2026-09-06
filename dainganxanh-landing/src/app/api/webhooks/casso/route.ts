@@ -5,8 +5,10 @@ import { createReferralClick } from '@/actions/createReferralClick'
 import { createHmac } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
+import { captureError } from '@/lib/monitoring'
 
 const ORDER_CODE_REGEX = /\b((?:DH|BK|ST)[A-Z0-9]{6})\b/i
+const POLYMORPHIC_WEBHOOK_ENABLED = process.env.POLYMORPHIC_WEBHOOK_ENABLED !== 'false'
 
 interface OrderLike {
   id: string
@@ -95,6 +97,29 @@ async function notifyPaymentMismatch(orderCode: string, expected: number, receiv
   }
 }
 
+async function notifyWebhookError(orderType: string, orderCode: string, error: string, cassoTid: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chatId) return
+  const typeLabel = orderType === 'tree' ? 'Cây' : orderType === 'booking' ? 'Đặt phòng' : 'Store'
+  const message =
+    `🚨 <b>Webhook Handler Error — ${typeLabel}</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 Mã đơn: <code>${orderCode}</code>\n` +
+    `🔗 Casso TID: <code>${cassoTid}</code>\n` +
+    `❌ Lỗi: <code>${error}</code>\n` +
+    `⚠️ Admin cần kiểm tra webhook handler.`
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: Number(chatId), text: message, parse_mode: 'HTML' }),
+    })
+  } catch (err) {
+    console.error('[Telegram] notifyWebhookError failed:', err)
+  }
+}
+
 async function notifyStoreOrderConfirmed(orderCode: string, customerName: string, totalAmount: number) {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_CHAT_ID
@@ -137,6 +162,8 @@ async function notifyBookingConfirmed(orderCode: string, guestName: string, tota
   }
 }
 
+type PaymentTransactionStatus = 'pending' | 'matched' | 'amount_mismatch' | 'stale' | 'duplicate'
+
 async function logPaymentTransaction(
   supabase: ReturnType<typeof createServiceRoleClient>,
   params: {
@@ -145,10 +172,10 @@ async function logPaymentTransaction(
     orderCode: string
     cassoTid: string
     amount: number
-    status: 'pending' | 'matched' | 'amount_mismatch' | 'stale' | 'duplicate'
+    status: PaymentTransactionStatus
     metadata?: Record<string, unknown>
   }
-) {
+): Promise<'ok' | 'duplicate'> {
   const { error } = await supabase.from('payment_transactions').insert({
     order_type: params.orderType,
     order_id: params.orderId,
@@ -158,7 +185,14 @@ async function logPaymentTransaction(
     status: params.status,
     metadata: params.metadata ?? {},
   })
-  if (error) console.error('[payment_transactions] insert failed:', error)
+  if (error) {
+    if (error.code === '23505') {
+      console.error('[payment_transactions] duplicate detected:', params.cassoTid, params.orderCode)
+      return 'duplicate'
+    }
+    console.error('[payment_transactions] insert failed:', error)
+  }
+  return 'ok'
 }
 
 async function processTreeOrder(
@@ -380,7 +414,7 @@ export async function POST(req: NextRequest) {
     const supabase = createServiceRoleClient()
     try {
       await supabase.from('casso_transactions').insert({
-        casso_id: `hmac_fail_${Date.now()}`,
+        casso_id: null,
         casso_tid: `hmac_fail_${Date.now()}`,
         amount: 0,
         description: `HMAC fail — sig: ${sig.slice(0, 80)}`,
@@ -396,7 +430,7 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tx = (body as any)?.data
-  const txId = tx?.id ?? tx?.tid
+  const txId = String(tx?.id ?? tx?.tid ?? `unknown_${Date.now()}`)
   if (!txId) {
     return NextResponse.json({ ok: true })
   }
@@ -407,7 +441,7 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabase
     .from('casso_transactions')
     .select('id, status')
-    .eq('casso_tid', String(txId))
+    .eq('casso_tid', txId)
     .single()
 
   if (existing) {
@@ -415,9 +449,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Log raw Casso transaction
+  const numericCassoId = Number.isInteger(Number(txId)) ? Number(txId) : null
   await supabase.from('casso_transactions').insert({
-    casso_id: String(txId),
-    casso_tid: String(txId),
+    casso_id: numericCassoId,
+    casso_tid: txId,
     amount: tx.amount,
     description: tx.description,
     bank_account: tx.accountNumber ?? tx.bank_sub_acc_id,
@@ -430,7 +465,7 @@ export async function POST(req: NextRequest) {
   if (tx.amount <= 0) {
     await supabase.from('casso_transactions')
       .update({ status: 'no_match', note: 'Outgoing transaction ignored' })
-      .eq('casso_tid', String(txId))
+      .eq('casso_tid', txId)
     return NextResponse.json({ ok: true })
   }
 
@@ -439,7 +474,7 @@ export async function POST(req: NextRequest) {
   if (!orderCode) {
     await supabase.from('casso_transactions')
       .update({ status: 'no_match', note: 'orderCode not found in description' })
-      .eq('casso_tid', String(txId))
+      .eq('casso_tid', txId)
     return NextResponse.json({ ok: true })
   }
 
@@ -447,8 +482,24 @@ export async function POST(req: NextRequest) {
   if (!orderType) {
     await supabase.from('casso_transactions')
       .update({ status: 'no_match', note: `Unknown order prefix: ${orderCode}` })
-      .eq('casso_tid', String(txId))
+      .eq('casso_tid', txId)
     return NextResponse.json({ ok: true })
+  }
+
+  // Feature flag: rollback to legacy DH-only handler if disabled
+  if (!POLYMORPHIC_WEBHOOK_ENABLED && orderType !== 'tree') {
+    await supabase.from('casso_transactions')
+      .update({ status: 'skipped', note: `Polymorphic webhook disabled. ${orderType} not processed.` })
+      .eq('casso_tid', txId)
+    await logPaymentTransaction(supabase, {
+      orderType,
+      orderId: '00000000-0000-0000-0000-000000000000',
+      orderCode,
+      cassoTid: txId,
+      amount: tx.amount,
+      status: 'duplicate', // placeholder: we do not process non-DH in legacy mode
+    })
+    return NextResponse.json({ ok: true, skipped: true })
   }
 
   // Stale check (60 minutes)
@@ -456,12 +507,12 @@ export async function POST(req: NextRequest) {
   if (isStaleTransaction(txAt)) {
     await supabase.from('casso_transactions')
       .update({ status: 'no_match', note: 'Transaction older than 60 minutes' })
-      .eq('casso_tid', String(txId))
+      .eq('casso_tid', txId)
     await logPaymentTransaction(supabase, {
       orderType,
       orderId: '00000000-0000-0000-0000-000000000000',
       orderCode,
-      cassoTid: String(txId),
+      cassoTid: txId,
       amount: tx.amount,
       status: 'stale',
     })
@@ -473,7 +524,7 @@ export async function POST(req: NextRequest) {
   if (!order) {
     await supabase.from('casso_transactions')
       .update({ status: 'order_not_found', note: `${orderType} ${orderCode} not found or not pending` })
-      .eq('casso_tid', String(txId))
+      .eq('casso_tid', txId)
     return NextResponse.json({ ok: true })
   }
 
@@ -482,38 +533,57 @@ export async function POST(req: NextRequest) {
   const paymentStatus: 'matched' | 'amount_mismatch' = diff > 1000 ? 'amount_mismatch' : 'matched'
 
   let result: { ok: boolean; error?: string }
-  switch (orderType) {
-    case 'tree':
-      result = await processTreeOrder(supabase, tx, orderCode, order, paymentStatus)
-      break
-    case 'booking':
-      result = await processBooking(supabase, tx, orderCode, order, paymentStatus)
-      break
-    case 'store':
-      result = await processStoreOrder(supabase, tx, orderCode, order, paymentStatus)
-      break
+  try {
+    switch (orderType) {
+      case 'tree':
+        result = await processTreeOrder(supabase, tx, orderCode, order, paymentStatus)
+        break
+      case 'booking':
+        result = await processBooking(supabase, tx, orderCode, order, paymentStatus)
+        break
+      case 'store':
+        result = await processStoreOrder(supabase, tx, orderCode, order, paymentStatus)
+        break
+      default:
+        result = { ok: false, error: 'Unknown order type' }
+    }
+  } catch (handlerError) {
+    const errMsg = handlerError instanceof Error ? handlerError.message : String(handlerError)
+    console.error(`[Casso] ${orderType} handler failed:`, handlerError)
+    captureError(handlerError, {
+      route: '/api/webhooks/casso',
+      orderType,
+      orderCode,
+      cassoTid: txId,
+      action: 'handler_processing',
+    })
+    notifyWebhookError(orderType, orderCode, errMsg, txId)
+    result = { ok: false, error: `${orderType} handler error: ${errMsg}` }
   }
 
   // Ledger record
-  await logPaymentTransaction(supabase, {
+  const logResult = await logPaymentTransaction(supabase, {
     orderType,
     orderId: order.id,
     orderCode,
-    cassoTid: String(txId),
+    cassoTid: txId,
     amount: tx.amount,
     status: paymentStatus === 'amount_mismatch' ? 'amount_mismatch' : (result.ok ? 'matched' : 'amount_mismatch'),
     metadata: { note: result.error },
   })
+  if (logResult === 'duplicate') {
+    return NextResponse.json({ ok: true, duplicate: true })
+  }
 
   // Update casso_transactions final status for non-tree (tree does it inside)
+  // Note: casso_transactions.order_id has FK to orders(id), so we don't pass order_id for booking/store
   if (orderType !== 'tree') {
     await supabase.from('casso_transactions')
       .update({
         status: result.ok ? 'processed' : 'function_error',
         note: result.error ?? undefined,
-        order_id: order.id,
       })
-      .eq('casso_tid', String(txId))
+      .eq('casso_tid', txId)
   }
 
   return NextResponse.json({ ok: true })

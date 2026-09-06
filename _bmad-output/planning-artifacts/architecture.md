@@ -920,3 +920,168 @@ SENDGRID_API_KEY=xxx
 ---
 
 **End of Architecture Decision Document v1.1 (Simplified)**
+
+---
+
+## 🌿 Eco-Tourism & Trầm Hương Store Architecture
+
+### Overview
+
+Phần mở rộng này bổ sung 2 vertical mới:
+- **Eco-Stay**: Đặt phòng nghỉ tại vườn trầm hương
+- **Trầm Hương Store**: Bán sản phẩm trầm hương vật lý
+
+Cả 2 vertical dùng chung Supabase PostgreSQL, Next.js App Router, và Casso payment webhook với tree platform hiện có.
+
+### Added Route Structure
+
+```
+daiinganxanh-landing/src/app/
+├── (marketing)/
+│   ├── eco-tourism/
+│   │   ├── page.tsx                 # /eco-tourism
+│   │   └── [lotId]/
+│   │       ├── page.tsx             # /eco-tourism/[lotId]
+│   │       └── book/
+│   │           └── page.tsx         # /eco-tourism/[lotId]/book
+│   └── store/
+│       ├── page.tsx                 # /store
+│       ├── [productSlug]/
+│       │   └── page.tsx             # /store/[productSlug]
+│       ├── checkout/
+│       │   └── page.tsx             # /store/checkout
+│       └── checkout/success/
+│           └── page.tsx             # /store/checkout/success
+│
+├── crm/
+│   ├── my-bookings/
+│   │   └── page.tsx                 # /crm/my-bookings
+│   ├── my-store-orders/
+│   │   └── page.tsx                 # /crm/my-store-orders
+│   └── admin/
+│       ├── bookings/
+│       │   └── page.tsx             # /crm/admin/bookings
+│       ├── rooms/
+│       │   └── page.tsx             # /crm/admin/rooms
+│       ├── products/
+│       │   └── page.tsx             # /crm/admin/products
+│       └── store-orders/
+│           └── page.tsx             # /crm/admin/store-orders
+│
+└── api/
+    ├── webhooks/casso/route.ts      # Polymorphic DH/BK/ST dispatcher
+    ├── bookings/create/route.ts     # Create room booking
+    ├── store/orders/create/route.ts # Create store order
+    ├── store/orders/status/route.ts # Poll order status
+    └── cron/expire-pending/route.ts # Release pending inventory
+```
+
+### Database Schema Additions
+
+| Table | Purpose | Key Constraints |
+|-------|---------|---------------|
+| `rooms` | Các phòng trong vườn | `lot_id`, `capacity`, `price_per_night` |
+| `room_pricing_rules` | Giá theo mùa/cuối tuần | `room_id`, date range |
+| `room_bookings` | Đặt phòng | GiST exclusion, `check_in_date`, `check_out_date` |
+| `products` | Sản phẩm Store | `stock_quantity`, `category`, `origin` |
+| `store_orders` | Đơn hàng Store | `status` workflow P0-P4 |
+| `store_order_items` | Chi tiết đơn hàng | `store_order_id`, `product_id`, `quantity` |
+| `user_carts` | Giỏ hàng persistent | `user_id`, product + quantity |
+| `payment_transactions` | Ledger sự kiện Casso | idempotency, `order_code`, `amount` |
+
+### Security & RLS
+
+- Tất cả inserts qua authenticated server routes (service role)
+- Không cho phép anonymous insert trực tiếp lên `room_bookings`, `store_orders`
+- Sử dụng `public.is_admin()` SECURITY DEFINER
+- Phân quyền: `resort_manager`, `store_staff`, `admin`, `super_admin`
+
+### Payment Flow
+
+```
+User checkout → create booking/order → 15-min VietQR/COD
+                                        ↓
+Casso webhook → /api/webhooks/casso → parse prefix
+                                        ↓
+                    DH → tree order
+                    BK → room booking confirmed
+                    ST → store order confirmed + decrement stock
+                                        ↓
+              Record payment_transactions → idempotency check
+                                        ↓
+              Update order/booking status
+```
+
+### Inventory Control
+
+- **Room booking**: GiST exclusion constraint + 15-min reservation lock
+- **Store order**: Atomic stock decrement + reserved_quantity
+- **Cron**: `/api/cron/expire-pending` chạy mỗi phút để release pending
+
+### API Contracts
+
+- `POST /api/bookings/create`: Tạo booking, trả về VietQR
+- `POST /api/store/orders/create`: Tạo store order (banking/COD)
+- `GET /api/store/orders/status`: Poll order status
+- `POST /api/webhooks/casso`: Polymorphic dispatcher
+- `POST /api/cron/expire-pending`: Cron endpoint
+
+### Shared Infrastructure
+
+- Polymorphic Casso webhook xử lý cả 3 verticals: tree (`DH-`), booking (`BK-`), store (`ST-`)
+- `payment_transactions` ledger để tránh duplicate processing
+- On-demand revalidation khi inventory thay đổi
+
+
+### Risk Mitigation & Operational Safeguards
+
+#### Polymorphic Webhook Rollback Strategy
+
+- **Single point of failure**: `/api/webhooks/casso` xử lý cả 3 verticals.
+- **Mitigation**:
+  - Giữ backward-compatible `DH-` handler cho tree orders.
+  - Feature flag: `POLYMORPHIC_WEBHOOK_ENABLED=false` để fallback về handler cũ nếu có bug.
+  - Mỗi handler chạy trong try/catch riêng — lỗi ở `BK-` không làm crash `ST-`.
+  - Telegram alert khi bất kỳ handler nào throw.
+
+#### Race Condition Prevention
+
+| Scenario | Solution |
+|----------|----------|
+| Double-booking | GiST exclusion constraint trên `room_bookings` với `btree_gist` |
+| Overselling | `SELECT ... FOR UPDATE` hoặc stored procedure khi decrement stock |
+| Double-payment | `payment_transactions` ledger với unique constraint `(order_code, transaction_id)` |
+| Over-release | Cron chỉ release những `pending` có `expires_at < now()` |
+
+#### Execution Sequence Recommendation
+
+```
+Phase 1: Foundation
+  13.1 Polymorphic Casso Webhook
+  13.2 Secure Order Creation APIs
+  13.4 Server-Side Price Validation
+  13.3 Inventory Reservation & Release
+
+Phase 2: Eco-Stay
+  11.1 Browse Gardens
+  11.2 View Garden & Room Details
+  11.3 Create Booking Reservation
+  11.4 Confirm Booking Payment
+
+Phase 3: Store
+  12.1 Browse Products
+  12.2 View Product Detail
+  12.3 Store Checkout Form
+  12.4 Create Store Order
+  12.5 Confirm Store Payment
+
+Phase 4: Admin & Polish
+  11.5-11.8, 12.6-12.9, 13.5, 13.6
+```
+
+#### Monitoring
+
+- Sentry cho webhook errors
+- Telegram alerts cho payment mismatch
+- Logs `payment_transactions` mọi sự kiện Casso
+- UptimeRobot theo dõi `/api/webhooks/casso`
