@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
 import { rateLimit } from '@/lib/rate-limit'
+import { captureError } from '@/lib/monitoring'
 
 const SHIPPING_FEE_DEFAULT = 0
 const PAYMENT_TIMEOUT_MINUTES = 15
@@ -32,12 +33,15 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const effectiveUser = await getEffectiveUser()
-  if (!effectiveUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const effectiveUser = await getEffectiveUser().catch(() => null)
+
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Dữ liệu không hợp lệ' }, { status: 400 })
   }
 
-  const body = await req.json()
   const parsed = createOrderSchema.safeParse(body)
   if (!parsed.success) {
     const firstIssue = parsed.error.issues[0]
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
     .from('store_orders')
     .insert({
       code: orderCode,
-      user_id: effectiveUser.userId,
+      user_id: effectiveUser?.userId ?? null,
       customer_name: data.customer_name,
       customer_phone: data.customer_phone,
       customer_email: data.customer_email || null,
@@ -110,6 +114,11 @@ export async function POST(req: NextRequest) {
     // Rollback stock reservation on order creation failure
     await supabase.rpc('release_product_stock', { p_product_id: product.id, p_qty: data.quantity })
     console.error('store order creation failed:', orderError)
+    captureError(orderError, {
+      route: '/api/store/orders/create',
+      action: 'order_insert',
+      productSlug: data.product_slug,
+    })
     return NextResponse.json({ error: 'Không thể tạo đơn hàng' }, { status: 500 })
   }
 
@@ -126,6 +135,12 @@ export async function POST(req: NextRequest) {
     await supabase.from('store_orders').delete().eq('id', order.id)
     await supabase.rpc('release_product_stock', { p_product_id: product.id, p_qty: data.quantity })
     console.error('store order item creation failed:', itemError)
+    captureError(itemError, {
+      route: '/api/store/orders/create',
+      action: 'item_insert',
+      orderId: order.id,
+      productSlug: data.product_slug,
+    })
     return NextResponse.json({ error: 'Không thể tạo chi tiết đơn hàng' }, { status: 500 })
   }
 
