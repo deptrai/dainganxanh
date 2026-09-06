@@ -138,7 +138,7 @@ development_status:
   epic-13: in-progress
   13-1-polymorphic-casso-webhook: done
   13-2-secure-order-creation-apis: done
-  13-3-inventory-reservation-and-release: backlog
+  13-3-inventory-reservation-and-release: done
   13-4-server-side-price-validation: backlog
   13-5-transactional-email-templates: backlog
   13-6-lot-scoped-admin-roles: backlog
@@ -151,7 +151,7 @@ summary:
   stories_ready: 0
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 49
-  stories_backlog: 19
+  stories_done: 50
+  stories_backlog: 18
   current_velocity: 11
   last_updated: "2026-09-06"
