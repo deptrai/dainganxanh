@@ -110,8 +110,8 @@ development_status:
   epic-10-retrospective: backlog
 
   # Epic 11: Eco-Stay (Room Booking) - Added 2026-09-05
-  epic-11: backlog
-  11-1-browse-gardens: backlog
+  epic-11: in-progress
+  11-1-browse-gardens: ready-for-dev
   11-2-view-garden-and-room-details: backlog
   11-3-create-booking-reservation: backlog
   11-4-confirm-booking-payment: backlog
@@ -148,10 +148,10 @@ development_status:
 summary:
   total_epics: 13
   total_stories: 68
-  stories_ready: 1
+  stories_ready: 2
   stories_in_progress: 0
   stories_review: 0
   stories_done: 53
-  stories_backlog: 15
+  stories_backlog: 14
   current_velocity: 11
   last_updated: "2026-09-07"
