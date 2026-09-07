@@ -10,9 +10,11 @@ export async function generateMetadata({ params }: { params: Promise<{ lotId: st
     const supabase = createServiceRoleClient()
     const { data: lot } = await supabase
         .from('lots')
-        .select('name, description')
+        .select('name, description, images')
         .eq('id', lotId)
         .maybeSingle()
+
+    const ogImage = Array.isArray(lot?.images) && lot.images.length > 0 ? lot.images[0] : undefined
 
     return {
         title: lot ? `${lot.name} — Nghỉ Dưỡng Tại Vườn` : 'Vườn nghỉ dưỡng — Đại Ngàn Xanh',
@@ -25,6 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lotId: st
             siteName: 'Đại Ngàn Xanh',
             type: 'website',
             locale: 'vi_VN',
+            images: ogImage ? [{ url: ogImage }] : undefined,
         },
     }
 }
