@@ -1,5 +1,5 @@
 import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderEmail } from './render'
 import { TreeContractEmail } from '@/emails/TreeContractEmail'
 import { EcoStayVoucherEmail } from '@/emails/EcoStayVoucherEmail'
 import { StoreDispatchEmail } from '@/emails/StoreDispatchEmail'
@@ -18,7 +18,7 @@ export async function sendTreeContractEmail(
   params: SendTreeContractEmailParams
 ): Promise<SendEmailResult> {
   const { orderId, recipientEmail, ...props } = params
-  const html = '<!DOCTYPE html>' + renderToStaticMarkup(React.createElement(TreeContractEmail, props))
+  const html = await renderEmail(React.createElement(TreeContractEmail, props))
 
   return sendRawEmail({
     orderId,
@@ -33,7 +33,7 @@ export async function sendEcoStayVoucherEmail(
   params: SendEcoStayVoucherEmailParams
 ): Promise<SendEmailResult> {
   const { bookingId, recipientEmail, ...props } = params
-  const html = '<!DOCTYPE html>' + renderToStaticMarkup(React.createElement(EcoStayVoucherEmail, props))
+  const html = await renderEmail(React.createElement(EcoStayVoucherEmail, props))
 
   return sendRawEmail({
     orderId: bookingId,
@@ -48,7 +48,7 @@ export async function sendStoreDispatchEmail(
   params: SendStoreDispatchEmailParams
 ): Promise<SendEmailResult> {
   const { storeOrderId, recipientEmail, ...props } = params
-  const html = '<!DOCTYPE html>' + renderToStaticMarkup(React.createElement(StoreDispatchEmail, props))
+  const html = await renderEmail(React.createElement(StoreDispatchEmail, props))
 
   return sendRawEmail({
     orderId: storeOrderId,
