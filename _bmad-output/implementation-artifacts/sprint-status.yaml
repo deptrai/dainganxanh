@@ -113,7 +113,7 @@ development_status:
   # Epic 11: Eco-Stay (Room Booking) - Added 2026-09-05
   epic-11: in-progress
   11-1-browse-gardens: done
-  11-2-view-garden-and-room-details: in-progress
+  11-2-view-garden-and-room-details: done
   11-3-create-booking-reservation: backlog
   11-4-confirm-booking-payment: backlog
   11-5-cancel-booking: backlog

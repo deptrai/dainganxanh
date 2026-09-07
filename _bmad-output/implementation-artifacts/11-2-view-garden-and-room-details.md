@@ -1,6 +1,6 @@
 # Story 11.2: View Garden & Room Details
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -190,6 +190,15 @@ Status: **resolved** (all critical issues and warnings addressed)
 
 - CTA links to `/eco-tourism/[lotId]/book?room_id={room.id}&check_in={checkIn}&check_out={checkOut}` — Story 11.3 will implement the book route. A stub `src/app/(marketing)/eco-tourism/[lotId]/book/page.tsx` must be created returning "Coming soon" so links are valid.
 - Use Next.js `Link` component.
+
+### Review Findings
+
+All findings from code review have been addressed in commit `fe755c97`.
+
+- [x] [Review][Patch] Add `'use client'` to client components (`DateRangePicker`, `ImageGallery`, `MapSection`, `RoomCard`)
+- [x] [Review][Patch] Validate `room.images` with `Array.isArray` and `length > 0` (`RoomCard.tsx`)
+- [x] [Review][Patch] Add `console.error` for lot fetch failure (`page.tsx`)
+- [x] [Review][Patch] Reuse `RoomBooking` type from `availability.ts` (`page.tsx`)
 
 ## Dev Agent Record
 
