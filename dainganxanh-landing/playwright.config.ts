@@ -69,6 +69,7 @@ export default defineConfig({
                 /tree-detail-.*\.spec\.ts/,
                 /accessibility\.spec\.ts/,
                 /notification-flow\.spec\.ts/,
+                /epic11-eco-stay\/.*\.spec\.ts/,
             ],
         },
         // Unauthenticated specs (login/register flow itself, public pages). No storageState.

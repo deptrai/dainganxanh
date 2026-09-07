@@ -33,3 +33,10 @@
 - `Order.status` TypeScript union missing `failed` / `manual_payment_claimed` values that the DB CHECK already admits — renders `undefined` badges silently.
 - `admin_audit_log.admin_id` FK points to `public.users`; admins present only in `auth.users` cause insert to fail (silently swallowed by route's try/catch).
 - Referral commission clawback policy when a completed order is refunded — `getAvailableBalance` filters by `status='completed'`; refunded orders disappear from commission base. If referrer already withdrew, balance can go negative. Needs policy decision (full vs partial clawback, deduct vs notify, freeze payouts during dispute window).
+
+## Deferred from: code review of 11-6-view-my-bookings-crm.md (2026-09-07)
+
+- [ ] Replace `as unknown as { name: string }` Supabase join type assertions with generated types (prevalent in eco-tourism modules).
+- [ ] Verify `nights_count` population in `room_bookings` — `create` route computes `diffDays` but does not insert `nights_count`; confirm generated column/trigger.
+- [ ] Revisit rate limit for `GET /api/bookings/my` (100 req/min) after production usage.
+
