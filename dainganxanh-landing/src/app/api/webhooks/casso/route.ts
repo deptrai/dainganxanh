@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { notifyPaymentSuccess, notifyContractFailure } from '@/lib/utils/telegram'
 import { createReferralClick } from '@/actions/createReferralClick'
@@ -6,6 +6,7 @@ import { createHmac } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { rateLimit } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitoring'
+import { sendEcoStayVoucherEmail } from '@/lib/email'
 
 const ORDER_CODE_REGEX = /\b((?:DH|BK|ST)[A-Z0-9]{6})\b/i
 const POLYMORPHIC_WEBHOOK_ENABLED = process.env.POLYMORPHIC_WEBHOOK_ENABLED !== 'false'
@@ -18,6 +19,14 @@ interface OrderLike {
   user_name?: string | null
   total_amount: number
   status?: string
+  // Eco-stay booking fields
+  guest_name?: string | null
+  guest_email?: string | null
+  room_id?: string | null
+  check_in_date?: string | null
+  check_out_date?: string | null
+  nights_count?: number | null
+  guests_count?: number | null
 }
 
 // Verify Casso Webhook V2 HMAC signature
@@ -295,7 +304,58 @@ async function processBooking(
   }
 
   revalidatePath('/eco-tourism')
-  notifyBookingConfirmed(orderCode, (booking as any).guest_name ?? '', booking.total_amount)
+  notifyBookingConfirmed(orderCode, booking.guest_name ?? '', booking.total_amount)
+
+  // Send Eco-Stay Voucher email asynchronously (non-blocking)
+  // Note: avoid next/after here because tests invoke this handler outside a request scope.
+  if (booking.guest_email) {
+    (async () => {
+      try {
+        const { data: roomData, error: roomError } = await supabase
+          .from('rooms')
+          .select('name, lots(name, region)')
+          .eq('id', booking.room_id ?? '')
+          .single()
+
+        if (roomError) {
+          throw new Error(`Failed to load room data: ${roomError.message}`)
+        }
+
+        const roomName = roomData?.name || 'Phòng nghỉ sinh thái'
+        const lotInfo = (roomData as any)?.lots
+        const gardenName = lotInfo?.name
+          ? (lotInfo.name.startsWith('Vườn') ? lotInfo.name : `Vườn ${lotInfo.name}`)
+          : undefined
+        const gardenAddress = lotInfo?.region
+          ? (lotInfo.region.startsWith('Khu vực') ? lotInfo.region : `Khu vực ${lotInfo.region}`)
+          : undefined
+
+        await sendEcoStayVoucherEmail({
+          bookingId: booking.id,
+          recipientEmail: booking.guest_email,
+          guestName: booking.guest_name || 'Quý khách',
+          bookingCode: orderCode,
+          roomName,
+          gardenName,
+          gardenAddress,
+          checkInDate: booking.check_in_date || '',
+          checkOutDate: booking.check_out_date || '',
+          nightsCount: booking.nights_count || 1,
+          guestsCount: booking.guests_count || 1,
+          totalAmount: booking.total_amount,
+        })
+      } catch (emailErr) {
+        console.error('[Casso] Failed to send voucher email:', emailErr)
+        captureError(emailErr instanceof Error ? emailErr : new Error(String(emailErr)), {
+          route: '/api/webhooks/casso',
+          orderType: 'booking',
+          orderCode,
+          action: 'send_voucher_email',
+        })
+      }
+    })()
+  }
+
   return { ok: true }
 }
 
@@ -378,7 +438,7 @@ async function findPendingOrder(
   if (orderType === 'booking') {
     const { data: booking } = await supabase
       .from('room_bookings')
-      .select('id, code, user_id, guest_name, guest_email, room_id, total_amount, status')
+      .select('id, code, user_id, guest_name, guest_email, room_id, check_in_date, check_out_date, nights_count, guests_count, total_amount, status')
       .eq('code', orderCode)
       .eq('status', 'pending')
       .single()
