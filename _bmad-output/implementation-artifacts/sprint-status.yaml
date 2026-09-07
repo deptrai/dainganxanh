@@ -117,7 +117,7 @@ development_status:
   11-3-create-booking-reservation: done
   11-4-confirm-booking-payment: done
   11-5-cancel-booking: done
-  11-6-view-my-bookings-crm: backlog
+  11-6-view-my-bookings-crm: ready-for-dev
   11-7-admin-booking-management: backlog
   11-8-admin-room-calendar: backlog
   epic-11-retrospective: optional
@@ -155,4 +155,4 @@ summary:
   stories_done: 58
   stories_backlog: 12
   current_velocity: 11
-  last_updated: "2026-09-07T20:30:00+07:00"
+  last_updated: "2026-09-07T21:00:00+07:00"
