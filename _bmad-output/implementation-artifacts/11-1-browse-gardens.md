@@ -152,6 +152,15 @@ Status: **resolved** (schema assumptions corrected and story updated)
 - Do not expose room-level details on the listing page beyond the minimum price.
 - Public listing should use `createServiceRoleClient` to bypass RLS on first iteration, but `public_read_lots` policy in the new migration makes direct client/supabase SSR reads acceptable as well.
 
+### Review Findings
+
+- [x] [Review][Decision→Patch] `public_read_lots` RLS policy removed — page already uses `createServiceRoleClient` for public read, so public anon policy was unnecessary and leaked sensitive columns. Fixed by dropping `public_read_lots` from migration.
+- [x] [Review][Patch] JSON-LD XSS breakout fixed — `JSON.stringify(jsonLd).replace(/</g, '\\u003c')` applied in page.tsx.
+- [x] [Review][Patch] `images` validated with `Array.isArray` before indexing in page.tsx.
+- [x] [Review][Defer] Supabase query error renders same empty state as "no gardens" — acceptable for MVP; log is emitted.
+- [x] [Review][Defer] `lot.region` rendered twice on card (badge + location row) — cosmetic duplication.
+- [x] [Review][Defer] buildJsonLd uses raw lots instead of transformed gardenLots — output equivalent; dismissed.
+
 ## Dev Agent Record
 
 ### Agent Model Used

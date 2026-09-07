@@ -74,7 +74,7 @@ export default async function EcoTourismPage() {
             id: lot.id,
             name: lot.name,
             region: lot.region,
-            images: lot.images ?? [],
+            images: Array.isArray(lot.images) ? (lot.images as string[]) : [],
             priceFrom,
         }
     })
@@ -85,7 +85,7 @@ export default async function EcoTourismPage() {
         <>
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
             />
             <EcoTourismClient lots={gardenLots} />
         </>

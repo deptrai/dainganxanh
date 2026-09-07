@@ -18,29 +18,3 @@ BEGIN
   END IF;
 END
 $$;
-
--- ========================================
--- PUBLIC SELECT ON LOTS (if not already)
--- ========================================
--- The baseline migration does not enable RLS or a public policy on lots.
--- This migration enables RLS and grants SELECT to anon/authenticated so that
--- the public eco-tourism listing can be read with or without service role.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'lots'
-  ) THEN
-    ALTER TABLE public.lots ENABLE ROW LEVEL SECURITY;
-
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_policies
-      WHERE schemaname = 'public' AND tablename = 'lots' AND policyname = 'public_read_lots'
-    ) THEN
-      CREATE POLICY "public_read_lots" ON public.lots
-        FOR SELECT TO anon, authenticated
-        USING (true);
-    END IF;
-  END IF;
-END
-$$;
