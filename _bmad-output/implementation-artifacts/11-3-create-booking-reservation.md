@@ -1,6 +1,6 @@
 # Story 11.3: Create Booking Reservation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -56,17 +56,17 @@ So that I can pay later via bank transfer.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace stub `/eco-tourism/[lotId]/book/page.tsx` with real booking page.
-- [ ] Task 2: Build `BookingPageClient` orchestrator.
-- [ ] Task 3: Build `BookingForm` component.
-- [ ] Task 4: Build `OrderSummary` component.
-- [ ] Task 5: Build `VietQRDisplay` component.
-- [ ] Task 6: Implement `GET /api/bookings/status`.
-- [ ] Task 7: Implement `POST /api/bookings/claim-payment`.
-- [ ] Task 8: Implement `POST /api/bookings/cancel`.
-- [ ] Task 9: Wire form -> payment flow.
-- [ ] Task 10: Build booking success page.
-- [ ] Task 11: Write tests.
+- [x] Task 1: Replace stub `/eco-tourism/[lotId]/book/page.tsx` with real booking page.
+- [x] Task 2: Build `BookingPageClient` orchestrator.
+- [x] Task 3: Build `BookingForm` component.
+- [x] Task 4: Build `OrderSummary` component.
+- [x] Task 5: Build `VietQRDisplay` component.
+- [x] Task 6: Implement `GET /api/bookings/status`.
+- [x] Task 7: Implement `POST /api/bookings/claim-payment`.
+- [x] Task 8: Implement `POST /api/bookings/cancel`.
+- [x] Task 9: Wire form -> payment flow.
+- [x] Task 10: Build booking success page.
+- [x] Task 11: Write tests.
 
 ## Dev Notes
 
@@ -154,26 +154,44 @@ So that I can pay later via bank transfer.
 
 ### Agent Model Used
 
-claude-opus-5[1m]
+Claude Sonnet 5 (claude-sonnet-5)
 
 ### Completion Notes List
 
-- Ultimate context engine analysis completed - comprehensive developer guide created.
-- Story 11.3 wires up the booking UX on top of already-implemented backend (Stories 13.1-13.4). New server work: status poll, claim-payment, cancel endpoints and optional `payment_claimed_at` column.
+- Task 1: Replaced stub `src/app/(marketing)/eco-tourism/[lotId]/book/page.tsx` with full SSR implementation validating query params, checking active room belonging to lot, checking blocking bookings via `getBlockingBookings`, and rendering `BookingPageClient`.
+- Task 2: Built `BookingPageClient` managing steps (`form`, `payment`, `success`, `expired`).
+- Task 3: Built `BookingForm` with full client validation matching `createBookingSchema`, Vietnamese error messages, submitting to `POST /api/bookings/create`, handling 409 GiST overlap errors.
+- Task 4: Built `OrderSummary` fetching authoritative pricing from `POST /api/bookings/calculate-price` with 300ms debounce, formatting total VND, displaying custom pricing rule breakdown.
+- Task 5: Built `VietQRDisplay` with VietQR image (`img.vietqr.io`), accurate countdown timer derived from `expiresAt`, copy buttons with feedback, claim payment action, cancel reservation action, and 5-second polling of `GET /api/bookings/status`.
+- Task 6: Implemented `GET /api/bookings/status` (rate limited, no PII leakage, expired calculation).
+- Task 7: Implemented `POST /api/bookings/claim-payment` (rate limited, updates `payment_claimed_at` on pending booking).
+- Task 8: Implemented `POST /api/bookings/cancel` (rate limited, cancels pending booking and revalidates marketing pages).
+- Task 9: Wired full form -> payment -> confirmed -> success flow.
+- Task 10: Built `src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx` displaying booking code, room, dates, nights, guests, total amount, and check-in instructions.
+- Task 11: Added unit and integration tests across 6 test suites: `page.test.tsx` (book SSR), `BookingPageClient.test.tsx`, `BookingForm.test.tsx`, `OrderSummary.test.tsx`, `VietQRDisplay.test.tsx`, `status/route.test.ts`, `claim-payment/route.test.ts`, `cancel/route.test.ts`, `success/page.test.tsx`.
+- Verification: 79 test suites passed, 746 tests passed, TypeScript `tsc --noEmit` passed with 0 errors, Next.js build succeeded.
 
 ### File List
 
-**New files to create:**
-- `src/app/(marketing)/eco-tourism/[lotId]/book/BookingPageClient.tsx`
-- `src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx`
-- `src/components/eco-tourism/BookingForm.tsx`
-- `src/components/eco-tourism/OrderSummary.tsx`
-- `src/components/eco-tourism/VietQRDisplay.tsx`
-- `src/app/api/bookings/status/route.ts`
-- `src/app/api/bookings/claim-payment/route.ts`
-- `src/app/api/bookings/cancel/route.ts`
-- Tests for the above.
-- `supabase/migrations/20260908000001_add_payment_claimed_at_to_room_bookings.sql` (if needed)
+**New files created:**
+- `dainganxanh-landing/src/app/(marketing)/eco-tourism/[lotId]/book/BookingPageClient.tsx`
+- `dainganxanh-landing/src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx`
+- `dainganxanh-landing/src/components/eco-tourism/BookingForm.tsx`
+- `dainganxanh-landing/src/components/eco-tourism/OrderSummary.tsx`
+- `dainganxanh-landing/src/components/eco-tourism/VietQRDisplay.tsx`
+- `dainganxanh-landing/src/app/api/bookings/status/route.ts`
+- `dainganxanh-landing/src/app/api/bookings/claim-payment/route.ts`
+- `dainganxanh-landing/src/app/api/bookings/cancel/route.ts`
+- `dainganxanh-landing/src/app/(marketing)/eco-tourism/[lotId]/book/__tests__/page.test.tsx`
+- `dainganxanh-landing/src/app/(marketing)/eco-tourism/[lotId]/book/__tests__/BookingPageClient.test.tsx`
+- `dainganxanh-landing/src/app/(marketing)/eco-tourism/[lotId]/book/success/__tests__/page.test.tsx`
+- `dainganxanh-landing/src/components/eco-tourism/__tests__/BookingForm.test.tsx`
+- `dainganxanh-landing/src/components/eco-tourism/__tests__/OrderSummary.test.tsx`
+- `dainganxanh-landing/src/components/eco-tourism/__tests__/VietQRDisplay.test.tsx`
+- `dainganxanh-landing/src/app/api/bookings/status/__tests__/route.test.ts`
+- `dainganxanh-landing/src/app/api/bookings/claim-payment/__tests__/route.test.ts`
+- `dainganxanh-landing/src/app/api/bookings/cancel/__tests__/route.test.ts`
+- `dainganxanh-landing/supabase/migrations/20260908000001_add_payment_claimed_at_to_room_bookings.sql`
 
-**Existing files to modify:**
-- `src/app/(marketing)/eco-tourism/[lotId]/book/page.tsx` (replace stub)
+**Modified files:**
+- `dainganxanh-landing/src/app/(marketing)/eco-tourism/[lotId]/book/page.tsx`
