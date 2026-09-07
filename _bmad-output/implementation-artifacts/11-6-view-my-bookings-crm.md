@@ -30,7 +30,8 @@ Status: ready-for-dev
    - **And** if status is `pending`, show "Hủy đặt phòng" button that calls cancel API
    - **And** if status is `confirmed` or `completed`, show "Check-in instructions" section
    - **And** check-in instructions include: garden address (from `lots.location`), check-in time note, contact phone, special requirements reminder
-   - **And** if status is `cancelled` or `no_show`, show cancellation reason
+   - **And** if status is `cancelled` or `no_show`, show cancellation reason only if the current user is the booking owner (not for other users)
+   - **And** never expose `payment_ref` or `payment_claimed_at` in any API response or UI
 
 3. **Empty state**:
    - **Given** I have no bookings
@@ -41,7 +42,8 @@ Status: ready-for-dev
 4. **Access control**:
    - **Given** I am not authenticated
    - **When** I navigate to `/crm/my-bookings` or `/crm/my-bookings/[bookingId]`
-   - **Then** I redirect to `/login?redirect=/crm/my-bookings` (or `/crm/my-bookings/[bookingId]`)
+   - **Then** the CRM layout redirects me to `/login` (see `src/app/crm/layout.tsx`)
+   - **And** if `getImpersonationContext()` returns `null`, the page redirects to `/login?redirect=/crm/my-bookings` (or `/crm/my-bookings/[bookingId]`)
    - **And** after login, I redirect back to the original destination
 
 5. **Impersonation support**:
@@ -63,7 +65,7 @@ Status: ready-for-dev
   - [ ] Query `room_bookings` where `user_id = effectiveUserId`
   - [ ] Join with `rooms` and `lots` to get room name and garden name
   - [ ] Order by `created_at` DESC
-  - [ ] Return only safe fields: id, code, room_name, lot_name, check_in_date, check_out_date, nights_count, guests_count, status, total_amount, payment_method, created_at
+  - [ ] Return only safe fields: id, code, room_name, lot_name, check_in_date, check_out_date, nights_count, guests_count, status, total_amount, payment_method, expires_at, created_at
   - [ ] Add rate limiting (100 req/min per IP)
   - [ ] Add `captureError` for server errors
 
@@ -72,6 +74,8 @@ Status: ready-for-dev
   - [ ] Use `getImpersonationContext` in Server Component
   - [ ] Fetch bookings via `createServiceRoleClient` (server-side, not API call)
   - [ ] Display list/table with all columns
+  - [ ] Add pagination (20 items per page) with simple offset/limit or cursor
+  - [ ] Default sort `created_at` DESC
   - [ ] Make rows clickable to navigate to detail
   - [ ] Add empty state with link to `/eco-tourism`
   - [ ] Style with existing CRM theme (emerald/green palette)
@@ -95,6 +99,9 @@ Status: ready-for-dev
   - [ ] `src/components/crm/BookingStatusBadge.tsx` — color-coded status badge
   - [ ] `src/components/crm/BookingDetail.tsx` — detail view component
   - [ ] `src/components/crm/CancelBookingButton.tsx` — cancel button with confirm modal (reuse pattern from `VietQRDisplay`)
+    - [ ] Calls `POST /api/bookings/cancel` with `{ bookingCode, reason: "Khách hủy từ CRM" }`
+    - [ ] On success, redirect to `/crm/my-bookings?cancelled=1`
+    - [ ] On error, show inline error message
   - [ ] `src/components/crm/CheckInInstructions.tsx` — instructions block
 
 - [ ] Task 5: Add navigation link in CRM header (AC: #1)
@@ -104,10 +111,11 @@ Status: ready-for-dev
 
 - [ ] Task 6: Write tests (AC: all)
   - [ ] `src/app/api/bookings/my/__tests__/route.test.ts` — test list endpoint, auth, impersonation, error cases
-  - [ ] `src/app/crm/my-bookings/__tests__/page.test.tsx` — test list render, empty state, auth redirect
+  - [ ] `src/app/crm/my-bookings/__tests__/page.test.tsx` — test list render, empty state, auth redirect, pagination controls
   - [ ] `src/app/crm/my-bookings/[bookingId]/__tests__/page.test.tsx` — test detail render, 404 for other user's booking
   - [ ] `src/components/crm/__tests__/BookingTable.test.tsx` — test table rendering
-  - [ ] `src/components/crm/__tests__/BookingStatusBadge.test.tsx` — test status colors
+  - [ ] `src/components/crm/__tests__/BookingStatusBadge.test.tsx` — test status colors and labels
+  - [ ] `src/components/crm/__tests__/CancelBookingButton.test.tsx` — test modal, cancel API call, redirect
 
 - [ ] Task 7: Build and typecheck verification
   - [ ] `npm test`
@@ -149,11 +157,11 @@ Status: ready-for-dev
     .eq('user_id', ctx.effectiveUserId)
   ```
 - **Status Colors**:
-  - `pending` → `bg-amber-100 text-amber-800`
-  - `confirmed` → `bg-emerald-100 text-emerald-800`
-  - `cancelled` → `bg-red-100 text-red-800`
-  - `completed` → `bg-blue-100 text-blue-800`
-  - `no_show` → `bg-gray-100 text-gray-800`
+  - `pending` → `bg-amber-100 text-amber-800` (label: "Chờ thanh toán")
+  - `confirmed` → `bg-emerald-100 text-emerald-800` (label: "Đã xác nhận")
+  - `cancelled` → `bg-red-100 text-red-800` (label: "Đã hủy")
+  - `completed` → `bg-blue-100 text-blue-800` (label: "Hoàn thành")
+  - `no_show` → `bg-gray-100 text-gray-800` (label: "Không đến")
 - **Date Formatting**: Use `toLocaleDateString('vi-VN')` for dates, `Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })` for amounts.
 - **Cancel Button**: Reuse the accessible modal pattern from `VietQRDisplay.tsx` — `role="dialog"`, `aria-modal="true"`, Escape/backdrop close, loading spinner.
 
