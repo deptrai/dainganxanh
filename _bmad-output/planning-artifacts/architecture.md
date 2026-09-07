@@ -368,14 +368,21 @@ CREATE TABLE orders (
 );
 
 -- Lots table
+-- NOTE: the running database and src/actions/lots.ts use total_trees + planted,
+-- not capacity. Keep this schema aligned with the deployed baseline migration.
 CREATE TABLE lots (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   region TEXT NOT NULL,
-  capacity INTEGER NOT NULL,
+  description TEXT,
+  location_lat DECIMAL(10, 7),
+  location_lng DECIMAL(10, 7),
+  total_trees INTEGER DEFAULT 0,
   planted INTEGER DEFAULT 0,
-  gps_polygon JSONB, -- GeoJSON
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  images JSONB DEFAULT '[]'::jsonb, -- cover/gallery images for eco-tourism cards
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT check_planted_capacity CHECK (planted <= total_trees)
 );
 
 -- Trees table
