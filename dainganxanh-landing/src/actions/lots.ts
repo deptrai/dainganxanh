@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { canAccessLot, getAdminUserLots } from '@/lib/admin/permissions'
 
 interface LotData {
     name: string
@@ -16,7 +17,21 @@ interface LotActionResult {
     error?: string
 }
 
-async function verifyAdminRole(): Promise<{ userId: string | null; error: string | null }> {
+export interface LotSummary {
+    id: string
+    name: string
+    region: string
+    description?: string | null
+    total_trees: number
+    planted: number
+}
+
+export interface FetchLotsResult {
+    lots: LotSummary[]
+    error?: string
+}
+
+async function verifyAdminRole(lotId?: string): Promise<{ userId: string | null; error: string | null }> {
     const supabase = await createServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -35,8 +50,24 @@ async function verifyAdminRole(): Promise<{ userId: string | null; error: string
         return { userId: null, error: 'Không thể xác minh quyền truy cập' }
     }
 
-    if (!['admin', 'super_admin'].includes(profile.role)) {
-        return { userId: null, error: 'Bạn không có quyền thực hiện hành động này' }
+    // Global admins bypass lot checks entirely
+    if (['admin', 'super_admin'].includes(profile.role)) {
+        return { userId: user.id, error: null }
+    }
+
+    // If no lotId provided, the user must have at least one lot assignment
+    if (!lotId) {
+        const assignments = await getAdminUserLots(user.id)
+        if (assignments.length === 0) {
+            return { userId: null, error: 'Bạn không có quyền thực hiện hành động này' }
+        }
+        return { userId: user.id, error: null }
+    }
+
+    // Lot-scoped check for non-global roles
+    const allowed = await canAccessLot(user.id, lotId)
+    if (!allowed) {
+        return { userId: null, error: 'Bạn không có quyền thực hiện hành động này trên lô này' }
     }
 
     return { userId: user.id, error: null }
@@ -76,7 +107,7 @@ export async function createLot(data: LotData): Promise<LotActionResult> {
 }
 
 export async function updateLot(lotId: string, data: LotData): Promise<LotActionResult> {
-    const { userId, error: authError } = await verifyAdminRole()
+    const { userId, error: authError } = await verifyAdminRole(lotId)
     if (!userId) {
         return { success: false, error: authError ?? 'Unauthorized' }
     }
@@ -109,5 +140,25 @@ export async function updateLot(lotId: string, data: LotData): Promise<LotAction
     }
 
     return { success: true }
+}
+
+export async function fetchLots(): Promise<FetchLotsResult> {
+    const { userId, error: authError } = await verifyAdminRole()
+    if (!userId) {
+        return { lots: [], error: authError ?? 'Unauthorized' }
+    }
+
+    const serviceClient = createServiceRoleClient()
+    const { data, error } = await serviceClient
+        .from('lots')
+        .select('id, name, region, description, total_trees, planted')
+        .order('name')
+
+    if (error) {
+        console.error('Error fetching lots:', error)
+        return { lots: [], error: error.message }
+    }
+
+    return { lots: (data || []) as LotSummary[] }
 }
 

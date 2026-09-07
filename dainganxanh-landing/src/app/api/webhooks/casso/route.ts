@@ -332,7 +332,7 @@ async function processBooking(
 
         await sendEcoStayVoucherEmail({
           bookingId: booking.id,
-          recipientEmail: booking.guest_email,
+          recipientEmail: booking.guest_email || '',
           guestName: booking.guest_name || 'Quý khách',
           bookingCode: orderCode,
           roomName,
