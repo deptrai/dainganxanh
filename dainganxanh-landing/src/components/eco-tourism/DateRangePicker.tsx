@@ -1,3 +1,5 @@
+'use client'
+
 interface DateRangePickerProps {
     checkIn: string
     checkOut: string

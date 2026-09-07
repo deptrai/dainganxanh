@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { GardenDetailClient, type GardenDetail } from '@/components/eco-tourism/GardenDetailClient'
+import type { RoomBooking } from '@/lib/eco-tourism/availability'
 
 export const revalidate = 3600
 
@@ -100,6 +101,7 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
     const lot = rawLot as LotWithRooms | null
 
     if (error || !lot) {
+        console.error('Failed to fetch lot:', error ?? 'not found')
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
                 <div className="text-center text-gray-500">
@@ -116,14 +118,7 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
     const activeRooms = (Array.isArray(lot.rooms) ? lot.rooms : []).filter((r) => r.status === 'active')
     const roomIds = activeRooms.map((r) => r.id)
 
-    let bookings: Array<{
-        id: string
-        room_id: string
-        check_in_date: string
-        check_out_date: string
-        status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
-        expires_at: string | null
-    }> = []
+    let bookings: RoomBooking[] = []
 
     if (roomIds.length > 0) {
         const { data: bookingData } = await supabase

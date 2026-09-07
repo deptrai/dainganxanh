@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { Users } from 'lucide-react'
 
@@ -30,7 +32,7 @@ export function RoomCard({ room, lotId, checkIn, checkOut, isBooked = false }: R
     return (
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
             <div className="relative aspect-[4/3] bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
-                {room.images?.[0] ? (
+                {Array.isArray(room.images) && room.images.length > 0 ? (
                     <img src={room.images[0]} alt={room.name} className="w-full h-full object-cover" />
                 ) : (
                     <span className="text-4xl">🛏️</span>
