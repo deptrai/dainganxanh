@@ -101,7 +101,7 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
     const lot = rawLot as LotWithRooms | null
 
     if (error || !lot) {
-        console.error('Failed to fetch lot:', error ?? 'not found')
+        console.error('Failed to fetch lot:', error?.message ?? 'not found')
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
                 <div className="text-center text-gray-500">
