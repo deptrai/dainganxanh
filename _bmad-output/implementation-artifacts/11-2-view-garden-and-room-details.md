@@ -200,6 +200,13 @@ All findings from code review have been addressed in commit `fe755c97`.
 - [x] [Review][Patch] Add `console.error` for lot fetch failure (`page.tsx`)
 - [x] [Review][Patch] Reuse `RoomBooking` type from `availability.ts` (`page.tsx`)
 
+### E2E Findings
+
+- [x] CSP img-src: `images.unsplash.com` added to `next.config.js` remotePatterns.
+- [x] 404 error logging: `console.error` now uses `error?.message ?? 'not found'`.
+- [x] `/eco-tourism/[lotId]/book` stub renders "Sắp ra mắt" placeholder.
+- [x] Date picker shows `2 đêm` when selecting 2026-09-10 → 2026-09-12.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -209,6 +216,17 @@ claude-opus-5
 ### Debug Log References
 
 ### Completion Notes List
+
+- Implemented `/eco-tourism/[lotId]` with SSR, `revalidate = 3600`, Vietnamese metadata, OpenGraph canonical, and JSON-LD `LodgingBusiness`.
+- Reused `MiniMap` via `next/dynamic` with `ssr: false`; handles missing `location_lat`/`location_lng`.
+- Created `GardenDetailClient`, `ImageGallery`, `MapSection`, `DateRangePicker`, `RoomCard` components.
+- `RoomCard` filters `active` rooms only; `inactive`/`maintenance` hidden. CTA links to `/eco-tourism/[lotId]/book?room_id={id}&check_in={date}&check_out={date}`.
+- Availability check uses strict daterange overlap `check_in_date < checkOut && check_out_date > checkIn` and respects `expires_at` for `pending`.
+- Stub `/eco-tourism/[lotId]/book` page returns "Sắp ra mắt" placeholder.
+- Added unit tests for `availability`, `RoomCard`, `DateRangePicker`; integration test for page 404 / data render.
+- Full test suite: 708 passed. TypeScript lint `tsc --noEmit` passed. Build succeeded.
+- **E2E browser verification passed** on `http://localhost:3001` for `/eco-tourism`, `/eco-tourism/[lotId]`, date picker, room cards, CTA, and `/eco-tourism/[lotId]/book` stub.
+- Post-E2E fixes: added `images.unsplash.com` to `next.config.js` remotePatterns; changed 404 error logging to `error?.message`.
 
 - Implemented `/eco-tourism/[lotId]` with SSR, `revalidate = 3600`, Vietnamese metadata, OpenGraph canonical, and JSON-LD `LodgingBusiness`.
 - Reused `MiniMap` via `next/dynamic` with `ssr: false`; handles missing `location_lat`/`location_lng`.
