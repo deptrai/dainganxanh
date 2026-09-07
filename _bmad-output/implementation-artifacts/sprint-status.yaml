@@ -11,7 +11,7 @@ last_updated: 2026-09-07T14:29:18.007651
 # - done: Hoàn thành tất cả AC và passed review
 
 generated: "2026-09-05T08:15:00+07:00"
-last_updated: "2026-09-07"
+last_updated: "2026-09-07T15:45:00+07:00"
 project: "Đại Ngàn Xanh"
 project_key: "NOKEY"
 tracking_system: "file-system"
@@ -112,7 +112,7 @@ development_status:
 
   # Epic 11: Eco-Stay (Room Booking) - Added 2026-09-05
   epic-11: in-progress
-  11-1-browse-gardens: review
+  11-1-browse-gardens: done
   11-2-view-garden-and-room-details: backlog
   11-3-create-booking-reservation: backlog
   11-4-confirm-booking-payment: backlog
@@ -136,7 +136,7 @@ development_status:
   epic-12-retrospective: optional
 
   # Epic 13: Shared Payment & Inventory Infrastructure - Added 2026-09-05
-  epic-13: in-progress
+  epic-13: done
   13-1-polymorphic-casso-webhook: done
   13-2-secure-order-creation-apis: done
   13-3-inventory-reservation-and-release: done
@@ -149,10 +149,10 @@ development_status:
 summary:
   total_epics: 13
   total_stories: 68
-  stories_ready: 2
+  stories_ready: 1
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 53
+  stories_done: 54
   stories_backlog: 14
   current_velocity: 11
-  last_updated: "2026-09-07"
+  last_updated: "2026-09-07T15:45:00+07:00"

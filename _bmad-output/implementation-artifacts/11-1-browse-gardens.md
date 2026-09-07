@@ -1,6 +1,6 @@
 # Story 11.1: Browse Gardens
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -174,6 +174,9 @@ claude-sonnet-4-6
 - `npm run build` compiled /eco-tourism route successfully
 
 ### Completion Notes List
+
+- Code review completed and all findings resolved (D1: removed public RLS; P1/P2: JSON-LD XSS escape + images validation).
+- E2E browser verification passed on localhost:3001/eco-tourism with seeded data.
 
 - Implemented public `/eco-tourism` listing page with SSR, `revalidate = 3600`, Vietnamese metadata and OpenGraph canonical.
 - Added `lots.images` support via new migration `supabase/migrations/20260907000200_eco_tourism_lot_images_and_schema_fixes.sql`.
