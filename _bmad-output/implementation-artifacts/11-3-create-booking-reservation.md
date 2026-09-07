@@ -12,14 +12,14 @@ So that I can pay later via bank transfer.
 
 1. **Booking page route:**
    - `/eco-tourism/[lotId]/book` is a public, server-rendered Next.js App Router page.
-   - Page reads `searchParams` for `room_id`, `check_in`, `check_out` (all required, validated as YYYY-MM-DD).
+   - Page reads `searchParams` for `room_id`, `check_in`, `check_out` (all required, validated as YYYY-MM-DD). In Next.js 15, `searchParams` is a `Promise` -- use `const searchParams = await props.searchParams` or type it as `Promise<{ room_id?: string; check_in?: string; check_out?: string }>`.
    - If any param is missing or malformed, redirect to `/eco-tourism/[lotId]`.
    - Metadata: Vietnamese title/description, canonical URL.
    - Page fetches `rooms` + `lots` server-side via `createServiceRoleClient`; 404 if room does not exist, is not `active`, or does not belong to `[lotId]`.
    - SSR: `export const dynamic = 'force-dynamic'` or `revalidate = 0`.
 
 2. **Booking form (client):**
-   - Fields: `guest_name`, `guest_phone` (10 digits starting with `0`), `guest_email` (optional), `guests_count` (>=1, <= capacity), `special_requests` (optional, max 500).
+   - Fields: `guest_name`, `guest_phone` (10 digits starting with `0`), `guest_email` (optional), `guests_count` (>=1, <= capacity, `parseInt()` from `<input type="number">`), `special_requests` (optional, max 500).
    - Client-side validation mirrors `createBookingSchema` in `src/app/api/bookings/create/route.ts`.
    - Submit POSTs to `/api/bookings/create`.
    - On 201, swap to VietQR display.
@@ -36,7 +36,7 @@ So that I can pay later via bank transfer.
 
 5. **VietQR payment display (client):**
    - VietQR image via `img.vietqr.io` with `MB` bank, `amount`, `addInfo=bookingCode`.
-   - 15-minute countdown from `expiresAt`.
+   - 15-minute countdown from `expiresAt` (ISO 8601 `timestamptz` string). Use `new Date(booking.expiresAt).getTime() - Date.now()` to compute remaining seconds; do not assume a fixed 15:00.
    - Copy buttons for code, amount, account, account holder.
    - Poll `GET /api/bookings/status?code={bookingCode}` every 5s.
    - "Đã chuyển tiền" -> `POST /api/bookings/claim-payment`.
@@ -44,9 +44,9 @@ So that I can pay later via bank transfer.
    - On `confirmed`, redirect to `/eco-tourism/[lotId]/book/success?code={bookingCode}`.
 
 6. **New API endpoints:**
-   - `GET /api/bookings/status` - returns status without guest PII.
-   - `POST /api/bookings/claim-payment` - sets `payment_claimed_at` on pending.
-   - `POST /api/bookings/cancel` - sets `status='cancelled'` on pending and revalidates.
+   - `GET /api/bookings/status?code={bookingCode}` - PUBLIC endpoint (no auth; guests check status without login). Validate `code` matches `BK[A-Z0-9]{6}`. Returns `{ status, expiresAt, totalAmount, roomName, checkInDate, checkOutDate, guestsCount }`. 404 if not found. Rate-limit 60 req/min per IP. Do NOT return `guest_name`, `guest_phone`, `guest_email`, or `user_id`.
+   - `POST /api/bookings/claim-payment` - sets `payment_claimed_at` on `pending` booking; 404/409 if not found or not pending. Rate-limit 10 req/min.
+   - `POST /api/bookings/cancel` - sets `status='cancelled'` on `pending` booking and revalidates; 404/409 if not found or not pending. Rate-limit 10 req/min.
 
 7. **Expired-hold UX:**
    - Show "Đơn đặt phòng đã hết hạn" with a back link.
@@ -106,7 +106,11 @@ So that I can pay later via bank transfer.
 
 - **Timezone:** `todayVN = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0,10)`.
 
-- **`payment_claimed_at`:** Add column via `supabase/migrations/20260908000001_add_payment_claimed_at_to_room_bookings.sql` if missing.
+- **`payment_claimed_at`:** This column does NOT exist yet on `room_bookings`. Create migration `supabase/migrations/20260908000001_add_payment_claimed_at_to_room_bookings.sql` before implementing `claim-payment`:
+  ```sql
+  ALTER TABLE public.room_bookings
+    ADD COLUMN IF NOT EXISTS payment_claimed_at timestamp with time zone;
+  ```
 
 - **Statuses:** `pending`, `confirmed`, `completed`, `cancelled`, `no_show`.
 
