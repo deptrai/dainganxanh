@@ -1,5 +1,5 @@
 # Sprint Status - Đại Ngàn Xanh
-last_updated: 2026-09-07T15:15:00.000000
+last_updated: 2026-09-07T18:30:00.000000
 # Generated: 2026-09-05T08:15:00+07:00
 # ⚠️ DO NOT manually edit status values - use workflows to update
 
@@ -11,7 +11,7 @@ last_updated: 2026-09-07T15:15:00.000000
 # - done: Hoàn thành tất cả AC và passed review
 
 generated: "2026-09-05T08:15:00+07:00"
-last_updated: "2026-09-07T15:15:00+07:00"
+last_updated: "2026-09-07T18:30:00+07:00"
 project: "Đại Ngàn Xanh"
 project_key: "NOKEY"
 tracking_system: "file-system"
@@ -115,7 +115,7 @@ development_status:
   11-1-browse-gardens: done
   11-2-view-garden-and-room-details: done
   11-3-create-booking-reservation: done
-  11-4-confirm-booking-payment: backlog
+  11-4-confirm-booking-payment: ready-for-dev
   11-5-cancel-booking: backlog
   11-6-view-my-bookings-crm: backlog
   11-7-admin-booking-management: backlog
@@ -149,10 +149,10 @@ development_status:
 summary:
   total_epics: 13
   total_stories: 68
-  stories_ready: 2
+  stories_ready: 3
   stories_in_progress: 0
   stories_review: 0
   stories_done: 55
-  stories_backlog: 12
+  stories_backlog: 11
   current_velocity: 11
-  last_updated: "2026-09-07T17:30:00+07:00"
+  last_updated: "2026-09-07T18:30:00+07:00"
