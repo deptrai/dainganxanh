@@ -42,6 +42,30 @@ describe('BookingSuccessPage', () => {
     expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
   })
 
+  it('redirects if booking is not confirmed or completed', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: 'b1',
+        code: 'BKABC123',
+        status: 'pending',
+        check_in_date: '2026-10-01',
+        check_out_date: '2026-10-03',
+        nights_count: 2,
+        guests_count: 2,
+        total_amount: 2400000,
+        guest_name: 'Nguyễn Văn A',
+        guest_phone: '0901234567',
+        rooms: { name: 'Phòng Sen', lot_id: 'lot-1', lots: { name: 'Vườn Trầm A', region: 'Miền Bắc' } },
+      },
+      error: null,
+    })
+    const params = Promise.resolve({ lotId: 'lot-1' })
+    const searchParams = Promise.resolve({ code: 'BKABC123' })
+
+    await BookingSuccessPage({ params, searchParams })
+    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+  })
+
   it('renders booking details when booking is found', async () => {
     mockMaybeSingle.mockResolvedValue({
       data: {

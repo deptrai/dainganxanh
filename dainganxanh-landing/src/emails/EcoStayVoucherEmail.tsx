@@ -36,7 +36,7 @@ export const EcoStayVoucherEmail: React.FC<EcoStayVoucherEmailProps> = ({
   nightsCount,
   guestsCount,
   totalAmount,
-  voucherUrl = 'https://dainganxanh.com.vn/eco-tourism',
+  voucherUrl = `https://dainganxanh.com.vn/eco-tourism/voucher/${bookingCode}`,
 }) => {
   return (
     <EmailLayout previewText={`Voucher xác nhận đặt phòng ${bookingCode} - ${roomName}`}>

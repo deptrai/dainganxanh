@@ -1,6 +1,6 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import BookingVoucherPage from '../page'
+import { render, screen, fireEvent } from '@testing-library/react'
+import BookingVoucherPage, { generateMetadata } from '../page'
 
 const mockFrom = jest.fn()
 const mockSelect = jest.fn()
@@ -126,5 +126,45 @@ describe('BookingVoucherPage', () => {
     expect(html).not.toContain('cassoid-123')
     expect(html).not.toContain('payment_claimed')
     expect(html).not.toContain('cancellation_reason')
+  })
+
+  it('normalizes lowercase booking code and renders print button', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        code: 'BKABC123',
+        status: 'confirmed',
+        check_in_date: '2026-10-01',
+        check_out_date: '2026-10-03',
+        nights_count: 2,
+        guests_count: 2,
+        total_amount: 2000000,
+        guest_name: 'Trần Thị B',
+        guest_phone: '0912345678',
+        rooms: {
+          name: 'Phòng Mây',
+          lots: { name: 'Vườn Trầm B', region: 'Tây Nguyên' },
+        },
+      },
+      error: null,
+    })
+
+    const printSpy = jest.spyOn(window, 'print').mockImplementation(() => {})
+
+    const element = await BookingVoucherPage({ params: Promise.resolve({ code: 'bkabc123' }) })
+    render(element)
+
+    expect(mockEq).toHaveBeenCalledWith('code', 'BKABC123')
+    const printButton = screen.getByRole('button', { name: /In vé \/ Lưu PDF/i })
+    expect(printButton).toBeInTheDocument()
+    fireEvent.click(printButton)
+    expect(printSpy).toHaveBeenCalled()
+
+    printSpy.mockRestore()
+  })
+
+  it('generates metadata with dynamic booking code and noindex tags', async () => {
+    const meta = await generateMetadata({ params: Promise.resolve({ code: 'bkabc123' }) })
+    expect(meta.title).toBe('Vé đặt phòng BKABC123 - Đại Ngàn Xanh')
+    expect(meta.robots).toEqual({ index: false, follow: false })
   })
 })

@@ -1,6 +1,6 @@
 # Story 11.4: Confirm Booking Payment
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -117,6 +117,20 @@ So that I receive a booking confirmation and offline voucher.
   - [x] `npm test`
   - [x] `npx tsc --noEmit`
   - [x] `npm run build`
+
+### Review Findings
+
+- [x] [Review][Patch] Revalidate lot page `/eco-tourism/[lotId]` on booking confirmation to satisfy AC #10 [src/app/api/webhooks/casso/route.ts:323]
+- [x] [Review][Patch] Redirect unconfirmed bookings on success page to prevent premature confirmation view [src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx:49]
+- [x] [Review][Patch] Add client-side print button (`VoucherPrintButton`) on printable voucher page with `window.print()` [src/components/eco-tourism/VoucherPrintButton.tsx:1]
+- [x] [Review][Patch] Normalize booking code to uppercase in voucher SSR route and metadata [src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx:35]
+- [x] [Review][Patch] Update voucher page metadata title with dynamic booking code and noindex robots tags [src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx:37]
+- [x] [Review][Patch] Add unit tests for lowercase code normalization, print button invocation, and metadata generation [src/app/(marketing)/eco-tourism/voucher/[code]/__tests__/page.test.tsx:132]
+- [x] [Review][Patch] Fix `EcoStayVoucherEmail` default `voucherUrl` to point to voucher page instead of eco-tourism listing [src/emails/EcoStayVoucherEmail.tsx:36]
+- [x] [Review][Patch] Log Supabase error before `notFound()` on voucher page [src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx:81]
+- [x] [Review][Patch] Log QR code generation failure instead of silent catch [src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx:89]
+- [x] [Review][Patch] URL-encode `rawBooking.code` in success page voucher link [src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx:144]
+- [x] [Review][Patch] Assert `voucherUrl` href in `EcoStayVoucherEmail` template test [src/emails/__tests__/templates.test.tsx:61]
 
 ## Dev Notes
 
@@ -273,11 +287,13 @@ Claude Sonnet 5
 - `sendEcoStayVoucherEmail` signature already included `voucherUrl` via `EcoStayVoucherEmailProps`; only needed to pass the value from `processBooking`.
 - Updated email template test expectation from `Xem Chi Tiết Đặt Phòng` to `Xem Vé Offline` to match new CTA copy.
 - Added unit tests for voucher page (5 tests) and success page CTA.
+- Senior Developer Code Review: 11 patches applied and verified (lot page revalidation on confirmation, success page unconfirmed status guard, case-insensitive booking code normalization, dynamic metadata title with booking code, VoucherPrintButton with print:hidden, corrected email default voucher URL, error logging for voucher page/QR, URL-encoded booking code, voucher href assertion, and comprehensive unit tests). All 80 test suites passed (755 tests). Status updated to `done`.
 
 ### File List
 
 - `src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx` (new)
 - `src/app/(marketing)/eco-tourism/voucher/[code]/__tests__/page.test.tsx` (new)
+- `src/components/eco-tourism/VoucherPrintButton.tsx` (new)
 - `src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx` (modified)
 - `src/app/(marketing)/eco-tourism/[lotId]/book/success/__tests__/page.test.tsx` (modified)
 - `src/emails/EcoStayVoucherEmail.tsx` (modified)
@@ -289,3 +305,4 @@ Claude Sonnet 5
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2026-09-05 | 1.0 | Implemented public voucher page, success CTA, email voucher URL, and tests | Dev Agent |
+| 2026-09-07 | 1.1 | Code review: code case normalization, dynamic metadata title, VoucherPrintButton, and tests | Review Agent |

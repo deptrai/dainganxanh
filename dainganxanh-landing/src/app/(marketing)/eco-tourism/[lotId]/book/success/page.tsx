@@ -16,7 +16,10 @@ function formatVND(value: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
+  if (!dateStr) return ''
+  const cleanDate = dateStr.split('T')[0]
+  const d = new Date(cleanDate + 'T00:00:00')
+  if (isNaN(d.getTime())) return dateStr
   return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })
 }
 
@@ -43,7 +46,7 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
     .eq('code', code)
     .maybeSingle()
 
-  if (error || !rawBooking) {
+  if (error || !rawBooking || (rawBooking.status !== 'confirmed' && rawBooking.status !== 'completed')) {
     redirect(`/eco-tourism/${lotId}`)
     return null
   }
@@ -141,7 +144,7 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Link
-              href={`/eco-tourism/voucher/${rawBooking.code}`}
+              href={`/eco-tourism/voucher/${encodeURIComponent(rawBooking.code)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-3 px-4 text-center rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition-colors text-sm flex items-center justify-center gap-2"

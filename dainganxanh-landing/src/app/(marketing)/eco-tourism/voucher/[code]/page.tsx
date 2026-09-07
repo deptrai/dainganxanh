@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { Calendar, MapPin, Moon, Phone, Receipt, Users } from 'lucide-react'
+import { VoucherPrintButton } from '@/components/eco-tourism/VoucherPrintButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,10 @@ function formatVND(value: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
+  if (!dateStr) return ''
+  const cleanDate = dateStr.split('T')[0]
+  const d = new Date(cleanDate + 'T00:00:00')
+  if (isNaN(d.getTime())) return dateStr
   return d.toLocaleDateString('vi-VN', {
     weekday: 'short',
     day: 'numeric',
@@ -26,16 +30,19 @@ function formatDate(dateStr: string): string {
   })
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ params }: VoucherPageProps): Promise<Metadata> {
+  const { code } = await params
+  const cleanCode = code?.trim().toUpperCase()
   return {
-    title: 'Vé đặt phòng - Đại Ngàn Xanh',
+    title: cleanCode ? `Vé đặt phòng ${cleanCode} - Đại Ngàn Xanh` : 'Vé đặt phòng - Đại Ngàn Xanh',
     description: 'Vé đặt phòng nghỉ dưỡng sinh thái Đại Ngàn Xanh.',
     robots: { index: false, follow: false },
   }
 }
 
 export default async function BookingVoucherPage({ params }: VoucherPageProps) {
-  const { code } = await params
+  const rawCode = (await params).code
+  const code = rawCode?.trim().toUpperCase()
 
   if (!code || !BOOKING_CODE_REGEX.test(code)) {
     notFound()
@@ -51,7 +58,12 @@ export default async function BookingVoucherPage({ params }: VoucherPageProps) {
     .in('status', ['confirmed', 'completed'])
     .maybeSingle()
 
-  if (error || !rawBooking) {
+  if (error) {
+    console.error('[Voucher] Failed to load booking:', error)
+    notFound()
+  }
+
+  if (!rawBooking) {
     notFound()
   }
 
@@ -66,13 +78,14 @@ export default async function BookingVoucherPage({ params }: VoucherPageProps) {
   const lotName = lot?.name ?? 'Khu nghỉ dưỡng'
   const region = lot?.region ?? ''
 
-  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? 'https://dainganxanh.com.vn').replace(/\/$/, '')
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://dainganxanh.com.vn').replace(/\/$/, '')
   const voucherUrl = `${baseUrl}/eco-tourism/voucher/${code}`
 
   let qrDataUrl = ''
   try {
     qrDataUrl = await QRCode.toDataURL(voucherUrl, { margin: 1, scale: 5 })
-  } catch {
+  } catch (qrErr) {
+    console.error('[Voucher] Failed to generate QR code:', qrErr)
     qrDataUrl = ''
   }
 
@@ -190,9 +203,12 @@ export default async function BookingVoucherPage({ params }: VoucherPageProps) {
               <li>Nếu cần hỗ trợ đón hoặc nhận phòng muộn, vui lòng liên hệ hotline.</li>
             </ul>
           </div>
-          <div className="flex items-center gap-2 text-emerald-700 font-semibold">
-            <Phone className="w-4 h-4" />
-            <span>Hotline: 1900 8888</span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+            <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+              <Phone className="w-4 h-4" />
+              <span>Hotline: 1900 8888</span>
+            </div>
+            <VoucherPrintButton />
           </div>
           <p className="text-[11px] text-gray-400 text-center break-all">{voucherUrl}</p>
         </div>

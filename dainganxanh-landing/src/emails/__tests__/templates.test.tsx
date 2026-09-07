@@ -58,6 +58,7 @@ describe('Email Templates — Rendering & Content Verification', () => {
     expect(html).toContain('14:00')
     expect(html).toContain('12:00')
     expect(html).toContain('Xem Vé Offline')
+    expect(html).toContain('href="https://dainganxanh.com.vn/eco-tourism/voucher/BK987654"')
   })
 
   test('StoreDispatchEmail renders dispatch tracking and itemized table', () => {

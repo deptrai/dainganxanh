@@ -115,7 +115,7 @@ development_status:
   11-1-browse-gardens: done
   11-2-view-garden-and-room-details: done
   11-3-create-booking-reservation: done
-  11-4-confirm-booking-payment: review
+  11-4-confirm-booking-payment: done
   11-5-cancel-booking: backlog
   11-6-view-my-bookings-crm: backlog
   11-7-admin-booking-management: backlog
@@ -148,11 +148,11 @@ development_status:
 # Summary
 summary:
   total_epics: 13
-  total_stories: 68
+  total_stories: 70
   stories_ready: 0
   stories_in_progress: 0
-  stories_review: 1
-  stories_done: 56
+  stories_review: 0
+  stories_done: 57
   stories_backlog: 13
   current_velocity: 11
-  last_updated: "2026-09-07T19:30:00+07:00"
+  last_updated: "2026-09-07T19:45:00+07:00"

@@ -306,21 +306,29 @@ async function processBooking(
   revalidatePath('/eco-tourism')
   notifyBookingConfirmed(orderCode, booking.guest_name ?? '', booking.total_amount)
 
-  // Send Eco-Stay Voucher email asynchronously (non-blocking)
+  // Revalidate lot page and send Eco-Stay Voucher email asynchronously (non-blocking)
   // Note: avoid next/after here because tests invoke this handler outside a request scope.
-  if (booking.guest_email) {
-    (async () => {
-      try {
-        const { data: roomData, error: roomError } = await supabase
-          .from('rooms')
-          .select('name, lots(name, region)')
-          .eq('id', booking.room_id ?? '')
-          .single()
+  ;(async () => {
+    try {
+      const { data: roomData, error: roomError } = await supabase
+        .from('rooms')
+        .select('name, lot_id, lots(name, region)')
+        .eq('id', booking.room_id ?? '')
+        .single()
 
-        if (roomError) {
-          throw new Error(`Failed to load room data: ${roomError.message}`)
+      if (roomError) {
+        console.error('[Casso] Failed to load room data for revalidation/email:', roomError)
+      }
+
+      if (roomData?.lot_id) {
+        try {
+          revalidatePath(`/eco-tourism/${roomData.lot_id}`, 'page')
+        } catch {
+          // best-effort revalidation
         }
+      }
 
+      if (booking.guest_email) {
         const roomName = roomData?.name || 'Phòng nghỉ sinh thái'
         const lotInfo = (roomData as any)?.lots
         const gardenName = lotInfo?.name
@@ -330,7 +338,7 @@ async function processBooking(
           ? (lotInfo.region.startsWith('Khu vực') ? lotInfo.region : `Khu vực ${lotInfo.region}`)
           : undefined
 
-        const voucherBaseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? "https://dainganxanh.com.vn").replace(/\/$/, "")
+        const voucherBaseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "https://dainganxanh.com.vn").replace(/\/$/, "")
         const voucherUrl = `${voucherBaseUrl}/eco-tourism/voucher/${orderCode}`
 
         await sendEcoStayVoucherEmail({
@@ -348,17 +356,17 @@ async function processBooking(
           guestsCount: booking.guests_count || 1,
           totalAmount: booking.total_amount,
         })
-      } catch (emailErr) {
-        console.error('[Casso] Failed to send voucher email:', emailErr)
-        captureError(emailErr instanceof Error ? emailErr : new Error(String(emailErr)), {
-          route: '/api/webhooks/casso',
-          orderType: 'booking',
-          orderCode,
-          action: 'send_voucher_email',
-        })
       }
-    })()
-  }
+    } catch (postErr) {
+      console.error('[Casso] Failed in booking post-confirmation processing:', postErr)
+      captureError(postErr instanceof Error ? postErr : new Error(String(postErr)), {
+        route: '/api/webhooks/casso',
+        orderType: 'booking',
+        orderCode,
+        action: 'booking_post_confirmation',
+      })
+    }
+  })()
 
   return { ok: true }
 }
