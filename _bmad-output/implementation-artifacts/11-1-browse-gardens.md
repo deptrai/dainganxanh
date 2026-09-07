@@ -1,6 +1,6 @@
 # Story 11.1: Browse Gardens
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -43,25 +43,25 @@ So that I can choose a location.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `/eco-tourism` route (AC: #1, #6)
-  - [ ] Add `src/app/(marketing)/eco-tourism/page.tsx` with SSR and `revalidate`
-  - [ ] Add OpenGraph / canonical metadata
-  - [ ] Add JSON-LD structured data
-- [ ] Task 2: Implement garden data query (AC: #2)
-  - [ ] Query `lots` joined with at least one active `rooms` row
-  - [ ] Compute `price_from` as `MIN(rooms.price_per_night)` per lot
-  - [ ] Transform result to `GardenCard` props
-- [ ] Task 3: Build UI components (AC: #2, #3)
-  - [ ] Create `GardenCard` component (image, name, region badge, price, CTA)
-  - [ ] Create `RegionFilter` component (tabs for Tất cả / Miền Bắc / Miền Trung / Miền Nam)
-  - [ ] Create `EcoTourismClient` for client-side filter state (hydration-safe)
-- [ ] Task 4: Empty/loading states (AC: #5)
-  - [ ] Empty state when no active lots
-  - [ ] Optional `loading.tsx` for route
-- [ ] Task 5: Tests (AC: #2, #3, #5)
-  - [ ] Add unit test for `GardenCard` rendering
-  - [ ] Add test for region filter logic
-  - [ ] Add Next.js route integration test (optional) mocking Supabase
+- [x] Task 1: Create `/eco-tourism` route (AC: #1, #6)
+  - [x] Add `src/app/(marketing)/eco-tourism/page.tsx` with SSR and `revalidate`
+  - [x] Add OpenGraph / canonical metadata
+  - [x] Add JSON-LD structured data
+- [x] Task 2: Implement garden data query (AC: #2)
+  - [x] Query `lots` joined with at least one active `rooms` row
+  - [x] Compute `price_from` as `MIN(rooms.price_per_night)` per lot
+  - [x] Transform result to `GardenCard` props
+- [x] Task 3: Build UI components (AC: #2, #3)
+  - [x] Create `GardenCard` component (image, name, region badge, price, CTA)
+  - [x] Create `RegionFilter` component (tabs for Tất cả / Miền Bắc / Miền Trung / Miền Nam)
+  - [x] Create `EcoTourismClient` for client-side filter state (hydration-safe)
+- [x] Task 4: Empty/loading states (AC: #5)
+  - [x] Empty state when no active lots
+  - [x] Optional `loading.tsx` for route
+- [x] Task 5: Tests (AC: #2, #3, #5)
+  - [x] Add unit test for `GardenCard` rendering
+  - [x] Add test for region filter logic
+  - [x] Add Next.js route integration test (optional) mocking Supabase
 
 ## Validation Findings
 
@@ -160,9 +160,32 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+- `npm run lint` passed
+- `npm test` all 66 suites passed
+- `npm run build` compiled /eco-tourism route successfully
+
 ### Completion Notes List
 
+- Implemented public `/eco-tourism` listing page with SSR, `revalidate = 3600`, Vietnamese metadata and OpenGraph canonical.
+- Added `lots.images` support via new migration `supabase/migrations/20260907000200_eco_tourism_lot_images_and_schema_fixes.sql`.
+- Query joins `rooms!inner` and filters `rooms.status = 'active'`; only lots with at least one active room are shown.
+- `price_from` is computed server-side as `MIN(rooms.price_per_night)`.
+- Region filter is client-side with tabs: Tất cả / Miền Bắc / Miền Trung / Miền Nam. Matching is case-insensitive and trims whitespace.
+- Added JSON-LD `ItemList` with canonical URLs.
+- Created `loading.tsx` and empty state.
+- Added unit tests for `GardenCard`, `EcoTourismClient`, and page-level render with mocked Supabase.
+
 ### File List
+
+- `src/app/(marketing)/eco-tourism/page.tsx`
+- `src/app/(marketing)/eco-tourism/loading.tsx`
+- `src/app/(marketing)/eco-tourism/__tests__/page.test.tsx`
+- `src/components/eco-tourism/EcoTourismClient.tsx`
+- `src/components/eco-tourism/GardenCard.tsx`
+- `src/components/eco-tourism/__tests__/GardenCard.test.tsx`
+- `src/components/eco-tourism/__tests__/EcoTourismClient.test.tsx`
+- `supabase/migrations/20260907000200_eco_tourism_lot_images_and_schema_fixes.sql`
+- `_bmad-output/planning-artifacts/architecture.md`
 
 ## References
 

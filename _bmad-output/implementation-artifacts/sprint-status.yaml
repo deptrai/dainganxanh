@@ -1,4 +1,5 @@
 # Sprint Status - Đại Ngàn Xanh
+last_updated: 2026-09-07T14:29:18.007651
 # Generated: 2026-09-05T08:15:00+07:00
 # ⚠️ DO NOT manually edit status values - use workflows to update
 
@@ -111,7 +112,7 @@ development_status:
 
   # Epic 11: Eco-Stay (Room Booking) - Added 2026-09-05
   epic-11: in-progress
-  11-1-browse-gardens: ready-for-dev
+  11-1-browse-gardens: review
   11-2-view-garden-and-room-details: backlog
   11-3-create-booking-reservation: backlog
   11-4-confirm-booking-payment: backlog
