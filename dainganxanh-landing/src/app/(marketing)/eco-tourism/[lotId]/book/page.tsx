@@ -65,7 +65,10 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     const checkIn = searchParamsResolved.check_in
     const checkOut = searchParamsResolved.check_out
 
-    if (!roomId || !isValidDate(checkIn) || !isValidDate(checkOut)) {
+    const nowVN = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    const todayVN = nowVN.toISOString().slice(0, 10)
+
+    if (!roomId || !isValidDate(checkIn) || !isValidDate(checkOut) || checkIn >= checkOut || checkIn < todayVN) {
         redirect(`/eco-tourism/${lotId}`)
         return null
     }

@@ -52,11 +52,19 @@ describe('BookingPage SSR', () => {
     mockIn.mockResolvedValue({ data: [] })
   })
 
-  it('redirects to /eco-tourism/[lotId] if query parameters are missing', async () => {
+  it('redirects to /eco-tourism/[lotId] if query parameters are missing or dates invalid', async () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({ room_id: '', check_in: '', check_out: '' })
 
     await BookingPage({ params, searchParams })
+    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+
+    const invalidDates = Promise.resolve({
+      room_id: 'r1',
+      check_in: '2026-10-05',
+      check_out: '2026-10-02',
+    })
+    await BookingPage({ params, searchParams: invalidDates })
     expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
   })
 

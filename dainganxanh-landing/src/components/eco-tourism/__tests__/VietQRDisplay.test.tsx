@@ -114,6 +114,23 @@ describe('VietQRDisplay Component', () => {
     })
   })
 
+  it('polls status every 5 seconds and calls onExpired when cancelled or expired', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'cancelled' }),
+    })
+
+    render(<VietQRDisplay {...defaultProps} />)
+
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+
+    await waitFor(() => {
+      expect(defaultProps.onExpired).toHaveBeenCalled()
+    })
+  })
+
   it('calls onExpired when timer reaches 0', () => {
     const pastProps = {
       ...defaultProps,

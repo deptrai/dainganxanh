@@ -58,6 +58,10 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                 if (pollRef.current) clearInterval(pollRef.current)
                 if (timerRef.current) clearInterval(timerRef.current)
                 onSuccess()
+            } else if (data.status === 'cancelled' || data.status === 'expired') {
+                if (pollRef.current) clearInterval(pollRef.current)
+                if (timerRef.current) clearInterval(timerRef.current)
+                onExpired()
             }
         } catch {
             // silent fail

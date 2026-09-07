@@ -73,7 +73,7 @@ export function OrderSummary({ roomId, checkIn, checkOut, guestsCount, roomName,
         new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
 
     const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr)
+        const d = new Date(dateStr + 'T00:00:00')
         return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })
     }
 

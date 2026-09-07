@@ -1,6 +1,6 @@
 # Story 11.3: Create Booking Reservation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -67,6 +67,14 @@ So that I can pay later via bank transfer.
 - [x] Task 9: Wire form -> payment flow.
 - [x] Task 10: Build booking success page.
 - [x] Task 11: Write tests.
+
+### Review Findings
+
+- [x] [Review][Patch] Missing cancellation_reason column in migration [supabase/migrations/20260908000001_add_payment_claimed_at_to_room_bookings.sql:1]
+- [x] [Review][Patch] Stop polling and handle expired/cancelled status in VietQRDisplay [src/components/eco-tourism/VietQRDisplay.tsx:57]
+- [x] [Review][Patch] Validate checkIn < checkOut and not in past on booking SSR page [src/app/(marketing)/eco-tourism/[lotId]/book/page.tsx:68]
+- [x] [Review][Patch] Fix timezone shift in date formatting across OrderSummary and BookingSuccessPage [src/components/eco-tourism/OrderSummary.tsx:73]
+- [x] [Review][Patch] Trim guest_name and guest_phone in BookingForm before submit [src/components/eco-tourism/BookingForm.tsx:75]
 
 ## Dev Notes
 
@@ -170,6 +178,7 @@ Claude Sonnet 5 (claude-sonnet-5)
 - Task 10: Built `src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx` displaying booking code, room, dates, nights, guests, total amount, and check-in instructions.
 - Task 11: Added unit and integration tests across 6 test suites: `page.test.tsx` (book SSR), `BookingPageClient.test.tsx`, `BookingForm.test.tsx`, `OrderSummary.test.tsx`, `VietQRDisplay.test.tsx`, `status/route.test.ts`, `claim-payment/route.test.ts`, `cancel/route.test.ts`, `success/page.test.tsx`.
 - Verification: 79 test suites passed, 746 tests passed, TypeScript `tsc --noEmit` passed with 0 errors, Next.js build succeeded.
+- Senior Developer Code Review: 5 patches applied and verified (migration column `cancellation_reason`, terminal status polling in VietQRDisplay, SSR date order validation `checkIn < checkOut` and future dates, timezone-safe date formatting, trimmed input fields). All 79 test suites passed (747 tests). Status updated to `done`.
 
 ### File List
 
