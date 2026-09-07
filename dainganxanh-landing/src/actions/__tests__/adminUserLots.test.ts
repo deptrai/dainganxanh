@@ -145,6 +145,12 @@ describe('[P1] assignLotToUser', () => {
             eq: jest.fn().mockReturnThis(),
             single: jest.fn().mockResolvedValue({ data: { id: 'l1' }, error: null }),
         })
+        // existing assignment check
+        mockServiceFrom.mockReturnValueOnce({
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({ data: null, error: null }),
+        })
         // upsert
         mockServiceFrom.mockReturnValueOnce({
             upsert: jest.fn().mockResolvedValue({ error: null }),
@@ -182,10 +188,9 @@ describe('[P1] removeLotFromUser', () => {
     test('removes lot successfully', async () => {
         mockSuperAdmin()
 
-        // existing assignment check
+        // existing assignment check (select().eq().eq().single() chain)
         mockServiceFrom.mockReturnValueOnce({
             select: jest.fn().mockReturnThis(),
-            eq: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             single: jest.fn().mockResolvedValue({ data: { role: 'resort_manager' }, error: null }),
         })

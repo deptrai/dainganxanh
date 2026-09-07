@@ -20,6 +20,7 @@ BEGIN
     END IF;
 
     -- Policy: store_staff can manage orders for their assigned lots
+    -- Orders with NULL lot_id are not accessible by store_staff (require lot scoping)
     IF NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE schemaname = 'public' AND tablename = 'store_orders' AND policyname = 'store_staff_store_orders'
@@ -27,7 +28,8 @@ BEGIN
       CREATE POLICY "store_staff_store_orders" ON public.store_orders
         FOR ALL TO authenticated
         USING (
-          EXISTS (
+          store_orders.lot_id IS NOT NULL
+          AND EXISTS (
             SELECT 1 FROM public.admin_user_lots aul
             WHERE aul.user_id = auth.uid()
               AND aul.lot_id = store_orders.lot_id
@@ -35,7 +37,8 @@ BEGIN
           )
         )
         WITH CHECK (
-          EXISTS (
+          store_orders.lot_id IS NOT NULL
+          AND EXISTS (
             SELECT 1 FROM public.admin_user_lots aul
             WHERE aul.user_id = auth.uid()
               AND aul.lot_id = store_orders.lot_id

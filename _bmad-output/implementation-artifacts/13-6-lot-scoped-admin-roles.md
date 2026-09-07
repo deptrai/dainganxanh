@@ -1,6 +1,6 @@
 # Story 13.6: Lot-Scoped Admin Roles
 
-Status: review
+Status: done
 
 ## Story
 
@@ -211,6 +211,43 @@ CREATE POLICY "lot_manager_room_bookings" ON public.room_bookings
 - [Source: src/actions/adminOrders.ts]
 - [Source: src/actions/lots.ts]
 - [Source: _bmad-output/planning-artifacts/ux-design-specification.md#Admin-pages]
+
+
+### Review Findings
+
+Review date: 2026-09-07
+Review scope: commit 26c644de — Story 13.6 lot-scoped admin roles
+Review mode: full (with spec)
+Layers: blind + edge + acceptance auditor
+
+#### decision-needed
+
+- [x] [Review][Decision] D1 — RESOLVED: restrict createLot to global admin/super_admin only — `createLot` accessible to any lot-scoped user [src/actions/lots.ts:verifyAdminRole()] — `verifyAdminRole()` with no `lotId` returns success if user has any `admin_user_lots` assignment. `createLot` calls `verifyAdminRole()` so any `resort_manager`/`store_staff` can create lots. Options: (a) restrict to global admin/super_admin only; (b) allow any lot-scoped user; (c) allow lot-scoped user to create lot only if auto-assigned as manager.
+- [x] [Review][Decision] D2 — RESOLVED: added fetchAssignedLots for lot-scoped users; fetchLots remains global admin — `fetchLots()` accessible to any lot-scoped user (leaks all lots) [src/actions/lots.ts:fetchLots()] — `fetchLots` is used by lot-assignment UI and other admin flows. With `verifyAdminRole()` (no lotId), any lot-scoped user can list every lot, not just assigned lots. Options: (a) keep as-is for UI convenience; (b) filter to assigned lots for non-global admins; (c) separate `fetchAllLots` (super_admin) and `fetchAssignedLots` (lot-scoped).
+- [x] [Review][Decision] D3 — RESOLVED: getUserHighestRole now ranks lot-scoped roles — `getUserHighestRole` semantics — "highest" or "most recent"? [src/lib/admin/permissions.ts:getUserHighestRole()] — Function returns `lots[0].role` from `getAdminUserLots` ordered by `created_at DESC`. If user has both `store_staff` and `resort_manager`, it returns whichever was assigned most recently. Options: (a) keep "most recent" and rename function; (b) implement ranking (`super_admin` > `resort_manager` > `store_staff`) and return highest across all assignments.
+
+#### patch
+
+- [x] [Review][Patch] P1 — FIXED: assignLotToUser preserves created_by on role change — `assignLotToUser` should not overwrite `created_by` on conflict [src/actions/adminUserLots.ts:assignLotToUser()] — Upsert sets `created_by: user.id` and `updated_at`. On conflict this rewrites `created_by` to current admin, erasing original creator. Preserve `created_by` and only update `role` and `updated_at`.
+- [x] [Review][Patch] P2 — FIXED: page.tsx uses LotScopedRole cast instead of as any — `assignLotToUser` type assertion `as any` in page.tsx [src/app/crm/admin/users/[id]/lots/page.tsx:handleAssign()] — `assignLotToUser(id, selectedLot, selectedRole as any)` defeats type safety. Validate against `ROLE_OPTIONS` and cast to `LotScopedRole` safely.
+- [x] [Review][Patch] P3 — FIXED: getUserHighestRole ranks by role priority — `getUserHighestRole` should rank roles, not pick newest [src/lib/admin/permissions.ts:getUserHighestRole()] — Depends on D3 resolution. If ranked, implement proper role ranking.
+- [x] [Review][Patch] P4 — FIXED: added fetchAssignedLots for lot-scoped lot listing — `fetchLots` should filter lots for lot-scoped users [src/actions/lots.ts:fetchLots()] — Depends on D2 resolution. If filter, restrict `fetchLots` to assigned lots for non-global admins.
+- [x] [Review][Patch] P5 — FIXED: createLot requires global admin/super_admin — `createLot` should be global-admin only [src/actions/lots.ts:createLot()] — Depends on D1 resolution. If restricted, enforce `admin`/`super_admin`.
+- [x] [Review][Patch] P6 — FIXED: store_staff_store_orders policy explicitly requires non-null lot_id — `store_staff_store_orders` policy denies rows with NULL `lot_id` [supabase/migrations/20260907000001_add_store_orders_lot_id.sql] — Policy `aul.lot_id = store_orders.lot_id` makes orders with `lot_id = NULL` invisible to `store_staff`. Add fallback or require `lot_id` not null.
+- [x] [Review][Patch] P7 — FIXED: public_read_products policy guarded by status column existence — `public_read_products` policy assumes `status` column exists [supabase/migrations/20260907000000_add_admin_user_lots.sql] — `USING (status = 'active')` will error if `products` table lacks a `status` column. Guard with `IF EXISTS` column check or defer until products table is finalized.
+- [x] [Review][Patch] P8 — DEFERRED: adminOrders.ts is tree-order management; store order lot-scoping handled by RLS and future store order actions — `adminOrders.ts` not updated for lot-scoped filtering [src/actions/adminOrders.ts] — AC #5 says update `adminOrders.ts` to accept optional `lotId` and enforce `canAccessLot`. This was not done. Add lot-scoped enforcement or explicitly document as out-of-scope.
+
+#### defer
+
+- [x] [Review][Defer] DF1 — Layout allows lot-scoped users into all `/crm/admin/*` pages [src/app/crm/admin/layout.tsx] — Per-AC #3 this is intended; per-page actions still enforce permissions. Page-level gating is future work.
+- [x] [Review][Defer] DF2 — No RLS integration tests — Testing RLS cross-lot denial requires Supabase test harness; existing Jest unit tests don't cover it.
+- [x] [Review][Defer] DF3 — No explicit regression test for existing admin without `admin_user_lots` — Backward compatibility implicitly covered by `lots.test.ts` but not an explicit test case.
+
+#### dismiss
+
+- [x] [Review][Dismiss] DS1 — Target user/lot existence checks use `.single()` without checking `error` — Null checks are sufficient; safe failure mode.
+- [x] [Review][Dismiss] DS2 — Race condition in concurrent assign/remove — Unique constraint prevents duplicates.
+- [x] [Review][Dismiss] DS3 — `use(params)` rejection not handled — Standard Next.js 15 behavior.
 
 ## Dev Agent Record
 

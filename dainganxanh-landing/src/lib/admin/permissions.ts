@@ -1,6 +1,14 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { AdminUserLot, LotScopedRole } from '@/types/admin'
 
+const ROLE_RANK: Record<string, number> = {
+  super_admin: 4,
+  admin: 3,
+  resort_manager: 2,
+  store_staff: 1,
+  user: 0,
+}
+
 /**
  * Fetch all lot-scoped role assignments for a user.
  * Uses service role to bypass RLS and read the mapping table.
@@ -65,7 +73,8 @@ export async function canAccessLot(
 
 /**
  * Return the highest effective role for a user.
- * Global roles take precedence over lot-scoped roles.
+ * Global roles take precedence over lot-scoped roles; among lot-scoped
+ * roles, the highest ranked role wins (super_admin > resort_manager > store_staff).
  */
 export async function getUserHighestRole(userId: string): Promise<string> {
   const supabase = createServiceRoleClient()
@@ -86,7 +95,12 @@ export async function getUserHighestRole(userId: string): Promise<string> {
   const lots = await getAdminUserLots(userId)
   if (lots.length === 0) return user?.role || 'user'
 
-  return lots[0].role
+  // Pick the highest-ranked lot-scoped role, not just the most recent
+  const highest = lots.reduce((best, lot) => {
+    return (ROLE_RANK[lot.role] || 0) > (ROLE_RANK[best.role] || 0) ? lot : best
+  }, lots[0])
+
+  return highest.role
 }
 
 /**

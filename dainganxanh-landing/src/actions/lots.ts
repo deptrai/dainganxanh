@@ -3,6 +3,7 @@
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { canAccessLot, getAdminUserLots } from '@/lib/admin/permissions'
 
+
 interface LotData {
     name: string
     region: string
@@ -55,13 +56,13 @@ async function verifyAdminRole(lotId?: string): Promise<{ userId: string | null;
         return { userId: user.id, error: null }
     }
 
-    // If no lotId provided, the user must have at least one lot assignment
+    // If no lotId provided, only global admins may proceed.
+    // Lot-scoped users must use lot-specific actions (e.g. updateLot, fetchAssignedLots).
     if (!lotId) {
-        const assignments = await getAdminUserLots(user.id)
-        if (assignments.length === 0) {
-            return { userId: null, error: 'Bạn không có quyền thực hiện hành động này' }
+        if (['admin', 'super_admin'].includes(profile.role)) {
+            return { userId: user.id, error: null }
         }
-        return { userId: user.id, error: null }
+        return { userId: null, error: 'Bạn không có quyền thực hiện hành động này' }
     }
 
     // Lot-scoped check for non-global roles
@@ -156,6 +157,61 @@ export async function fetchLots(): Promise<FetchLotsResult> {
 
     if (error) {
         console.error('Error fetching lots:', error)
+        return { lots: [], error: error.message }
+    }
+
+    return { lots: (data || []) as LotSummary[] }
+}
+
+export async function fetchAssignedLots(): Promise<FetchLotsResult> {
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+        return { lots: [], error: 'Unauthorized' }
+    }
+
+    const serviceClient = createServiceRoleClient()
+    const { data: profile, error: profileError } = await serviceClient
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profileError || !profile) {
+        return { lots: [], error: 'Không thể xác minh quyền truy cập' }
+    }
+
+    // Global admins see all lots
+    if (['admin', 'super_admin'].includes(profile.role)) {
+        const { data, error } = await serviceClient
+            .from('lots')
+            .select('id, name, region, description, total_trees, planted')
+            .order('name')
+
+        if (error) {
+            console.error('Error fetching lots:', error)
+            return { lots: [], error: error.message }
+        }
+
+        return { lots: (data || []) as LotSummary[] }
+    }
+
+    // Lot-scoped users only see their assigned lots
+    const assignments = await getAdminUserLots(user.id)
+    if (assignments.length === 0) {
+        return { lots: [] }
+    }
+
+    const lotIds = assignments.map((a) => a.lot_id)
+    const { data, error } = await serviceClient
+        .from('lots')
+        .select('id, name, region, description, total_trees, planted')
+        .in('id', lotIds)
+        .order('name')
+
+    if (error) {
+        console.error('Error fetching assigned lots:', error)
         return { lots: [], error: error.message }
     }
 

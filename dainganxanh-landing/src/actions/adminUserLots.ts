@@ -133,13 +133,30 @@ export async function assignLotToUser(
         return { success: false, error: 'Lô không tồn tại' }
     }
 
-    const { error: upsertError } = await serviceClient.from('admin_user_lots').upsert({
+    // Check for existing assignment to preserve created_by on role change
+    const { data: existingAssignment } = await serviceClient
+        .from('admin_user_lots')
+        .select('id, created_by')
+        .eq('user_id', targetUserId)
+        .eq('lot_id', lotId)
+        .single()
+
+    const assignData: Record<string, unknown> = {
         user_id: targetUserId,
         lot_id: lotId,
         role,
-        created_by: user.id,
         updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,lot_id' })
+    }
+
+    // Only set created_by on insert, not on role change
+    if (!existingAssignment) {
+        assignData.created_by = user.id
+    }
+
+    const { error: upsertError } = await serviceClient.from('admin_user_lots').upsert(
+        assignData,
+        { onConflict: 'user_id,lot_id', ignoreDuplicates: false }
+    )
 
     if (upsertError) {
         console.error('assignLotToUser error:', upsertError)

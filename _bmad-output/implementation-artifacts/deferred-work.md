@@ -1,3 +1,9 @@
+## Deferred from: code review of 13-6-lot-scoped-admin-roles (2026-09-07)
+
+- DF1 — Layout allows lot-scoped users into all `/crm/admin/*` pages [src/app/crm/admin/layout.tsx] — Per-AC #3 this is intended; per-page actions still enforce permissions. Page-level gating is future work.
+- DF2 — No RLS integration tests — Testing RLS cross-lot denial requires Supabase test harness.
+- DF3 — No explicit regression test for existing admin without `admin_user_lots` — Backward compatibility implicitly covered by `lots.test.ts` but not an explicit test case.
+
 # Deferred Work
 
 ## Deferred from: code review of story-10.1 (2026-03-28)

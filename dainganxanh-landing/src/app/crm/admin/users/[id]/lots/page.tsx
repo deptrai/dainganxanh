@@ -8,6 +8,7 @@ import {
     removeLotFromUser,
     AdminUserLotAssignment,
 } from '@/actions/adminUserLots'
+import { LotScopedRole } from '@/types/admin'
 import { fetchLots } from '@/actions/lots'
 
 interface PageParams {
@@ -72,7 +73,7 @@ export default function UserLotsPage({ params }: { params: Promise<PageParams> }
         setError(null)
         setSuccess(null)
 
-        const result = await assignLotToUser(id, selectedLot, selectedRole as any)
+        const result = await assignLotToUser(id, selectedLot, selectedRole as LotScopedRole)
         setSubmitting(false)
 
         if (result.error) {

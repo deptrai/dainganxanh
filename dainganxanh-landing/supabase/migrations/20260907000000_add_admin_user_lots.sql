@@ -262,8 +262,11 @@ BEGIN
         );
     END IF;
 
-    -- Public read access for active products (already typical for store pages)
-    IF NOT EXISTS (
+    -- Public read access for active products (only if status column exists)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'status'
+    ) AND NOT EXISTS (
       SELECT 1 FROM pg_policies
       WHERE schemaname = 'public' AND tablename = 'products' AND policyname = 'public_read_products'
     ) THEN
