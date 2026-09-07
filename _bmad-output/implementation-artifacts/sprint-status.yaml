@@ -10,7 +10,7 @@
 # - done: Hoàn thành tất cả AC và passed review
 
 generated: "2026-09-05T08:15:00+07:00"
-last_updated: "2026-09-06"
+last_updated: "2026-09-07"
 project: "Đại Ngàn Xanh"
 project_key: "NOKEY"
 tracking_system: "file-system"
@@ -141,17 +141,17 @@ development_status:
   13-3-inventory-reservation-and-release: done
   13-4-server-side-price-validation: done
   13-5-transactional-email-templates: done
-  13-6-lot-scoped-admin-roles: backlog
+  13-6-lot-scoped-admin-roles: ready-for-dev
   epic-13-retrospective: optional
 
 # Summary
 summary:
   total_epics: 13
   total_stories: 68
-  stories_ready: 0
+  stories_ready: 1
   stories_in_progress: 0
   stories_review: 0
   stories_done: 52
-  stories_backlog: 16
+  stories_backlog: 15
   current_velocity: 11
-  last_updated: "2026-09-06"
+  last_updated: "2026-09-07"
