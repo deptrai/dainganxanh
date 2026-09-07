@@ -149,10 +149,10 @@ development_status:
 summary:
   total_epics: 13
   total_stories: 68
-  stories_ready: 3
+  stories_ready: 1
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 55
-  stories_backlog: 11
+  stories_done: 56
+  stories_backlog: 13
   current_velocity: 11
   last_updated: "2026-09-07T18:30:00+07:00"

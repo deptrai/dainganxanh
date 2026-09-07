@@ -14,7 +14,7 @@ So that I receive a booking confirmation and offline voucher.
 
 1. **Casso webhook dispatch to booking handler (already implemented in 13.1):**
    - `POST /api/webhooks/casso` reads transaction description, extracts order-code prefix `BK`, and routes to the booking handler (`processBooking`).
-   - The booking handler finds the pending `room_bookings` row by `code` (without prefix) and matches the incoming `amount` against `total_amount`.
+   - The booking handler finds the pending `room_bookings` row by `code` (including the `BK` prefix; database stores `code` as `BK` + 6 chars) and matches the incoming `amount` against `total_amount`.
    - AC #1 from 13.1 already guarantees dispatch + `payment_transactions` ledger logging + idempotency.
 
 2. **Booking status confirmation (already implemented in 13.1):**
@@ -62,7 +62,7 @@ So that I receive a booking confirmation and offline voucher.
      - A scannable QR code encoding the same public voucher URL
      - Contact hotline and check-in instructions
    - **And** the page returns 404 if the booking code does not exist or status is not `confirmed` or `completed`
-   - **And** PII such as `guest_email`, `user_id`, and internal `id` is NOT exposed in the page or HTML source
+   - **And** PII such as `guest_email`, `user_id`, internal `id`, `room_id`, `expires_at`, `payment_claimed_at`, `payment_ref`, `cancellation_reason`, `created_at`, and `updated_at` is NOT exposed in the page or HTML source
 
 8. **Voucher CTA on success page (NEW):**
    - **Given** a confirmed booking on the success page
@@ -82,11 +82,13 @@ So that I receive a booking confirmation and offline voucher.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Verify `processBooking` fully confirms room bookings (AC: #2)
-  - [ ] Read `src/app/api/webhooks/casso/route.ts` `processBooking` function
-  - [ ] Confirm it updates `status='confirmed'`, `payment_ref`, `expires_at=null`
-  - [ ] Confirm it calls `revalidatePath` and `notifyBookingConfirmed`
-  - [ ] Confirm it sends `sendEcoStayVoucherEmail` when `guest_email` present
+- [ ] Task 1: Review existing implementation (AC: #1-#6, #9, #10)
+  - [ ] Confirm `src/app/api/webhooks/casso/route.ts` `processBooking` already:
+  - [ ] Finds pending booking by `code` with `BK` prefix
+  - [ ] Confirms it updates `status='confirmed'`, `payment_ref`, `expires_at=null`
+  - [ ] Confirms it calls `revalidatePath`, `notifyBookingConfirmed`
+  - [ ] Confirms `GET /api/bookings/status` returns `confirmed` and `VietQRDisplay` redirects correctly
+  - [ ] Confirms it sends `sendEcoStayVoucherEmail` when `guest_email` present
 - [ ] Task 2: Implement public offline voucher page (AC: #7)
   - [ ] Create `src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx`
   - [ ] Fetch booking by code using `createServiceRoleClient`
@@ -102,7 +104,8 @@ So that I receive a booking confirmation and offline voucher.
   - [ ] Read `src/emails/EcoStayVoucherEmail.tsx`
   - [ ] Ensure it links to public voucher page URL
 - [ ] Task 5: Update `sendEcoStayVoucherEmail` arguments to include voucher URL if not already (AC: #9)
-  - [ ] Add `voucherUrl` prop if missing
+  - [ ] Replace `crmBookingUrl` default `https://dainganxanh.com.vn/crm/my-bookings` with `voucherUrl` prop pointing to `/eco-tourism/voucher/[code]`
+  - [ ] Pass `voucherUrl` from `processBooking` in webhook route
 - [ ] Task 6: Write tests
   - [ ] Unit test public voucher page: `src/app/(marketing)/eco-tourism/voucher/[code]/__tests__/page.test.tsx`
     - [ ] 200 for confirmed booking, 404 for non-existent, 404 for pending/cancelled
@@ -137,16 +140,20 @@ The email template from Story 13.5 already contains:
 - `src/emails/EcoStayVoucherEmail.tsx` for booking voucher emails
 - `src/lib/email/` mailer client with Resend fallback and `email_logs` table logging
 
+### Important: Booking Code Format
+
+`room_bookings.code` is stored **WITH** the `BK` prefix (e.g., `BKABC123`). `generateBookingCode()` returns `BK` + 6 chars. `findPendingOrder` queries `.eq("code", orderCode)` where `orderCode` already includes `BK`. Do NOT strip the prefix when querying.
+
 ### What Needs Implementation
 
 1. **Public offline voucher page** is missing. Need a public, PII-safe, printable voucher view.
 2. **Voucher CTA on success page** is missing.
-3. **Voucher link in `EcoStayVoucherEmail`** may be missing or may need to point to the new public page.
+3. **Voucher link in `EcoStayVoucherEmail`** currently points to `/crm/my-bookings` (Story 11.6 not implemented); must be updated to `/eco-tourism/voucher/[code]` and `sendEcoStayVoucherEmail` must accept `voucherUrl`.
 
 ### Architecture Compliance
 
 - **File structure:**
-  - `src/app/api/webhooks/casso/route.ts` (verify existing `processBooking`)
+  - `src/app/api/webhooks/casso/route.ts` (update `sendEcoStayVoucherEmail` call to pass `voucherUrl`)
   - `src/app/(marketing)/eco-tourism/voucher/[code]/page.tsx` (NEW voucher page)
   - `src/lib/qrcode.ts` or inline QR code generation helper
   - `src/app/(marketing)/eco-tourism/[lotId]/book/success/page.tsx` (add voucher CTA)
@@ -155,13 +162,21 @@ The email template from Story 13.5 already contains:
 
 - **Database:**
   - `room_bookings.status` enum: `pending`, `confirmed`, `completed`, `cancelled`, `no_show`
-  - `room_bookings.code` is stored WITHOUT `BK` prefix
+  - `room_bookings.code` is stored WITH `BK` prefix (e.g., `BKABC123`)
   - `payment_transactions.status` enum: `pending`, `matched`, `amount_mismatch`, `stale`, `duplicate`
 
 - **QR Code generation:**
-  - Option A: Use `qrcode` npm package (already common) to generate data URL server-side.
-  - Option B: Use a third-party QR API, but avoid external network dependency; prefer server-side rendering.
-  - If adding dependency, run `npm install qrcode @types/qrcode --save`.
+  - Use `qrcode` npm package already in `package.json` to generate a data URL server-side.
+  - `qrcode` and `qrcode.react` are already installed; no `npm install` needed.
+  - Example: `import QRCode from 'qrcode'; const dataUrl = await QRCode.toDataURL(voucherUrl, { margin: 1, scale: 4 })`
+
+- **SEO / metadata for voucher page:**
+  - Add `metadata.robots: 'noindex, nofollow'` or equivalent because voucher page is personal and not meant for search indexing.
+  - Keep `generateMetadata` minimal (e.g., title "Vé đặt phòng - Đại Ngàn Xanh").
+
+- **Environment variables:**
+  - `NEXT_PUBLIC_BASE_URL` must be set to build the public voucher URL (e.g., `https://dainganxanh.com.vn`).
+  - Fallback: derive from request origin if env is missing.
 
 - **Revalidation pattern (existing):**
   ```ts
@@ -176,6 +191,8 @@ The email template from Story 13.5 already contains:
 
 - **Email pattern (existing):**
   - `sendEcoStayVoucherEmail` in `src/lib/email/index.ts`
+  - Signature: `SendEcoStayVoucherEmailParams` includes `bookingId`, `recipientEmail`, plus all `EcoStayVoucherEmailProps`
+  - Update `EcoStayVoucherEmailProps` to include `voucherUrl?: string` and render it as the primary CTA
   - Non-blocking execution; failures logged via `captureError`
   - `RESEND_API_KEY` not configured in local dev returns `{ success: true, id: 'dev-mock-id' }`
 
@@ -184,7 +201,7 @@ The email template from Story 13.5 already contains:
 1. **Service Role Client**: `createServiceRoleClient()` from `@/lib/supabase/server`
 2. **SSR page pattern**: public, uses `createServiceRoleClient`, `export const dynamic = 'force-dynamic'`, `generateMetadata`
 3. **Error Handling**: wrap QR generation and database calls in `try/catch`, `captureError`
-4. **Amount comparison**: already handled in `processBooking` by comparing integer amounts from Casso to `room_bookings.total_amount`
+4. **Amount comparison**: `processBooking` uses `Math.abs(Number(tx.amount) - Number(order.total_amount)) > 1000` to detect mismatch with 1,000đ tolerance
 5. **Code extraction**: `orderCode` in webhook description may be `BK-XXXXXX` or `BKXXXXXX`; `processBooking` already strips prefix via regex
 
 ### UX Notes
@@ -193,6 +210,7 @@ The email template from Story 13.5 already contains:
 - Success page: `emerald-50` background, `rounded-lg` cards.
 - Voucher: printable A4-friendly layout, QR code clearly visible, contact hotline prominent.
 - Voucher page should be minimal, no marketing navigation, printer-friendly.
+- Include `@media print` CSS or print-optimized layout so the voucher looks clean when saved/printed.
 - Email: responsive, includes logo, booking summary, voucher CTA.
 
 ### Testing Standards
@@ -205,7 +223,7 @@ The email template from Story 13.5 already contains:
 
 ### Previous Story Intelligence (11.3)
 
-- `room_bookings.code` is stored WITHOUT the `BK` prefix in the database; client-facing code is shown with `BK` prefix.
+- `room_bookings.code` is stored WITH the `BK` prefix in the database (e.g., `BKABC123`); client-facing code is shown with `BK` prefix.
 - `status` endpoint returns `status`, `expiresAt`, `totalAmount`, `roomName`, etc. and hides PII.
 - `VietQRDisplay` polls every 5s and calls `onSuccess()` when `status === 'confirmed'`.
 - `revalidatePath` is called on booking creation and cancellation.
