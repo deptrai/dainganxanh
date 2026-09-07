@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CheckCircle2, Calendar, MapPin, Users, Moon, Receipt } from 'lucide-react'
+import { CheckCircle2, Calendar, MapPin, Users, Moon, Receipt, Ticket } from 'lucide-react'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -140,6 +140,15 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Link
+              href={`/eco-tourism/voucher/${rawBooking.code}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-3 px-4 text-center rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              <Ticket className="w-4 h-4" />
+              Xem vé offline
+            </Link>
             <Link
               href={`/eco-tourism/${lotId}`}
               className="flex-1 py-3 px-4 text-center rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"

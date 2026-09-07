@@ -12,7 +12,7 @@ export interface EcoStayVoucherEmailProps {
   nightsCount: number
   guestsCount: number
   totalAmount: number
-  crmBookingUrl?: string
+  voucherUrl?: string
 }
 
 function formatDateVN(dateStr: string): string {
@@ -36,7 +36,7 @@ export const EcoStayVoucherEmail: React.FC<EcoStayVoucherEmailProps> = ({
   nightsCount,
   guestsCount,
   totalAmount,
-  crmBookingUrl = 'https://dainganxanh.com.vn/crm/my-bookings',
+  voucherUrl = 'https://dainganxanh.com.vn/eco-tourism',
 }) => {
   return (
     <EmailLayout previewText={`Voucher xác nhận đặt phòng ${bookingCode} - ${roomName}`}>
@@ -133,7 +133,7 @@ export const EcoStayVoucherEmail: React.FC<EcoStayVoucherEmailProps> = ({
 
       <div style={{ textAlign: 'center', margin: '28px 0' }}>
         <a
-          href={crmBookingUrl}
+          href={voucherUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -147,7 +147,7 @@ export const EcoStayVoucherEmail: React.FC<EcoStayVoucherEmailProps> = ({
             textDecoration: 'none',
           }}
         >
-          🏡 Xem Chi Tiết Đặt Phòng
+          🎫 Xem Vé Offline
         </a>
       </div>
     </EmailLayout>

@@ -57,7 +57,7 @@ describe('Email Templates — Rendering & Content Verification', () => {
     expect(html).toContain('150.000')
     expect(html).toContain('14:00')
     expect(html).toContain('12:00')
-    expect(html).toContain('Xem Chi Tiết Đặt Phòng')
+    expect(html).toContain('Xem Vé Offline')
   })
 
   test('StoreDispatchEmail renders dispatch tracking and itemized table', () => {

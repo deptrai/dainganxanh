@@ -75,5 +75,9 @@ describe('BookingSuccessPage', () => {
     expect(screen.getByText('Phòng Sen')).toBeInTheDocument()
     expect(screen.getByText('2.400.000 ₫')).toBeInTheDocument()
     expect(screen.getByText('0901234567')).toBeInTheDocument()
+
+    const voucherCta = screen.getByRole('link', { name: /Xem vé offline/i })
+    expect(voucherCta).toHaveAttribute('href', '/eco-tourism/voucher/BKABC123')
+    expect(voucherCta).toHaveAttribute('target', '_blank')
   })
 })

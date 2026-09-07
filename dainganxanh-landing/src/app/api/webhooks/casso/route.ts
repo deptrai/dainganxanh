@@ -330,11 +330,15 @@ async function processBooking(
           ? (lotInfo.region.startsWith('Khu vực') ? lotInfo.region : `Khu vực ${lotInfo.region}`)
           : undefined
 
+        const voucherBaseUrl = (process.env.NEXT_PUBLIC_BASE_URL ?? "https://dainganxanh.com.vn").replace(/\/$/, "")
+        const voucherUrl = `${voucherBaseUrl}/eco-tourism/voucher/${orderCode}`
+
         await sendEcoStayVoucherEmail({
           bookingId: booking.id,
           recipientEmail: booking.guest_email || '',
           guestName: booking.guest_name || 'Quý khách',
           bookingCode: orderCode,
+          voucherUrl,
           roomName,
           gardenName,
           gardenAddress,
