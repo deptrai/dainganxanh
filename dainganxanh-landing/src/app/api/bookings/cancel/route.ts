@@ -6,7 +6,9 @@ import { rateLimit } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitoring'
 
 const cancelBookingSchema = z.object({
-  bookingCode: z.string().regex(/^BK[A-Z0-9]{6}$/, 'Mã đặt phòng không hợp lệ'),
+  bookingCode: z.string().transform((val) => val.trim().toUpperCase()).pipe(
+    z.string().regex(/^BK[A-Z0-9]{6}$/, 'Mã đặt phòng không hợp lệ')
+  ),
   reason: z.string().max(200, 'Lý do hủy không quá 200 ký tự').optional(),
 })
 
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   const cancellationReason = reason ?? 'Khách hủy đặt phòng'
-  const { error: updateError } = await supabase
+  const { data: updatedBookings, error: updateError } = await supabase
     .from('room_bookings')
     .update({
       status: 'cancelled',
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
     })
     .eq('id', booking.id)
     .eq('status', 'pending')
+    .select('id')
 
   if (updateError) {
     console.error('[Booking Cancel] Update error:', updateError)
@@ -73,6 +76,13 @@ export async function POST(req: NextRequest) {
       bookingCode,
     })
     return NextResponse.json({ error: 'Không thể hủy đặt phòng. Vui lòng thử lại.' }, { status: 500 })
+  }
+
+  if (!updatedBookings || updatedBookings.length === 0) {
+    return NextResponse.json(
+      { error: 'Đơn đặt phòng không còn ở trạng thái chờ thanh toán' },
+      { status: 409 }
+    )
   }
 
   // On-demand revalidation for marketing pages

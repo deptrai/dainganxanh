@@ -4,7 +4,9 @@ import BookingPageClient from '../BookingPageClient'
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: jest.fn(),
+    replace: jest.fn(),
   }),
+  useSearchParams: () => new URLSearchParams(''),
 }))
 
 jest.mock('@/components/eco-tourism/BookingForm', () => ({

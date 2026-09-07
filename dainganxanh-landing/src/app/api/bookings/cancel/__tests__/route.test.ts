@@ -40,7 +40,9 @@ describe('POST /api/bookings/cancel', () => {
     mockEq.mockReturnValue({ maybeSingle: mockMaybeSingle })
     mockUpdate.mockReturnValue({
       eq: jest.fn().mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
+        eq: jest.fn().mockReturnValue({
+          select: jest.fn().mockResolvedValue({ data: [{ id: 'b1' }], error: null }),
+        }),
       }),
     })
   })
@@ -99,5 +101,44 @@ describe('POST /api/bookings/cancel', () => {
     expect(json.message).toBe('Đã hủy đặt phòng thành công')
     expect(revalidatePath).toHaveBeenCalledWith('/eco-tourism')
     expect(revalidatePath).toHaveBeenCalledWith('/eco-tourism/lot-1', 'page')
+  })
+
+  it('normalizes lowercase booking code to uppercase and cancels successfully', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'b1', code: 'BKABC123', status: 'pending', rooms: { lot_id: 'lot-1' } },
+      error: null,
+    })
+    const req = new NextRequest('http://localhost/api/bookings/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ bookingCode: '  bkabc123  ' }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.ok).toBe(true)
+    expect(mockEq).toHaveBeenCalledWith('code', 'BKABC123')
+  })
+
+  it('returns 409 when booking was concurrently confirmed before cancel', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'b1', code: 'BKABC123', status: 'pending', rooms: { lot_id: 'lot-1' } },
+      error: null,
+    })
+    mockUpdate.mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          select: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+    })
+
+    const req = new NextRequest('http://localhost/api/bookings/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ bookingCode: 'BKABC123' }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(409)
+    const json = await res.json()
+    expect(json.error).toBe('Đơn đặt phòng không còn ở trạng thái chờ thanh toán')
   })
 })

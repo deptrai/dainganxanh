@@ -35,6 +35,30 @@ describe('GET /api/bookings/status', () => {
     expect(json.error).toBe('Mã đặt phòng không hợp lệ')
   })
 
+  it('normalizes lowercase booking code before lookup', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: 'b1',
+        code: 'BKABC123',
+        status: 'pending',
+        expires_at: null,
+        total_amount: 1500000,
+        check_in_date: '2026-10-01',
+        check_out_date: '2026-10-02',
+        guests_count: 1,
+        rooms: { name: 'Phòng Trúc' },
+      },
+      error: null,
+    })
+
+    const req = new NextRequest('http://localhost/api/bookings/status?code=bkabc123')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    expect(mockEq).toHaveBeenCalledWith('code', 'BKABC123')
+    const json = await res.json()
+    expect(json.status).toBe('pending')
+  })
+
   it('returns 404 when booking does not exist', async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null })
     const req = new NextRequest('http://localhost/api/bookings/status?code=BKABC123')
@@ -100,5 +124,28 @@ describe('GET /api/bookings/status', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.status).toBe('expired')
+  })
+
+  it('returns status cancelled when booking was cancelled', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: 'b3',
+        code: 'BKABC125',
+        status: 'cancelled',
+        expires_at: null,
+        total_amount: 1500000,
+        check_in_date: '2026-10-01',
+        check_out_date: '2026-10-02',
+        guests_count: 1,
+        rooms: { name: 'Phòng Trúc' },
+      },
+      error: null,
+    })
+
+    const req = new NextRequest('http://localhost/api/bookings/status?code=BKABC125')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.status).toBe('cancelled')
   })
 })

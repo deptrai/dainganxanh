@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { BookingForm } from '@/components/eco-tourism/BookingForm'
 import { OrderSummary } from '@/components/eco-tourism/OrderSummary'
 import { VietQRDisplay } from '@/components/eco-tourism/VietQRDisplay'
@@ -41,26 +42,40 @@ interface BookingPageClientProps {
     lot: Lot
     checkIn: string
     checkOut: string
+    initialBooking?: BookingResponse | null
+    initialStep?: Step
 }
 
 type Step = 'form' | 'payment' | 'success' | 'expired'
 
-export default function BookingPageClient({ room, lot, checkIn, checkOut }: BookingPageClientProps) {
+export default function BookingPageClient({
+    room,
+    lot,
+    checkIn,
+    checkOut,
+    initialBooking = null,
+    initialStep,
+}: BookingPageClientProps) {
     const router = useRouter()
-    const [step, setStep] = useState<Step>('form')
-    const [booking, setBooking] = useState<BookingResponse | null>(null)
+    const [step, setStep] = useState<Step>(initialStep || (initialBooking ? 'payment' : 'form'))
+    const [booking, setBooking] = useState<BookingResponse | null>(initialBooking)
     const [pricingError, setPricingError] = useState<string | null>(null)
     const [guestsCount, setGuestsCount] = useState(1)
 
     const handleBookingSuccess = useCallback((data: BookingResponse) => {
         setBooking(data)
         setStep('payment')
-    }, [])
+        // Replace URL to include code param so F5 triggers resume flow
+        router.replace(`/eco-tourism/${lot.id}/book?code=${encodeURIComponent(data.bookingCode)}`, { scroll: false })
+    }, [lot.id, router])
 
     const handlePaymentSuccess = useCallback(() => {
         setStep('success')
         setTimeout(() => {
-            router.push(`/eco-tourism/${lot.id}/book/success?code=${booking?.bookingCode}`)
+            const code = booking?.bookingCode
+            if (code) {
+                router.push(`/eco-tourism/${lot.id}/book/success?code=${encodeURIComponent(code)}`)
+            }
         }, 2000)
     }, [router, lot.id, booking?.bookingCode])
 
@@ -69,7 +84,7 @@ export default function BookingPageClient({ room, lot, checkIn, checkOut }: Book
     }, [])
 
     const handleCancel = useCallback(() => {
-        router.push(`/eco-tourism/${lot.id}`)
+        router.push(`/eco-tourism/${lot.id}?cancelled=1`)
     }, [router, lot.id])
 
     const handleGuestsCountChange = useCallback((count: number) => {
@@ -84,9 +99,9 @@ export default function BookingPageClient({ room, lot, checkIn, checkOut }: Book
         <div className="min-h-screen bg-gradient-to-b from-emerald-50/30 to-white py-8 px-4">
             <div className="max-w-6xl mx-auto">
                 <div className="mb-6">
-                    <a href={`/eco-tourism/${lot.id}`} className="text-sm text-emerald-600 hover:underline mb-2 inline-block">
+                    <Link href={`/eco-tourism/${lot.id}`} className="text-sm text-emerald-600 hover:underline mb-2 inline-block">
                         ← Quay lại trang vườn
-                    </a>
+                    </Link>
                     <h1 className="text-3xl font-bold text-gray-900">Đặt phòng tại {lot.name}</h1>
                     <p className="text-gray-600 mt-1">Vùng {lot.region} • Check-in {checkIn} • Check-out {checkOut}</p>
                 </div>
@@ -145,12 +160,12 @@ export default function BookingPageClient({ room, lot, checkIn, checkOut }: Book
                         <Clock className="w-16 h-16 text-amber-500 mx-auto mb-4" />
                         <h2 className="text-xl font-bold text-amber-900 mb-2">Đơn đặt phòng đã hết hạn</h2>
                         <p className="text-amber-700 mb-4">Thời gian giữ chỗ 15 phút đã hết. Vui lòng chọn ngày khác.</p>
-                        <a
+                        <Link
                             href={`/eco-tourism/${lot.id}`}
                             className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700"
                         >
                             Chọn ngày khác
-                        </a>
+                        </Link>
                     </div>
                 )}
             </div>

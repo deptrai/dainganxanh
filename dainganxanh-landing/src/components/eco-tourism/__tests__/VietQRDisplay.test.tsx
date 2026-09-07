@@ -77,7 +77,33 @@ describe('VietQRDisplay Component', () => {
     })
   })
 
-  it('handles "Hủy đặt phòng" click and calls cancel API', async () => {
+  it('opens confirmation modal on "Hủy đặt phòng" click and can be dismissed', async () => {
+    render(<VietQRDisplay {...defaultProps} />)
+    const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
+    fireEvent.click(cancelBtn)
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('Xác nhận hủy đặt phòng')).toBeInTheDocument()
+
+    const dismissBtn = screen.getByRole('button', { name: /Không, quay lại/i })
+    fireEvent.click(dismissBtn)
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('closes confirmation modal on Escape key', async () => {
+    render(<VietQRDisplay {...defaultProps} />)
+    const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
+    fireEvent.click(cancelBtn)
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('handles "Xác nhận hủy" click and calls cancel API', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ ok: true }),
@@ -86,6 +112,9 @@ describe('VietQRDisplay Component', () => {
     render(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
+
+    const confirmBtn = screen.getByRole('button', { name: /Xác nhận hủy/i })
+    fireEvent.click(confirmBtn)
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/bookings/cancel', expect.objectContaining({
@@ -142,5 +171,48 @@ describe('VietQRDisplay Component', () => {
 
     render(<VietQRDisplay {...pastProps} />)
     expect(defaultProps.onExpired).toHaveBeenCalled()
+  })
+
+  it('closes confirmation modal on backdrop click', () => {
+    render(<VietQRDisplay {...defaultProps} />)
+    const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
+    fireEvent.click(cancelBtn)
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    const modal = screen.getByRole('dialog').parentElement
+    if (modal) fireEvent.click(modal)
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('displays cancel error and keeps modal open when API fails', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'Đơn đặt phòng không còn ở trạng thái chờ thanh toán' }),
+    })
+
+    render(<VietQRDisplay {...defaultProps} />)
+    const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
+    fireEvent.click(cancelBtn)
+
+    const confirmBtn = screen.getByRole('button', { name: /Xác nhận hủy/i })
+    fireEvent.click(confirmBtn)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Đơn đặt phòng không còn ở trạng thái chờ thanh toán/i)).toBeInTheDocument()
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(defaultProps.onCancel).not.toHaveBeenCalled()
+    })
+  })
+
+  it('cleans up intervals on unmount', () => {
+    const { unmount } = render(<VietQRDisplay {...defaultProps} />)
+    const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
+    unmount()
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(2)
+    clearIntervalSpy.mockRestore()
   })
 })

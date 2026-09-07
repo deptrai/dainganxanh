@@ -1,13 +1,41 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BedDouble } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { ArrowLeft, BedDouble, CheckCircle2, X } from 'lucide-react'
 import { ImageGallery } from './ImageGallery'
 import { MapSection } from './MapSection'
 import { DateRangePicker } from './DateRangePicker'
 import { RoomCard, type Room } from './RoomCard'
 import { getBlockingBookings, type RoomBooking } from '@/lib/eco-tourism/availability'
+
+function CancelledFeedbackBanner() {
+    const searchParams = useSearchParams()
+    const isCancelled = searchParams.get('cancelled') === '1'
+    const [dismissed, setDismissed] = useState(false)
+
+    if (!isCancelled || dismissed) return null
+
+    return (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between gap-3 text-emerald-800 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <p className="text-sm font-medium">
+                    Đã hủy đơn đặt phòng thành công. Thời gian giữ chỗ đã kết thúc và phòng đã được giải phóng cho khách hàng khác.
+                </p>
+            </div>
+            <button
+                type="button"
+                onClick={() => setDismissed(true)}
+                className="p-1 text-emerald-600 hover:text-emerald-800 rounded-lg hover:bg-emerald-100 transition-colors shrink-0"
+                aria-label="Đóng thông báo"
+            >
+                <X className="w-4 h-4" />
+            </button>
+        </div>
+    )
+}
 
 export interface GardenDetail {
     id: string
@@ -52,6 +80,10 @@ export function GardenDetailClient({ garden }: GardenDetailClientProps) {
                 <ArrowLeft className="w-4 h-4" />
                 Quay lại danh sách vườn
             </Link>
+
+            <Suspense fallback={null}>
+                <CancelledFeedbackBanner />
+            </Suspense>
 
             <div className="mb-8">
                 <div className="flex items-start justify-between gap-4 flex-wrap">

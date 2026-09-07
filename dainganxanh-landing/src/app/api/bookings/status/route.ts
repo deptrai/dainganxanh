@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const code = req.nextUrl.searchParams.get('code')
+  const rawCode = req.nextUrl.searchParams.get('code')
+  const code = rawCode ? rawCode.trim().toUpperCase() : null
   if (!code || !/^BK[A-Z0-9]{6}$/.test(code)) {
     return NextResponse.json({ error: 'Mã đặt phòng không hợp lệ' }, { status: 400 })
   }
