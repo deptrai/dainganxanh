@@ -29,7 +29,7 @@ Status: ready-for-dev
    - **And** if status is `pending` or `confirmed` and `expires_at` is in future, show QR payment button/link
    - **And** if status is `pending`, show "Hủy đặt phòng" button that calls cancel API
    - **And** if status is `confirmed` or `completed`, show "Check-in instructions" section
-   - **And** check-in instructions include: garden address (from `lots.location`), check-in time note, contact phone, special requirements reminder
+   - **And** check-in instructions include: garden name (from `lots.name`), region (from `lots.region`), description (from `lots.description`), check-in time note, contact info from `guest_phone` (as fallback), special requirements reminder
    - **And** if status is `cancelled` or `no_show`, show cancellation reason only if the current user is the booking owner (not for other users)
    - **And** never expose `payment_ref` or `payment_claimed_at` in any API response or UI
 
@@ -102,7 +102,7 @@ Status: ready-for-dev
     - [ ] Calls `POST /api/bookings/cancel` with `{ bookingCode, reason: "Khách hủy từ CRM" }`
     - [ ] On success, redirect to `/crm/my-bookings?cancelled=1`
     - [ ] On error, show inline error message
-  - [ ] `src/components/crm/CheckInInstructions.tsx` — instructions block
+  - [ ] `src/components/crm/CheckInInstructions.tsx` — instructions block showing garden name, region, description, check-in/out times, contact info from guest_phone, and special requests if any
 
 - [ ] Task 5: Add navigation link in CRM header (AC: #1)
   - [ ] Update `src/components/layout/CRMHeader.tsx`
@@ -153,7 +153,7 @@ Status: ready-for-dev
   const serviceClient = createServiceRoleClient()
   const { data, error } = await serviceClient
     .from('room_bookings')
-    .select('*, rooms(name), lots(name, location)')
+    .select('*, rooms(name), lots(name, region, description)')
     .eq('user_id', ctx.effectiveUserId)
   ```
 - **Status Colors**:
