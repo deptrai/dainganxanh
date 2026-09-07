@@ -227,6 +227,7 @@ claude-opus-5
 - Full test suite: 708 passed. TypeScript lint `tsc --noEmit` passed. Build succeeded.
 - **E2E browser verification passed** on `http://localhost:3001` for `/eco-tourism`, `/eco-tourism/[lotId]`, date picker, room cards, CTA, and `/eco-tourism/[lotId]/book` stub.
 - Post-E2E fixes: added `images.unsplash.com` to `next.config.js` remotePatterns; changed 404 error logging to `error?.message`.
+- **Deferred items resolved**: `openGraph.images` now uses `lot.images[0]` when available; `price_per_night` formatting kept as `1.200.000 ₫` (Vietnamese standard, no space before ₫).
 
 - Implemented `/eco-tourism/[lotId]` with SSR, `revalidate = 3600`, Vietnamese metadata, OpenGraph canonical, and JSON-LD `LodgingBusiness`.
 - Reused `MiniMap` via `next/dynamic` with `ssr: false`; handles missing `location_lat`/`location_lng`.
