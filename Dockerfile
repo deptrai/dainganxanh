@@ -1,24 +1,19 @@
-# Dockerfile for dainganxanh-landing Next.js app
-# Build from within /d/packages/dainganxanh-landing directory
+# Dockerfile at repository root for Dokploy
+# The Next.js project is located in dainganxanh-landing/
 
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+# Copy package files from dainganxanh-landing
+COPY dainganxanh-landing/package.json dainganxanh-landing/package-lock.json* ./
+RUN npm ci
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY dainganxanh-landing/ .
 
 # Accept build arguments for Next.js public env vars
 ARG NEXT_PUBLIC_SUPABASE_URL
@@ -40,12 +35,7 @@ ENV NEXT_PUBLIC_BANK_BRANCH=$NEXT_PUBLIC_BANK_BRANCH
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN \
-  if [ -f yarn.lock ]; then yarn build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm build; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+RUN npm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
@@ -54,13 +44,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# LibreOffice for DOCX→PDF conversion (headless, no GUI) + Vietnamese fonts
+# LibreOffice for DOCX→PDF conversion + Vietnamese fonts
 RUN apk add --no-cache libreoffice font-noto font-noto-extra
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# LibreOffice writes a user profile on first run — needs writable HOME
 ENV HOME=/tmp
 
 # Copy built files
