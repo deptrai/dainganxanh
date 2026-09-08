@@ -53,9 +53,13 @@ export interface BookingDetailProps {
     hideCustomerActions?: boolean
     /** Ẩn hướng dẫn nhận phòng — dùng trong admin view. */
     hideCheckInInstructions?: boolean
+    /** Ẩn link quay lại danh sách — dùng trong admin view. */
+    hideBackNavigation?: boolean
+    /** Ẩn thông báo hết hạn và nút đặt phòng mới — dùng trong admin view. */
+    hideExpiredNotice?: boolean
 }
 
-export default function BookingDetail({ booking, hideCustomerActions = false, hideCheckInInstructions = false }: BookingDetailProps) {
+export default function BookingDetail({ booking, hideCustomerActions = false, hideCheckInInstructions = false, hideBackNavigation = false, hideExpiredNotice = false }: BookingDetailProps) {
     const router = useRouter()
 
     const [now, setNow] = useState(Date.now())
@@ -89,15 +93,17 @@ export default function BookingDetail({ booking, hideCustomerActions = false, hi
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             {/* Back to list navigation */}
-            <div>
-                <Link
-                    href="/crm/my-bookings"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Quay lại danh sách</span>
-                </Link>
-            </div>
+            {!hideBackNavigation && (
+                <div>
+                    <Link
+                        href="/crm/my-bookings"
+                        className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-800 transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Quay lại danh sách</span>
+                    </Link>
+                </div>
+            )}
 
             {/* Header Card */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -136,7 +142,7 @@ export default function BookingDetail({ booking, hideCustomerActions = false, hi
             </div>
 
             {/* Expired pending notice */}
-            {isPending && !isFuture && (
+            {isPending && !isFuture && !hideExpiredNotice && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3 text-amber-900">
                     <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                     <div className="space-y-1 text-sm">

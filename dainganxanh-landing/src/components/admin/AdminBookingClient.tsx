@@ -49,8 +49,29 @@ export default function AdminBookingClient({
     }, [filters, page, pageSize])
 
     useEffect(() => {
-        loadBookings()
-    }, [loadBookings])
+        let cancelled = false
+        const load = async () => {
+            setLoading(true)
+            setError(null)
+            try {
+                const result = await fetchAdminBookings(filters, page, pageSize)
+                if (cancelled) return
+                if (result.error) {
+                    setError(result.error)
+                } else {
+                    setBookings(result.bookings)
+                    setTotalCount(result.totalCount)
+                    setTotalPages(Math.ceil(result.totalCount / pageSize))
+                }
+            } catch (err) {
+                if (!cancelled) setError('Failed to load bookings')
+            } finally {
+                if (!cancelled) setLoading(false)
+            }
+        }
+        load()
+        return () => { cancelled = true }
+    }, [filters, page, pageSize])
 
     const handleFilterChange = (newFilters: AdminBookingFilters) => {
         setFilters(newFilters)
@@ -107,10 +128,18 @@ export default function AdminBookingClient({
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
                     <p className="mt-4 text-gray-600">Đang tải đơn đặt phòng...</p>
                 </div>
-            ) : bookings.length === 0 ? (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                    <p className="text-gray-600">Không có đơn đặt phòng nào</p>
+            ) : error ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-800">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                        Tải lại trang
+                    </button>
                 </div>
+            ) : bookings.length === 0 ? (
+                <AdminBookingTable bookings={bookings} />
             ) : (
                 <>
                     <AdminBookingTable bookings={bookings} />

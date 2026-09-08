@@ -40,3 +40,7 @@
 - [ ] Verify `nights_count` population in `room_bookings` — `create` route computes `diffDays` but does not insert `nights_count`; confirm generated column/trigger.
 - [ ] Revisit rate limit for `GET /api/bookings/my` (100 req/min) after production usage.
 
+
+## Deferred from: code review of story-11.7 (2026-09-08)
+
+- [ ] [Review][Defer] Date filters use `check_in_date` only — a stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic (`check_in_date <= dateTo AND check_out_date >= dateFrom`).

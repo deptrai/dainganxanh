@@ -23,7 +23,7 @@ export default function BookingFilterBar({ filters, onFiltersChange }: BookingFi
     const debouncedSearch = useDebounce(localFilters.search || '', 300)
 
     useEffect(() => {
-        if (debouncedSearch !== filters.search) {
+        if (debouncedSearch !== (filters.search ?? '')) {
             onFiltersChange({ ...localFilters, search: debouncedSearch || undefined })
         }
     }, [debouncedSearch])
@@ -63,7 +63,7 @@ export default function BookingFilterBar({ filters, onFiltersChange }: BookingFi
                     </label>
                     <input
                         type="text"
-                        placeholder="Mã, tên khách, SĐT, email"
+                        placeholder="Mã đặt phòng hoặc tên khách"
                         value={localFilters.search || ''}
                         onChange={(e) => handleChange('search', e.target.value || undefined)}
                         className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"

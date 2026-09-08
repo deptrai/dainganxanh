@@ -59,6 +59,7 @@ export default defineConfig({
                 storageState: USER_AUTH_FILE,
             },
             dependencies: ['setup'],
+            testIgnore: [/admin-.*\.spec\.ts/],
             testMatch: [
                 /checkout-payment-flow\.spec\.ts/,
                 /my-garden-dashboard\.spec\.ts/,

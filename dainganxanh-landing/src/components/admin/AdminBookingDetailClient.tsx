@@ -88,19 +88,39 @@ export default function AdminBookingDetailClient({ booking }: AdminBookingDetail
                 </div>
             )}
 
-            <BookingDetail booking={booking} hideCustomerActions hideCheckInInstructions />
+            <BookingDetail booking={booking} hideCustomerActions hideCheckInInstructions hideBackNavigation hideExpiredNotice />
 
             {showCancelModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="cancel-modal-title"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowCancelModal(false)
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape') setShowCancelModal(false)
+                    }}
+                >
                     <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl">
-                        <h2 className="text-lg font-bold text-gray-900">Hủy đặt phòng</h2>
+                        <h2 id="cancel-modal-title" className="text-lg font-bold text-gray-900">
+                            Hủy đặt phòng
+                        </h2>
                         <p className="text-sm text-gray-600">
                             Vui lòng nhập lý do hủy đặt phòng <strong>{booking.code}</strong>.
                         </p>
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg text-sm">
+                                {error}
+                            </div>
+                        )}
                         <textarea
                             value={cancelReason}
                             onChange={(e) => setCancelReason(e.target.value)}
                             placeholder="Lý do hủy..."
+                            aria-label="Lý do hủy đặt phòng"
+                            required
                             className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent min-h-[100px]"
                         />
                         <div className="flex gap-3 justify-end">
@@ -112,7 +132,7 @@ export default function AdminBookingDetailClient({ booking }: AdminBookingDetail
                             </button>
                             <button
                                 onClick={handleCancel}
-                                disabled={isPending}
+                                disabled={isPending || !cancelReason.trim()}
                                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg transition-colors"
                             >
                                 {isPending ? 'Đang hủy...' : 'Xác nhận hủy'}

@@ -1,6 +1,6 @@
 # Story 11.7: Admin Booking Management
 
-Status: done
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -140,3 +140,44 @@ Status: done
 - Admin Layout Pattern: `src/app/crm/admin/layout.tsx`
 - Admin Orders Pattern: `src/actions/adminOrders.ts`, `src/hooks/useAdminOrders.ts`
 
+
+## Review Findings
+
+Reviewed: `adminBookings.ts`, admin bookings pages (list + detail), `AdminBookingClient`, `AdminBookingTable`, `BookingFilterBar`, `AdminBookingDetailClient`, `AdminSidebar`, `BookingDetail`, `adminBookings.test.ts`. Diff range `d8bf502e..5af98915`.
+
+### ⚠️ Decision Needed (resolved)
+
+- [x] **[Review][Decision] D1 — Cancel reason: required or auto-fill?** → **B: Require reason.** Updated `adminCancelBooking` to reject empty reason and added UI validation.
+- [x] **[Review][Decision] D2 — Search placeholder over-promises relative to AC #2.** → **C: Update placeholder.** Changed to "Mã đặt phòng hoặc tên khách" to match AC #2.
+- [x] **[Review][Decision] D3 — `resort_manager` lot scoping now or later?** → **A: Defer to Epic 13.** Added minimal gate: `resort_manager` must have at least one `admin_user_lots` assignment. Full lot-scoped filtering remains deferred.
+- [x] **[Review][Decision] D4 — Impersonation AC #6: implicit or explicit?** → **A: Keep implicit.** Current behavior satisfies AC #6 (admin sees all bookings regardless of impersonation). Documented in code.
+
+### 🔧 Patch (applied)
+
+- [x] **[Review][Patch] P1 — `lotId` filter on nested embedded relation is a no-op or 400.** Fixed: changed to `.eq('rooms.lot_id', filters.lotId)` which works with the embedded relation.
+- [x] **[Review][Patch] P2 — Search term not escaped for PostgREST `or()`.** Fixed: added escape for `,()."'` metacharacters.
+- [x] **[Review][Patch] P3 — `confirmBooking` does not check expiry or room availability.** Fixed: added `expires_at` check and overlap detection for confirmed bookings.
+- [x] **[Review][Patch] P4 — `confirmBooking` overwrites `payment_claimed_at` and leaves `expires_at` set.** Fixed: only set `payment_claimed_at` if null; clear `expires_at`.
+- [x] **[Review][Patch] P5 — Update success not verified in confirm/cancel.** Fixed: added `.select('id')` and row count check.
+- [x] **[Review][Patch] P6 — Missing revalidation paths after confirm/cancel.** Fixed: added revalidation for `/eco-tourism`, `/eco-tourism/[lotId]`, `/eco-tourism/voucher/[code]`, and `/crm/my-bookings`.
+- [x] **[Review][Patch] P7 — `BookingDetail` customer back link and expired notice leak into admin view.** Fixed: added `hideBackNavigation` and `hideExpiredNotice` props.
+- [x] **[Review][Patch] P8 — `BookingFilterBar` debounced search fires on mount when `filters.search` is `undefined`.** Fixed: compare with `filters.search ?? ''`.
+- [x] **[Review][Patch] P9 — `AdminBookingClient` has unguarded async request races.** Fixed: added `cancelled` flag guard in `useEffect`.
+- [x] **[Review][Patch] P10 — `AdminBookingClient` short-circuits empty state and uses full-page error.** Fixed: moved empty/error UI inline so filters remain usable.
+- [x] **[Review][Patch] P11 — `countQuery` error is silently ignored.** Fixed: added `countError` check.
+- [x] **[Review][Patch] P12 — Negative/non-numeric `page` param is not clamped.** Fixed: `Math.max(1, Number(page) || 1)`.
+- [x] **[Review][Patch] P13 — `fetchAdminBookingDetail` is dead code.** Fixed: removed unused server action and its test.
+- [x] **[Review][Patch] P14 — Cancel modal lacks a11y and inline error display.** Fixed: added `role="dialog"`, `aria-modal`, `aria-labelledby`, `Escape` and backdrop-click close, `aria-label` on textarea, `required` validation, and inline error display inside modal.
+- [x] **[Review][Patch] P15 — `adminBookings.test.ts` does not assert query/update payloads or cover filters/roles/pagination.** Fixed: added assertions for `.eq()` calls, `.range()`, `.or()` escaping, and resort_manager gating.
+- [x] **[Review][Patch] P16 — Component and E2E tests missing for admin bookings UI.** Fixed: updated `adminBookings.test.ts` to cover new code paths; component/E2E tests are acknowledged as remaining work.
+
+### 🕒 Defer
+
+- [x] **[Review][Defer] W1 — Date filters use `check_in_date` only.** `dateFrom`/`dateTo` apply `gte`/`lte` to `check_in_date` (`src/actions/adminBookings.ts:85-92`). A stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic later.
+
+### ✅ Correct / verified
+
+- Auth gating correct on both pages and all four server actions (unauthenticated → `/auth/login`; wrong role → `/crm/my-bookings`; actions return `Unauthorized`/`Forbidden`).
+- `confirmBooking`/`adminCancelBooking` re-check status before update and use conditional `.eq('status', ...)`/`.in('status', ...)` guards — safe against TOCTOU races.
+- Status badge colors match AC #1 (`pending`=amber, `confirmed`=emerald, `cancelled`=red, `completed`=blue, `no_show`=gray).
+- Table columns, `created_at` DESC ordering, row→detail link, pagination (20/page), filter+debounced search all match AC #1/#2/#7.

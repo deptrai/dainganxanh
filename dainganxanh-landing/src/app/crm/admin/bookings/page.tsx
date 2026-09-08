@@ -44,7 +44,7 @@ export default async function AdminBookingsPage({
     return (
         <AdminBookingClient
             userId={user.id}
-            initialPage={Number(page) || 1}
+            initialPage={Math.max(1, Number(page) || 1)}
             initialFilters={initialFilters}
         />
     )
