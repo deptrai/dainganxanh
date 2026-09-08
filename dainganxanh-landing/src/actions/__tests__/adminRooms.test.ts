@@ -132,7 +132,7 @@ describe('adminRooms', () => {
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
       .mockReturnValueOnce(deleteChain)
 
-    const result = await unblockRoom('rb1')
+    const result = await unblockRoom('11111111-1111-1111-1111-111111111111')
     expect(result.error).toBeUndefined()
   })
 
@@ -142,7 +142,7 @@ describe('adminRooms', () => {
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
 
-    const result = await unblockRoom('rb-missing')
+    const result = await unblockRoom('22222222-2222-2222-2222-222222222222')
     expect(result.error).toBe('Block không tồn tại hoặc đã bị xóa')
   })
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { captureError } from '@/lib/monitoring'
 import { calculateBookingPrice, PricingError } from '@/lib/pricing'
 
 const calculateBookingPriceSchema = z.object({
@@ -37,6 +38,28 @@ export async function POST(req: NextRequest) {
 
   try {
     const supabase = createServiceRoleClient()
+
+    // Check room_blocks for maintenance overlap (story 11.8)
+    const { data: overlappingBlocks, error: blocksError } = await supabase
+      .from('room_blocks')
+      .select('id')
+      .eq('room_id', room_id)
+      .lt('start_date', check_out_date)
+      .gt('end_date', check_in_date)
+
+    if (blocksError) {
+      console.error('[Booking Calculate] Blocks check error:', blocksError)
+      captureError(blocksError, {
+        route: '/api/bookings/calculate-price',
+        roomId: room_id,
+      })
+      return NextResponse.json({ error: 'Không thể kiểm tra lịch bảo trì' }, { status: 500 })
+    }
+
+    if (overlappingBlocks && overlappingBlocks.length > 0) {
+      return NextResponse.json({ error: 'Phòng đang bảo trì trong khoảng thời gian này' }, { status: 409 })
+    }
+
     const pricing = await calculateBookingPrice(supabase, {
       roomId: room_id,
       checkInDate: check_in_date,

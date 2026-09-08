@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Calendar, Wrench, X, AlertCircle } from 'lucide-react'
 import { fetchRoomCalendarData, blockRoomForMaintenance, unblockRoom, RoomCalendarData } from '@/actions/adminRooms'
 import { BOOKING_STATUS_CONFIG } from '@/components/crm/BookingStatusBadge'
@@ -22,8 +21,6 @@ interface CalendarItem {
     reason?: string | null
 }
 
-const DAYS_IN_WEEK = 7
-
 function getMonthBounds(date: Date) {
     const year = date.getFullYear()
     const month = date.getMonth()
@@ -42,7 +39,8 @@ function pad(n: number) {
 }
 
 function getMonthDateString(year: number, month: number, day: number) {
-    return `${year}-${pad(month + 1)}-${pad(day)}`
+    const d = new Date(year, month, day)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function getMonthName(month: number, year: number) {
@@ -50,7 +48,6 @@ function getMonthName(month: number, year: number) {
 }
 
 export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) {
-    const router = useRouter()
     const [currentDate, setCurrentDate] = useState(new Date())
     const [calendarData, setCalendarData] = useState<RoomCalendarData | null>(null)
     const [loading, setLoading] = useState(true)
@@ -97,9 +94,19 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
         setShowBlockModal(true)
     }
 
+    const validateDate = (value: string) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+        const d = new Date(value + 'T00:00:00Z')
+        return !isNaN(d.getTime()) && value === d.toISOString().slice(0, 10)
+    }
+
     const submitBlock = async () => {
         if (!selectedRoomId) return
         setBlockError(null)
+        if (!validateDate(blockStart) || !validateDate(blockEnd)) {
+            setBlockError('Ngày không hợp lệ')
+            return
+        }
         setBlockPending(true)
         const result = await blockRoomForMaintenance(selectedRoomId, blockStart, blockEnd, blockReason)
         setBlockPending(false)
@@ -112,7 +119,10 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
         }
     }
 
-    const handleUnblock = async (blockId: string) => {
+    const handleUnblock = async (blockId: string, roomName?: string) => {
+        if (!window.confirm(`Xác nhận mở khóa phòng ${roomName || ''} cho thời gian bảo trì này?`)) {
+            return
+        }
         const result = await unblockRoom(blockId)
         if (result.error) {
             setError(result.error)
@@ -285,6 +295,7 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
                                             onClick={() => handleBlockRoom(room.id)}
                                             className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
                                             title="Khóa phòng bảo trì"
+                                            aria-label={`Khóa phòng ${room.name} bảo trì`}
                                         >
                                             <Wrench className="w-3 h-3" />
                                             <span>Khóa</span>
@@ -309,7 +320,8 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
                                                 <div className="space-y-1">
                                                     {dayItems.slice(0, 2).map((item) => {
                                                         const isStart = item.startDate === dayDate
-                                                        const isEnd = item.endDate === getMonthDateString(year, month, day + 1)
+                                                        const nextDayDate = getMonthDateString(year, month, day + 1)
+                                                        const isEnd = item.endDate === nextDayDate
                                                         const linkTarget = item.type === 'booking' ? `/crm/admin/bookings/${item.id}` : undefined
                                                         const content = (
                                                             <div
@@ -321,8 +333,25 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
                                                                 {isStart && (
                                                                     <span className="font-semibold">{item.label}</span>
                                                                 )}
+                                                                {item.type === 'booking' && item.sublabel && (
+                                                                    <span className="ml-1 opacity-80 truncate max-w-[60px]">{item.sublabel}</span>
+                                                                )}
                                                             </div>
                                                         )
+                                                        if (item.type === 'block') {
+                                                            return (
+                                                                <button
+                                                                    key={item.id}
+                                                                    type="button"
+                                                                    onClick={() => handleUnblock(item.id, room.name)}
+                                                                    className="text-left"
+                                                                    aria-label={`Mở khóa block ${item.reason || item.label}`}
+                                                                    title="Bấm để mở khóa bảo trì"
+                                                                >
+                                                                    {content}
+                                                                </button>
+                                                            )
+                                                        }
                                                         return linkTarget ? (
                                                             <Link key={item.id} href={linkTarget}>
                                                                 {content}

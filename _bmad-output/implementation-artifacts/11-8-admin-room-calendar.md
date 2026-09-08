@@ -1,6 +1,6 @@
 # Story 11.8: Admin Room Calendar
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -211,3 +211,20 @@ claude-opus-5 (Opus 5)
 ### Change Log
 
 - 2026-09-08: Implemented story 11.8 Admin Room Calendar (tasks 1-8 complete)
+- 2026-09-08: Code review applied 6 patches (removed dead code, added date validation, unblock confirm, guest name display, calculate-price block check, UUID validation). All tests pass (854), typecheck clean.
+
+## Review Findings
+
+- [x] [Review][Patch] Remove `useRouter` dead import — removed from `RoomCalendarClient.tsx`
+- [x] [Review][Patch] Remove `DAYS_IN_WEEK` dead constant — removed from `RoomCalendarClient.tsx`
+- [x] [Review][Patch] Add `aria-label` to "Khóa" button — added in `RoomCalendarClient.tsx:289`
+- [x] [Review][Patch] Add `window.confirm` before `unblockRoom` — added in `RoomCalendarClient.tsx:122`
+- [x] [Review][Patch] Fix `isEnd` for last day of month — fixed via `getMonthDateString` using `Date` constructor in `RoomCalendarClient.tsx:45`
+- [x] [Review][Patch] Add date validation to `fetchRoomCalendarData` — added `isValidDateString` check in `adminRooms.ts:225`
+- [x] [Review][Patch] Add semantic date validation to `blockRoomForMaintenance` — added `isValidDateString` in `adminRooms.ts:69`
+- [x] [Review][Patch] Add UUID validation to `unblockRoom` — added `UUID_RE` check in `adminRooms.ts:166`
+- [x] [Review][Patch] Display `guest_name` in booking bar — added visible `sublabel` in `RoomCalendarClient.tsx:332`
+- [x] [Review][Patch] Add `room_blocks` check to `calculate-price` route — added overlap query in `calculate-price/route.ts:38`
+- [x] [Review][Defer] `resort_manager` lot-scoped filtering — deferred to Epic 13 (pre-existing design)
+- [x] [Review][Defer] `room_blocks` RLS missing authenticated read — deferred, `createServiceRoleClient` bypasses RLS
+- [x] [Review][Dismiss] `page.tsx` EOF newline — cosmetic, already present

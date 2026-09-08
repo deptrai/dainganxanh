@@ -5,9 +5,26 @@ import { NextRequest } from 'next/server'
 import { POST } from '../route'
 import { calculateBookingPrice, PricingError } from '@/lib/pricing'
 
+const mockFrom = jest.fn()
+
 jest.mock('@/lib/supabase/server', () => ({
-  createServiceRoleClient: jest.fn(() => ({})),
+  createServiceRoleClient: jest.fn(() => ({
+    from: mockFrom,
+  })),
 }))
+
+function makeQueryChain(resolveValue: any) {
+  const chain: any = {
+    select: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    lt: jest.fn(() => chain),
+    gt: jest.fn(() => chain),
+    order: jest.fn(() => Promise.resolve(resolveValue)),
+    then: (resolve: any, reject: any) => Promise.resolve(resolveValue).then(resolve, reject),
+    catch: (reject: any) => Promise.resolve(resolveValue).catch(reject),
+  }
+  return chain
+}
 
 jest.mock('@/lib/pricing', () => {
   const actual = jest.requireActual('@/lib/pricing')
@@ -20,6 +37,8 @@ jest.mock('@/lib/pricing', () => {
 describe('POST /api/bookings/calculate-price', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockFrom.mockReset()
+    mockFrom.mockReturnValue(makeQueryChain({ data: [], error: null }))
   })
 
   test('validates payload and returns calculated price', async () => {

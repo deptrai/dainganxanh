@@ -49,6 +49,13 @@ async function verifyAdminRole() {
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+
+function isValidDateString(value: string): boolean {
+    if (!DATE_RE.test(value)) return false
+    const d = new Date(value + 'T00:00:00Z')
+    return !isNaN(d.getTime()) && value === d.toISOString().slice(0, 10)
+}
 
 export interface BlockRoomResult {
     error?: string
@@ -66,7 +73,7 @@ export async function blockRoomForMaintenance(
         return { error: authError || 'Unauthorized' }
     }
 
-    if (!roomId || !DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
+    if (!roomId || !isValidDateString(startDate) || !isValidDateString(endDate)) {
         return { error: 'Ngày hoặc phòng không hợp lệ' }
     }
     if (startDate >= endDate) {
@@ -162,7 +169,7 @@ export async function unblockRoom(blockId: string): Promise<{ error?: string }> 
         return { error: authError || 'Unauthorized' }
     }
 
-    if (!blockId) {
+    if (!blockId || !UUID_RE.test(blockId)) {
         return { error: 'Block không hợp lệ' }
     }
 
@@ -225,6 +232,13 @@ export async function fetchRoomCalendarData(
     const { user, error: authError } = await verifyAdminRole()
     if (authError || !user) {
         return { lots: [], error: authError || 'Unauthorized' }
+    }
+
+    if (!isValidDateString(startDate) || !isValidDateString(endDate)) {
+        return { lots: [], error: 'Ngày không hợp lệ' }
+    }
+    if (startDate > endDate) {
+        return { lots: [], error: 'Ngày bắt đầu phải trước ngày kết thúc' }
     }
 
     const serviceSupabase = createServiceRoleClient()
