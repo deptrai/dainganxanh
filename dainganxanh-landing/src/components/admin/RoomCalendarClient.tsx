@@ -24,12 +24,10 @@ interface CalendarItem {
 function getMonthBounds(date: Date) {
     const year = date.getFullYear()
     const month = date.getMonth()
-    const start = new Date(year, month, 1)
     const end = new Date(year, month + 1, 0)
     return {
         year,
         month,
-        startDay: start.getDay(),
         daysInMonth: end.getDate(),
     }
 }
@@ -60,15 +58,16 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
     const [blockError, setBlockError] = useState<string | null>(null)
     const [blockPending, setBlockPending] = useState(false)
 
-    const { year, month, startDay, daysInMonth } = useMemo(() => getMonthBounds(currentDate), [currentDate])
+    const { year, month, daysInMonth } = useMemo(() => getMonthBounds(currentDate), [currentDate])
 
     const monthStartStr = getMonthDateString(year, month, 1)
     const monthEndStr = getMonthDateString(year, month, daysInMonth)
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true)
         setError(null)
         const result = await fetchRoomCalendarData(monthStartStr, monthEndStr)
+        if (signal?.aborted) return
         if (result.error) {
             setError(result.error)
         } else {
@@ -78,7 +77,9 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
     }, [monthStartStr, monthEndStr])
 
     useEffect(() => {
-        load()
+        const controller = new AbortController()
+        load(controller.signal)
+        return () => controller.abort()
     }, [load])
 
     const changeMonth = (delta: number) => {
@@ -125,27 +126,22 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
         }
         const result = await unblockRoom(blockId)
         if (result.error) {
-            setError(result.error)
+            window.alert(`Lỗi mở khóa: ${result.error}`)
         } else {
             await load()
         }
     }
 
-    const allRooms = useMemo(() => {
-        const rooms: { id: string; name: string; lotName: string; lotRegion?: string; status: string }[] = []
-        if (!calendarData) return rooms
-        for (const lot of calendarData.lots) {
-            for (const room of lot.rooms) {
-                rooms.push({
-                    id: room.id,
-                    name: room.name,
-                    lotName: lot.name,
-                    lotRegion: lot.region,
-                    status: room.status,
-                })
-            }
-        }
-        return rooms
+    const lotsWithRooms = useMemo(() => {
+        if (!calendarData) return []
+        return calendarData.lots.map((lot) => ({
+            ...lot,
+            rooms: lot.rooms.map((room) => ({
+                ...room,
+                lotName: lot.name,
+                lotRegion: lot.region,
+            })),
+        }))
     }, [calendarData])
 
     const itemsByRoom = useMemo(() => {
@@ -229,7 +225,7 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
                     <span>{error}</span>
                 </div>
                 <button
-                    onClick={load}
+                    onClick={() => load()}
                     className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
                     Thử lại
@@ -237,6 +233,8 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
             </div>
         )
     }
+
+    const gridStyle = { gridTemplateColumns: `160px repeat(${daysInMonth}, minmax(36px, 1fr))` }
 
     return (
         <div className="space-y-6">
@@ -270,7 +268,7 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <div className="min-w-[800px]">
-                        <div className="grid grid-cols-[160px_repeat(auto-fill,minmax(36px,1fr))] border-b border-gray-200">
+                        <div className="grid border-b border-gray-200" style={gridStyle}>
                             <div className="p-3 text-sm font-semibold text-gray-700 border-r border-gray-100 bg-gray-50 sticky left-0 z-10">
                                 Phòng
                             </div>
@@ -281,97 +279,106 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
                             ))}
                         </div>
 
-                        {allRooms.map((room) => {
-                            const items = itemsByRoom.get(room.id) || []
-                            return (
-                                <div key={room.id} className="grid grid-cols-[160px_repeat(auto-fill,minmax(36px,1fr))] border-b border-gray-100 min-h-[80px]">
-                                    <div className="p-3 bg-gray-50 border-r border-gray-100 sticky left-0 z-10 flex flex-col justify-between">
-                                        <div>
-                                            <p className="font-semibold text-sm text-gray-900">{room.name}</p>
-                                            <p className="text-xs text-emerald-700">{room.lotName}</p>
-                                            {room.lotRegion && <p className="text-[10px] text-gray-500">{room.lotRegion}</p>}
-                                        </div>
-                                        <button
-                                            onClick={() => handleBlockRoom(room.id)}
-                                            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
-                                            title="Khóa phòng bảo trì"
-                                            aria-label={`Khóa phòng ${room.name} bảo trì`}
-                                        >
-                                            <Wrench className="w-3 h-3" />
-                                            <span>Khóa</span>
-                                        </button>
-                                    </div>
-
-                                    {dayNumbers.map((day) => {
-                                        const dayDate = getDayDate(day)
-                                        const isTodayClass = isToday(day) ? 'bg-emerald-50/50' : ''
-
-                                        // Find items covering this day
-                                        const dayItems = items.filter((item) =>
-                                            item.startDate <= dayDate && item.endDate > dayDate
-                                        )
-
-                                        return (
-                                            <div
-                                                key={day}
-                                                className={`border-r border-gray-100 p-1 relative min-h-[80px] ${isTodayClass}`}
-                                            >
-                                                <div className="text-[10px] text-gray-400 text-right mb-1">{day}</div>
-                                                <div className="space-y-1">
-                                                    {dayItems.slice(0, 2).map((item) => {
-                                                        const isStart = item.startDate === dayDate
-                                                        const nextDayDate = getMonthDateString(year, month, day + 1)
-                                                        const isEnd = item.endDate === nextDayDate
-                                                        const linkTarget = item.type === 'booking' ? `/crm/admin/bookings/${item.id}` : undefined
-                                                        const content = (
-                                                            <div
-                                                                className={`text-[10px] truncate px-1.5 py-0.5 rounded ${getItemColorClass(item)} ${
-                                                                    isStart ? 'rounded-l-md' : ''
-                                                                } ${isEnd ? 'rounded-r-md' : ''}`}
-                                                                title={`${item.label}${item.sublabel ? ` - ${item.sublabel}` : ''}${item.reason ? ` - ${item.reason}` : ''}`}
-                                                            >
-                                                                {isStart && (
-                                                                    <span className="font-semibold">{item.label}</span>
-                                                                )}
-                                                                {item.type === 'booking' && item.sublabel && (
-                                                                    <span className="ml-1 opacity-80 truncate max-w-[60px]">{item.sublabel}</span>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                        if (item.type === 'block') {
-                                                            return (
-                                                                <button
-                                                                    key={item.id}
-                                                                    type="button"
-                                                                    onClick={() => handleUnblock(item.id, room.name)}
-                                                                    className="text-left"
-                                                                    aria-label={`Mở khóa block ${item.reason || item.label}`}
-                                                                    title="Bấm để mở khóa bảo trì"
-                                                                >
-                                                                    {content}
-                                                                </button>
-                                                            )
-                                                        }
-                                                        return linkTarget ? (
-                                                            <Link key={item.id} href={linkTarget}>
-                                                                {content}
-                                                            </Link>
-                                                        ) : (
-                                                            <div key={item.id}>{content}</div>
-                                                        )
-                                                    })}
-                                                    {dayItems.length > 2 && (
-                                                        <div className="text-[10px] text-gray-500 pl-1">+{dayItems.length - 2}</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
+                        {lotsWithRooms.map((lot) => (
+                            <div key={lot.id}>
+                                <div className="px-3 py-2 bg-emerald-50 border-b border-emerald-100 sticky left-0 z-10">
+                                    <h3 className="text-sm font-semibold text-emerald-900">
+                                        {lot.name}
+                                        {lot.region && <span className="ml-2 text-xs text-emerald-700 font-normal">({lot.region})</span>}
+                                    </h3>
                                 </div>
-                            )
-                        })}
 
-                        {allRooms.length === 0 && (
+                                {lot.rooms.map((room) => {
+                                    const items = itemsByRoom.get(room.id) || []
+                                    return (
+                                        <div key={room.id} className="grid border-b border-gray-100 min-h-[80px]" style={gridStyle}>
+                                            <div className="p-3 bg-gray-50 border-r border-gray-100 sticky left-0 z-10 flex flex-col justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-sm text-gray-900">{room.name}</p>
+                                                    <p className="text-xs text-emerald-700">{room.lotName}</p>
+                                                    {room.lotRegion && <p className="text-[10px] text-gray-500">{room.lotRegion}</p>}
+                                                </div>
+                                                <button
+                                                    onClick={() => handleBlockRoom(room.id)}
+                                                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900"
+                                                    title="Khóa phòng bảo trì"
+                                                    aria-label={`Khóa phòng ${room.name} bảo trì`}
+                                                >
+                                                    <Wrench className="w-3 h-3" />
+                                                    <span>Khóa</span>
+                                                </button>
+                                            </div>
+
+                                            {dayNumbers.map((day) => {
+                                                const dayDate = getDayDate(day)
+                                                const isTodayClass = isToday(day) ? 'bg-emerald-50/50' : ''
+
+                                                // Find items covering this day
+                                                const dayItems = items.filter((item) =>
+                                                    item.startDate <= dayDate && item.endDate > dayDate
+                                                )
+
+                                                return (
+                                                    <div
+                                                        key={day}
+                                                        className={`border-r border-gray-100 p-1 relative min-h-[80px] ${isTodayClass}`}
+                                                    >
+                                                        <div className="text-[10px] text-gray-400 text-right mb-1">{day}</div>
+                                                        <div className="space-y-1">
+                                                            {dayItems.slice(0, 2).map((item) => {
+                                                                const isStart = item.startDate === dayDate
+                                                                const nextDayDate = getMonthDateString(year, month, day + 1)
+                                                                const isEnd = item.endDate === nextDayDate
+                                                                const linkTarget = item.type === 'booking' ? `/crm/admin/bookings/${item.id}` : undefined
+                                                                const content = (
+                                                                    <div
+                                                                        className={`text-[10px] truncate px-1.5 py-0.5 rounded ${getItemColorClass(item)} ${
+                                                                            isStart ? 'rounded-l-md' : ''
+                                                                        } ${isEnd ? 'rounded-r-md' : ''}`}
+                                                                        title={`${item.label}${item.sublabel ? ` - ${item.sublabel}` : ''}${item.reason ? ` - ${item.reason}` : ''}`}
+                                                                    >
+                                                                        <span className="font-semibold">{item.label}</span>
+                                                                        {item.type === 'booking' && item.sublabel && (
+                                                                            <span className="ml-1 opacity-80 truncate max-w-[60px]">{item.sublabel}</span>
+                                                                        )}
+                                                                    </div>
+                                                                )
+                                                                if (item.type === 'block') {
+                                                                    return (
+                                                                        <button
+                                                                            key={item.id}
+                                                                            type="button"
+                                                                            onClick={() => handleUnblock(item.id, room.name)}
+                                                                            className="text-left"
+                                                                            aria-label={`Mở khóa block ${item.reason || item.label}`}
+                                                                            title="Bấm để mở khóa bảo trì"
+                                                                        >
+                                                                            {content}
+                                                                        </button>
+                                                                    )
+                                                                }
+                                                                return linkTarget ? (
+                                                                    <Link key={item.id} href={linkTarget}>
+                                                                        {content}
+                                                                    </Link>
+                                                                ) : (
+                                                                    <div key={item.id}>{content}</div>
+                                                                )
+                                                            })}
+                                                            {dayItems.length > 2 && (
+                                                                <div className="text-[10px] text-gray-500 pl-1">+{dayItems.length - 2}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ))}
+
+                        {lotsWithRooms.length === 0 && (
                             <div className="p-8 text-center text-gray-500">
                                 <Calendar className="w-10 h-10 mx-auto text-gray-300 mb-2" />
                                 <p>Không có phòng nào trong hệ thống.</p>
@@ -452,7 +459,7 @@ export default function RoomCalendarClient({ userId }: RoomCalendarClientProps) 
                             </button>
                             <button
                                 onClick={submitBlock}
-                                disabled={blockPending || !blockStart || !blockEnd || !blockReason.trim()}
+                                disabled={blockPending || !blockStart || !blockEnd || !blockReason.trim() || blockStart >= blockEnd}
                                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-lg"
                             >
                                 {blockPending ? 'Đang lưu...' : 'Khóa phòng'}

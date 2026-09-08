@@ -18,6 +18,7 @@ function makeQueryChain(resolveValue: any) {
     select: jest.fn(() => chain),
     eq: jest.fn(() => chain),
     lt: jest.fn(() => chain),
+    lte: jest.fn(() => chain),
     gt: jest.fn(() => chain),
     order: jest.fn(() => Promise.resolve(resolveValue)),
     then: (resolve: any, reject: any) => Promise.resolve(resolveValue).then(resolve, reject),

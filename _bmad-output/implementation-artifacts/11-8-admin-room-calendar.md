@@ -228,3 +228,22 @@ claude-opus-5 (Opus 5)
 - [x] [Review][Defer] `resort_manager` lot-scoped filtering — deferred to Epic 13 (pre-existing design)
 - [x] [Review][Defer] `room_blocks` RLS missing authenticated read — deferred, `createServiceRoleClient` bypasses RLS
 - [x] [Review][Dismiss] `page.tsx` EOF newline — cosmetic, already present
+
+### Round 2 — Sub-Agent Review (Blind Hunter / Edge Case Hunter / Acceptance Auditor)
+
+- [x] [Patch] Fix off-by-one: `.lt` → `.lte` in room_blocks overlap queries — applied to `route.ts` (create + calculate-price), `adminRooms.ts`
+- [x] [Patch] Wire `getAssignedLotIds` and `resort_manager` lot-scoping into `blockRoomForMaintenance`, `unblockRoom`, `fetchRoomCalendarData` — `verifyAdminRole` now returns `{ role, assignedLotIds }`; scoping enforced
+- [x] [Patch] `unblockRoom`: fetch block + lot via `rooms!inner(lot_id)` before delete; reject if outside assigned lots
+- [x] [Patch] `blockRoomForMaintenance`: reject when `endDate <= today` ("Không thể khóa phòng cho ngày trong quá khứ")
+- [x] [Patch] Add GiST exclusion constraint `room_blocks_no_overlap` to migration (TOCTOU protection)
+- [x] [Patch] Add `update_room_blocks_updated_at` trigger to migration
+- [x] [Patch] Add `public_read_room_blocks` SELECT policy for `anon, authenticated` — closes RLS gap that hid blocks from public availability
+- [x] [Patch] Add `RoomBlock`, `isBlockOverlapping`, `getOverlappingBlocks`, `getBlockedRoomIds` helpers to `availability.ts`
+- [x] [Patch] `GardenDetailClient`: `blocks` field added to `GardenDetail`; `bookedRoomIds` unions bookings + blocks
+- [x] [Patch] `[lotId]/page.tsx`: fetch `room_blocks` for active rooms; pass `blocks` into `garden`
+- [x] [Patch] `[lotId]/book/page.tsx`: check `room_blocks` overlap and render "Phòng đang bảo trì" unavailable screen
+- [x] [Patch] `RoomCalendarClient`: booking bars always render label (removed `isStart` gate); block bars clickable with confirm + alert on error; AbortController prevents stale-month data races; grid uses inline `gridTemplateColumns` (`auto-fill` breaks layout <1300px)
+- [x] [Patch] `RoomCalendarClient`: submit button disabled when `blockStart >= blockEnd`; client-side `validateDate` semantic check
+- [x] [Patch] Remove dead `LotSection` interface + `startDay` destructure
+- [x] [Patch] Tests: updated `adminRooms.test.ts` (UUIDs, unblockRoom select-before-delete chain, future dates); `calculate-price` test chain gains `.lte`/`.gt`; `tampering-prevention.test.ts` gains `room_blocks` `.lte` mock
+- [x] [Dismiss] Cancelled/no_show bookings remain visible on calendar (per spec AC1 — color-code all statuses)

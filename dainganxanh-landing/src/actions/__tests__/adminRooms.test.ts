@@ -73,7 +73,7 @@ describe('adminRooms', () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
     mockServiceFrom.mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
 
-    const result = await blockRoomForMaintenance('r1', '2026-09-01', '2026-09-02', '')
+    const result = await blockRoomForMaintenance('r1', '2099-09-01', '2099-09-02', '')
     expect(result.error).toBe('Vui lòng nhập lý do khóa phòng')
   })
 
@@ -81,7 +81,7 @@ describe('adminRooms', () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
     mockServiceFrom.mockReturnValueOnce(makeQueryChain({ data: { role: 'user' }, error: null }))
 
-    const result = await blockRoomForMaintenance('r1', '2026-09-01', '2026-09-02', 'Sửa chữa')
+    const result = await blockRoomForMaintenance('r1', '2099-09-01', '2099-09-02', 'Sửa chữa')
     expect(result.error).toBe('Forbidden: admin role required')
   })
 
@@ -91,7 +91,7 @@ describe('adminRooms', () => {
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: { id: 'r1', status: 'maintenance', name: 'Room A' }, error: null }))
 
-    const result = await blockRoomForMaintenance('r1', '2026-09-01', '2026-09-05', 'Sửa chữa')
+    const result = await blockRoomForMaintenance('r1', '2099-09-01', '2099-09-05', 'Sửa chữa')
     expect(result.error).toBe('Phòng đang ở trạng thái bảo trì vĩnh viễn')
   })
 
@@ -101,12 +101,12 @@ describe('adminRooms', () => {
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: { id: 'r1', status: 'active', name: 'Room A' }, error: null }))
       .mockReturnValueOnce(makeQueryChain({
-        data: [{ id: 'b1', room_id: 'r1', check_in_date: '2026-09-01', check_out_date: '2026-09-03', status: 'confirmed', expires_at: null }],
+        data: [{ id: 'b1', room_id: 'r1', check_in_date: '2099-09-01', check_out_date: '2099-09-03', status: 'confirmed', expires_at: null }],
         error: null
       }))
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
 
-    const result = await blockRoomForMaintenance('r1', '2026-09-01', '2026-09-05', 'Sửa chữa')
+    const result = await blockRoomForMaintenance('r1', '2099-09-01', '2099-09-05', 'Sửa chữa')
     expect(result.error).toBe('Phòng có đơn đặt đang hoạt động trong khoảng thời gian này')
   })
 
@@ -120,7 +120,7 @@ describe('adminRooms', () => {
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
       .mockReturnValueOnce(insertChain)
 
-    const result = await blockRoomForMaintenance('r1', '2026-09-10', '2026-09-15', 'Sửa chữa')
+    const result = await blockRoomForMaintenance('r1', '2099-09-10', '2099-09-15', 'Sửa chữa')
     expect(result.error).toBeUndefined()
     expect(result.blockId).toBe('rb1')
   })
@@ -130,6 +130,7 @@ describe('adminRooms', () => {
     const deleteChain = makeQueryChain({ data: [{ id: 'rb1' }], error: null })
     mockServiceFrom
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: { id: 'rb1', room_id: 'r1', rooms: { lot_id: 'l1' } }, error: null }))
       .mockReturnValueOnce(deleteChain)
 
     const result = await unblockRoom('11111111-1111-1111-1111-111111111111')
@@ -140,7 +141,7 @@ describe('adminRooms', () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
     mockServiceFrom
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
-      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: null, error: null }))
 
     const result = await unblockRoom('22222222-2222-2222-2222-222222222222')
     expect(result.error).toBe('Block không tồn tại hoặc đã bị xóa')
@@ -155,7 +156,7 @@ describe('adminRooms', () => {
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
 
-    const result = await fetchRoomCalendarData('2026-09-01', '2026-09-30')
+    const result = await fetchRoomCalendarData('2099-09-01', '2099-09-30')
     expect(result.error).toBeUndefined()
     expect(result.lots).toHaveLength(1)
     expect(result.lots[0].rooms[0].name).toBe('Deluxe')

@@ -52,7 +52,7 @@ jest.mock('@/lib/supabase/server', () => ({
         return {
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              lt: jest.fn().mockReturnValue({
+              lte: jest.fn().mockReturnValue({
                 gt: jest.fn().mockResolvedValue({ data: [], error: null }),
               }),
             }),

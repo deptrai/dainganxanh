@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       .from('room_blocks')
       .select('id')
       .eq('room_id', room_id)
-      .lt('start_date', check_out_date)
+      .lte('start_date', check_out_date)
       .gt('end_date', check_in_date)
 
     if (blocksError) {

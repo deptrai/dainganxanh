@@ -122,6 +122,7 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
     const roomIds = activeRooms.map((r) => r.id)
 
     let bookings: RoomBooking[] = []
+    let blocks: any[] = []
 
     if (roomIds.length > 0) {
         const { data: bookingData } = await supabase
@@ -130,6 +131,12 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
             .in('room_id', roomIds)
             .in('status', ['pending', 'confirmed', 'completed'])
         bookings = bookingData ?? []
+
+        const { data: blockData } = await supabase
+            .from('room_blocks')
+            .select('id, room_id, start_date, end_date, reason, status')
+            .in('room_id', roomIds)
+        blocks = blockData ?? []
     }
 
     const garden: GardenDetail = {
@@ -142,6 +149,7 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
         images: Array.isArray(lot.images) ? lot.images : [],
         rooms: activeRooms,
         bookings,
+        blocks,
     }
 
     const jsonLd = buildJsonLd(lot)

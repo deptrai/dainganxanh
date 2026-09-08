@@ -8,7 +8,7 @@ import { ImageGallery } from './ImageGallery'
 import { MapSection } from './MapSection'
 import { DateRangePicker } from './DateRangePicker'
 import { RoomCard, type Room } from './RoomCard'
-import { getBlockingBookings, type RoomBooking } from '@/lib/eco-tourism/availability'
+import { getBlockingBookings, getOverlappingBlocks, type RoomBooking, type RoomBlock } from '@/lib/eco-tourism/availability'
 
 function CancelledFeedbackBanner() {
     const searchParams = useSearchParams()
@@ -47,6 +47,7 @@ export interface GardenDetail {
     images: string[] | null
     rooms: Room[]
     bookings: RoomBooking[]
+    blocks: RoomBlock[]
 }
 
 interface GardenDetailClientProps {
@@ -62,8 +63,9 @@ export function GardenDetailClient({ garden }: GardenDetailClientProps) {
     const bookedRoomIds = useMemo(() => {
         if (!checkIn || !checkOut) return new Set<string>()
         const blocking = getBlockingBookings(garden.bookings, checkIn, checkOut)
-        return new Set(blocking.map((b) => b.room_id))
-    }, [garden.bookings, checkIn, checkOut])
+        const overlapping = getOverlappingBlocks(garden.blocks, checkIn, checkOut)
+        return new Set([...blocking.map((b) => b.room_id), ...overlapping.map((b) => b.room_id)])
+    }, [garden.bookings, garden.blocks, checkIn, checkOut])
 
     const allImages = useMemo(() => {
         const lotImages = Array.isArray(garden.images) ? garden.images : []

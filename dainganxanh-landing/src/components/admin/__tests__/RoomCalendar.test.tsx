@@ -60,8 +60,8 @@ describe('RoomCalendarClient', () => {
     })
 
     expect(screen.getByText('Deluxe')).toBeInTheDocument()
-    expect(screen.getByText('Ba Vì')).toBeInTheDocument()
-    expect(screen.getByText('BK1')).toBeInTheDocument()
+    expect(screen.getAllByText('Ba Vì').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('BK1').length).toBeGreaterThanOrEqual(1)
   })
 
   it('changes month on navigation', async () => {

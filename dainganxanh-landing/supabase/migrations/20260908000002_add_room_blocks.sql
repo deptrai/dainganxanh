@@ -23,6 +23,38 @@ CREATE TABLE IF NOT EXISTS public.room_blocks (
 CREATE INDEX IF NOT EXISTS idx_room_blocks_room_id ON public.room_blocks(room_id);
 CREATE INDEX IF NOT EXISTS idx_room_blocks_dates ON public.room_blocks(room_id, start_date, end_date);
 
+-- Prevent overlapping maintenance blocks on the same room (TOCTOU protection)
+-- Uses same [) semantics as room_bookings: start inclusive, end exclusive.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'room_blocks_no_overlap'
+  ) THEN
+    ALTER TABLE public.room_blocks
+      ADD CONSTRAINT room_blocks_no_overlap
+      EXCLUDE USING gist (
+        room_id WITH =,
+        daterange(start_date, end_date, '[)') WITH &&
+      );
+  END IF;
+END
+$$;
+
+-- Auto-update updated_at on row change
+CREATE OR REPLACE FUNCTION public.update_room_blocks_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS room_blocks_updated_at_trigger ON public.room_blocks;
+CREATE TRIGGER room_blocks_updated_at_trigger
+  BEFORE UPDATE ON public.room_blocks
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_room_blocks_updated_at();
+
 -- Enable RLS; only service role and admins can manage/read
 ALTER TABLE IF EXISTS public.room_blocks ENABLE ROW LEVEL SECURITY;
 
@@ -74,6 +106,17 @@ BEGIN
             AND aul.role = 'resort_manager'
         )
       );
+  END IF;
+
+  -- Public read access for availability checking (prevents booking UI from showing
+  -- maintenance-blocked rooms as available). Public sees room_id + dates only.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'room_blocks' AND policyname = 'public_read_room_blocks'
+  ) THEN
+    CREATE POLICY "public_read_room_blocks" ON public.room_blocks
+      FOR SELECT TO anon, authenticated
+      USING (true);
   END IF;
 END
 $$;

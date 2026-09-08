@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { Clock, AlertCircle } from 'lucide-react'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getBlockingBookings } from '@/lib/eco-tourism/availability'
+import { getBlockingBookings, isBlockOverlapping } from '@/lib/eco-tourism/availability'
 import BookingPageClient from './BookingPageClient'
 
 export const dynamic = 'force-dynamic'
@@ -252,6 +252,11 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         .eq('room_id', roomId)
         .in('status', ['pending', 'confirmed', 'completed'])
 
+    const { data: blockData } = await supabase
+        .from('room_blocks')
+        .select('id, room_id, start_date, end_date, reason, status')
+        .eq('room_id', roomId)
+
     const blocking = getBlockingBookings(bookingData ?? [], checkIn, checkOut)
 
     if (blocking.length > 0) {
@@ -260,6 +265,22 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
                 <div className="text-center text-gray-500">
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Phòng đã được đặt</h1>
                     <p>Phòng này đã có người đặt hoặc đang giữ chỗ trong khoảng thời gian này.</p>
+                    <a href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
+                        Chọn phòng khác
+                    </a>
+                </div>
+            </div>
+        )
+    }
+
+    const overlappingBlocks = (blockData ?? []).filter((b) => isBlockOverlapping(b, checkIn, checkOut))
+
+    if (overlappingBlocks.length > 0) {
+        return (
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="text-center text-gray-500">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Phòng đang bảo trì</h1>
+                    <p>Phòng này đang tạm khóa trong khoảng thời gian này.</p>
                     <a href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
                         Chọn phòng khác
                     </a>

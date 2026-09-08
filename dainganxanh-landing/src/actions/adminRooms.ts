@@ -7,12 +7,33 @@ import { isBookingBlocking, RoomBooking } from '@/lib/eco-tourism/availability'
 
 const ADMIN_ROLES = new Set(['admin', 'super_admin', 'resort_manager'])
 
-async function verifyAdminRole() {
+async function getAssignedLotIds(userId: string): Promise<string[]> {
+    const serviceSupabase = createServiceRoleClient()
+    const { data, error } = await serviceSupabase
+        .from('admin_user_lots')
+        .select('lot_id')
+        .eq('user_id', userId)
+        .eq('role', 'resort_manager')
+
+    if (error) {
+        console.error('Failed to fetch admin_user_lots:', error)
+        return []
+    }
+
+    return (data || []).map((a: any) => a.lot_id)
+}
+
+async function verifyAdminRole(): Promise<{
+    user: { id: string } | null
+    role: string | null
+    assignedLotIds: string[] | null
+    error: string | null
+}> {
     const supabase = await createServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        return { user: null, error: 'Unauthorized' }
+        return { user: null, role: null, assignedLotIds: null, error: 'Unauthorized' }
     }
 
     const serviceSupabase = createServiceRoleClient()
@@ -23,29 +44,18 @@ async function verifyAdminRole() {
         .single()
 
     if (!profile || !ADMIN_ROLES.has(profile.role)) {
-        return { user: null, error: 'Forbidden: admin role required' }
+        return { user: null, role: null, assignedLotIds: null, error: 'Forbidden: admin role required' }
     }
 
-    // D3: For resort_manager, require at least one admin_user_lots assignment
-    // Full lot-scoped filtering is deferred to Epic 13
     if (profile.role === 'resort_manager') {
-        const { data: lotAssignments, error: lotError } = await serviceSupabase
-            .from('admin_user_lots')
-            .select('id')
-            .eq('user_id', user.id)
-            .limit(1)
-
-        if (lotError) {
-            console.error('Failed to check admin_user_lots:', lotError)
-            return { user: null, error: 'Không thể kiểm tra quyền truy cập' }
+        const assignedLotIds = await getAssignedLotIds(user.id)
+        if (assignedLotIds.length === 0) {
+            return { user: null, role: null, assignedLotIds: null, error: 'Forbidden: resort_manager requires lot assignment' }
         }
-
-        if (!lotAssignments || lotAssignments.length === 0) {
-            return { user: null, error: 'Forbidden: resort_manager requires lot assignment' }
-        }
+        return { user, role: profile.role, assignedLotIds, error: null }
     }
 
-    return { user, error: null }
+    return { user, role: profile.role, assignedLotIds: null, error: null }
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -68,7 +78,7 @@ export async function blockRoomForMaintenance(
     endDate: string,
     reason?: string
 ): Promise<BlockRoomResult> {
-    const { user, error: authError } = await verifyAdminRole()
+    const { user, role, assignedLotIds, error: authError } = await verifyAdminRole()
     if (authError || !user) {
         return { error: authError || 'Unauthorized' }
     }
@@ -79,21 +89,33 @@ export async function blockRoomForMaintenance(
     if (startDate >= endDate) {
         return { error: 'Ngày kết thúc phải sau ngày bắt đầu' }
     }
+
+    const today = new Date().toISOString().slice(0, 10)
+    if (endDate <= today) {
+        return { error: 'Không thể khóa phòng cho ngày trong quá khứ' }
+    }
+
     const trimmedReason = reason?.trim()
     if (!trimmedReason) {
         return { error: 'Vui lòng nhập lý do khóa phòng' }
+    }
+    if (trimmedReason.length > 500) {
+        return { error: 'Lý do không quá 500 ký tự' }
     }
 
     const serviceSupabase = createServiceRoleClient()
 
     const { data: room, error: roomError } = await serviceSupabase
         .from('rooms')
-        .select('id, status, name')
+        .select('id, status, name, lot_id')
         .eq('id', roomId)
         .single()
 
     if (roomError || !room) {
         return { error: 'Phòng không tồn tại' }
+    }
+    if (role === 'resort_manager' && (!assignedLotIds || !assignedLotIds.includes(room.lot_id))) {
+        return { error: 'Bạn không được phép quản lý phòng của khu vườn này' }
     }
     if (room.status === 'maintenance') {
         return { error: 'Phòng đang ở trạng thái bảo trì vĩnh viễn' }
@@ -126,7 +148,7 @@ export async function blockRoomForMaintenance(
         .from('room_blocks')
         .select('id')
         .eq('room_id', roomId)
-        .lt('start_date', endDate)
+        .lte('start_date', endDate)
         .gt('end_date', startDate)
 
     if (blocksError) {
@@ -164,7 +186,7 @@ export async function blockRoomForMaintenance(
 }
 
 export async function unblockRoom(blockId: string): Promise<{ error?: string }> {
-    const { user, error: authError } = await verifyAdminRole()
+    const { user, role, assignedLotIds, error: authError } = await verifyAdminRole()
     if (authError || !user) {
         return { error: authError || 'Unauthorized' }
     }
@@ -174,6 +196,21 @@ export async function unblockRoom(blockId: string): Promise<{ error?: string }> 
     }
 
     const serviceSupabase = createServiceRoleClient()
+
+    const { data: block, error: blockError } = await serviceSupabase
+        .from('room_blocks')
+        .select('id, room_id, rooms!inner(lot_id)')
+        .eq('id', blockId)
+        .single()
+
+    if (blockError || !block) {
+        return { error: 'Block không tồn tại hoặc đã bị xóa' }
+    }
+
+    const blockLotId = (block as any).rooms?.lot_id
+    if (role === 'resort_manager' && (!assignedLotIds || !assignedLotIds.includes(blockLotId))) {
+        return { error: 'Bạn không được phép quản lý block của khu vườn này' }
+    }
 
     const { data: deletedRows, error: deleteError } = await serviceSupabase
         .from('room_blocks')
@@ -229,7 +266,7 @@ export async function fetchRoomCalendarData(
     startDate: string,
     endDate: string
 ): Promise<RoomCalendarData> {
-    const { user, error: authError } = await verifyAdminRole()
+    const { user, role, assignedLotIds, error: authError } = await verifyAdminRole()
     if (authError || !user) {
         return { lots: [], error: authError || 'Unauthorized' }
     }
@@ -244,19 +281,27 @@ export async function fetchRoomCalendarData(
     const serviceSupabase = createServiceRoleClient()
 
     try {
-        const { data: lots, error: lotsError } = await serviceSupabase
+        const lotIdsFilter = role === 'resort_manager' ? assignedLotIds : undefined
+
+        const lotsQuery = serviceSupabase
             .from('lots')
             .select('id, name, region')
             .order('name', { ascending: true })
+        const { data: lots, error: lotsError } = lotIdsFilter
+            ? await lotsQuery.in('id', lotIdsFilter)
+            : await lotsQuery
 
         if (lotsError) {
             console.error('[Admin Room] Fetch lots error:', lotsError)
             return { lots: [], error: 'Không thể tải danh sách khu vườn' }
         }
 
+        const allowedLotIds = new Set((lots || []).map((l: any) => l.id))
+
         const { data: rooms, error: roomsError } = await serviceSupabase
             .from('rooms')
             .select('id, name, status, lot_id')
+            .in('lot_id', [...allowedLotIds])
             .order('name', { ascending: true })
 
         if (roomsError) {
@@ -279,7 +324,7 @@ export async function fetchRoomCalendarData(
         const { data: blocks, error: blocksError } = await serviceSupabase
             .from('room_blocks')
             .select('id, room_id, start_date, end_date, reason, status')
-            .lt('start_date', endDate)
+            .lte('start_date', endDate)
             .gt('end_date', startDate)
 
         if (blocksError) {
