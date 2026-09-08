@@ -49,9 +49,13 @@ export interface MyBookingDetail {
 
 export interface BookingDetailProps {
     booking: MyBookingDetail
+    /** Ẩn action của khách (tiếp tục thanh toán / hủy) — dùng trong admin view. */
+    hideCustomerActions?: boolean
+    /** Ẩn hướng dẫn nhận phòng — dùng trong admin view. */
+    hideCheckInInstructions?: boolean
 }
 
-export default function BookingDetail({ booking }: BookingDetailProps) {
+export default function BookingDetail({ booking, hideCustomerActions = false, hideCheckInInstructions = false }: BookingDetailProps) {
     const router = useRouter()
 
     const [now, setNow] = useState(Date.now())
@@ -112,7 +116,7 @@ export default function BookingDetail({ booking }: BookingDetailProps) {
                 </div>
 
                 {/* Conditional Pending/Confirmed Actions */}
-                {showPaymentAction && (
+                {showPaymentAction && !hideCustomerActions && (
                     <div className="flex flex-wrap items-center gap-3 pt-2 md:pt-0">
                         {isPending && (
                             <CancelBookingButton
@@ -168,7 +172,7 @@ export default function BookingDetail({ booking }: BookingDetailProps) {
             )}
 
             {/* Check-in instructions when confirmed or completed */}
-            {isConfirmedOrCompleted && (
+            {isConfirmedOrCompleted && !hideCheckInInstructions && (
                 <CheckInInstructions
                     roomName={booking.roomName}
                     lotName={booking.lotName}
