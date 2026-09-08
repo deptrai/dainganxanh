@@ -288,15 +288,17 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                     Đã chuyển tiền thành công
                 </button>
 
-                <button
-                    type="button"
-                    onClick={() => setShowCancelModal(true)}
-                    disabled={cancelling || claiming}
-                    className="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                    <XCircle className="w-4 h-4" />
-                    Hủy đặt phòng
-                </button>
+                <div className="pt-2 border-t border-gray-100">
+                    <button
+                        type="button"
+                        onClick={() => setShowCancelModal(true)}
+                        disabled={cancelling || claiming}
+                        className="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <XCircle className="w-4 h-4" />
+                        Hủy đặt phòng
+                    </button>
+                </div>
             </div>
 
             {/* Cancel Confirmation Modal */}

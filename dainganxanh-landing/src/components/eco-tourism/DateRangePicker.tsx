@@ -9,7 +9,7 @@ interface DateRangePickerProps {
 
 export function DateRangePicker({ checkIn, checkOut, onCheckInChange, onCheckOutChange }: DateRangePickerProps) {
     const today = new Date().toISOString().split('T')[0]
-    const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const maxDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-8">

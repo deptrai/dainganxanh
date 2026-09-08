@@ -14,6 +14,8 @@ export interface Room {
     status: 'active' | 'inactive' | 'maintenance'
 }
 
+export type RoomCardState = 'available' | 'booked' | 'blocked'
+
 function formatVND(value: number): string {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
 }
@@ -23,11 +25,17 @@ interface RoomCardProps {
     lotId: string
     checkIn?: string
     checkOut?: string
-    isBooked?: boolean
+    state?: RoomCardState
 }
 
-export function RoomCard({ room, lotId, checkIn, checkOut, isBooked = false }: RoomCardProps) {
+export function RoomCard({ room, lotId, checkIn, checkOut, state = 'available' }: RoomCardProps) {
     const bookUrl = `/eco-tourism/${lotId}/book?room_id=${room.id}&check_in=${checkIn ?? ''}&check_out=${checkOut ?? ''}`
+
+    const stateBadge = {
+        available: null,
+        booked: { label: 'Đã được đặt', className: 'bg-red-100 text-red-700' },
+        blocked: { label: 'Đang bảo trì', className: 'bg-amber-100 text-amber-700' },
+    }[state]
 
     return (
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
@@ -37,9 +45,9 @@ export function RoomCard({ room, lotId, checkIn, checkOut, isBooked = false }: R
                 ) : (
                     <span className="text-4xl">🛏️</span>
                 )}
-                {isBooked && (
-                    <span className="absolute top-3 left-3 bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium">
-                        Đã được đặt
+                {stateBadge && (
+                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-medium ${stateBadge.className}`}>
+                        {stateBadge.label}
                     </span>
                 )}
             </div>
@@ -61,20 +69,20 @@ export function RoomCard({ room, lotId, checkIn, checkOut, isBooked = false }: R
                         <p className="text-xs text-gray-400">Giá mỗi đêm</p>
                         <p className="text-lg font-bold text-emerald-600">{formatVND(room.price_per_night)}</p>
                     </div>
-                    {isBooked ? (
-                        <button
-                            disabled
-                            className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-400 text-sm font-medium rounded-lg cursor-not-allowed"
-                        >
-                            Đã đặt
-                        </button>
-                    ) : (
+                    {state === 'available' ? (
                         <Link
                             href={bookUrl}
                             className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                         >
                             Đặt phòng
                         </Link>
+                    ) : (
+                        <button
+                            disabled
+                            className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-400 text-sm font-medium rounded-lg cursor-not-allowed"
+                        >
+                            {state === 'blocked' ? 'Bảo trì' : 'Đã đặt'}
+                        </button>
                     )}
                 </div>
             </div>

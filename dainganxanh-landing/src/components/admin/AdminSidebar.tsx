@@ -18,21 +18,23 @@ import {
     Bars3Icon,
     XMarkIcon,
     CalendarIcon,
+    WrenchScrewdriverIcon,
+    ShoppingBagIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
-    { name: 'Orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
+    { name: 'Đơn hàng', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
     { name: 'Đặt phòng', href: '/crm/admin/bookings', icon: CalendarIcon },
-    { name: 'Lịch phòng', href: '/crm/admin/rooms', icon: CalendarIcon },
+    { name: 'Lịch phòng', href: '/crm/admin/rooms', icon: WrenchScrewdriverIcon },
     { name: 'Người dùng', href: '/crm/admin/users', icon: UsersIcon },
     { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
     { name: 'Hoa hồng', href: '/crm/admin/referrals', icon: GiftIcon },
-    { name: 'Withdrawals', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
-    { name: 'Casso Logs', href: '/crm/admin/casso', icon: ArrowPathIcon },
+    { name: 'Rút tiền', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
+    { name: 'Lịch sử Casso', href: '/crm/admin/casso', icon: ArrowPathIcon },
     { name: 'Phantom', href: '/crm/admin/phantom', icon: UserPlusIcon },
     { name: 'Blog', href: '/crm/admin/blog', icon: DocumentTextIcon },
-    { name: 'Analytics', href: '/crm/admin/analytics', icon: ChartBarIcon },
-    { name: 'Settings', href: '/crm/admin/settings', icon: Cog6ToothIcon },
+    { name: 'Thống kê', href: '/crm/admin/analytics', icon: ChartBarIcon },
+    { name: 'Cài đặt', href: '/crm/admin/settings', icon: Cog6ToothIcon },
 ]
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -43,7 +45,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             {/* Logo/Header */}
             <div className="p-6 border-b border-gray-200 shrink-0">
                 <h1 className="text-xl font-bold text-green-600">Đại Ngàn Xanh</h1>
-                <p className="text-sm text-gray-500 mt-1">Admin Panel</p>
+                <p className="text-sm text-gray-500 mt-1">Quản trị hệ thống</p>
             </div>
 
             {/* Navigation */}
@@ -77,7 +79,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
                 >
                     <HomeIcon className="w-5 h-5 shrink-0" />
-                    <span>Back to User Dashboard</span>
+                    <span>Về trang người dùng</span>
                 </Link>
             </div>
         </div>

@@ -65,7 +65,9 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const subtotal = product.price * quantity
-  const shippingFee = 0
+  const freeShippingThreshold = 500000
+  const standardShippingFee = 30000
+  const shippingFee = subtotal >= freeShippingThreshold ? 0 : standardShippingFee
   const total = subtotal + shippingFee
 
   const handlePlaceOrder = async () => {
@@ -458,7 +460,13 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Phí vận chuyển</span>
-                <span className="font-semibold">{formatPrice(shippingFee)}</span>
+                <span className="font-semibold">
+                  {shippingFee === 0 ? (
+                    <span className="text-emerald-600">Miễn phí</span>
+                  ) : (
+                    formatPrice(shippingFee)
+                  )}
+                </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-stone-100">
                 <span className="font-bold text-gray-900">Tổng cộng</span>

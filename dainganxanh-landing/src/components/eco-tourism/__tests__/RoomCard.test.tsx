@@ -22,9 +22,15 @@ describe('RoomCard', () => {
         expect(link).toHaveAttribute('href', '/eco-tourism/lot-1/book?room_id=room-1&check_in=2026-09-10&check_out=2026-09-12')
     })
 
-    it('disables CTA and shows booked badge when isBooked is true', () => {
-        render(<RoomCard room={sampleRoom} lotId="lot-1" isBooked />)
+    it('disables CTA and shows booked badge when state is booked', () => {
+        render(<RoomCard room={sampleRoom} lotId="lot-1" state="booked" />)
         expect(screen.getByText('Đã được đặt')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Đã đặt' })).toBeDisabled()
+    })
+
+    it('disables CTA and shows maintenance badge when state is blocked', () => {
+        render(<RoomCard room={sampleRoom} lotId="lot-1" state="blocked" />)
+        expect(screen.getByText('Đang bảo trì')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Bảo trì' })).toBeDisabled()
     })
 })

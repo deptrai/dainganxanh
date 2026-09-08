@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ShoppingBag, Star } from 'lucide-react'
+import { ShoppingBag, Star, Search } from 'lucide-react'
 
 interface Category {
     id: string
@@ -87,12 +87,21 @@ function ProductCard({ product }: { product: Product }) {
 
 export function StoreClient({ categories, products }: { categories: Category[]; products: Product[] }) {
     const [activeSlug, setActiveSlug] = useState<string | null>(null)
+    const [search, setSearch] = useState('')
 
-    const filtered = activeSlug
-        ? products.filter(p => p.product_categories?.slug === activeSlug)
-        : products
+    const filtered = useMemo(() => {
+        return products.filter((p) => {
+            const matchesCategory = activeSlug ? p.product_categories?.slug === activeSlug : true
+            const query = search.trim().toLowerCase()
+            const matchesSearch = !query
+                ? true
+                : p.name.toLowerCase().includes(query)
+                    || p.product_categories?.name?.toLowerCase().includes(query)
+            return matchesCategory && matchesSearch
+        })
+    }, [products, activeSlug, search])
 
-    const featured = products.filter(p => p.is_featured)
+    const featured = products.filter((p) => p.is_featured)
 
     return (
         <>
@@ -112,42 +121,57 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
             </section>
 
             <div className="max-w-6xl mx-auto px-4 py-10">
+                {/* Search */}
+                <div className="relative mb-6">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Tìm kiếm theo tên, mô tả hoặc danh mục sản phẩm..."
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                </div>
+
                 {/* Category filter */}
                 {categories.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-8">
                         <FilterBtn label="Tất cả" active={!activeSlug} onClick={() => setActiveSlug(null)} />
-                        {categories.map(c => (
+                        {categories.map((c) => (
                             <FilterBtn key={c.id} label={c.name} active={activeSlug === c.slug} onClick={() => setActiveSlug(c.slug)} />
                         ))}
                     </div>
                 )}
 
-                {/* Featured (only on All tab) */}
-                {!activeSlug && featured.length > 0 && (
+                {/* Featured (only on All tab and no search) */}
+                {!activeSlug && !search.trim() && featured.length > 0 && (
                     <section className="mb-10">
                         <h2 className="font-serif text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <Star className="w-6 h-6 text-amber-400 fill-current" /> Sản Phẩm Nổi Bật
                         </h2>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {featured.slice(0, 4).map(p => <ProductCard key={p.id} product={p} />)}
+                            {featured.slice(0, 4).map((p) => <ProductCard key={p.id} product={p} />)}
                         </div>
                     </section>
                 )}
 
                 {/* All products */}
                 <section>
-                    {!activeSlug && featured.length > 0 && (
+                    {!activeSlug && !search.trim() && featured.length > 0 && (
                         <h2 className="font-serif text-2xl font-bold text-gray-900 mb-4">Tất Cả Sản Phẩm</h2>
                     )}
 
                     {filtered.length === 0 ? (
                         <div className="text-center py-20 text-gray-500">
                             <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p>Chưa có sản phẩm nào trong danh mục này.</p>
+                            <p>Chưa có sản phẩm nào phù hợp.</p>
+                            {search.trim() && (
+                                <p className="text-sm mt-1">Thử từ khóa khác hoặc xóa bộ lọc tìm kiếm.</p>
+                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+                            {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
                         </div>
                     )}
                 </section>

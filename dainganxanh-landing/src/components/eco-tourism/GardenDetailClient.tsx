@@ -60,11 +60,18 @@ export function GardenDetailClient({ garden }: GardenDetailClientProps) {
 
     const activeRooms = useMemo(() => garden.rooms.filter((r) => r.status === 'active'), [garden.rooms])
 
-    const bookedRoomIds = useMemo(() => {
-        if (!checkIn || !checkOut) return new Set<string>()
+    const blockedRoomStates = useMemo(() => {
+        if (!checkIn || !checkOut) return new Map<string, 'booked' | 'blocked'>()
         const blocking = getBlockingBookings(garden.bookings, checkIn, checkOut)
         const overlapping = getOverlappingBlocks(garden.blocks, checkIn, checkOut)
-        return new Set([...blocking.map((b) => b.room_id), ...overlapping.map((b) => b.room_id)])
+        const states = new Map<string, 'booked' | 'blocked'>()
+        blocking.forEach((b) => states.set(b.room_id, 'booked'))
+        overlapping.forEach((b) => {
+            if (!states.has(b.room_id)) {
+                states.set(b.room_id, 'blocked')
+            }
+        })
+        return states
     }, [garden.bookings, garden.blocks, checkIn, checkOut])
 
     const allImages = useMemo(() => {
@@ -139,7 +146,7 @@ export function GardenDetailClient({ garden }: GardenDetailClientProps) {
                                 lotId={garden.id}
                                 checkIn={checkIn}
                                 checkOut={checkOut}
-                                isBooked={bookedRoomIds.has(room.id)}
+                                state={blockedRoomStates.get(room.id) || 'available'}
                             />
                         ))}
                     </div>
