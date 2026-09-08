@@ -11,7 +11,7 @@ last_updated: 2026-09-07T19:00:00.000000
 # - done: Hoàn thành tất cả AC và passed review
 
 generated: "2026-09-05T08:15:00+07:00"
-last_updated: "2026-09-08T09:41:57.191470"
+last_updated: "2026-09-08T09:55:53.292319"
 project: "Đại Ngàn Xanh"
 project_key: "NOKEY"
 tracking_system: "file-system"
@@ -118,7 +118,7 @@ development_status:
   11-4-confirm-booking-payment: done
   11-5-cancel-booking: done
   11-6-view-my-bookings-crm: done
-  11-7-admin-booking-management: in-progress
+  11-7-admin-booking-management: done
   11-8-admin-room-calendar: backlog
   epic-11-retrospective: optional
 
