@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { Compass, ShoppingBag, ArrowRight, BedDouble, Sparkles } from 'lucide-react'
 import { FadeIn, StaggerContainer, StaggerItem, ParallaxImage, ScaleHover, TextReveal } from '@/components/MotionWrapper'
 import { AuthCallbackHandler } from '@/components/AuthCallbackHandler'
 import { AuthNavLink } from '@/components/AuthNavLink'
@@ -48,24 +49,39 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             {/* Navbar - Glassmorphism */}
             <nav className="fixed w-full z-50 transition-all duration-300 top-0 py-4">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <FadeIn delay={0.2} className="flex justify-between items-center glass-card rounded-full px-6 py-3 shadow-soft backdrop-blur-md bg-white/70 border border-white/50">
-                        <div className="flex items-center space-x-2 cursor-pointer">
-                            <span className="text-2xl font-serif font-bold text-brand-500">Đại Ngàn Xanh</span>
-                        </div>
-                        <div className="hidden md:flex space-x-8">
-                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Câu Chuyện</a>
-                            <a href="#product" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Dó Đen Việt</a>
-                            <a href="#how-it-works" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Cách Tham Gia</a>
-                            <Link href="/blog" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200">Blog</Link>
+                    <FadeIn delay={0.2} className="flex justify-between items-center glass-card rounded-full px-5 py-3 shadow-soft backdrop-blur-md bg-white/80 border border-white/50">
+                        <Link href="/" className="flex items-center space-x-2 cursor-pointer">
+                            <span className="text-xl md:text-2xl font-serif font-bold text-brand-500">Đại Ngàn Xanh</span>
+                        </Link>
+                        <div className="hidden lg:flex items-center space-x-6">
+                            <a href="#about" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200 text-sm">Câu Chuyện</a>
+                            <a href="#product" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200 text-sm">Dó Đen Việt</a>
+                            <Link href="/eco-tourism" className="text-emerald-700 hover:text-emerald-800 font-semibold transition-colors hover:scale-105 transform duration-200 text-sm flex items-center gap-1.5">
+                                <Compass className="w-4 h-4 text-emerald-600" />
+                                <span>Du Lịch & Tour</span>
+                            </Link>
+                            <Link href="/store" className="text-amber-800 hover:text-amber-900 font-semibold transition-colors hover:scale-105 transform duration-200 text-sm flex items-center gap-1.5">
+                                <ShoppingBag className="w-4 h-4 text-amber-600" />
+                                <span>Cửa Hàng Trầm</span>
+                            </Link>
+                            <Link href="/blog" className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200 text-sm">Blog</Link>
                             <AuthNavLink />
                         </div>
-                        <ScaleHover>
-                            <Link href="/pricing">
-                                <button className="bg-brand-600 hover:bg-brand-600 text-white px-6 py-2 rounded-full font-medium shadow-lg hover:shadow-xl transition-all">
-                                    Trồng Ngay
-                                </button>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <Link href="/eco-tourism" className="lg:hidden text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-full border border-emerald-200 transition-colors">
+                                Tour/Phòng
                             </Link>
-                        </ScaleHover>
+                            <Link href="/store" className="lg:hidden text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-full border border-amber-200 transition-colors">
+                                Cửa hàng
+                            </Link>
+                            <ScaleHover>
+                                <Link href="/pricing">
+                                    <button className="bg-brand-600 hover:bg-brand-600 text-white px-4 sm:px-6 py-2 rounded-full font-medium text-sm shadow-lg hover:shadow-xl transition-all">
+                                        Trồng Ngay
+                                    </button>
+                                </Link>
+                            </ScaleHover>
+                        </div>
                     </FadeIn>
                 </div>
             </nav>
@@ -91,6 +107,26 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                     <FadeIn delay={1.0} className="flex flex-col sm:flex-row justify-center gap-6">
                         <CTAButton href="/pricing">Gieo Mầm Ngay</CTAButton>
                         <VideoButton />
+                    </FadeIn>
+
+                    {/* Quick Access to Eco-Tourism & Store */}
+                    <FadeIn delay={1.2} className="mt-10 flex flex-wrap justify-center gap-4">
+                        <Link
+                            href="/eco-tourism"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-900/70 backdrop-blur-md border border-emerald-400/50 text-emerald-100 hover:bg-emerald-800/90 hover:scale-105 transition-all text-sm font-medium shadow-lg"
+                        >
+                            <Compass className="w-4 h-4 text-emerald-300" />
+                            <span>Khám Phá & Đặt Tour Nghỉ Dưỡng</span>
+                            <ArrowRight className="w-4 h-4 text-emerald-300" />
+                        </Link>
+                        <Link
+                            href="/store"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-950/70 backdrop-blur-md border border-amber-400/50 text-amber-100 hover:bg-amber-900/90 hover:scale-105 transition-all text-sm font-medium shadow-lg"
+                        >
+                            <ShoppingBag className="w-4 h-4 text-amber-300" />
+                            <span>Cửa Hàng Trầm Hương Thuần Việt</span>
+                            <ArrowRight className="w-4 h-4 text-amber-300" />
+                        </Link>
                     </FadeIn>
                 </div>
             </section>
@@ -195,6 +231,105 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             </StaggerItem>
                         ))}
                     </StaggerContainer>
+                </div>
+            </section>
+
+            {/* Eco-Tourism & Store Showcase */}
+            <section className="py-24 bg-gradient-to-b from-white via-emerald-50/40 to-white relative overflow-hidden">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center max-w-3xl mx-auto mb-16">
+                        <FadeIn>
+                            <span className="text-emerald-700 font-bold tracking-widest uppercase text-sm bg-emerald-100 px-4 py-1.5 rounded-full inline-block mb-3">
+                                Hệ Sinh Thái Toàn Diện
+                            </span>
+                            <h2 className="font-serif text-3xl md:text-5xl font-bold text-gray-900 leading-tight">
+                                Trải Nghiệm Nghỉ Dưỡng & Sản Phẩm Thuần Việt
+                            </h2>
+                            <p className="mt-4 text-gray-600 text-base md:text-lg">
+                                Không chỉ gieo mầm cây, bạn còn có thể trực tiếp đến thăm vườn, nghỉ dưỡng giữa rừng Dó Đen và thưởng thức các sản phẩm trầm hương thượng hạng.
+                            </p>
+                        </FadeIn>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+                        {/* Card 1: Eco-Tourism / Book tour */}
+                        <FadeIn delay={0.2} className="group relative rounded-3xl overflow-hidden border border-emerald-100 bg-white shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col">
+                            <div className="relative aspect-[16/10] overflow-hidden bg-emerald-950">
+                                <Image
+                                    src="/images/lots/vuon-tram-huong-ba-vi.webp"
+                                    alt="Du lịch sinh thái nghỉ dưỡng tại vườn trầm hương"
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <div className="absolute top-4 left-4 bg-emerald-600/90 text-white px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1.5">
+                                    <Compass className="w-3.5 h-3.5" />
+                                    <span>Du Lịch & Tour Nghỉ Dưỡng</span>
+                                </div>
+                                <div className="absolute bottom-4 left-4 right-4 text-white">
+                                    <p className="text-xs text-emerald-300 font-medium">Ba Vì • Đồng Nai • Tây Nguyên</p>
+                                    <h3 className="text-xl md:text-2xl font-serif font-bold mt-1">Vườn Trầm Hương Có Phòng Nghỉ</h3>
+                                </div>
+                            </div>
+                            <div className="p-6 md:p-8 flex-1 flex flex-col justify-between">
+                                <p className="text-gray-600 leading-relaxed text-sm md:text-base mb-6">
+                                    Hòa mình vào không gian rừng tự nhiên trong lành. Nghỉ dưỡng tại các bungalow view rừng, tham gia workshop tạo trầm, xông trầm thư giãn và thưởng trà đạo.
+                                </p>
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <div>
+                                        <p className="text-xs text-gray-400">Giá phòng từ</p>
+                                        <p className="text-lg font-bold text-emerald-700">650.000₫ / đêm</p>
+                                    </div>
+                                    <Link
+                                        href="/eco-tourism"
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-md hover:shadow-lg transition-all"
+                                    >
+                                        <span>Đặt Tour / Phòng</span>
+                                        <ArrowRight className="w-4 h-4" />
+                                    </Link>
+                                </div>
+                            </div>
+                        </FadeIn>
+
+                        {/* Card 2: Store */}
+                        <FadeIn delay={0.4} className="group relative rounded-3xl overflow-hidden border border-amber-100 bg-white shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col">
+                            <div className="relative aspect-[16/10] overflow-hidden bg-amber-950">
+                                <Image
+                                    src="/images/products/nhang-nu-tram-huong.webp"
+                                    alt="Cửa hàng sản phẩm Trầm Hương Đại Ngàn Xanh"
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <div className="absolute top-4 left-4 bg-amber-600/90 text-white px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-sm flex items-center gap-1.5">
+                                    <ShoppingBag className="w-3.5 h-3.5" />
+                                    <span>Cửa Hàng Trầm Hương Thuần Việt</span>
+                                </div>
+                                <div className="absolute bottom-4 left-4 right-4 text-white">
+                                    <p className="text-xs text-amber-300 font-medium">100% Nguyên Chất Tự Nhiên</p>
+                                    <h3 className="text-xl md:text-2xl font-serif font-bold mt-1">Sản Phẩm Trầm Hương Cao Cấp</h3>
+                                </div>
+                            </div>
+                            <div className="p-6 md:p-8 flex-1 flex flex-col justify-between">
+                                <p className="text-gray-600 leading-relaxed text-sm md:text-base mb-6">
+                                    Chắt lọc từ những cây Dó Đen trưởng thành: Nhang nụ thanh lọc không gian, nhang không tăm thiền định, tinh dầu nguyên chất, nước hoa sang trọng và vòng tay may mắn.
+                                </p>
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <div>
+                                        <p className="text-xs text-gray-400">Sản phẩm từ</p>
+                                        <p className="text-lg font-bold text-amber-800">180.000₫</p>
+                                    </div>
+                                    <Link
+                                        href="/store"
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-medium text-sm shadow-md hover:shadow-lg transition-all"
+                                    >
+                                        <span>Ghé Cửa Hàng</span>
+                                        <ArrowRight className="w-4 h-4" />
+                                    </Link>
+                                </div>
+                            </div>
+                        </FadeIn>
+                    </div>
                 </div>
             </section>
 
@@ -370,6 +505,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                             <ul className="space-y-2 text-white/60 text-sm">
                                 <li><a href="#about" className="hover:text-white transition-colors">Câu chuyện</a></li>
                                 <li><a href="#product" className="hover:text-white transition-colors">Dó Đen Việt</a></li>
+                                <li><Link href="/eco-tourism" className="hover:text-white transition-colors flex items-center gap-1.5 text-emerald-300 font-medium">🌿 Du lịch & Đặt tour</Link></li>
+                                <li><Link href="/store" className="hover:text-white transition-colors flex items-center gap-1.5 text-amber-300 font-medium">✨ Cửa hàng Trầm Hương</Link></li>
                                 <li><a href="#how-it-works" className="hover:text-white transition-colors">Cách tham gia</a></li>
                                 <li><Link href="/pricing" className="hover:text-white transition-colors">Mua cây</Link></li>
                                 <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>

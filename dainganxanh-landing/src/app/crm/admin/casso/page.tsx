@@ -76,7 +76,7 @@ export default async function CassoAdminPage({ searchParams }: PageProps) {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900">Casso Transaction Logs</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Lịch sử giao dịch Casso</h1>
                 <p className="mt-2 text-gray-600">
                     Lịch sử tất cả giao dịch Casso — bao gồm cả không khớp
                 </p>

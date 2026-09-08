@@ -11,3 +11,6 @@ jest.mock('next/cache', () => ({
     revalidateTag: jest.fn(),
     unstable_cache: jest.fn().mockImplementation((fn: () => unknown) => fn),
 }))
+
+// Set NODE_ENV for render shim
+process.env.NODE_ENV = 'test'

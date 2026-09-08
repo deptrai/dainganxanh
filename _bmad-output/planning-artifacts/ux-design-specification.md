@@ -504,3 +504,130 @@ All design tokens are defined in:
 
 **End of UX Design Specification**
 
+
+---
+
+## 🌿 Eco-Tourism & Store UX Specification
+
+### New Pages
+
+#### 1. `/eco-tourism` - Garden Listing
+
+**Layout:**
+- Hero section: Giới thiệu ngắn về Eco-Stay
+- Filter tabs: Tất cả | Miền Bắc | Miền Trung | Miền Nam
+- Grid of Garden Cards (2 columns mobile, 3 columns desktop)
+- Each card: image, name, region, price from, "Xem phòng" CTA
+
+**Components:**
+- `GardenCard`: image, title, region badge, price, CTA
+- `RegionFilter`: tab buttons, active state
+
+#### 2. `/eco-tourism/[lotId]` - Garden Detail
+
+**Layout:**
+- Image gallery (main + thumbnails)
+- Garden description + map/location
+- Room cards grid
+- Date picker (check-in/check-out)
+- Disabled rooms if booked in selected range
+
+**Components:**
+- `ImageGallery`
+- `RoomCard`: image, name, capacity, amenities, price/night, status
+- `DateRangePicker`: `<input type="date">` with min/max
+
+#### 3. `/eco-tourism/[lotId]/book` - Booking Checkout
+
+**Layout:**
+- Form: name, phone, email, guest count, special requests
+- Order summary: room, dates, nights, total
+- VietQR code with 15-minute countdown
+- Copy transfer description
+
+**Components:**
+- `BookingForm`
+- `VietQRDisplay`: QR image + countdown + copy button
+- `OrderSummary`
+
+#### 4. `/store` - Product Catalog
+
+**Layout:**
+- Hero with featured product
+- Category pills (filter)
+- Search bar
+- Product grid
+
+**Components:**
+- `ProductCard`: image, name, price, stock status, origin badge
+- `CategoryPills`: horizontal scroll on mobile
+- `SearchInput`
+
+#### 5. `/store/[productSlug]` - Product Detail
+
+**Layout:**
+- Image gallery
+- Product info: name, price, compare-at price, origin, stock
+- Specifications table
+- Quantity selector
+- "Mua ngay" CTA
+- Related products
+
+**Components:**
+- `ProductImageGallery`
+- `QuantitySelector`
+- `SpecsTable`
+
+#### 6. `/store/checkout` - Store Checkout
+
+**Layout:**
+- Checkout form: name, phone, email, shipping address, province, note
+- Order summary: product, quantity, subtotal, shipping, total
+- Payment method: Banking / COD toggle
+- Banking: show VietQR after submit
+- COD: show confirmation immediately
+
+**Components:**
+- `StoreCheckoutForm`
+- `PaymentMethodToggle`
+- `StoreOrderSummary`
+
+#### 7. CRM `/crm/my-bookings` & `/crm/my-store-orders`
+
+**Layout:**
+- Table/list of bookings/orders
+- Status badges
+- Click row → detail
+
+**Components:**
+- `BookingList`
+- `StoreOrderList`
+- `StatusBadge`
+
+#### 8. Admin `/crm/admin/bookings`, `/crm/admin/rooms`, `/crm/admin/products`, `/crm/admin/store-orders`
+
+**Layout:**
+- Data tables with filters
+- Action buttons (confirm/cancel/update status)
+- Calendar view for rooms
+
+**Components:**
+- `AdminDataTable`
+- `BookingCalendar`
+- `ProductForm`
+- `StoreOrderFulfillment`
+
+### Responsive Behavior
+
+- Mobile-first
+- All public pages under 3s load time
+- Touch-friendly inputs and buttons
+- Date pickers use native `<input type="date">`
+
+### Accessibility
+
+- WCAG 2.1 AA
+- Focus indicators
+- ARIA labels on interactive elements
+- Color contrast on status badges
+
