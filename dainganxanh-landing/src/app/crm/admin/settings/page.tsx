@@ -17,8 +17,8 @@ export default function SettingsPage() {
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">⚙️ Settings</h1>
-                    <p className="text-gray-600">Manage your admin preferences and system configuration</p>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">⚙️ Cài đặt</h1>
+                    <p className="text-gray-600">Quản lý tùy chọn và cấu hình hệ thống</p>
                 </div>
 
                 {/* Tabs */}

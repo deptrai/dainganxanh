@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Home, TreePine, Share2, Package, UserCircle, ShieldCheck } from 'lucide-react'
+import { Home, TreePine, Share2, Package, UserCircle, ShieldCheck, Calendar, ShoppingBag } from 'lucide-react'
 import { UserHeader } from './UserHeader'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 const baseNavItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
     { name: 'Mua cây', href: '/pricing', icon: Package },
+    { name: 'Đặt phòng', href: '/crm/my-bookings', icon: Calendar },
+    { name: 'Đơn hàng', href: '/crm/my-store-orders', icon: ShoppingBag },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
     { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
