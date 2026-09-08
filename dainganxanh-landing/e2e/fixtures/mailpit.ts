@@ -2,18 +2,11 @@
  * Mailpit OTP Fixture
  *
  * Replaces 21 duplicated `getOTPFromMailpit` implementations across the e2e suite.
- *
- * Key improvements over the inline version:
- * - Condition-based polling (no hardcoded setTimeout)
- * - Configurable retry count and poll interval
- * - Supports both 6-digit and 8-digit OTP codes
- * - Reads MAILPIT_URL from env with fallback
- * - Typed exports for use in Playwright fixtures and standalone helpers
  */
 
 const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://127.0.0.1:54334'
 const DEFAULT_POLL_INTERVAL_MS = 500
-const DEFAULT_MAX_RETRIES = 20  // 20 × 500ms = 10s max wait
+const DEFAULT_MAX_RETRIES = 20
 
 export interface MailpitMessage {
     ID: string
@@ -21,10 +14,6 @@ export interface MailpitMessage {
     Subject: string
 }
 
-/**
- * Poll Mailpit until an email arrives for the given address.
- * Throws if no email found after maxRetries.
- */
 export async function waitForMailpitEmail(
     email: string,
     options: { maxRetries?: number; pollIntervalMs?: number } = {}
@@ -50,14 +39,10 @@ export async function waitForMailpitEmail(
     }
 
     throw new Error(
-        `[mailpit] No email found for <${email}> after ${maxRetries} attempts (${(maxRetries * pollIntervalMs) / 1000}s)`
+        `[mailpit] No email found for <${email}> after ${maxRetries} attempts`
     )
 }
 
-/**
- * Extract OTP code from a Mailpit message body.
- * Supports 6-digit and 8-digit codes.
- */
 export async function extractOTPFromMessage(messageId: string): Promise<string> {
     const response = await fetch(`${MAILPIT_URL}/api/v1/message/${messageId}`)
     if (!response.ok) {
@@ -67,7 +52,6 @@ export async function extractOTPFromMessage(messageId: string): Promise<string> 
     const msgData = await response.json()
     const text: string = msgData.Text ?? ''
 
-    // Try 8-digit first (Supabase OTP), then 6-digit
     const otpMatch = text.match(/\b\d{8}\b/) ?? text.match(/\b\d{6}\b/)
 
     if (!otpMatch) {
@@ -77,14 +61,6 @@ export async function extractOTPFromMessage(messageId: string): Promise<string> 
     return otpMatch[0]
 }
 
-/**
- * Convenience wrapper: wait for email and extract OTP in one call.
- *
- * Usage (replaces all 21 inline getOTPFromMailpit calls):
- *
- *   import { getOTPFromMailpit } from '../fixtures/mailpit'
- *   const otp = await getOTPFromMailpit(email)
- */
 export async function getOTPFromMailpit(
     email: string,
     options: { maxRetries?: number; pollIntervalMs?: number } = {}
