@@ -247,3 +247,12 @@ claude-opus-5 (Opus 5)
 - [x] [Patch] Remove dead `LotSection` interface + `startDay` destructure
 - [x] [Patch] Tests: updated `adminRooms.test.ts` (UUIDs, unblockRoom select-before-delete chain, future dates); `calculate-price` test chain gains `.lte`/`.gt`; `tampering-prevention.test.ts` gains `room_blocks` `.lte` mock
 - [x] [Dismiss] Cancelled/no_show bookings remain visible on calendar (per spec AC1 — color-code all statuses)
+
+## E2E Verification
+
+- File: `dainganxanh-landing/e2e/specs/admin-room-calendar.spec.ts`
+- `npx playwright test e2e/specs/admin-room-calendar.spec.ts --project=chromium-admin --workers=1` passed 7/7
+- Playwright version: 1.47
+- E2E artifacts: `/tmp/e2e-story11-8/`
+- DB migration `20260908000002_add_room_blocks.sql` applied to local Supabase
+- Status: done
