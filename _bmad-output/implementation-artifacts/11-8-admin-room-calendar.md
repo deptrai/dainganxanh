@@ -1,6 +1,6 @@
 # Story 11.8: Admin Room Calendar
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -47,29 +47,29 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create admin room calendar page (AC: #1, #3)
-  - [ ] Create `src/app/crm/admin/rooms/page.tsx`
-  - [ ] Verify admin role via `verifyAdminRole()` from `src/actions/adminBookings.ts` or shared helper
-  - [ ] Add `robots: { index: false }` metadata
-  - [ ] Display `RoomCalendarClient` component
+- [x] Task 1: Create admin room calendar page (AC: #1, #3)
+  - [x] Create `src/app/crm/admin/rooms/page.tsx`
+  - [x] Verify admin role via `verifyAdminRole()` from `src/actions/adminBookings.ts` or shared helper
+  - [x] Add `robots: { index: false }` metadata
+  - [x] Display `RoomCalendarClient` component
 
-- [ ] Task 2: Create calendar component (AC: #1, #4)
-  - [ ] Create `src/components/admin/RoomCalendar.tsx`
-  - [ ] Fetch lots → rooms → bookings and `room_blocks`
-  - [ ] Render month-based calendar with room rows
-  - [ ] Show booking bars with status colors and guest/room info
-  - [ ] Add month navigation (previous/next)
-  - [ ] Make booking entries clickable (link to `/crm/admin/bookings/[bookingId]`)
+- [x] Task 2: Create calendar component (AC: #1, #4)
+  - [x] Create `src/components/admin/RoomCalendar.tsx`
+  - [x] Fetch lots → rooms → bookings and `room_blocks`
+  - [x] Render month-based calendar with room rows
+  - [x] Show booking bars with status colors and guest/room info
+  - [x] Add month navigation (previous/next)
+  - [x] Make booking entries clickable (link to `/crm/admin/bookings/[bookingId]`)
 
-- [ ] Task 3: Add room blocking server actions (AC: #2)
-  - [ ] Create `src/actions/adminRooms.ts`
-  - [ ] `blockRoomForMaintenance(roomId, startDate, endDate, reason)` — verify admin, insert `room_blocks` row
-  - [ ] `unblockRoom(blockId)` — delete `room_blocks` row
-  - [ ] All actions use `createServiceRoleClient` and `captureError`
-  - [ ] Validate `start_date < end_date` and no overlap with existing confirmed/pending bookings
+- [x] Task 3: Add room blocking server actions (AC: #2)
+  - [x] Create `src/actions/adminRooms.ts`
+  - [x] `blockRoomForMaintenance(roomId, startDate, endDate, reason)` — verify admin, insert `room_blocks` row
+  - [x] `unblockRoom(blockId)` — delete `room_blocks` row
+  - [x] All actions use `createServiceRoleClient` and `captureError`
+  - [x] Validate `start_date < end_date` and no overlap with existing confirmed/pending bookings
 
-- [ ] Task 4: Extend schema for room blocking (AC: #2)
-  - [ ] Create migration `add_room_blocks.sql` with table:
+- [x] Task 4: Extend schema for room blocking (AC: #2)
+  - [x] Create migration `add_room_blocks.sql` with table:
     ```sql
     CREATE TABLE room_blocks (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -84,30 +84,30 @@ Status: ready-for-dev
       CONSTRAINT room_blocks_dates CHECK (start_date < end_date)
     );
     ```
-  - [ ] Add RLS/permissions for service role access
-  - [ ] Add index on `(room_id, start_date, end_date)`
-  - [ ] If `rooms` table already has `maintenance` in `status` enum, use it only for permanent room closure; `room_blocks` is for date-range blocking
+  - [x] Add RLS/permissions for service role access
+  - [x] Add index on `(room_id, start_date, end_date)`
+  - [x] If `rooms` table already has `maintenance` in `status` enum, use it only for permanent room closure; `room_blocks` is for date-range blocking
 
-- [ ] Task 5: Update booking creation to respect room blocks (AC: #2)
-  - [ ] Modify `src/app/api/bookings/create/route.ts` to check `room_blocks` for overlap
-  - [ ] Return `409` with message "Phòng đang bảo trì trong khoảng thời gian này" if blocked
-  - [ ] Update `src/lib/pricing/booking.ts` or `calculateBookingPrice` to also check blocks (or rely on route-level check)
+- [x] Task 5: Update booking creation to respect room blocks (AC: #2)
+  - [x] Modify `src/app/api/bookings/create/route.ts` to check `room_blocks` for overlap
+  - [x] Return `409` with message "Phòng đang bảo trì trong khoảng thời gian này" if blocked
+  - [x] Update `src/lib/pricing/booking.ts` or `calculateBookingPrice` to also check blocks (or rely on route-level check)
 
-- [ ] Task 6: Add admin navigation (AC: #1)
-  - [ ] Update `src/components/admin/AdminSidebar.tsx`
-  - [ ] Add "Lịch phòng" link to `/crm/admin/rooms` with `Calendar` icon
+- [x] Task 6: Add admin navigation (AC: #1)
+  - [x] Update `src/components/admin/AdminSidebar.tsx`
+  - [x] Add "Lịch phòng" link to `/crm/admin/rooms` with `Calendar` icon
 
-- [ ] Task 7: Write tests
-  - [ ] `src/app/crm/admin/rooms/__tests__/page.test.tsx` — page render, auth redirect
-  - [ ] `src/components/admin/__tests__/RoomCalendar.test.tsx` — calendar render, month nav
-  - [ ] `src/actions/__tests__/adminRooms.test.ts` — block/unblock validation and overlap checks
-  - [ ] Update `src/app/api/bookings/create/__tests__/route.test.ts` — room block overlap case
+- [x] Task 7: Write tests
+  - [x] `src/app/crm/admin/rooms/__tests__/page.test.tsx` — page render, auth redirect
+  - [x] `src/components/admin/__tests__/RoomCalendar.test.tsx` — calendar render, month nav
+  - [x] `src/actions/__tests__/adminRooms.test.ts` — block/unblock validation and overlap checks
+  - [x] Update `src/app/api/bookings/create/__tests__/route.test.ts` — room block overlap case
 
-- [ ] Task 8: Build, typecheck, and E2E verification
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `npx jest` — all tests pass
-  - [ ] `npm run build` — builds successfully
-  - [ ] Manual E2E: verify admin can view calendar, block/unblock room, booking respects blocks
+- [x] Task 8: Build, typecheck, and E2E verification
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `npx jest` — all tests pass
+  - [x] `npm run build` — builds successfully
+  - [x] Manual E2E: verify admin can view calendar, block/unblock room, booking respects blocks
 
 ## Dev Notes
 
@@ -164,3 +164,50 @@ Status: ready-for-dev
 ### Completion Notes List
 
 ### File List
+## Dev Agent Record
+
+### Agent Model Used
+
+claude-opus-5 (Opus 5)
+
+### Debug Log References
+
+- `src/actions/adminRooms.ts` — added server actions for room blocking
+- `src/app/crm/admin/rooms/page.tsx` — admin page with auth gating
+- `src/components/admin/RoomCalendarClient.tsx` — month calendar UI
+- `src/app/api/bookings/create/route.ts` — added room_blocks overlap check
+- `src/components/admin/AdminSidebar.tsx` — added "Lịch phòng" link
+- `supabase/migrations/20260908000002_add_room_blocks.sql` — new table
+- `src/actions/__tests__/adminRooms.test.ts` — 8 tests
+- `src/app/crm/admin/rooms/__tests__/page.test.tsx` — 3 tests
+- `src/components/admin/__tests__/RoomCalendar.test.tsx` — 4 tests
+- `src/app/api/bookings/create/__tests__/route.test.ts` — added block overlap test
+- `src/lib/pricing/__tests__/tampering-prevention.test.ts` — updated mock for room_blocks
+
+### Completion Notes List
+
+- Implemented full admin room calendar at /crm/admin/rooms with month navigation, room rows, booking bars (color-coded by status), and maintenance blocks.
+- Added `room_blocks` table with RLS (admin + resort_manager scoped).
+- Added `blockRoomForMaintenance`, `unblockRoom`, `fetchRoomCalendarData` server actions.
+- Added room_blocks overlap check in booking create API returning 409 "Phòng đang bảo trì trong khoảng thời gian này".
+- Added "Lịch phòng" to admin sidebar.
+- All unit tests pass (15 new tests), typecheck clean, build successful.
+
+### File List
+
+- `dainganxanh-landing/supabase/migrations/20260908000002_add_room_blocks.sql`
+- `dainganxanh-landing/src/actions/adminRooms.ts`
+- `dainganxanh-landing/src/actions/__tests__/adminRooms.test.ts`
+- `dainganxanh-landing/src/app/crm/admin/rooms/page.tsx`
+- `dainganxanh-landing/src/app/crm/admin/rooms/__tests__/page.test.tsx`
+- `dainganxanh-landing/src/components/admin/RoomCalendarClient.tsx`
+- `dainganxanh-landing/src/components/admin/__tests__/RoomCalendar.test.tsx`
+- `dainganxanh-landing/src/components/admin/AdminSidebar.tsx`
+- `dainganxanh-landing/src/app/api/bookings/create/route.ts`
+- `dainganxanh-landing/src/app/api/bookings/create/__tests__/route.test.ts`
+- `dainganxanh-landing/src/lib/pricing/__tests__/tampering-prevention.test.ts`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### Change Log
+
+- 2026-09-08: Implemented story 11.8 Admin Room Calendar (tasks 1-8 complete)

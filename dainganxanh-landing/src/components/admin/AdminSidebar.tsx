@@ -23,6 +23,7 @@ import {
 const navigation = [
     { name: 'Orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
     { name: 'Đặt phòng', href: '/crm/admin/bookings', icon: CalendarIcon },
+    { name: 'Lịch phòng', href: '/crm/admin/rooms', icon: CalendarIcon },
     { name: 'Người dùng', href: '/crm/admin/users', icon: UsersIcon },
     { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
     { name: 'Hoa hồng', href: '/crm/admin/referrals', icon: GiftIcon },

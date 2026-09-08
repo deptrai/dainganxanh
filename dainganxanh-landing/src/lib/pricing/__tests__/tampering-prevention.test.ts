@@ -48,6 +48,17 @@ jest.mock('@/lib/supabase/server', () => ({
           }),
         }
       }
+      if (table === 'room_blocks') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              lt: jest.fn().mockReturnValue({
+                gt: jest.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          }),
+        }
+      }
       if (table === 'room_bookings') {
         return {
           insert: jest.fn().mockReturnValue({

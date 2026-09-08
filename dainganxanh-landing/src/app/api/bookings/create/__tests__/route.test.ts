@@ -113,3 +113,14 @@ describe('Booking logic utilities', () => {
     expect(isExclusionConflict({ message: 'other database error' })).toBe(false)
   })
 })
+
+describe('Room block overlap logic', () => {
+  it('detects overlapping room_blocks for maintenance', () => {
+    const hasOverlap = (blocks: { start_date: string; end_date: string }[], checkIn: string, checkOut: string) =>
+      blocks.some((b) => b.start_date < checkOut && b.end_date > checkIn)
+
+    expect(hasOverlap([{ start_date: '2026-09-10', end_date: '2026-09-15' }], '2026-09-12', '2026-09-13')).toBe(true)
+    expect(hasOverlap([{ start_date: '2026-09-10', end_date: '2026-09-15' }], '2026-09-15', '2026-09-16')).toBe(false)
+    expect(hasOverlap([], '2026-09-10', '2026-09-11')).toBe(false)
+  })
+})

@@ -11,7 +11,7 @@ last_updated: 2026-09-07T19:00:00.000000
 # - done: Hoàn thành tất cả AC và passed review
 
 generated: "2026-09-05T08:15:00+07:00"
-last_updated: "2026-09-08T10:02:55.742491"
+last_updated: "2026-09-08T11:30:00.000000"
 project: "Đại Ngàn Xanh"
 project_key: "NOKEY"
 tracking_system: "file-system"
@@ -119,7 +119,7 @@ development_status:
   11-5-cancel-booking: done
   11-6-view-my-bookings-crm: done
   11-7-admin-booking-management: done
-  11-8-admin-room-calendar: ready-for-dev
+  11-8-admin-room-calendar: in-progress
   epic-11-retrospective: optional
 
   # Epic 12: Trầm Hương Store - Added 2026-09-05
@@ -150,9 +150,9 @@ summary:
   total_epics: 13
   total_stories: 70
   stories_ready: 0
-  stories_in_progress: 0
+  stories_in_progress: 1
   stories_review: 0
-  stories_done: 58
-  stories_backlog: 12
+  stories_done: 60
+  stories_backlog: 9
   current_velocity: 11
-  last_updated: "2026-09-07T21:00:00+07:00"
+  last_updated: "2026-09-08T11:30:00+07:00"

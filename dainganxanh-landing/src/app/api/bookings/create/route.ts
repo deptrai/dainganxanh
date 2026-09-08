@@ -71,6 +71,27 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
+  // Check room_blocks for maintenance overlap (story 11.8)
+  const { data: overlappingBlocks, error: blocksError } = await supabase
+    .from('room_blocks')
+    .select('id')
+    .eq('room_id', data.room_id)
+    .lt('start_date', data.check_out_date)
+    .gt('end_date', data.check_in_date)
+
+  if (blocksError) {
+    console.error('[Booking Create] Blocks check error:', blocksError)
+    captureError(blocksError, {
+      route: '/api/bookings/create',
+      roomId: data.room_id,
+    })
+    return NextResponse.json({ error: 'Không thể kiểm tra lịch bảo trì' }, { status: 500 })
+  }
+
+  if (overlappingBlocks && overlappingBlocks.length > 0) {
+    return NextResponse.json({ error: 'Phòng đang bảo trì trong khoảng thời gian này' }, { status: 409 })
+  }
+
   // Authoritative server-side price calculation
   let pricing
   try {
