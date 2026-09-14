@@ -142,25 +142,16 @@ describe('RegisterPage', () => {
             })
         })
 
-        it('should allow user to fill default referral code', async () => {
+        it('should NOT show quick-fill default referral button', async () => {
             render(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText(/Đăng ký nhanh/i)).toBeInTheDocument()
             })
 
-            // Find the "Bấm vào đây" button
-            const defaultRefButton = screen.getByText(/Bấm vào đây để dùng mã/i)
-            expect(defaultRefButton).toBeInTheDocument()
-
-            // Click to auto-fill
-            fireEvent.click(defaultRefButton)
-
-            // Check that input is filled
-            const refInput = screen.getByPlaceholderText(/VD: dainganxanh/i)
-            await waitFor(() => {
-                expect(refInput).toHaveValue(DEFAULT_REF.toLowerCase())
-            })
+            // The "Bấm vào đây để dùng mã" quick-fill button has been removed
+            const defaultRefButton = screen.queryByText(/Bấm vào đây để dùng mã/i)
+            expect(defaultRefButton).not.toBeInTheDocument()
         })
 
         it('should convert referral code to lowercase', async () => {

@@ -216,20 +216,7 @@ function RegisterContent() {
                                 {refError && (
                                     <p className="mt-1 text-xs text-red-600">{refError}</p>
                                 )}
-                                {/* Hint: click to auto-fill default code */}
-                                <p className="mt-1.5 text-xs text-gray-500">
-                                    Chưa có mã?{" "}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setRefInput(DEFAULT_REF.toLowerCase());
-                                            setRefError("");
-                                        }}
-                                        className="text-emerald-600 font-semibold hover:underline focus:outline-none"
-                                    >
-                                        Bấm vào đây để dùng mã {DEFAULT_REF}
-                                    </button>
-                                </p>
+                                {/* Hint: optional helper text */}
                             </motion.div>
                         </>
                     ) : (
