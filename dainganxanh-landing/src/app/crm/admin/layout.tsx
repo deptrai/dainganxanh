@@ -28,9 +28,25 @@ export default async function AdminLayout({
         redirect('/crm/dashboard')
     }
 
-    // Only allow admin and super_admin roles
-    if (!['admin', 'super_admin'].includes(profile.role)) {
-        redirect('/crm/dashboard')
+    // Global admin / super_admin always have access
+    const isGlobalAdmin = ['admin', 'super_admin'].includes(profile.role)
+
+    if (!isGlobalAdmin) {
+        // Check if the user has any lot-scoped admin assignment
+        const { data: lotAssignments, error: lotError } = await supabase
+            .from('admin_user_lots')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1)
+
+        if (lotError) {
+            console.error('Failed to fetch lot assignments:', lotError)
+            redirect('/crm/dashboard')
+        }
+
+        if (!lotAssignments || lotAssignments.length === 0) {
+            redirect('/crm/dashboard')
+        }
     }
 
     return <AdminShell>{children}</AdminShell>

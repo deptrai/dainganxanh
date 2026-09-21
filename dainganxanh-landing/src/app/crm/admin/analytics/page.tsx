@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-4">📊 Analytics Dashboard</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-4">📊 Thống kê</h1>
 
                     {/* Controls */}
                     <div className="flex flex-wrap items-center gap-4">

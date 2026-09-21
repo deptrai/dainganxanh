@@ -1,3 +1,9 @@
+## Deferred from: code review of 13-6-lot-scoped-admin-roles (2026-09-07)
+
+- DF1 — Layout allows lot-scoped users into all `/crm/admin/*` pages [src/app/crm/admin/layout.tsx] — Per-AC #3 this is intended; per-page actions still enforce permissions. Page-level gating is future work.
+- DF2 — No RLS integration tests — Testing RLS cross-lot denial requires Supabase test harness.
+- DF3 — No explicit regression test for existing admin without `admin_user_lots` — Backward compatibility implicitly covered by `lots.test.ts` but not an explicit test case.
+
 # Deferred Work
 
 ## Deferred from: code review of story-10.1 (2026-03-28)
@@ -27,3 +33,14 @@
 - `Order.status` TypeScript union missing `failed` / `manual_payment_claimed` values that the DB CHECK already admits — renders `undefined` badges silently.
 - `admin_audit_log.admin_id` FK points to `public.users`; admins present only in `auth.users` cause insert to fail (silently swallowed by route's try/catch).
 - Referral commission clawback policy when a completed order is refunded — `getAvailableBalance` filters by `status='completed'`; refunded orders disappear from commission base. If referrer already withdrew, balance can go negative. Needs policy decision (full vs partial clawback, deduct vs notify, freeze payouts during dispute window).
+
+## Deferred from: code review of 11-6-view-my-bookings-crm.md (2026-09-07)
+
+- [ ] Replace `as unknown as { name: string }` Supabase join type assertions with generated types (prevalent in eco-tourism modules).
+- [ ] Verify `nights_count` population in `room_bookings` — `create` route computes `diffDays` but does not insert `nights_count`; confirm generated column/trigger.
+- [ ] Revisit rate limit for `GET /api/bookings/my` (100 req/min) after production usage.
+
+
+## Deferred from: code review of story-11.7 (2026-09-08)
+
+- [ ] [Review][Defer] Date filters use `check_in_date` only — a stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic (`check_in_date <= dateTo AND check_out_date >= dateFrom`).

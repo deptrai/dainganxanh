@@ -9,6 +9,13 @@
 
 import { createLot, updateLot } from '../lots'
 
+jest.mock('@/lib/admin/permissions', () => ({
+    canAccessLot: jest.fn(),
+    getAdminUserLots: jest.fn(),
+}))
+
+const { canAccessLot, getAdminUserLots } = require('@/lib/admin/permissions')
+
 // ── Mock state ───────────────────────────────────────────────────────────────
 
 const mockGetUser = jest.fn()
@@ -45,6 +52,9 @@ function setupAdminUser(role: 'admin' | 'super_admin' | 'customer' = 'admin') {
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { role }, error: null }),
     })
+
+    // Non-admin lot assignments default to empty so getAdminUserLots doesn't call missing serviceFrom
+    getAdminUserLots.mockResolvedValue([])
 }
 
 function setupUnauthenticated() {

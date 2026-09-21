@@ -18,47 +18,56 @@ interface PostPageProps {
 
 // Pre-generate paths for published posts at build time
 export async function generateStaticParams() {
-  const supabase = createServiceRoleClient()
-  const { data } = await supabase
-    .from('posts')
-    .select('slug')
-    .eq('status', 'published')
-    .lte('published_at', new Date().toISOString())
+  try {
+    const supabase = createServiceRoleClient()
+    const { data } = await supabase
+      .from('posts')
+      .select('slug')
+      .eq('status', 'published')
+      .lte('published_at', new Date().toISOString())
 
-  return (data ?? []).map((p: { slug: string }) => ({ slug: p.slug }))
+    return (data ?? []).map((p: { slug: string }) => ({ slug: p.slug }))
+  } catch (err) {
+    console.warn('[build] generateStaticParams for blog posts skipped or failed:', err instanceof Error ? err.message : err)
+    return []
+  }
 }
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
   const { slug } = await params
-  const supabase = createServiceRoleClient()
-  const { data: post } = await supabase
-    .from('posts')
-    .select('title, excerpt, cover_image, published_at, tags, meta_title, meta_desc')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .single()
+  try {
+    const supabase = createServiceRoleClient()
+    const { data: post } = await supabase
+      .from('posts')
+      .select('title, excerpt, cover_image, published_at, tags, meta_title, meta_desc')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single()
 
-  if (!post) {
-    return { title: 'Không tìm thấy bài viết — Đại Ngàn Xanh' }
-  }
+    if (!post) {
+      return { title: 'Không tìm thấy bài viết — Đại Ngàn Xanh' }
+    }
 
-  const title = post.meta_title || post.title
-  const description = post.meta_desc || post.excerpt || ''
+    const title = post.meta_title || post.title
+    const description = post.meta_desc || post.excerpt || ''
 
-  return {
-    title,
-    description,
-    openGraph: {
+    return {
       title,
       description,
-      images: post.cover_image ? [{ url: post.cover_image, alt: title }] : [],
-      type: 'article',
-      publishedTime: post.published_at ?? undefined,
-      tags: post.tags ?? [],
-    },
-    alternates: {
-      canonical: `/blog/${slug}`,
-    },
+      openGraph: {
+        title,
+        description,
+        images: post.cover_image ? [{ url: post.cover_image, alt: title }] : [],
+        type: 'article',
+        publishedTime: post.published_at ?? undefined,
+        tags: post.tags ?? [],
+      },
+      alternates: {
+        canonical: `/blog/${slug}`,
+      },
+    }
+  } catch {
+    return { title: 'Bài viết — Đại Ngàn Xanh' }
   }
 }
 

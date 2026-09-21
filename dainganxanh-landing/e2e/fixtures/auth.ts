@@ -46,7 +46,7 @@ async function loginWithOTP(
     const sendOTPButton = page.getByRole('button', { name: /gửi mã otp/i })
     await sendOTPButton.click()
 
-    const otpPattern = otpDigits === 8 ? /nhập mã otp \(8 chữ số\)/i : /nhập mã otp/i
+    const otpPattern = /nhập mã otp/i
     await expect(page.getByText(otpPattern)).toBeVisible({ timeout: 10000 })
 
     const otpCode = await getOTPFromMailpit(email)

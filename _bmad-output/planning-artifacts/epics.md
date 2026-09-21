@@ -1207,3 +1207,541 @@ _Stories bổ sung vào Epic 3 sau MVP_
 | Epic 8: Notifications | 1 | ✅ Complete |
 | Epic 9: Admin Extended | 1 | ✅ Complete |
 | Epic 10: Auto Contract | 3 | ✅ Complete (2026-03-29) |
+## Overview
+
+Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn trầm) và Trầm Hương Store (bán sản phẩm trầm hương vật lý).
+
+## Requirements Inventory
+
+### Functional Requirements
+
+| ID | Mô tả | Priority | Epic |
+|----|-------|----------|------|
+| F-ES-01 | Garden landing page with region filter | P0 | Epic 11 |
+| F-ES-02 | Garden detail with room list | P0 | Epic 11 |
+| F-ES-03 | Date-based availability check | P0 | Epic 11 |
+| F-ES-04 | Guest booking form | P0 | Epic 11 |
+| F-ES-05 | 15-minute VietQR payment | P0 | Epic 11 |
+| F-ES-06 | Casso webhook confirm | P0 | Epic 11 |
+| F-ES-07 | Booking success & offline voucher | P0 | Epic 11 |
+| F-ES-08 | CRM my-bookings list/detail | P1 | Epic 11 |
+| F-ES-09 | Admin booking management | P1 | Epic 11 |
+| F-ES-10 | Calendar-based room admin | P2 | Epic 11 |
+| F-ST-01 | Product catalog page | P0 | Epic 12 |
+| F-ST-02 | Product detail page | P0 | Epic 12 |
+| F-ST-03 | Direct buy-now checkout | P0 | Epic 12 |
+| F-ST-04 | Banking & COD payment | P0 | Epic 12 |
+| F-ST-05 | Casso webhook confirm | P0 | Epic 12 |
+| F-ST-06 | Store order success | P0 | Epic 12 |
+| F-ST-07 | CRM my-store-orders | P1 | Epic 12 |
+| F-ST-08 | Admin product CRUD | P1 | Epic 12 |
+| F-ST-09 | Admin store order management | P1 | Epic 12 |
+| F-ST-10 | Multi-item persistent cart | P2 | Epic 12 |
+| F-SH-01 | Polymorphic Casso webhook dispatcher | P0 | Epic 13 |
+| F-SH-02 | Secure order creation APIs | P0 | Epic 13 |
+| F-SH-03 | Server-side price/total calculation | P0 | Epic 13 |
+| F-SH-04 | Inventory reservation & release | P0 | Epic 13 |
+| F-SH-05 | Three transactional email templates | P1 | Epic 13 |
+| F-SH-06 | Lot-scoped admin roles | P2 | Epic 13 |
+
+### FR Coverage Map
+
+| Epic | FRs Covered | Priority Mix |
+|------|-------------|--------------|
+| Epic 11: Eco-Stay | F-ES-01 → F-ES-10 | 8 P0, 1 P1, 1 P2 |
+| Epic 12: Trầm Hương Store | F-ST-01 → F-ST-10 | 7 P0, 2 P1, 1 P2 |
+| Epic 13: Shared Infrastructure | F-SH-01 → F-SH-06 | 4 P0, 1 P1, 1 P2 |
+
+## Epic List
+
+| # | Epic Name | Goal | Stories | Priority |
+|---|-----------|------|---------|----------|
+| 11 | Eco-Stay (Room Booking) | Guest có thể tìm garden, xem phòng, đặt chỗ, thanh toán | 8 | P0 |
+| 12 | Trầm Hương Store | Customer có thể duyệt sản phẩm, mua hàng, theo dõi đơn | 7 | P0 |
+| 13 | Shared Payment & Inventory Infrastructure | Payment reconciliation, inventory reservation, security chung cho 3 verticals | 6 | P0 |
+
+---
+
+## Epic 11: Eco-Stay (Room Booking)
+
+**Goal:** Guest có thể tìm garden, xem phòng, đặt chỗ và thanh toán thành công.
+
+**Success Metrics:**
+- 0 overbooking incidents
+- 99.5% payment reconciliation accuracy
+- < 5 minutes end-to-end payment confirmation
+
+### Story 11.1: Browse Gardens
+
+**As a** guest,
+**I want** to see gardens with bookable rooms and filter by region,
+**So that** I can choose a location.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/eco-tourism`
+**When** the page loads
+**Then** I see garden cards with image, name, region, and price from
+**And** I see filter tabs: Tất cả, Miền Bắc, Miền Trung, Miền Nam
+**And** only lots with at least one active room are shown
+
+**FRs:** F-ES-01
+**Story Points:** 3
+**Priority:** P0
+
+### Story 11.2: View Garden & Room Details
+
+**As a** guest,
+**I want** to see room photos, capacity, amenities, and availability,
+**So that** I can decide.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/eco-tourism/[lotId]`
+**When** the page loads
+**Then** I see gallery, description, map, and room cards
+**And** each room card shows price/night, capacity, amenities, status
+**When** I select check-in/check-out dates
+**Then** rooms already booked in that range are disabled
+
+**FRs:** F-ES-02, F-ES-03
+**Story Points:** 5
+**Priority:** P0
+
+### Story 11.3: Create Booking Reservation
+
+**As a** guest,
+**I want** to submit my contact info and reserve a room for 15 minutes,
+**So that** I can pay later via bank transfer.
+
+**Acceptance Criteria:**
+
+**Given** I selected a room and dates
+**When** I submit the booking form with name, phone, email, guest count
+**Then** the system computes total server-side: `nights * price_per_night`
+**And** generates a booking code with prefix `BK-`
+**And** locks the room for 15 minutes with status `pending`
+**And** shows a 15-minute VietQR code
+
+**FRs:** F-ES-04, F-ES-05
+**Story Points:** 5
+**Priority:** P0
+**Dependencies:** 11.2, 13.1, 13.3
+
+### Story 11.4: Confirm Booking Payment
+
+**As a** guest,
+**I want** the system to confirm my booking when payment arrives,
+**So that** I receive a booking confirmation and offline voucher.
+
+**Acceptance Criteria:**
+
+**Given** I have a pending booking with code `BK-`
+**When** Casso webhook confirms payment via 13.1 dispatcher
+**Then** booking status changes to `confirmed`
+**And** room is locked for the booked date range
+**And** I see success page with booking code, summary, offline voucher link
+
+**FRs:** F-ES-06, F-ES-07
+**Story Points:** 3
+**Priority:** P0
+**Dependencies:** 11.3, 13.1
+
+### Story 11.5: Cancel Booking
+
+**As a** guest,
+**I want** to cancel a pending booking,
+**So that** I can free the room.
+
+**Acceptance Criteria:**
+
+**Given** I have a pending booking
+**When** I click the cancel button
+**Then** the booking transitions to `cancelled` with reason
+**And** the room becomes available immediately
+
+**Given** I revisit a booking payment link after the 15-minute hold has expired
+**When** the page loads
+**Then** I see a "Đơn hàng đã hết hạn" message with a button to create a new booking
+
+**FRs:** F-ES-04 (extended)
+**Story Points:** 2
+**Priority:** P1
+
+### Story 11.6: View My Bookings (CRM)
+
+**As a** logged-in user,
+**I want** to see my booking history,
+**So that** I can track trips.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/crm/my-bookings`
+**When** the page loads
+**Then** I see a list: code, room, garden, dates, status, total
+**When** I click a row
+**Then** I see detail with check-in instructions and QR
+
+**FRs:** F-ES-08
+**Story Points:** 3
+**Priority:** P1
+
+### Story 11.7: Admin Booking Management
+
+**As an** admin/resort manager,
+**I want** to view and update bookings,
+**So that** I can operate the resort.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/crm/admin/bookings`
+**When** the page loads
+**Then** I see a table: code, guest, room, garden, dates, status, total
+**And** I can filter by status, date range, garden
+**When** I select confirm/cancel
+**Then** the booking updates with reason
+
+**FRs:** F-ES-09
+**Story Points:** 5
+**Priority:** P1
+
+### Story 11.8: Admin Room Calendar
+
+**As an** admin/resort manager,
+**I want** a calendar view of room availability,
+**So that** I can manage operations.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/crm/admin/rooms`
+**When** the page loads
+**Then** I see a calendar/gantt view of bookings per room
+**And** I can block rooms for maintenance
+
+**FRs:** F-ES-10
+**Story Points:** 5
+**Priority:** P2
+
+---
+
+## Epic 12: Trầm Hương Store
+
+**Goal:** Customer có thể duyệt sản phẩm, mua hàng, và theo dõi đơn.
+
+**Success Metrics:**
+- 0 overselling incidents
+- 95% accurate stock display
+- < 3% COD fraud rate
+
+### Story 12.1: Browse Products
+
+**As a** customer,
+**I want** to browse featured products and filter by category,
+**So that** I can find items.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/store`
+**When** the page loads
+**Then** I see hero, category pills, featured section, all-product grid
+**And** I can filter by category and search by name/description
+**And** each card shows image, name, price, stock status, origin badge
+
+**FRs:** F-ST-01
+**Story Points:** 3
+**Priority:** P0
+
+### Story 12.2: View Product Detail
+
+**As a** customer,
+**I want** to see full product info,
+**So that** I can decide to buy.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/store/[productSlug]`
+**When** the page loads
+**Then** I see image gallery, name, price, compare-at price, description
+**And** I see specifications table, origin, stock, quantity selector
+**And** related products are shown
+
+**FRs:** F-ST-02
+**Story Points:** 3
+**Priority:** P0
+
+### Story 12.3: Store Checkout Form
+
+**As a** customer,
+**I want** to buy a product directly,
+**So that** I can complete a purchase.
+
+**Acceptance Criteria:**
+
+**Given** I am on product detail page
+**When** I click "Mua ngay"
+**Then** I go to checkout form: name, phone, email, shipping address, province, note
+**And** the system calculates subtotal + shipping + total server-side
+**And** I can choose payment method: Banking or COD
+
+**FRs:** F-ST-03
+**Story Points:** 5
+**Priority:** P0
+
+### Story 12.4: Create Store Order
+
+**As a** customer,
+**I want** to submit my shipping info and create a store order,
+**So that** I can receive a VietQR (banking) or COD confirmation.
+
+**Acceptance Criteria:**
+
+**Given** I am on checkout page
+**When** I submit the checkout form
+**Then** the system calculates subtotal + shipping + total server-side
+**And** generates an order code with prefix `ST-`
+**If** I chose Banking
+**Then** I see a 15-minute VietQR
+**If** I chose COD
+**Then** I see immediate order confirmation with status `pending`
+
+**FRs:** F-ST-03, F-ST-04
+**Story Points:** 5
+**Priority:** P0
+**Dependencies:** 12.2, 13.1, 13.3
+
+### Story 12.5: Confirm Store Payment
+
+**As a** customer,
+**I want** the system to confirm my store order when payment arrives,
+**So that** my order is processed and stock is reserved.
+
+**Acceptance Criteria:**
+
+**Given** I have a pending store order with code `ST-`
+**When** Casso webhook confirms payment via 13.1 dispatcher
+**Then** order status updates to `confirmed`
+**And** stock decrements atomically
+**And** I see order success page with code and summary
+
+**Given** I revisit a store payment link after the 15-minute hold has expired
+**When** the page loads
+**Then** I see a "Đơn hàng đã hết hạn" message with a button to reorder
+
+**FRs:** F-ST-05, F-ST-06
+**Story Points:** 3
+**Priority:** P0
+**Dependencies:** 12.4, 13.1
+
+### Story 12.6: View My Store Orders
+
+**As a** logged-in user,
+**I want** to see my store orders,
+**So that** I can track delivery.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/crm/my-store-orders`
+**When** the page loads
+**Then** I see a list: code, items, total, status, date
+**When** I click a row
+**Then** I see products, shipping address, tracking number
+
+**FRs:** F-ST-07
+**Story Points:** 3
+**Priority:** P1
+
+### Story 12.7: Admin Product CRUD
+
+**As an** admin,
+**I want** to add/edit products,
+**So that** I can run the store.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/crm/admin/products`
+**When** I create/edit a product
+**Then** I can set name, slug, category, price, stock, SKU, images, specs, origin
+**And** images upload to `product-images` bucket with WebP/thumbnail optimization
+
+**FRs:** F-ST-08
+**Story Points:** 5
+**Priority:** P1
+
+### Story 12.8: Admin Store Order Fulfillment
+
+**As an** admin/store staff,
+**I want** to process orders,
+**So that** I can ship products.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to `/crm/admin/store-orders`
+**When** the page loads
+**Then** I see a table: code, customer, items, total, address, status
+**And** I can update status: `pending -> confirmed -> processing -> shipped -> delivered`
+**And** I can add tracking number when shipped
+
+**FRs:** F-ST-09
+**Story Points:** 5
+**Priority:** P1
+
+### Story 12.9: Multi-Item Persistent Cart (Deferred)
+
+**As a** logged-in user,
+**I want** a persistent cart with multiple items,
+**So that** I can buy more items later.
+
+**Acceptance Criteria:**
+
+- Guest items stored in localStorage
+- Authenticated users sync to `user_carts` table
+- Cart survives across devices
+
+**Note:** Deferred to post-MVP because the single-item "Mua ngay" checkout covers ~80% of MVP use cases. A persistent multi-item cart adds significant complexity to inventory reservation (holding multiple items simultaneously) and payment reconciliation.
+
+**FRs:** F-ST-10
+**Story Points:** 5
+**Priority:** P2
+
+---
+
+## Epic 13: Shared Payment & Inventory Infrastructure
+
+**Goal:** Payment reconciliation, inventory reservation, và security chung cho tree, booking, và store orders.
+
+### Story 13.1: Polymorphic Casso Webhook
+
+**As a** system,
+**I want** to route Casso events by order-code prefix,
+**So that** DH/BK/ST payments are processed correctly.
+
+**Acceptance Criteria:**
+
+**Given** a Casso webhook fires
+**When** the system receives the event
+**Then** it reads the transaction description for prefix `DH`, `BK`, or `ST`
+**And** dispatches to correct handler
+**And** records event in `payment_transactions` ledger idempotently
+**And** rejects stale or duplicate events
+
+**Technical Constraints:**
+- `payment_transactions` table MUST have a unique constraint on `(casso_transaction_id, order_code)` to enforce idempotent upserts.
+- Use `INSERT ... ON CONFLICT (casso_transaction_id, order_code) DO NOTHING` (or equivalent upsert) to handle retries safely.
+
+**FRs:** F-SH-01
+**Story Points:** 8
+**Priority:** P0
+
+### Story 13.2: Secure Order Creation APIs
+
+**As a** system,
+**I want** all order creation to go through secure server routes,
+**So that** anonymous users cannot fake orders.
+
+**Acceptance Criteria:**
+
+**Given** an order creation request
+**When** it hits `/api/bookings/create` or `/api/store/orders/create`
+**Then** the request is validated with Zod
+**And** total is computed server-side
+**And** rate limiting is enforced
+**And** service role is used for DB inserts
+
+**FRs:** F-SH-02
+**Story Points:** 5
+**Priority:** P0
+
+### Story 13.3: Inventory Reservation & Release
+
+**As a** system,
+**I want** to hold inventory for 15 minutes while payment is pending,
+**So that** I can release it if payment fails.
+
+**Acceptance Criteria:**
+
+**Given** a pending booking or order
+**When** 15 minutes pass without payment
+**Then** `/api/cron/expire-pending` releases the hold
+**And** room becomes available again (booking)
+**And** reserved stock is returned (store)
+
+**Technical Constraints:**
+- Room bookings MUST use `room_bookings.date_range` (PostgreSQL `daterange`) with a GiST exclusion constraint to prevent overlapping reservations at the DB level.
+- Store stock reservation MUST use an atomic decrement: `UPDATE products SET stock = stock - $1 WHERE id = $2 AND stock >= $1 RETURNING *`. A failed `RETURNING` indicates insufficient stock.
+- The cron job MUST release holds atomically and log the release action.
+
+**FRs:** F-SH-04
+**Story Points:** 5
+**Priority:** P0
+
+### Story 13.4: Server-Side Price Validation
+
+**As a** system,
+**I want** all prices and totals calculated server-side,
+**So that** users cannot tamper with totals.
+
+**Acceptance Criteria:**
+
+**Given** a checkout request
+**When** the client sends a total
+**Then** the server rejects it and recalculates from `products`/`rooms` tables
+**And** returns the correct total
+
+**FRs:** F-SH-03
+**Story Points:** 3
+**Priority:** P0
+
+### Story 13.5: Transactional Email Templates
+
+**As a** system,
+**I want** three distinct email templates,
+**So that** customers get correct post-purchase details.
+
+**Acceptance Criteria:**
+
+- Tree Contract email
+- Eco-Stay Voucher email
+- Store Dispatch email
+
+**Technical Constraints:**
+- Use **React Email** for template rendering and **Resend** (or existing email service) for delivery.
+- Triggers:
+  - `order.status = 'paid'` → send Tree Contract email
+  - `booking.status = 'confirmed'` → send Eco-Stay Voucher email
+  - `store_order.status = 'shipped'` → send Store Dispatch email
+
+**FRs:** F-SH-05
+**Story Points:** 3
+**Priority:** P1
+
+### Story 13.6: Lot-Scoped Admin Roles
+
+**As a** system,
+**I want** lot-scoped roles in addition to coarse admin,
+**So that** on-site staff have limited privileges.
+
+**Acceptance Criteria:**
+
+- `resort_manager` role: manage bookings/rooms for assigned lots
+- `store_staff` role: manage products/orders for assigned lots
+- Admin has global access
+
+**Technical Constraints:**
+- Create an `admin_user_lots` table with columns `(user_id, lot_id, role)` to map users to their scoped lots.
+- RLS policies MUST check `EXISTS` in `admin_user_lots` for the current `auth.uid()` and `lot_id`, or verify the `role` claim in the JWT.
+
+**FRs:** F-SH-06
+**Story Points:** 5
+**Priority:** P2
+
+---
+
+## Summary Statistics
+
+| Metric | Value |
+|--------|-------|
+| New Epics | 3 |
+| New Stories | 21 |
+| P0 Stories | 14 |
+| P1 Stories | 4 |
+| P2 Stories | 3 |

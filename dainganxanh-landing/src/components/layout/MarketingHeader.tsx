@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import { Home, TreePine, Share2, Package, User, LogIn, BookOpen, UserCircle } from "lucide-react";
+import { Home, TreePine, Share2, Package, User, LogIn, BookOpen, UserCircle, ShoppingBag, Compass } from "lucide-react";
 import { UserHeader } from "./UserHeader";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -13,6 +13,8 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 const baseNavItems = [
     { name: 'Trang chủ', href: '/', icon: Home },
     { name: 'Mua cây', href: '/pricing', icon: Package },
+    { name: 'Cửa hàng', href: '/store', icon: ShoppingBag },
+    { name: 'Du lịch & Tour', href: '/eco-tourism', icon: Compass },
 ]
 
 const guestOnlyItems = [
@@ -91,8 +93,8 @@ export function MarketingHeader() {
 
             {/* Navigation Menu */}
             <nav className="border-t border-gray-100 bg-white overflow-x-auto">
-                <div className="flex justify-center w-full">
-                    <div className="flex w-full max-w-md">
+                <div className="flex justify-center w-full min-w-max md:min-w-0 px-2">
+                    <div className="flex w-full max-w-2xl justify-between">
                         {(user ? authNavItems : guestNavItems).map((item) => {
                             const active = isActive(item.href);
                             return (
@@ -100,14 +102,14 @@ export function MarketingHeader() {
                                     key={item.href}
                                     href={item.href}
                                     className={cn(
-                                        "flex-1 flex flex-col items-center justify-center py-3 px-2 text-xs font-medium transition-colors border-b-2",
+                                        "flex-1 flex flex-col items-center justify-center py-3 px-3 text-xs font-medium transition-colors border-b-2 whitespace-nowrap",
                                         active
                                             ? "border-emerald-500 text-emerald-600"
                                             : "border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50"
                                     )}
                                 >
                                     <item.icon className={cn("w-5 h-5 mb-1", active && "stroke-[2.5px]")} />
-                                    <span className="truncate max-w-[80px]">{item.name}</span>
+                                    <span>{item.name}</span>
                                 </Link>
                             )
                         })}

@@ -25,7 +25,7 @@ export default function OrdersPage() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Quản lý đơn hàng</h1>
                 <p className="mt-2 text-gray-600">
                     Xác minh và quản lý đơn hàng mới
                 </p>
