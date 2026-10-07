@@ -1,5 +1,5 @@
 # Sprint Status - Đại Ngàn Xanh
-last_updated: 2026-10-07T15:45:00+07:00
+last_updated: 2026-10-07T16:00:00+07:00
 # Generated: 2026-09-05T08:15:00+07:00
 # ⚠️ DO NOT manually edit status values - use workflows to update
 
@@ -11,7 +11,6 @@ last_updated: 2026-10-07T15:45:00+07:00
 # - done: Hoàn thành tất cả AC và passed review
 
 generated: "2026-09-05T08:15:00+07:00"
-last_updated: "2026-10-07T15:45:00+07:00"
 project: "Đại Ngàn Xanh"
 project_key: "NOKEY"
 tracking_system: "file-system"
@@ -124,7 +123,7 @@ development_status:
 
   # Epic 12: Trầm Hương Store - Added 2026-09-05
   epic-12: backlog
-  12-1-browse-products: backlog
+  12-1-browse-products: done
   12-2-view-product-detail: backlog
   12-3-store-checkout-form: backlog
   12-4-create-store-order: backlog
@@ -152,7 +151,7 @@ summary:
   stories_ready: 0
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 61
-  stories_backlog: 9
+  stories_done: 62
+  stories_backlog: 8
   current_velocity: 11
   last_updated: "2026-09-08T12:45:00+07:00"

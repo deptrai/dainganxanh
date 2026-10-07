@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Star, Search } from 'lucide-react'
+import { ORIGIN_LABELS, type ProductOriginType } from './originLabels'
 
 interface Category {
     id: string
@@ -20,6 +21,8 @@ interface Product {
     images: string[]
     is_featured: boolean
     status: string
+    description?: string | null
+    origin_type?: ProductOriginType | null
     product_categories: { name: string; slug: string } | null
 }
 
@@ -59,6 +62,11 @@ function ProductCard({ product }: { product: Product }) {
                             Hết hàng
                         </span>
                     )}
+                    {product.origin_type && ORIGIN_LABELS[product.origin_type] && (
+                        <span className="absolute bottom-2 left-2 bg-emerald-700/80 text-white text-xs px-2 py-0.5 rounded-full">
+                            {ORIGIN_LABELS[product.origin_type]}
+                        </span>
+                    )}
                 </div>
             </Link>
             <div className="p-3">
@@ -96,6 +104,7 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
             const matchesSearch = !query
                 ? true
                 : p.name.toLowerCase().includes(query)
+                    || p.description?.toLowerCase().includes(query)
                     || p.product_categories?.name?.toLowerCase().includes(query)
             return matchesCategory && matchesSearch
         })
@@ -128,6 +137,7 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
+                        aria-label="Tìm kiếm sản phẩm"
                         placeholder="Tìm kiếm theo tên, mô tả hoặc danh mục sản phẩm..."
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />

@@ -21,8 +21,8 @@ export default async function StorePage() {
     const { data: products } = await supabase
         .from('products')
         .select(`
-            id, name, slug, price, compare_at_price, stock_quantity,
-            images, is_featured, status,
+            id, name, slug, description, price, compare_at_price, stock_quantity,
+            images, is_featured, status, origin_type,
             product_categories ( name, slug )
         `)
         .eq('status', 'active')

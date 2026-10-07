@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Star, ShoppingBag, Minus, Plus, Truck, Shield, ArrowLeft, Loader2 } from 'lucide-react'
+import { ORIGIN_LABELS, type ProductOriginType } from './originLabels'
 
 interface Product {
   id: string
@@ -16,16 +17,10 @@ interface Product {
   sku: string | null
   images: string[]
   specifications: Record<string, string>
-  origin_type: 'mature_partner_plantation' | 'cooperative_farm' | 'dainganxanh_harvest'
+  origin_type: ProductOriginType
   batch_certificate_url: string | null
   product_categories: { id: string; name: string; slug: string } | null
   lots: { id: string; name: string; region: string } | null
-}
-
-const ORIGIN_LABELS: Record<string, string> = {
-  mature_partner_plantation: 'Vườn đối tác trưởng thành',
-  cooperative_farm: 'Hợp tác xã nông dân',
-  dainganxanh_harvest: 'Thu hoạch từ vườn Đại Ngàn Xanh',
 }
 
 function formatPrice(amount: number) {
