@@ -27,17 +27,22 @@ interface OrderLike {
   check_out_date?: string | null
   nights_count?: number | null
   guests_count?: number | null
+  // Store order fields
+  customer_name?: string | null
+  customer_email?: string | null
 }
 
 // Verify Casso Webhook V2 HMAC signature
 // Header: x-casso-signature: t=<timestamp>,v1=<hmac-sha512>
 // Signed payload: `${timestamp}.${JSON.stringify(sortedByKey(body))}`
 // Ref: https://github.com/CassoHQ/casso-webhook-v2-verify-signature
-function sortObjByKey(obj: unknown): unknown {
+type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[]
+
+function sortObjByKey(obj: JsonValue): JsonValue {
   if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj
-  const sorted: Record<string, unknown> = {}
-  Object.keys(obj as Record<string, unknown>).sort().forEach(k => {
-    sorted[k] = sortObjByKey((obj as Record<string, unknown>)[k])
+  const sorted: { [key: string]: JsonValue } = {}
+  Object.keys(obj).sort().forEach(k => {
+    sorted[k] = sortObjByKey(obj[k])
   })
   return sorted
 }
@@ -434,7 +439,7 @@ async function processStoreOrder(
   }
 
   revalidatePath('/store')
-  notifyStoreOrderConfirmed(orderCode, (order as any).customer_name ?? '', order.total_amount)
+  notifyStoreOrderConfirmed(orderCode, order.customer_name ?? '', order.total_amount)
   return { ok: true }
 }
 
@@ -460,7 +465,7 @@ async function findPendingOrder(
       .eq('code', orderCode)
       .eq('status', 'pending')
       .single()
-    return { order: booking as unknown as OrderLike | null, table: 'room_bookings' }
+    return { order: booking as OrderLike | null, table: 'room_bookings' }
   }
 
   const { data: storeOrder } = await supabase
@@ -469,7 +474,7 @@ async function findPendingOrder(
     .eq('code', orderCode)
     .eq('status', 'pending')
     .single()
-  return { order: storeOrder as unknown as OrderLike | null, table: 'store_orders' }
+  return { order: storeOrder as OrderLike | null, table: 'store_orders' }
 }
 
 export async function POST(req: NextRequest) {

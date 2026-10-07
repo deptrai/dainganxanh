@@ -36,11 +36,34 @@
 
 ## Deferred from: code review of 11-6-view-my-bookings-crm.md (2026-09-07)
 
-- [ ] Replace `as unknown as { name: string }` Supabase join type assertions with generated types (prevalent in eco-tourism modules).
+- [x] Replace `as unknown as { name: string }` Supabase join type assertions with generated types (prevalent in eco-tourism modules). — **DONE 2026-10-07 (TD-06):** `src/types/database.types.ts` generated từ `supabase gen types --linked`; 0 cast `as unknown as` còn lại trong production code.
 - [ ] Verify `nights_count` population in `room_bookings` — `create` route computes `diffDays` but does not insert `nights_count`; confirm generated column/trigger.
 - [ ] Revisit rate limit for `GET /api/bookings/my` (100 req/min) after production usage.
 
 
 ## Deferred from: code review of story-11.7 (2026-09-08)
 
-- [ ] [Review][Defer] Date filters use `check_in_date` only — a stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic (`check_in_date <= dateTo AND check_out_date >= dateFrom`).
+- [x] [Review][Defer] Date filters use `check_in_date` only — a stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic (`check_in_date <= dateTo AND check_out_date >= dateFrom`). — **DONE 2026-10-07 (TD-09):** overlap logic đã áp dụng trong `src/actions/adminBookings.ts`, kèm test cả 3 trường hợp (both / only dateFrom / only dateTo).
+
+## Deferred from: Epic 11 Retrospective — tech debt cleanup (2026-10-07)
+
+Đã fix trong đợt dọn debt sau retro (chi tiết: `epic-11-retro-2026-10-07.md`):
+
+- [x] **TD-02** Region filter sync URL `?region=` (SSR pre-select + `router.replace` scroll:false).
+- [x] **TD-03** VietQR polling: pause khi tab ẩn, resume + poll ngay khi tab visible; giữ polling thay Realtime vì PII của guest.
+- [x] **TD-04** Rate-limit trang voucher công khai: 20 req/phút/IP qua `rateLimitByKey` (refactor từ `rate-limit.ts`), UI lỗi riêng không `notFound()`.
+- [x] **TD-06** Generated Supabase types (`src/types/database.types.ts`), gỡ sạch `as unknown as` trong production code.
+- [x] **TD-07** Hotline/email hỗ trợ gom về `SUPPORT_HOTLINE`/`SUPPORT_EMAIL` trong `src/lib/constants.ts`.
+- [x] **TD-08** Audit service-role client trên 6 trang CRM user-facing: tất cả scoped đúng `effectiveUserId`. **Fix thêm IDOR:** `getAvailableBalance`/`getSavedBankInfo` trong `src/actions/withdrawals.ts` thiếu auth check → thêm `assertOwnsUserId` (hỗ trợ impersonation).
+- [x] **TD-09** Admin date filter chuyển sang overlap logic.
+- [x] **TD-10 (phần lớn)** Đã giải quyết bởi story 13-6 (RLS theo lot + layout gating + `getAssignedLotIds`).
+
+Còn tồn lại (chưa fix):
+
+- [ ] **TD-01** (Trung bình) Bỏ qua `room_pricing_rules` — giá "Giá từ" chỉ là `MIN(price_per_night)`, chưa có giá mùa vụ/cuối tuần. Cần khi Epic 12 định giá sản phẩm tương tự.
+- [ ] **TD-05** (Thấp) Tự động hủy đơn pending quá hạn phụ thuộc cron 15 phút (`POST /api/cron/expire-pending`) — chấp nhận cho MVP; Epic 12 cần kiểm chứng cơ chế release inventory của 13.3.
+- [ ] **TD-10 (gap nhỏ)** `resort_manager` xem được chi tiết mọi booking theo ID ở `src/app/crm/admin/bookings/[bookingId]/page.tsx` — chưa check lot thuộc `admin_user_lots` cho role này (RLS đã chặn ở listing).
+- [ ] **TD-11** (Trung bình) Calendar chỉ có view tháng; chưa có view tuần, drag & drop đổi phòng/ngày; đơn hủy vẫn chiếm chỗ hiển thị. Enhancement, không chặn Epic 12.
+- [ ] Chuẩn hóa pattern scoped data access: helper `getScopedCrmClient()` (service-role + filter `effectiveUserId` tự động) để tránh quên filter tay ở route mới.
+- [ ] Thống nhất 404 (`notFound()`) cho mọi trang chi tiết theo ID URL — hiện `my-garden/[orderId]` render "Truy cập bị từ chối" (HTTP 200) trong khi `my-bookings/[bookingId]` trả 404 → information leakage.
+- [ ] Test `RoomCalendar.test.tsx` từng fail cứng do hardcode tháng 9/2026 — đã fix bằng ngày động theo `new Date()`; rà thêm các test date-dependent khác khi đến mốc thời gian.

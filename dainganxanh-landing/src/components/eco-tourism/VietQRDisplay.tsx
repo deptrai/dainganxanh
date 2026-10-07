@@ -33,11 +33,19 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const hasExpiredRef = useRef(false)
     const isCancellingRef = useRef(false)
+    const isTerminalRef = useRef(false)
 
     useEffect(() => {
         const url = `https://img.vietqr.io/image/MB-${BANK_INFO.accountNumber}-compact.png?amount=${booking.totalAmount}&addInfo=${encodeURIComponent(booking.bookingCode)}&accountName=${encodeURIComponent(BANK_INFO.accountName)}`
         setQrUrl(url)
     }, [booking.totalAmount, booking.bookingCode])
+
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current)
+            pollRef.current = null
+        }
+    }, [])
 
     const updateRemaining = useCallback(() => {
         const now = Date.now()
@@ -45,34 +53,37 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         setRemaining(diff)
         if (diff <= 0 && !hasExpiredRef.current) {
             hasExpiredRef.current = true
-            if (pollRef.current) clearInterval(pollRef.current)
-            if (timerRef.current) clearInterval(timerRef.current)
+            isTerminalRef.current = true
+            stopPolling()
+            if (timerRef.current) {
+                clearInterval(timerRef.current)
+                timerRef.current = null
+            }
             onExpired()
         }
-    }, [onExpired])
+    }, [onExpired, stopPolling])
 
+    // Dùng polling qua endpoint /api/bookings/status đã strip PII thay vì Supabase Realtime (postgres_changes).
+    // Guest booking flow là anonymous; subscribe postgres_changes vào room_bookings sẽ làm lộ
+    // toàn bộ row chứa PII (họ tên, SĐT, email) cho bất kỳ client nào có mã đơn.
     const pollStatus = useCallback(async () => {
-        // Do not poll while a cancellation request is in-flight
-        if (isCancellingRef.current) return
+        // Do not poll while a cancellation request is in-flight or terminal state reached
+        if (isCancellingRef.current || isTerminalRef.current) return
         try {
             const res = await fetch(`/api/bookings/status?code=${booking.bookingCode}`)
             if (!res.ok) return
             const data = await res.json()
             if (data.status === 'confirmed') {
-                if (pollRef.current) {
-                    clearInterval(pollRef.current)
-                    pollRef.current = null
-                }
+                isTerminalRef.current = true
+                stopPolling()
                 if (timerRef.current) {
                     clearInterval(timerRef.current)
                     timerRef.current = null
                 }
                 onSuccess()
             } else if (data.status === 'cancelled' || data.status === 'expired') {
-                if (pollRef.current) {
-                    clearInterval(pollRef.current)
-                    pollRef.current = null
-                }
+                isTerminalRef.current = true
+                stopPolling()
                 if (timerRef.current) {
                     clearInterval(timerRef.current)
                     timerRef.current = null
@@ -82,17 +93,43 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         } catch {
             // silent fail
         }
-    }, [booking.bookingCode, onSuccess, onExpired])
+    }, [booking.bookingCode, onSuccess, onExpired, stopPolling])
+
+    const startPolling = useCallback(() => {
+        if (isTerminalRef.current || isCancellingRef.current) return
+        if (pollRef.current) return
+        pollRef.current = setInterval(pollStatus, 5000)
+    }, [pollStatus])
 
     useEffect(() => {
         updateRemaining()
         timerRef.current = setInterval(updateRemaining, 1000)
-        pollRef.current = setInterval(pollStatus, 5000)
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current)
-            if (timerRef.current) clearInterval(timerRef.current)
+        if (typeof document !== 'undefined' && document.visibilityState !== 'hidden') {
+            startPolling()
         }
-    }, [updateRemaining, pollStatus])
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                stopPolling()
+            } else if (document.visibilityState === 'visible') {
+                if (!isTerminalRef.current && !isCancellingRef.current) {
+                    pollStatus()
+                    startPolling()
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+            stopPolling()
+            if (timerRef.current) {
+                clearInterval(timerRef.current)
+                timerRef.current = null
+            }
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [updateRemaining, pollStatus, startPolling, stopPolling])
 
     const copyToClipboard = async (text: string, field: string) => {
         try {
@@ -138,10 +175,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         setCancelling(true)
         setCancelError('')
         // Stop polling/timer immediately to prevent onExpired() firing mid-cancel
-        if (pollRef.current) {
-            clearInterval(pollRef.current)
-            pollRef.current = null
-        }
+        stopPolling()
         if (timerRef.current) {
             clearInterval(timerRef.current)
             timerRef.current = null
@@ -154,6 +188,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
             })
             const data = await res.json()
             if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra')
+            isTerminalRef.current = true
             setShowCancelModal(false)
             onCancel()
         } catch (err) {

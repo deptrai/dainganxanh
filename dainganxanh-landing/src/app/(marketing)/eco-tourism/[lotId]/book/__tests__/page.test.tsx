@@ -73,8 +73,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-10-01',
-      check_out: '2026-10-03',
+      check_in: '2026-11-01',
+      check_out: '2026-11-03',
     })
 
     const element = await BookingPage({ params, searchParams })
@@ -97,8 +97,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-10-01',
-      check_out: '2026-10-03',
+      check_in: '2026-11-01',
+      check_out: '2026-11-03',
     })
 
     await BookingPage({ params, searchParams })
@@ -126,8 +126,8 @@ describe('BookingPage SSR', () => {
         {
           id: 'b1',
           room_id: 'r1',
-          check_in_date: '2026-10-01',
-          check_out_date: '2026-10-03',
+          check_in_date: '2026-11-01',
+          check_out_date: '2026-11-03',
           status: 'confirmed',
           expires_at: null,
         },
@@ -137,8 +137,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-10-01',
-      check_out: '2026-10-03',
+      check_in: '2026-11-01',
+      check_out: '2026-11-03',
     })
 
     const element = await BookingPage({ params, searchParams })
@@ -167,8 +167,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-10-01',
-      check_out: '2026-10-03',
+      check_in: '2026-11-01',
+      check_out: '2026-11-03',
     })
 
     const element = await BookingPage({ params, searchParams })

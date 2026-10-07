@@ -5,33 +5,30 @@ import { Clock, AlertCircle } from 'lucide-react'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getBlockingBookings, isBlockOverlapping } from '@/lib/eco-tourism/availability'
 import BookingPageClient from './BookingPageClient'
+import type { Tables } from '@/types/database.types'
 
 export const dynamic = 'force-dynamic'
 
-interface Room {
-    id: string
-    name: string
-    description: string | null
-    capacity: number
+type RoomRow = Tables<'rooms'>
+type LotRow = Tables<'lots'>
+
+type Room = Omit<RoomRow, 'amenities' | 'images' | 'status'> & {
     amenities: string[] | null
-    price_per_night: number
     images: string[] | null
     status: 'active' | 'inactive' | 'maintenance'
-    lot_id: string
 }
 
-interface Lot {
-    id: string
-    name: string
-    region: string
-    description: string | null
-    location_lat: number | null
-    location_lng: number | null
+type Lot = Pick<LotRow, 'id' | 'name' | 'region' | 'description' | 'location_lat' | 'location_lng'> & {
     images: string[] | null
 }
 
 interface RoomWithLot extends Room {
-    lots: Lot | null
+    lots: Lot | Lot[] | null
+}
+
+function getFirstLot(lotData: Lot | Lot[] | null | undefined): Lot | null {
+    if (!lotData) return null
+    return Array.isArray(lotData) ? lotData[0] ?? null : lotData
 }
 
 interface BookingPageProps {
@@ -94,8 +91,9 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
             return null
         }
 
-        const roomsData = rawBooking.rooms as unknown
-        const room = (Array.isArray(roomsData) ? roomsData[0] : roomsData) as (RoomWithLot & { lots: Lot | null }) | null
+        const roomsData = rawBooking.rooms
+        const room = (Array.isArray(roomsData) ? roomsData[0] : roomsData) as RoomWithLot | null
+        const lot = getFirstLot(room?.lots)
         const bookingLotId = room?.lot_id
 
         // Guard against mismatched lot_id
@@ -158,7 +156,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         }
 
         // Active pending booking -> restore payment step
-        if (room && room.lots) {
+        if (room && lot) {
             return (
                 <BookingPageClient
                     room={{
@@ -172,9 +170,9 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
                         status: room.status,
                     }}
                     lot={{
-                        id: room.lots.id,
-                        name: room.lots.name,
-                        region: room.lots.region,
+                        id: lot.id,
+                        name: lot.name,
+                        region: lot.region,
                     }}
                     checkIn={rawBooking.check_in_date}
                     checkOut={rawBooking.check_out_date}
@@ -226,6 +224,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         .maybeSingle()
 
     const room = roomData as RoomWithLot | null
+    const lot = getFirstLot(room?.lots)
 
     if (roomError || !room) {
         console.error('Failed to fetch room:', roomError?.message ?? 'not found')
@@ -242,7 +241,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         )
     }
 
-    if (room.status !== 'active' || room.lot_id !== lotId || !room.lots) {
+    if (room.status !== 'active' || room.lot_id !== lotId || !lot) {
         return notFound()
     }
 
@@ -302,9 +301,9 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
                 status: room.status,
             }}
             lot={{
-                id: room.lots.id,
-                name: room.lots.name,
-                region: room.lots.region,
+                id: lot.id,
+                name: lot.name,
+                region: lot.region,
             }}
             checkIn={checkIn}
             checkOut={checkOut}

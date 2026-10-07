@@ -215,4 +215,85 @@ describe('VietQRDisplay Component', () => {
     expect(clearIntervalSpy).toHaveBeenCalledTimes(2)
     clearIntervalSpy.mockRestore()
   })
+
+  it('pauses polling when document is hidden and resumes immediately when visible', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'pending' }),
+    })
+
+    render(<VietQRDisplay {...defaultProps} />)
+
+    // Initial polling tick after 5s
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+
+    // Simulate tab becoming hidden
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    // Advance 10s while hidden -> fetch should NOT be called
+    act(() => {
+      jest.advanceTimersByTime(10000)
+    })
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+
+    // Simulate tab becoming visible again
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    // Resuming tab should trigger immediate poll
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+
+    // And periodic polling resumes
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    expect(global.fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not resume polling on visibility change after terminal state reached', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'confirmed' }),
+    })
+
+    render(<VietQRDisplay {...defaultProps} />)
+
+    // First poll confirms booking
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    await waitFor(() => {
+      expect(defaultProps.onSuccess).toHaveBeenCalled()
+    })
+
+    // Simulate tab switch hidden -> visible
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    // Fetch should not have been called again after confirmation
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+  })
 })

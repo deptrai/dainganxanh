@@ -97,9 +97,11 @@ export async function fetchAdminBookings(
             countQuery = countQuery.eq('status', filters.status)
             query = query.eq('status', filters.status)
         }
+        // Overlap logic: check_in_date <= dateTo AND check_out_date >= dateFrom
+        // When single: dateFrom -> check_out_date >= dateFrom; dateTo -> check_in_date <= dateTo
         if (filters.dateFrom) {
-            countQuery = countQuery.gte('check_in_date', filters.dateFrom)
-            query = query.gte('check_in_date', filters.dateFrom)
+            countQuery = countQuery.gte('check_out_date', filters.dateFrom)
+            query = query.gte('check_out_date', filters.dateFrom)
         }
         if (filters.dateTo) {
             countQuery = countQuery.lte('check_in_date', filters.dateTo)
@@ -221,7 +223,7 @@ export async function confirmBooking(bookingId: string): Promise<{ error?: strin
     }
 
     // P4: Only set payment_claimed_at if not already set; clear expires_at
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
         status: 'confirmed',
         expires_at: null,
     }

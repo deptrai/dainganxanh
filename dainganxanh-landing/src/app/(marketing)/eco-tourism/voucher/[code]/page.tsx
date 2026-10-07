@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import QRCode from 'qrcode'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { Calendar, MapPin, Moon, Phone, Receipt, Users } from 'lucide-react'
+import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
+import { AlertCircle, Calendar, MapPin, Moon, Phone, Receipt, Users } from 'lucide-react'
 import { VoucherPrintButton } from '@/components/eco-tourism/VoucherPrintButton'
+import { rateLimitByKey } from '@/lib/rate-limit'
+import { SUPPORT_HOTLINE } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +45,36 @@ export async function generateMetadata({ params }: VoucherPageProps): Promise<Me
 }
 
 export default async function BookingVoucherPage({ params }: VoucherPageProps) {
+  const headerStore = await headers()
+  const forwarded = headerStore.get('x-forwarded-for')
+  const clientIp = forwarded ? forwarded.split(',')[0].trim() : (headerStore.get('x-real-ip') ?? 'unknown')
+
+  const rlResult = rateLimitByKey(clientIp, {
+    limit: 20,
+    windowMs: 60_000,
+    keyPrefix: 'voucher-page',
+  })
+
+  if (!rlResult.ok) {
+    return (
+      <div className="min-h-screen bg-gray-100 py-12 px-4 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-amber-200 p-8 text-center">
+          <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Quá nhiều yêu cầu</h1>
+          <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+            Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút hoặc liên hệ hotline để được hỗ trợ.
+          </p>
+          <div className="p-3 bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-emerald-700">
+            <Phone className="w-4 h-4" />
+            <span>Hotline: {SUPPORT_HOTLINE}</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const rawCode = (await params).code
   const code = rawCode?.trim().toUpperCase()
 
@@ -67,11 +101,8 @@ export default async function BookingVoucherPage({ params }: VoucherPageProps) {
     notFound()
   }
 
-  const rawRooms = rawBooking.rooms as unknown
-  const room = (Array.isArray(rawRooms) ? rawRooms[0] : rawRooms) as {
-    name?: string
-    lots?: { name?: string; region?: string } | Array<{ name?: string; region?: string }> | null
-  } | null
+  const bookingRow = rawBooking as RoomBookingWithJoinedRoom
+  const room = Array.isArray(bookingRow.rooms) ? bookingRow.rooms[0] : bookingRow.rooms
   const roomName = room?.name ?? 'Phòng nghỉ sinh thái'
   const lotsData = room?.lots
   const lot = Array.isArray(lotsData) ? lotsData[0] : lotsData
@@ -206,7 +237,7 @@ export default async function BookingVoucherPage({ params }: VoucherPageProps) {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
             <div className="flex items-center gap-2 text-emerald-700 font-semibold">
               <Phone className="w-4 h-4" />
-              <span>Hotline: 1900 8888</span>
+              <span>Hotline: {SUPPORT_HOTLINE}</span>
             </div>
             <VoucherPrintButton />
           </div>

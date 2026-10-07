@@ -31,8 +31,17 @@ function normalizeVietnamese(text: string): string {
         .trim()
 }
 
+// Verify the caller is allowed to query data for `userId`
+// (the user themselves, or a super_admin impersonating them).
+async function assertOwnsUserId(userId: string): Promise<boolean> {
+    const effectiveUser = await getEffectiveUser()
+    return effectiveUser !== null && effectiveUser.userId === userId
+}
+
 // Calculate available balance
 export async function getAvailableBalance(userId: string) {
+    if (!(await assertOwnsUserId(userId))) return 0
+
     // Use service role for data queries — orders.referred_by references
     // OTHER users' rows, so RLS would block them with the anon client
     const supabase = createServiceRoleClient()
@@ -63,6 +72,8 @@ export async function getAvailableBalance(userId: string) {
 
 // Get saved bank info from the most recent withdrawal
 export async function getSavedBankInfo(userId: string) {
+    if (!(await assertOwnsUserId(userId))) return null
+
     const supabase = createServiceRoleClient()
 
     const { data } = await supabase

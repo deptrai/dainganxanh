@@ -1,6 +1,16 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import BookingVoucherPage, { generateMetadata } from '../page'
+import { _resetRateLimitStore } from '@/lib/rate-limit'
+
+const mockHeadersGet = jest.fn()
+jest.mock('next/headers', () => ({
+  headers: jest.fn(() =>
+    Promise.resolve({
+      get: (header: string) => mockHeadersGet(header),
+    })
+  ),
+}))
 
 const mockFrom = jest.fn()
 const mockSelect = jest.fn()
@@ -29,6 +39,11 @@ jest.mock('qrcode', () => ({
 describe('BookingVoucherPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    _resetRateLimitStore()
+    mockHeadersGet.mockImplementation((header: string) => {
+      if (header === 'x-forwarded-for') return '127.0.0.1'
+      return null
+    })
     mockFrom.mockImplementation(() => ({
       select: mockSelect,
     }))
@@ -156,10 +171,86 @@ describe('BookingVoucherPage', () => {
     expect(mockEq).toHaveBeenCalledWith('code', 'BKABC123')
     const printButton = screen.getByRole('button', { name: /In vé \/ Lưu PDF/i })
     expect(printButton).toBeInTheDocument()
+    expect(screen.getByText(/Hotline: 1900 8888/)).toBeInTheDocument()
     fireEvent.click(printButton)
     expect(printSpy).toHaveBeenCalled()
 
     printSpy.mockRestore()
+  })
+
+  it('renders rate-limit UI when exceeding request limit per IP without querying DB or crashing', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        code: 'BKABC123',
+        status: 'confirmed',
+        check_in_date: '2026-10-01',
+        check_out_date: '2026-10-03',
+        nights_count: 2,
+        guests_count: 2,
+        total_amount: 2000000,
+        guest_name: 'Khách Test',
+        guest_phone: '0901234567',
+        rooms: { name: 'Phòng Sen', lots: { name: 'Vườn Trầm A', region: 'Miền Bắc' } },
+      },
+      error: null,
+    })
+
+    mockHeadersGet.mockImplementation((header: string) => {
+      if (header === 'x-forwarded-for') return '192.168.1.100'
+      return null
+    })
+
+    // Gửi 20 request hợp lệ (chạm quota)
+    for (let i = 0; i < 20; i++) {
+      const el = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123' }) })
+      expect(el).toBeTruthy()
+    }
+    expect(mockFrom).toHaveBeenCalledTimes(20)
+
+    // Request thứ 21 từ cùng IP bị rate-limit
+    mockFrom.mockClear()
+    const rateLimitedElement = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123' }) })
+    render(rateLimitedElement)
+
+    expect(screen.getByText('Quá nhiều yêu cầu')).toBeInTheDocument()
+    expect(screen.getByText(/Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn/)).toBeInTheDocument()
+    expect(screen.getByText(/Hotline: 1900 8888/)).toBeInTheDocument()
+    // Không query DB thêm và không gọi notFound
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(mockNotFound).not.toHaveBeenCalled()
+  })
+
+  it('uses x-real-ip when x-forwarded-for is missing', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        code: 'BKABC123',
+        status: 'confirmed',
+        check_in_date: '2026-10-01',
+        check_out_date: '2026-10-03',
+        nights_count: 2,
+        guests_count: 2,
+        total_amount: 2000000,
+        guest_name: 'Khách Real IP',
+        guest_phone: '0901234567',
+        rooms: { name: 'Phòng Sen', lots: { name: 'Vườn Trầm A', region: 'Miền Bắc' } },
+      },
+      error: null,
+    })
+
+    mockHeadersGet.mockImplementation((header: string) => {
+      if (header === 'x-real-ip') return '10.0.0.5'
+      return null
+    })
+
+    for (let i = 0; i < 20; i++) {
+      await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123' }) })
+    }
+
+    mockFrom.mockClear()
+    const rlEl = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123' }) })
+    render(rlEl)
+    expect(screen.getByText('Quá nhiều yêu cầu')).toBeInTheDocument()
+    expect(mockFrom).not.toHaveBeenCalled()
   })
 
   it('generates metadata with dynamic booking code and noindex tags', async () => {

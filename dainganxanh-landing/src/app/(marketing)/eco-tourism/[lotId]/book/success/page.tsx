@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { CheckCircle2, Calendar, MapPin, Users, Moon, Receipt, Ticket } from 'lucide-react'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,12 +52,8 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
     return null
   }
 
-  const rawRooms = rawBooking.rooms as unknown
-  const room = (Array.isArray(rawRooms) ? rawRooms[0] : rawRooms) as {
-    name?: string
-    lot_id?: string
-    lots?: { name?: string; region?: string } | Array<{ name?: string; region?: string }> | null
-  } | null
+  const bookingRow = rawBooking as RoomBookingWithJoinedRoom
+  const room = Array.isArray(bookingRow.rooms) ? bookingRow.rooms[0] : bookingRow.rooms
   const roomName = room?.name ?? 'Phòng nghỉ'
   const lotsData = room?.lots
   const lot = Array.isArray(lotsData) ? lotsData[0] : lotsData
@@ -75,7 +72,7 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
           <p className="text-emerald-100 text-sm mt-1">Cảm ơn bạn đã lựa chọn nghỉ dưỡng cùng Đại Ngàn Xanh</p>
           <div className="mt-4 inline-block bg-white/15 backdrop-blur px-4 py-1.5 rounded-full">
             <span className="text-xs uppercase tracking-wider text-emerald-100 mr-2">Mã đặt phòng</span>
-            <span className="font-mono font-bold text-white tracking-wide">{rawBooking.code}</span>
+            <span className="font-mono font-bold text-white tracking-wide">{bookingRow.code}</span>
           </div>
         </div>
 
@@ -96,14 +93,14 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
                   <Calendar className="w-4 h-4 text-emerald-600" />
                   <span>Nhận phòng</span>
                 </div>
-                <p className="font-medium text-gray-900">{formatDate(rawBooking.check_in_date)}</p>
+                <p className="font-medium text-gray-900">{formatDate(bookingRow.check_in_date)}</p>
               </div>
               <div className="p-3 bg-gray-50 rounded-xl">
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
                   <Calendar className="w-4 h-4 text-emerald-600" />
                   <span>Trả phòng</span>
                 </div>
-                <p className="font-medium text-gray-900">{formatDate(rawBooking.check_out_date)}</p>
+                <p className="font-medium text-gray-900">{formatDate(bookingRow.check_out_date)}</p>
               </div>
             </div>
 
@@ -112,14 +109,14 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
                 <Moon className="w-4 h-4 text-emerald-600" />
                 <div>
                   <p className="text-xs text-gray-500">Thời gian</p>
-                  <p className="font-medium text-gray-900">{rawBooking.nights_count} đêm</p>
+                  <p className="font-medium text-gray-900">{bookingRow.nights_count} đêm</p>
                 </div>
               </div>
               <div className="p-3 bg-gray-50 rounded-xl flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-600" />
                 <div>
                   <p className="text-xs text-gray-500">Khách lưu trú</p>
-                  <p className="font-medium text-gray-900">{rawBooking.guests_count} khách</p>
+                  <p className="font-medium text-gray-900">{bookingRow.guests_count} khách</p>
                 </div>
               </div>
             </div>
@@ -129,7 +126,7 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
                 <Receipt className="w-5 h-5 text-emerald-600" />
                 <span className="font-medium text-gray-900">Tổng thanh toán</span>
               </div>
-              <span className="text-xl font-bold text-emerald-700">{formatVND(rawBooking.total_amount)}</span>
+              <span className="text-xl font-bold text-emerald-700">{formatVND(bookingRow.total_amount)}</span>
             </div>
           </div>
 
@@ -137,14 +134,14 @@ export default async function BookingSuccessPage({ params, searchParams }: Booki
             <p className="font-semibold mb-1">Hướng dẫn nhận phòng:</p>
             <p>
               Nhân viên khu nghỉ dưỡng sẽ liên hệ với quý khách theo số điện thoại{' '}
-              <span className="font-semibold">{rawBooking.guest_phone}</span> trước ngày nhận phòng để hỗ trợ thủ tục.
+              <span className="font-semibold">{bookingRow.guest_phone}</span> trước ngày nhận phòng để hỗ trợ thủ tục.
               Vui lòng mang theo CMND/CCCD khi làm thủ tục check-in.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Link
-              href={`/eco-tourism/voucher/${encodeURIComponent(rawBooking.code)}`}
+              href={`/eco-tourism/voucher/${encodeURIComponent(bookingRow.code)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-3 px-4 text-center rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition-colors text-sm flex items-center justify-center gap-2"

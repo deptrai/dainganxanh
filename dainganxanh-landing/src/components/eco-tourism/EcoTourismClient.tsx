@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { BedDouble } from 'lucide-react'
 import { GardenCard, type GardenLot } from './GardenCard'
 
@@ -10,6 +11,12 @@ const REGIONS = [
     { label: 'Miền Trung', value: 'Miền Trung' },
     { label: 'Miền Nam', value: 'Miền Nam' },
 ] as const
+
+function normalizeRegion(val?: string | null): string {
+    if (!val) return 'all'
+    const matched = REGIONS.find(r => r.value.toLowerCase() === val.trim().toLowerCase())
+    return matched ? matched.value : val
+}
 
 function RegionFilter({ active, onChange }: { active: string; onChange: (v: string) => void }) {
     return (
@@ -31,8 +38,51 @@ function RegionFilter({ active, onChange }: { active: string; onChange: (v: stri
     )
 }
 
-export function EcoTourismClient({ lots }: { lots: GardenLot[] }) {
-    const [activeRegion, setActiveRegion] = useState<string>('all')
+export interface EcoTourismClientProps {
+    lots: GardenLot[]
+    initialRegion?: string
+}
+
+export function EcoTourismClient({ lots, initialRegion }: EcoTourismClientProps) {
+    const router = useRouter()
+    const pathname = usePathname()
+    const searchParams = useSearchParams()
+
+    const searchParamRegion = searchParams?.get('region')
+
+    const [activeRegion, setActiveRegion] = useState(() => {
+        const initial = searchParamRegion ?? initialRegion
+        return initial ? normalizeRegion(initial) : 'all'
+    })
+
+    const isFirstRender = useRef(true)
+
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false
+            return
+        }
+        const currentParam = searchParams?.get('region')
+        if (currentParam) {
+            setActiveRegion(normalizeRegion(currentParam))
+        } else {
+            setActiveRegion('all')
+        }
+    }, [searchParams])
+
+    const handleRegionChange = (newRegion: string) => {
+        setActiveRegion(newRegion)
+        const params = new URLSearchParams(searchParams ? searchParams.toString() : '')
+        if (newRegion === 'all') {
+            params.delete('region')
+        } else {
+            params.set('region', newRegion)
+        }
+        const query = params.toString()
+        const currentPath = pathname || '/eco-tourism'
+        const newUrl = query ? `${currentPath}?${query}` : currentPath
+        router.replace(newUrl, { scroll: false })
+    }
 
     const filteredLots = useMemo(() => {
         if (activeRegion === 'all') return lots
@@ -58,7 +108,7 @@ export function EcoTourismClient({ lots }: { lots: GardenLot[] }) {
             </section>
 
             <div className="max-w-6xl mx-auto px-4 py-10">
-                <RegionFilter active={activeRegion} onChange={setActiveRegion} />
+                <RegionFilter active={activeRegion} onChange={handleRegionChange} />
 
                 {filteredLots.length === 0 ? (
                     <div className="text-center py-20 text-gray-500">

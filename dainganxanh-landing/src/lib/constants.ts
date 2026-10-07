@@ -99,6 +99,10 @@ export const HARVEST_MONTHS = 120;
 export const PHOTO_PLACEHOLDER_MONTHS = 9;
 export const MIN_WITHDRAWAL = 200_000;
 
+// ─── Support contact constants ────────────────────────────────────
+export const SUPPORT_HOTLINE = '1900 8888';
+export const SUPPORT_EMAIL = 'hotro@dainganxanh.com.vn';
+
 // Order statuses that count as successfully paid for commission purposes.
 // Keep in sync with the CHECK constraint in supabase/migrations/20260407000000_baseline_from_remote.sql
 export const COMMISSION_ELIGIBLE_ORDER_STATUSES = ['completed', 'paid', 'verified', 'assigned'] as const;

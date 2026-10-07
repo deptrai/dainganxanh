@@ -24,6 +24,16 @@ jest.mock('next/link', () => {
 })
 
 describe('RoomCalendarClient', () => {
+  // Booking dates must fall inside the month the calendar initially renders
+  // (the current month), so derive them from `new Date()` instead of
+  // hardcoding — otherwise the suite breaks when the calendar flips month.
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const curYear = now.getFullYear()
+  const curMonth = now.getMonth() + 1 // 1-based
+  const nextMonth = curMonth === 12 ? 1 : curMonth + 1
+  const monthLabel = (m: number) => new RegExp(`tháng ${m}\\b`, 'i')
+
   const mockData = {
     lots: [{
       id: 'l1',
@@ -37,8 +47,8 @@ describe('RoomCalendarClient', () => {
           id: 'b1',
           code: 'BK1',
           guest_name: 'Nguyễn A',
-          check_in_date: '2026-09-10',
-          check_out_date: '2026-09-12',
+          check_in_date: `${curYear}-${pad(curMonth)}-10`,
+          check_out_date: `${curYear}-${pad(curMonth)}-12`,
           status: 'confirmed',
         }],
         blocks: [],
@@ -69,21 +79,21 @@ describe('RoomCalendarClient', () => {
     render(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
-      expect(screen.getByText(/tháng 9/i)).toBeInTheDocument()
+      expect(screen.getByText(monthLabel(curMonth))).toBeInTheDocument()
     })
 
     const nextBtn = screen.getByLabelText('Tháng sau')
     fireEvent.click(nextBtn)
 
     await waitFor(() => {
-      expect(screen.getByText(/tháng 10/i)).toBeInTheDocument()
+      expect(screen.getByText(monthLabel(nextMonth))).toBeInTheDocument()
     })
 
     const prevBtn = screen.getByLabelText('Tháng trước')
     fireEvent.click(prevBtn)
 
     await waitFor(() => {
-      expect(screen.getByText(/tháng 9/i)).toBeInTheDocument()
+      expect(screen.getByText(monthLabel(curMonth))).toBeInTheDocument()
     })
   })
 

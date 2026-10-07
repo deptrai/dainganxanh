@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import { StoreOrdersList } from '@/components/crm/StoreOrdersList'
 import { captureError } from '@/lib/monitoring'
+import type { StoreOrderWithItems } from '@/types/database.types'
 
 export const metadata: Metadata = {
     title: 'Đơn hàng của tôi | Đại Ngàn Xanh',
@@ -67,24 +68,29 @@ export default async function MyStoreOrdersPage({ searchParams }: MyStoreOrdersP
         )
     }
 
-    const formattedOrders = (orders || []).map((row: any) => ({
+    const orderRows = (orders || []) as StoreOrderWithItems[]
+    const formattedOrders = orderRows.map((row) => ({
         id: row.id,
         code: row.code,
         status: row.status,
         totalAmount: row.total_amount,
         shippingFee: row.shipping_fee || 0,
-        paymentMethod: row.payment_method,
+        paymentMethod: row.payment_method as 'banking' | 'cod' | undefined,
         shippingAddress: row.shipping_address,
         trackingNumber: row.tracking_number,
         createdAt: row.created_at,
-        items: (row.store_order_items || []).map((item: any) => ({
-            id: item.id,
-            name: item.products?.name || '',
-            slug: item.products?.slug || '',
-            image: item.products?.images?.[0] || null,
-            quantity: item.quantity,
-            unitPrice: item.unit_price,
-        })),
+        items: (row.store_order_items || []).map((item) => {
+            const product = Array.isArray(item.products) ? item.products[0] : item.products
+            const images = Array.isArray(product?.images) ? product.images : []
+            return {
+                id: item.id,
+                name: product?.name || '',
+                slug: product?.slug || '',
+                image: (images[0] as string | undefined) || null,
+                quantity: item.quantity,
+                unitPrice: item.unit_price,
+            }
+        }),
     }))
 
     const totalCount = count || 0

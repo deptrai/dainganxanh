@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { EcoTourismClient } from '@/components/eco-tourism/EcoTourismClient'
@@ -43,7 +44,15 @@ function buildJsonLd(lots: LotWithRooms[]) {
     }
 }
 
-export default async function EcoTourismPage() {
+interface EcoTourismPageProps {
+    searchParams?: Promise<{ region?: string | string[] | undefined }>
+}
+
+export default async function EcoTourismPage({ searchParams }: EcoTourismPageProps = {}) {
+    const resolvedParams = searchParams ? await searchParams : undefined
+    const rawRegion = resolvedParams?.region
+    const initialRegion = Array.isArray(rawRegion) ? rawRegion[0] : rawRegion
+
     const supabase = createServiceRoleClient()
 
     const { data: lots, error } = await supabase
@@ -83,11 +92,12 @@ export default async function EcoTourismPage() {
 
     return (
         <>
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
-            />
-            <EcoTourismClient lots={gardenLots} />
+            <script type="application/ld+json">
+                {JSON.stringify(jsonLd).replace(/</g, '\\u003c')}
+            </script>
+            <Suspense fallback={null}>
+                <EcoTourismClient lots={gardenLots} initialRegion={initialRegion} />
+            </Suspense>
         </>
     )
 }

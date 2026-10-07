@@ -2,6 +2,7 @@
 
 import { MapPin, Calendar, Clock, Phone, FileText, Info } from 'lucide-react'
 import { formatDateVN } from '@/lib/date'
+import { SUPPORT_HOTLINE } from '@/lib/constants'
 
 export interface CheckInInstructionsProps {
     roomName: string
@@ -92,7 +93,7 @@ export default function CheckInInstructions({
                         <Phone className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <div>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hotline lễ tân & hỗ trợ</p>
-                            <p className="text-sm font-semibold text-emerald-700">1900 8888</p>
+                            <p className="text-sm font-semibold text-emerald-700">{SUPPORT_HOTLINE}</p>
                             {guestPhone && (
                                 <p className="text-xs text-gray-500 mt-0.5">
                                     SĐT liên hệ khách: <span className="font-medium text-gray-700">{guestPhone}</span>

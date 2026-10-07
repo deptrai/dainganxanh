@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect, notFound } from 'next/navigation'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import AdminBookingDetailClient from '@/components/admin/AdminBookingDetailClient'
+import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
 
 export const metadata: Metadata = {
     title: 'Chi tiết đặt phòng | Admin',
@@ -50,40 +51,37 @@ export default async function AdminBookingDetailPage({
         notFound()
     }
 
-    const roomData = booking.rooms as unknown as {
-        name?: string
-        lot_id?: string
-        lots?: { name?: string; region?: string; description?: string | null } | Array<{ name?: string; region?: string; description?: string | null }> | null
-    } | null
+    const bookingRow = booking as RoomBookingWithJoinedRoom
+    const roomData = Array.isArray(bookingRow.rooms) ? bookingRow.rooms[0] : bookingRow.rooms
     const lotData = roomData?.lots
     const lot = Array.isArray(lotData) ? lotData[0] : lotData
 
     return (
         <AdminBookingDetailClient
             booking={{
-                id: booking.id,
-                code: booking.code,
-                roomId: booking.room_id,
+                id: bookingRow.id,
+                code: bookingRow.code,
+                roomId: bookingRow.room_id,
                 roomName: roomData?.name || '',
                 lotId: roomData?.lot_id,
                 lotName: lot?.name || '',
                 lotRegion: lot?.region || '',
                 lotDescription: lot?.description || '',
-                guestName: booking.guest_name,
-                guestPhone: booking.guest_phone,
-                guestEmail: booking.guest_email,
-                checkInDate: booking.check_in_date,
-                checkOutDate: booking.check_out_date,
-                guestsCount: booking.guests_count,
-                nightsCount: booking.nights_count,
-                totalAmount: booking.total_amount,
-                paymentMethod: booking.payment_method,
-                status: booking.status,
-                specialRequests: booking.special_requests,
-                cancellationReason: booking.cancellation_reason,
-                expiresAt: booking.expires_at,
-                createdAt: booking.created_at,
-                updatedAt: booking.updated_at,
+                guestName: bookingRow.guest_name,
+                guestPhone: bookingRow.guest_phone,
+                guestEmail: bookingRow.guest_email,
+                checkInDate: bookingRow.check_in_date,
+                checkOutDate: bookingRow.check_out_date,
+                guestsCount: bookingRow.guests_count,
+                nightsCount: bookingRow.nights_count,
+                totalAmount: bookingRow.total_amount,
+                paymentMethod: bookingRow.payment_method,
+                status: bookingRow.status,
+                specialRequests: bookingRow.special_requests,
+                cancellationReason: bookingRow.cancellation_reason,
+                expiresAt: bookingRow.expires_at,
+                createdAt: bookingRow.created_at,
+                updatedAt: bookingRow.updated_at,
             }}
         />
     )
