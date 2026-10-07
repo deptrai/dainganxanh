@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { captureError } from '@/lib/monitoring'
 
 export async function GET(req: NextRequest) {
   const rl = rateLimit(req, { limit: 60, windowMs: 60_000, keyPrefix: 'store-order-status' })
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
 
   if (error) {
-    console.error('store order status lookup failed:', error)
+    captureError(error, { route: '/api/store/orders/status', action: 'order_lookup' })
     return NextResponse.json({ error: 'Lỗi hệ thống. Vui lòng thử lại sau.' }, { status: 500 })
   }
   if (!order) {

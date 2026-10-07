@@ -13,7 +13,7 @@ export const createOrderSchema = z.object({
   quantity: z.number().int().min(1).max(10),
   customer_name: z.string().min(1, 'Vui lòng nhập họ tên'),
   customer_phone: z.string().regex(/^0\d{9}$/, 'Số điện thoại không hợp lệ'),
-  customer_email: z.string().email().optional().or(z.literal('')),
+  customer_email: z.email().optional().or(z.literal('')),
   shipping_address: z.string().min(1, 'Vui lòng nhập địa chỉ giao hàng'),
   shipping_province: z.string().min(1, 'Vui lòng chọn tỉnh/thành phố'),
   shipping_note: z.string().optional(),
@@ -23,7 +23,7 @@ export const createOrderSchema = z.object({
 
 function generateStoreOrderCode(): string {
   // padEnd: base-36 ngẫu nhiên có thể < 6 ký tự; status route bắt đúng 6
-  return 'ST' + Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0')
+  return 'ST' + Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, '0')
 }
 
 export async function POST(req: NextRequest) {
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (reserveError || !reserved) {
-    console.error('reserve_product_stock failed:', reserveError)
+    captureError(reserveError ?? new Error('reserve returned false'), { route: '/api/store/orders/create', action: 'reserve_stock' })
     return NextResponse.json({ error: 'Không thể giữ hàng. Có thể sản phẩm vừa hết.' }, { status: 409 })
   }
 
@@ -121,7 +121,6 @@ export async function POST(req: NextRequest) {
   if (orderError) {
     // Rollback stock reservation on order creation failure
     await supabase.rpc('release_product_stock', { p_product_id: pricedItem.productId, p_qty: data.quantity })
-    console.error('store order creation failed:', orderError)
     captureError(orderError, {
       route: '/api/store/orders/create',
       action: 'order_insert',
@@ -142,7 +141,6 @@ export async function POST(req: NextRequest) {
     // Rollback
     await supabase.from('store_orders').delete().eq('id', order.id)
     await supabase.rpc('release_product_stock', { p_product_id: pricedItem.productId, p_qty: data.quantity })
-    console.error('store order item creation failed:', itemError)
     captureError(itemError, {
       route: '/api/store/orders/create',
       action: 'item_insert',
