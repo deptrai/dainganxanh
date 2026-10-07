@@ -346,6 +346,5 @@ describe('ProductDetailClient', () => {
       const { container } = renderProductDetail({ product: { origin_type: 'unknown_origin' as any } })
       expect(container.querySelector('.lucide-shield')).not.toBeInTheDocument()
     })
-    })
   })
 })

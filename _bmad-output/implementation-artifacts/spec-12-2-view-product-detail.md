@@ -3,7 +3,7 @@ title: 'Story 12.2: View Product Detail'
 type: 'feature'
 created: '2026-10-08'
 status: 'done'
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 baseline_revision: '9da73aa8b077d6fbd5c5eb1eb918817638df8c5b'
 context:
@@ -77,11 +77,63 @@ deferred: []
 
 ## Review Triage Log
 
-| Finding | Severity | Recommendation | Action Taken |
-|---------|----------|----------------|--------------|
-| Missing re-entrancy guard in `handleBuyNow`: Rapid clicks before route navigation can trigger multiple `router.push` calls. | Medium | Thêm `if (outOfStock \|\| buying \|\| qty < 1) return` | Đã vá trong `ProductDetailClient.tsx:48` và bổ sung test |
-| Quantity Minus/Plus buttons remain enabled during `buying` state. | Low | Thêm `buying` vào điều kiện disabled của nút Tăng/Giảm | Đã vá trong `ProductDetailClient.tsx:137,150` và bổ sung test |
-| Brittle regex text assertion `queryByText(/line-through/)` queries CSS class name rather than element content. | Low | Sửa assertion thành `queryByText('line-through')` | Đã vá trong `ProductDetailClient.test.tsx` |
+### 2026-10-08 — Review pass
+- verdicts: 21 findings — high 0, medium 4, low 13, false 4, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` Missing re-entrancy guard in handleBuyNow allows multiple rapid router.push calls — Đã thêm guard `buying` trong `handleBuyNow`: `if (outOfStock || buying || qty < 1) return`.
+  - `[low]` `[patch]` Out-of-stock boundary condition fails on negative stock — Đã cập nhật `const outOfStock = product.stock_quantity <= 0`.
+  - `[low]` `[patch]` Unconditional rendering of origin badge wrapper when originLabel() returns null — Đã bọc điều kiện chỉ render container badge khi `originLabel(product.origin_type)` là truthy.
+  - `[false]` `[reject]` batch_certificate_url is typed and fetched but omitted from UI — Refutation: ACs của Story 12.2 không yêu cầu hiển thị certificate tải về, chỉ yêu cầu info cơ bản, specs và origin.
+  - `[low]` `[patch]` Missing URI encoding for slug in checkout redirect — Đã dùng `encodeURIComponent(product.slug)`.
+  - `[medium]` `[patch]` Missing state reset when switching between products — Đã thêm `useEffect` reset state theo `product.id` và prop `key={product.id}` ở `page.tsx`.
+  - `[low]` `[patch]` Missing accessibility attributes on image thumbnails, emoji fallbacks, and quantity counter — Đã thêm `aria-current` cho thumbnail, `aria-hidden="true"` cho emoji `🌿`, `aria-live="polite"` cho bộ đếm số lượng.
+  - `[low]` `[patch]` Divergence from codebase standard loading spinner icon — Đã đổi span custom thành `<Loader2 className="w-5 h-5 animate-spin" />`.
+  - `[low]` `[patch]` Inline IIFE inside JSX for related product category resolution — Đã đơn giản hóa logic lấy category name cho related product.
+  - `[false]` `[reject]` Related product cards ignore compare_at_price and stock_quantity — Refutation: AC của Story 12.2 chỉ yêu cầu danh sách card liên quan hiển thị ảnh, tên, giá, category; không yêu cầu badge giảm giá phức tạp cho related items.
+  - `[low]` `[patch]` Missing unit test coverage for optional and edge-case props — Đã bổ sung 4 test cases cho `lots` null, `sku` null, `related` undefined, và `stock_quantity === 1`.
+  - `[false]` `[reject]` Spec metadata carries future creation date 2026 — Refutation: Toàn bộ codebase và migration repo được thiết kế theo timeline 2026.
+  - `[low]` `[patch]` User clicks minus/plus while checkout navigation in progress — Đã thêm guard `buying` vào `disabled` của cả nút Giảm và Tăng.
+  - `[low]` `[patch]` product.specifications is passed as JSON array or non-object primitive — Đã thắt chặt điều kiện: `product.specifications && typeof product.specifications === 'object' && !Array.isArray(product.specifications) && Object.keys(...).length > 0`.
+  - `[low]` `[patch]` product.specifications contains nested JSON objects or arrays as values — Đã an toàn hóa giá trị render: `{typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)}`.
+  - `[medium]` `[patch]` Broken assertion in COMPARE_PRICE display test queries CSS class name via queryByText — Đã sửa test assertion dùng `container.querySelector('.line-through')`.
+  - `[low]` `[patch]` Unverified category name rendering for related products with single-object product_categories — Đã thêm assertion `expect(screen.getByText('Tinh dầu')).toBeInTheDocument()` trong HAPPY_PATH.
+  - `[medium]` `[patch]` page.tsx missing key prop causing state bleed on related product navigation — Cùng root cause với blind-hunter #6, đã thêm `key={product.id}` ở `page.tsx`.
+  - `[low]` `[patch]` Related product test with empty images missing assertion for fallback icon — Đã thêm assertion cho emoji fallback `🌿`.
+  - `[false]` `[reject]` Component-level vs route integration divergence — Refutation: SSR route `/store/[slug]/page.tsx` đã tồn tại sẵn từ trước và tích hợp trực tiếp với `ProductDetailClient`.
+  - `[medium]` `[patch]` Sprint status yaml remains in backlog — Đã cập nhật `12-2-view-product-detail: done` trong `sprint-status.yaml` ở bước Finalize.
+
+## Auto Run Result
+
+### Summary of implemented change
+Triển khai hoàn chỉnh Story 12.2 (View Product Detail) trên Next.js App Router:
+- Thêm bảo vệ an toàn cho bảng thông số kỹ thuật (`specifications`), không bao giờ crash khi null/undefined/array/nested object.
+- Re-entrancy guard cho nút "Mua ngay", vô hiệu hóa toàn bộ tương tác khi đang chuyển trang sang checkout (`buying` state với `Loader2` spinner).
+- Reset state an toàn khi chuyển đổi sản phẩm liên quan qua `useEffect` và prop `key={product.id}` ở `page.tsx`.
+- Hỗ trợ WCAG 2.1 AA: `aria-current` cho thumbnail ảnh, `aria-hidden="true"` cho biểu tượng trang trí `🌿`, `aria-live="polite"` cho bộ đếm số lượng.
+- Viết mới 20 unit tests RTL bao phủ 100% I/O & Edge-Case Matrix, kiểm chứng gallery, giá so sánh, giới hạn số lượng, hết hàng và điều hướng mua hàng.
+
+### Files changed
+- `dainganxanh-landing/src/components/store/ProductDetailClient.tsx`: Thêm guards an toàn, type-safety, accessibility attributes, và re-entrancy protection.
+- `dainganxanh-landing/src/app/(marketing)/store/[slug]/page.tsx`: Thêm prop `key={product.id}` cho `ProductDetailClient` để ngăn ngừa state bleeding khi chuyển trang.
+- `dainganxanh-landing/src/components/store/__tests__/ProductDetailClient.test.tsx`: Bộ 20 unit tests RTL toàn diện cho ProductDetailClient.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`: Đánh dấu `12-2-view-product-detail: done` (63/70 stories completed).
+- `_bmad-output/implementation-artifacts/spec-12-2-view-product-detail.md`: Tài liệu đặc tả và review triage log cho Story 12.2.
+
+### Review findings breakdown
+- Patches applied: 17 findings (4 medium, 13 low).
+- Items deferred: 0.
+- Rejected findings: 4 findings (all false positives: batch_certificate_url ngoài scope AC, compare_at_price cho related cards ngoài scope AC, date 2026 timeline của repo, route integration divergence đã có SSR route sẵn).
+
+### Follow-up review recommendation
+- `followup_review_recommended: false` (toàn bộ 20 unit tests mới và 101/101 test suites của project pass sạch sẽ, `tsc --noEmit` 0 lỗi).
+
+### Verification performed
+- `cd dainganxanh-landing && npm test -- src/components/store/__tests__/ProductDetailClient.test.tsx`: 20/20 unit tests passed (PASS, 0 failures).
+- `cd dainganxanh-landing && npm test`: 101/101 test suites passed, 979 unit tests passed (PASS, 0 failures).
+- `cd dainganxanh-landing && npm run lint`: `tsc --noEmit` clean 0 errors.
+
+### Residual risks
+- Không có rủi ro tồn đọng.
 
 ## Verification
 
