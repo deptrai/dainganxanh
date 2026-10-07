@@ -25,8 +25,14 @@ export async function GET(req: NextRequest) {
   }
 
   const { effectiveUserId } = ctx
-  const { searchParams } = new URL(req.url)
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+  // req.url từ Next runtime luôn hợp lệ; vẫn guard để không throw ra ngoài nếu nhận input lạ
+  let page = 1
+  try {
+    const { searchParams } = new URL(req.url)
+    page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+  } catch {
+    // URL không parse được → dùng trang mặc định
+  }
   const start = (page - 1) * PAGE_SIZE
   const end = start + PAGE_SIZE - 1
 
