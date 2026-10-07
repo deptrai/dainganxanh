@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { jest } from '@jest/globals'
 
 // Polyfill TextEncoder/TextDecoder for jsdom (required by fetch/supabase deps)
 import { TextEncoder, TextDecoder } from 'util'
@@ -9,8 +10,12 @@ Object.assign(global, { TextEncoder, TextDecoder })
 jest.mock('next/cache', () => ({
     revalidatePath: jest.fn(),
     revalidateTag: jest.fn(),
-    unstable_cache: jest.fn().mockImplementation((fn: () => unknown) => fn),
+    unstable_cache: jest.fn((fn: (...args: unknown[]) => unknown) => fn),
 }))
 
 // Set NODE_ENV for render shim
-process.env.NODE_ENV = 'test'
+Object.defineProperty(process.env, 'NODE_ENV', {
+    value: 'test',
+    writable: true,
+    configurable: true,
+})

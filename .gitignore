@@ -67,3 +67,11 @@ supabase/.temp/
 # Claude config
 .claude/launch.json
 **/.claude/launch.json
+.claude/worktrees/
+
+# iCloud sync conflict copies
+* (1)*
+*(1)*
+
+# Vitest cache
+**/.vitest/
