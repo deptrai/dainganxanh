@@ -48,7 +48,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
     setActiveImage(product.images?.[0])
     setQty(1)
     setBuying(false)
-  }, [product.id, product.images])
+  }, [product.id])
 
   const outOfStock = product.stock_quantity <= 0
   const maxQty = Math.max(1, Math.min(product.stock_quantity, 10))
@@ -57,6 +57,8 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
     if (outOfStock || buying || qty < 1) return
     setBuying(true)
     router.push(`/store/checkout?slug=${encodeURIComponent(product.slug)}&quantity=${qty}`)
+    // ponytail: nếu điều hướng fail hoặc user quay lại qua bfcache, reset sau 5s
+    setTimeout(() => setBuying(false), 5000)
   }
 
   return (
@@ -88,6 +90,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                   {product.images.map((img, i) => (
                     <button
                       key={i}
+                      type="button"
                       onClick={() => setActiveImage(img)}
                       className={`w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 ${
                         activeImage === img ? 'border-emerald-600' : 'border-stone-200'
@@ -142,19 +145,21 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                 <span className="text-gray-700 font-medium">Số lượng:</span>
                 <div className="flex items-center border border-stone-300 rounded-lg bg-white">
                   <button
+                    type="button"
                     onClick={() => setQty(q => Math.max(1, q - 1))}
                     disabled={outOfStock || buying || qty <= 1}
                     className="p-2 hover:bg-stone-100 disabled:opacity-40"
-                    aria-label="Giảm"
+                    aria-label="Giảm số lượng"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="w-12 text-center font-semibold" aria-live="polite">{qty}</span>
+                  <span className="w-12 text-center font-semibold" aria-live="polite">{outOfStock ? 0 : qty}</span>
                   <button
+                    type="button"
                     onClick={() => setQty(q => Math.min(maxQty, q + 1))}
                     disabled={outOfStock || buying || qty >= maxQty}
                     className="p-2 hover:bg-stone-100 disabled:opacity-40"
-                    aria-label="Tăng"
+                    aria-label="Tăng số lượng"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -165,6 +170,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
               </div>
 
               <button
+                type="button"
                 onClick={handleBuyNow}
                 disabled={outOfStock || buying}
                 className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 text-white font-bold rounded-xl text-lg transition-colors flex items-center justify-center gap-2"
@@ -205,7 +211,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                 <div key={k} className="flex justify-between border-b border-stone-100 pb-2">
                   <span className="text-gray-500">{k}</span>
                   <span className="font-medium text-gray-900">
-                    {typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)}
+                    {v == null ? '—' : Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? JSON.stringify(v) : String(v)}
                   </span>
                 </div>
               ))}

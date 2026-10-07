@@ -140,3 +140,27 @@ Triển khai hoàn chỉnh Story 12.2 (View Product Detail) trên Next.js App Ro
 **Commands:**
 - `cd dainganxanh-landing && npm test -- src/components/store/__tests__/ProductDetailClient.test.tsx` -- expected: toàn bộ test suites pass
 - `cd dainganxanh-landing && npm run lint` -- expected: tsc --noEmit không có lỗi type nào
+
+### Review Findings — bmad-code-review (2026-10-08)
+
+- [x] [Review][Patch] Soft-404: trả về 200 khi sản phẩm không tồn tại — dùng `notFound()` và thêm `robots: noindex` trong generateMetadata [dainganxanh-landing/src/app/(marketing)/store/[slug]/page.tsx:45-53]
+- [x] [Review][Patch] useEffect dep `product.images` (array ref) gây reset state giả + dư thừa với `key={product.id}` — chỉ giữ dep `[product.id]` [dainganxanh-landing/src/components/store/ProductDetailClient.tsx:47-51]
+- [x] [Review][Patch] Bộ đếm số lượng hiển thị `1` khi hết hàng — hiển thị `0` khi `outOfStock` [dainganxanh-landing/src/components/store/ProductDetailClient.tsx:148]
+- [x] [Review][Patch] Spec value null/undefined render literal "null"/"undefined"; array render raw JSON — guard `v == null ? '—' : Array.isArray(v) ? v.join(', ') : ...` [dainganxanh-landing/src/components/store/ProductDetailClient.tsx:208]
+- [x] [Review][Patch] `buying` kẹt vĩnh viễn nếu router.push thất bại hoặc user quay lại qua bfcache — thêm timeout reset [dainganxanh-landing/src/components/store/ProductDetailClient.tsx:56-60]
+- [x] [Review][Patch] Related query `.eq('category_id', null)` match các sản phẩm không category — chỉ query khi `product.category_id` có giá trị [dainganxanh-landing/src/app/(marketing)/store/[slug]/page.tsx:57-63]
+- [x] [Review][Patch] Thiếu `type="button"` trên thumbnail/minus/plus/buy buttons [dainganxanh-landing/src/components/store/ProductDetailClient.tsx]
+- [x] [Review][Patch] aria-label "Giảm"/"Tăng" mơ hồ → "Giảm số lượng"/"Tăng số lượng" (bỏ qua role=spinbutton — over-engineering cho stepper đơn giản) [dainganxanh-landing/src/components/store/ProductDetailClient.tsx:145,153]
+- [x] [Review][Patch] Thiếu test: state reset khi `product.id` đổi (RTL rerender) [dainganxanh-landing/src/components/store/__tests__/ProductDetailClient.test.tsx]
+- [x] [Review][Patch] Thiếu test: specs nested object/array render qua JSON.stringify [dainganxanh-landing/src/components/store/__tests__/ProductDetailClient.test.tsx]
+- [x] [Review][Patch] Thiếu test: `stock_quantity` âm → hiển thị Hết hàng + disable controls [dainganxanh-landing/src/components/store/__tests__/ProductDetailClient.test.tsx]
+- [x] [Review][Patch] Thiếu test: nút +/- disabled khi `buying === true` [dainganxanh-landing/src/components/store/__tests__/ProductDetailClient.test.tsx]
+- [x] [Review][Defer] Raw `<img>` thay vì Next.js `<Image>` — pre-existing pattern toàn store section; cần remotePatterns config cho Supabase storage URLs — deferred: không phát sinh từ change này [dainganxanh-landing/src/components/store/ProductDetailClient.tsx]
+
+#### Rejected
+
+- `batch_certificate_url` fetch nhưng không render — `false` theo scope: ngoài AC Story 12.2 (đã reject ở vòng build-auto).
+- Related cards thiếu badge hết hàng/giá gạch ngang — `false` theo scope: AC chỉ yêu cầu ảnh/tên/giá/category.
+- Fallback fill khi category < 4 sản phẩm — feature request, ngoài phạm vi story.
+- Breadcrumb navigation — feature mới, ngoài AC.
+- Guard `qty > maxQty` trong handleBuyNow — `false`: qty bị ràng buộc trong [1, maxQty] bởi steppers + reset; prop static nên unreachable.

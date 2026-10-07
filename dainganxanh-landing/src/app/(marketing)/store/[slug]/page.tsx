@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { ProductDetailClient } from '@/components/store/ProductDetailClient'
 
@@ -14,9 +15,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq('status', 'active')
     .maybeSingle()
 
+  if (!product) return { title: 'Sản phẩm không tồn tại — Đại Ngàn Xanh', robots: { index: false, follow: false } }
   return {
-    title: product ? `${product.name} — Cửa Hàng Trầm Hương` : 'Sản phẩm — Đại Ngàn Xanh',
-    description: product?.description ?? 'Sản phẩm trầm hương thuần Việt từ vườn cây Dó Đen.',
+    title: `${product.name} — Cửa Hàng Trầm Hương`,
+    description: product.description ?? 'Sản phẩm trầm hương thuần Việt từ vườn cây Dó Đen.',
   }
 }
 
@@ -47,24 +49,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       }
     : null
 
-  if (!product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center text-gray-500">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy sản phẩm</h1>
-          <p>Sản phẩm này không tồn tại hoặc đã ngừng bán.</p>
-        </div>
-      </div>
-    )
-  }
+  if (!product) notFound()
 
-  const { data: related } = await supabase
-    .from('products')
-    .select('id, name, slug, price, compare_at_price, stock_quantity, images, product_categories(name)')
-    .eq('status', 'active')
-    .neq('slug', slug)
-    .eq('category_id', product.category_id)
-    .limit(4)
+  const { data: related } = product.category_id
+    ? await supabase
+        .from('products')
+        .select('id, name, slug, price, compare_at_price, stock_quantity, images, product_categories(name)')
+        .eq('status', 'active')
+        .neq('slug', slug)
+        .eq('category_id', product.category_id)
+        .limit(4)
+    : { data: [] }
 
   return (
     <ProductDetailClient

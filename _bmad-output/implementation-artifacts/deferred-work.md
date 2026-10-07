@@ -69,3 +69,7 @@ Còn tồn lại (chưa fix):
 - [x] Test date-dependent — **ĐÃ RÀ 2026-10-08:** audit toàn bộ `src/**/__tests__` — chỉ `book/__tests__/page.test.tsx` có nguy cơ fail (hardcode `2026-11-01`) → đã chuyển sang ngày động `getFutureDates()`. Các test khác an toàn (fake timers hoặc ngày động sẵn).
 
 Không còn item nào tồn lại cho Epic 11. Epic 12 (Trầm Hương Store) sẵn sàng kickoff.
+
+## Deferred from: code review of spec-12-2-view-product-detail (2026-10-08)
+
+- Raw `<img>` thay vì Next.js `<Image>` trong `ProductDetailClient.tsx` (và pattern tương tự ở `StoreClient.tsx`) — pre-existing, không phát sinh từ Story 12.2. Nâng cấp cần `remotePatterns` config trong `next.config` cho Supabase storage URLs + kiểm tra CLS.

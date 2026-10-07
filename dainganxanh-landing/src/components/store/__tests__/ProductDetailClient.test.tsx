@@ -198,8 +198,8 @@ describe('ProductDetailClient', () => {
 
       expect(screen.getByText('Hết hàng', { selector: 'span' })).toBeInTheDocument()
 
-      const minusBtn = screen.getByRole('button', { name: 'Giảm' })
-      const plusBtn = screen.getByRole('button', { name: 'Tăng' })
+      const minusBtn = screen.getByRole('button', { name: 'Giảm số lượng' })
+      const plusBtn = screen.getByRole('button', { name: 'Tăng số lượng' })
       expect(minusBtn).toBeDisabled()
       expect(plusBtn).toBeDisabled()
 
@@ -215,8 +215,8 @@ describe('ProductDetailClient', () => {
     it('disables Minus button at min boundary (qty = 1) and updates within limits', () => {
       renderProductDetail({ product: { stock_quantity: 3 } })
 
-      const minusBtn = screen.getByRole('button', { name: 'Giảm' })
-      const plusBtn = screen.getByRole('button', { name: 'Tăng' })
+      const minusBtn = screen.getByRole('button', { name: 'Giảm số lượng' })
+      const plusBtn = screen.getByRole('button', { name: 'Tăng số lượng' })
 
       // Initially at 1: Minus disabled, Plus enabled
       expect(screen.getByText('1', { selector: 'span.w-12' })).toBeInTheDocument()
@@ -253,7 +253,7 @@ describe('ProductDetailClient', () => {
     it('caps max quantity at 10 even when stock_quantity is larger than 10', () => {
       renderProductDetail({ product: { stock_quantity: 20 } })
 
-      const plusBtn = screen.getByRole('button', { name: 'Tăng' })
+      const plusBtn = screen.getByRole('button', { name: 'Tăng số lượng' })
 
       for (let i = 1; i < 10; i++) {
         fireEvent.click(plusBtn)
@@ -268,8 +268,8 @@ describe('ProductDetailClient', () => {
     it('redirects to checkout with slug and selected quantity, and shows loading state', () => {
       renderProductDetail({ product: { slug: 'nuoc-hoa-tram-huong-hoang-gia', stock_quantity: 5 } })
 
-      const plusBtn = screen.getByRole('button', { name: 'Tăng' })
-      const minusBtn = screen.getByRole('button', { name: 'Giảm' })
+      const plusBtn = screen.getByRole('button', { name: 'Tăng số lượng' })
+      const minusBtn = screen.getByRole('button', { name: 'Giảm số lượng' })
       fireEvent.click(plusBtn) // qty = 2
 
       const buyBtn = screen.getByRole('button', { name: /Mua ngay/i })
@@ -332,8 +332,8 @@ describe('ProductDetailClient', () => {
 
     it('disables both Minus and Plus on single item stock (stock_quantity = 1)', () => {
       renderProductDetail({ product: { stock_quantity: 1 } })
-      expect(screen.getByRole('button', { name: 'Giảm' })).toBeDisabled()
-      expect(screen.getByRole('button', { name: 'Tăng' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Giảm số lượng' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Tăng số lượng' })).toBeDisabled()
     })
 
     it('renders correctly when related prop is omitted (undefined)', () => {
@@ -343,8 +343,73 @@ describe('ProductDetailClient', () => {
     })
 
     it('does not render origin badge when origin_type is unmapped or returns null', () => {
-      const { container } = renderProductDetail({ product: { origin_type: 'unknown_origin' as any } })
+      const { container } = renderProductDetail({ product: { origin_type: 'unknown_origin' } })
       expect(container.querySelector('.lucide-shield')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('review patches', () => {
+    it('resets state when product.id changes (rerender)', () => {
+      const productA = { ...baseProduct, id: 'a', images: ['a1.jpg', 'a2.jpg'], stock_quantity: 5 }
+      const { rerender } = render(
+        <ProductDetailClient product={productA} related={[]} />
+      )
+      // đổi số lượng và chọn ảnh thứ 2
+      const plusBtn = screen.getByRole('button', { name: 'Tăng số lượng' })
+      fireEvent.click(plusBtn)
+      expect(screen.getByText('2')).toBeInTheDocument()
+      const thumb2 = screen.getByRole('button', { name: 'Ảnh 2' })
+      fireEvent.click(thumb2)
+      // rerender với product khác id → state phải reset
+      const productB = { ...baseProduct, id: 'b', name: 'Sản phẩm B', images: ['b1.jpg'], stock_quantity: 5 }
+      rerender(<ProductDetailClient product={productB} related={[]} />)
+      expect(screen.getByText('Sản phẩm B')).toBeInTheDocument()
+      // qty về 1 (span aria-live hiển thị số lượng)
+      const qtySpan = screen.getByText('1', { selector: 'span.font-semibold' })
+      expect(qtySpan).toBeInTheDocument()
+      // không còn thumbnail vì images chỉ 1 phần tử
+      expect(screen.queryByRole('button', { name: 'Ảnh 2' })).not.toBeInTheDocument()
+    })
+
+    it('renders nested object/array spec values via JSON.stringify', () => {
+      renderProductDetail({
+        product: {
+          specifications: {
+            'Kích thước': { 'Dài': '10cm' },
+            'Thành phần': ['Trầm hương', 'Dầu dừa'],
+            'Độ ẩm': null as string | null | undefined as never,
+          } as never,
+        },
+      })
+      // nested object → JSON.stringify
+      expect(screen.getByText('{"Dài":"10cm"}')).toBeInTheDocument()
+      // array → join(', ')
+      expect(screen.getByText('Trầm hương, Dầu dừa')).toBeInTheDocument()
+      // null → '—'
+      expect(screen.getByText('—')).toBeInTheDocument()
+    })
+
+    it('does not render specs section when specifications is an array', () => {
+      renderProductDetail({ product: { specifications: ['a', 'b'] as never } })
+      expect(screen.queryByText('Thông số kỹ thuật')).not.toBeInTheDocument()
+    })
+
+    it('negative stock renders Hết hàng and disables controls', () => {
+      renderProductDetail({ product: { stock_quantity: -1 } })
+      expect(screen.getByRole('button', { name: 'Giảm số lượng' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Tăng số lượng' })).toBeDisabled()
+      const buyBtn = screen.getByRole('button', { name: /Hết hàng|Mua ngay/i })
+      expect(buyBtn).toBeDisabled()
+    })
+
+    it('disables quantity buttons while buying', () => {
+      pushMock.mockImplementation(() => new Promise(() => {}))
+      renderProductDetail({ product: { stock_quantity: 5 } })
+      const buyBtn = screen.getByRole('button', { name: /Mua ngay/i })
+      fireEvent.click(buyBtn)
+      expect(screen.getByRole('button', { name: 'Giảm số lượng' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Tăng số lượng' })).toBeDisabled()
+      pushMock.mockReset()
     })
   })
 })
