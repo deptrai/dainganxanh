@@ -2,8 +2,8 @@
 title: 'Story 12.3: Store Checkout Form'
 type: 'feature'
 created: '2026-10-08'
-status: 'in-review'
-review_loop_iteration: 0
+status: 'done'
+review_loop_iteration: 1
 followup_review_recommended: false
 baseline_revision: '06434808db0ed416c9889c92ef59817ed6982b11'
 context:
@@ -101,3 +101,40 @@ deferred: []
 - `cd dainganxanh-landing && npm test -- src/app/api/store/orders/status/__tests__/route.test.ts` -- expected: guest/rate-limit/validation tests pass
 - `cd dainganxanh-landing && npm test` -- expected: không test nào hỏng, suite hiện có vẫn xanh
 - `cd dainganxanh-landing && npm run lint` -- expected: `tsc --noEmit` 0 lỗi
+
+## Review Triage Log
+
+Review loop 1 — 4 layers song song (blind-hunter N=8, edge-case-hunter, verification-gap, intent-alignment). Tổng 21 findings.
+
+### Patched (17)
+- **M** Trim toàn bộ field trước khi submit (phone/name/email/address/note) — client pass, server Zod 400.
+- **M** `customer_email` thêm vào fieldErrors + regex validate + aria-invalid/describedby + inline error.
+- **M** `pollStatus` xử lý `status==='expired'` → UI "Đơn hàng đã hết hạn" + link đặt lại, dừng poll ngay.
+- **M** Countdown `(còn X phút Y giây)` derive từ `order.expiresAt` thay elapsed count-up (đúng spec).
+- **M** Import `FREE_SHIPPING_THRESHOLD`/`STANDARD_SHIPPING_FEE` từ `@/lib/pricing/store` — bỏ duplicate constants.
+- **M** Status route: DB error → 500 + `console.error` (trước đây trả 404 giả); test cập nhật 404→500.
+- **L** Redirect `setTimeout` → `redirectRef`, cleanup chỉ khi unmount (bug thật: cleanup theo step hủy redirect).
+- **L** Payment effect guard thêm `!expired` — chặn interval re-register sau khi poll dừng.
+- **L** `VN_PROVINCES` bỏ annotation `readonly string[]` (giữ literal inference) + export `VnProvince`.
+- **L** `generateStoreOrderCode` `padEnd(6,'0')` — base-36 có thể <6 ký tự, status route sẽ từ chối vĩnh viễn.
+- **L** `setError('')` khi validation fail — xóa error banner cũ.
+- **L** Guard `!data.orderCode` ngoài `res.ok` — tránh step payment với QR hỏng.
+- **L** Focus field lỗi đầu tiên qua `fieldRefs` (a11y).
+- **Test** mới: POLLING describe (confirmed→redirect, expired→stop, countdown), email invalid + focus, trim submit; `checkout/page.test.tsx` SSR prefill (authed/guest/reject); status route DB-error→500.
+- **Chỉnh test** `route.test.ts` tách 404 not-found / 500 db-error.
+
+### Rejected (4)
+- Email local-part fallback trong `getEffectiveUser` — convention toàn app cho display name, không phải bug; đổi sẽ ảnh hưởng order flows khác.
+- `prefill` name bằng local-part email — field cho user sửa, không khóa.
+- Response casing snake_case (status) vs camelCase (create) — chỉ 1 consumer nội bộ; defer, thống nhất khi API surface lớn hơn.
+- Missing E2E checkout — đã có trong danh sách Playwright E2E; unit tests đủ cho story scope.
+
+### Intent-alignment
+Diff implement "Reading 2" (brownfield gap-remediation): 63 tỉnh, prefill SSR, guest status polling, unit matrix — đúng intent-contract. SSR page surface nay có `page.test.tsx` cover prefill prop. Polling integration surface nay có POLLING tests với fake timers.
+
+## Auto Run Result
+
+- Triển khai: `src/lib/constants/provinces.ts`, `checkout/page.tsx`, `StoreCheckoutClient.tsx`, `api/store/orders/status/route.ts`, `api/store/orders/create/route.ts`.
+- Tests: 1014 pass / 104 suites; `tsc --noEmit` 0 lỗi.
+- Review: 21 findings → 17 patch + 4 reject; 2 bug thật trong patch review được test mới bắt và fix (redirect cleanup hủy redirect; interval re-register sau expired).
+- Commit: `aa253d28`. followup_review_recommended=false.

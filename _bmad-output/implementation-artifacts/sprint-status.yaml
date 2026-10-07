@@ -125,7 +125,7 @@ development_status:
   epic-12: in-progress
   12-1-browse-products: done
   12-2-view-product-detail: done
-  12-3-store-checkout-form: backlog
+  12-3-store-checkout-form: done
   12-4-create-store-order: backlog
   12-5-confirm-store-payment: backlog
   12-6-view-my-store-orders: backlog
@@ -151,7 +151,7 @@ summary:
   stories_ready: 0
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 63
+  stories_done: 64
   stories_backlog: 7
   current_velocity: 11
   last_updated: "2026-10-08T04:45:00+07:00"
