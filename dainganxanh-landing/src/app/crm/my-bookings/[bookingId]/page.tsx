@@ -1,6 +1,5 @@
 import { redirect, notFound } from 'next/navigation'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getImpersonationContext } from '@/lib/getImpersonationContext'
+import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { BookingDetail } from '@/components/crm/BookingDetail'
 import { Metadata } from 'next'
 import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
@@ -15,15 +14,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BookingDetailPage({ params }: BookingDetailPageProps) {
     const { bookingId } = await params
-    const ctx = await getImpersonationContext()
+    // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
+    const scoped = await getScopedCrmClient()
 
-    if (!ctx) {
+    if (!scoped) {
         redirect(`/login?redirect=${encodeURIComponent(`/crm/my-bookings/${bookingId}`)}`)
     }
 
-    const { effectiveUserId } = ctx
-
-    const serviceClient = createServiceRoleClient()
+    const { client: serviceClient, effectiveUserId } = scoped
     const { data: booking, error } = await serviceClient
         .from('room_bookings')
         .select(

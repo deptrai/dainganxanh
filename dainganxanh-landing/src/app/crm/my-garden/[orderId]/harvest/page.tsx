@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -8,27 +8,28 @@ import HarvestKeepGrowing from '@/components/crm/HarvestKeepGrowing'
 import HarvestReceiveProduct from '@/components/crm/HarvestReceiveProduct'
 
 interface HarvestPageProps {
-    params: {
+    params: Promise<{
         orderId: string
-    }
+    }>
 }
 
 export default async function HarvestPage({ params }: HarvestPageProps) {
     const { orderId } = await params
-    const supabase = await createServerClient()
+    // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
+    const scoped = await getScopedCrmClient()
 
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (!scoped) {
         redirect('/login?redirect=/crm/my-garden')
     }
+
+    const { client: supabase, effectiveUserId } = scoped
 
     // Fetch order with trees using correct column names
     const { data: order, error } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .single()
 
     if (error || !order) {

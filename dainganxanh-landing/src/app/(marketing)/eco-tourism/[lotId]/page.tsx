@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { GardenDetailClient, type GardenDetail } from '@/components/eco-tourism/GardenDetailClient'
-import type { RoomBooking } from '@/lib/eco-tourism/availability'
+import type { RoomBooking, RoomBlock } from '@/lib/eco-tourism/availability'
+import { applyEffectiveRoomPrices, type RoomPricingRule } from '@/lib/pricing'
 
 export const revalidate = 3600
 
@@ -122,7 +123,8 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
     const roomIds = activeRooms.map((r) => r.id)
 
     let bookings: RoomBooking[] = []
-    let blocks: any[] = []
+    let blocks: RoomBlock[] = []
+    let pricingRules: RoomPricingRule[] = []
 
     if (roomIds.length > 0) {
         const { data: bookingData } = await supabase
@@ -137,7 +139,17 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
             .select('id, room_id, start_date, end_date, reason, status')
             .in('room_id', roomIds)
         blocks = blockData ?? []
+
+        // Query pricing rules để tính "Giá từ" hiệu dụng phản ánh giá mùa vụ/khuyến mãi (TD-01)
+        const { data: ruleData } = await supabase
+            .from('room_pricing_rules')
+            .select('id, room_id, start_date, end_date, price_per_night')
+            .in('room_id', roomIds)
+        pricingRules = (ruleData ?? []) as RoomPricingRule[]
     }
+
+    // Tính giá từ hiệu dụng cho từng phòng (min giữa base price và các pricing rule áp dụng được trong 90 ngày tới)
+    const effectiveRooms = applyEffectiveRoomPrices(activeRooms, pricingRules)
 
     const garden: GardenDetail = {
         id: lot.id,
@@ -147,12 +159,16 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
         location_lat: lot.location_lat,
         location_lng: lot.location_lng,
         images: Array.isArray(lot.images) ? lot.images : [],
-        rooms: activeRooms,
+        rooms: effectiveRooms,
         bookings,
         blocks,
     }
 
-    const jsonLd = buildJsonLd(lot)
+    const lotForJsonLd: LotWithRooms = {
+        ...lot,
+        rooms: effectiveRooms,
+    }
+    const jsonLd = buildJsonLd(lotForJsonLd)
 
     return (
         <>

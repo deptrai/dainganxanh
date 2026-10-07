@@ -1,6 +1,7 @@
 'use server'
 
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { assertOwnsUserId as assertMatchesUserId } from '@/lib/supabase/scopedClient'
 import { MIN_WITHDRAWAL, COMMISSION_ELIGIBLE_ORDER_STATUSES } from '@/lib/constants'
 import { notifyWithdrawalRequest, notifyWithdrawalApproved, notifyWithdrawalRejected } from '@/lib/utils/telegram'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
@@ -33,9 +34,15 @@ function normalizeVietnamese(text: string): string {
 
 // Verify the caller is allowed to query data for `userId`
 // (the user themselves, or a super_admin impersonating them).
+// Tái sử dụng assertOwnsUserId từ scopedClient để kiểm tra IDOR
 async function assertOwnsUserId(userId: string): Promise<boolean> {
     const effectiveUser = await getEffectiveUser()
-    return effectiveUser !== null && effectiveUser.userId === userId
+    try {
+        assertMatchesUserId(effectiveUser?.userId, userId)
+        return true
+    } catch {
+        return false
+    }
 }
 
 // Calculate available balance

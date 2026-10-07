@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getImpersonationContext } from '@/lib/getImpersonationContext'
+import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { ReferralLink } from '@/components/crm/ReferralLink'
 import { ReferralQRCode } from '@/components/crm/ReferralQRCode'
 import { ReferralStats } from '@/components/crm/ReferralStats'
@@ -23,15 +22,13 @@ function maskEmail(email: string): string {
 }
 
 export default async function ReferralsPage() {
-    const ctx = await getImpersonationContext()
+    // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
+    const scoped = await getScopedCrmClient()
 
     // Layout handles redirect, but we need user for data fetching
-    if (!ctx) return null
+    if (!scoped) return null
 
-    const { effectiveUserId } = ctx
-
-    // Use service role to bypass RLS when impersonating
-    const serviceClient = createServiceRoleClient()
+    const { client: serviceClient, effectiveUserId } = scoped
 
     // Get user's referral code, full name and referred_by_user_id
     let { data: userData } = await serviceClient

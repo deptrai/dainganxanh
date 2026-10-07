@@ -60,10 +60,12 @@
 
 Còn tồn lại (chưa fix):
 
-- [ ] **TD-01** (Trung bình) Bỏ qua `room_pricing_rules` — giá "Giá từ" chỉ là `MIN(price_per_night)`, chưa có giá mùa vụ/cuối tuần. Cần khi Epic 12 định giá sản phẩm tương tự.
-- [ ] **TD-05** (Thấp) Tự động hủy đơn pending quá hạn phụ thuộc cron 15 phút (`POST /api/cron/expire-pending`) — chấp nhận cho MVP; Epic 12 cần kiểm chứng cơ chế release inventory của 13.3.
-- [ ] **TD-10 (gap nhỏ)** `resort_manager` xem được chi tiết mọi booking theo ID ở `src/app/crm/admin/bookings/[bookingId]/page.tsx` — chưa check lot thuộc `admin_user_lots` cho role này (RLS đã chặn ở listing).
-- [ ] **TD-11** (Trung bình) Calendar chỉ có view tháng; chưa có view tuần, drag & drop đổi phòng/ngày; đơn hủy vẫn chiếm chỗ hiển thị. Enhancement, không chặn Epic 12.
-- [ ] Chuẩn hóa pattern scoped data access: helper `getScopedCrmClient()` (service-role + filter `effectiveUserId` tự động) để tránh quên filter tay ở route mới.
-- [ ] Thống nhất 404 (`notFound()`) cho mọi trang chi tiết theo ID URL — hiện `my-garden/[orderId]` render "Truy cập bị từ chối" (HTTP 200) trong khi `my-bookings/[bookingId]` trả 404 → information leakage.
-- [ ] Test `RoomCalendar.test.tsx` từng fail cứng do hardcode tháng 9/2026 — đã fix bằng ngày động theo `new Date()`; rà thêm các test date-dependent khác khi đến mốc thời gian.
+- [x] **TD-01** (Trung bình) — **ĐÃ FIX 2026-10-08:** giá "Giá từ" giờ tính qua `calculateEffectiveRoomPrices` (`src/lib/pricing/display.ts`): min giữa base price và các `room_pricing_rules` áp dụng trong cửa sổ 90 ngày tới (filter days_of_week), áp dụng ở listing `/eco-tourism` và trang chi tiết `[lotId]` (kèm JSON-LD). Logic tính giá đặt phòng giữ nguyên.
+- [x] **TD-05** (Thấp) — **ĐÃ FIX 2026-10-08:** migration `20261008000000_expire_pending_bookings_cron.sql` tạo `expire_pending_bookings()` (SECURITY DEFINER, search_path cố định) + pg_cron job `expire-pending-bookings` chạy `*/15 * * * *` trực tiếp trong DB (guard pg_available_extensions, idempotent). API route `/api/cron/expire-pending` giữ làm fallback.
+- [x] **TD-10 (gap nhỏ)** — **ĐÃ FIX 2026-10-08:** `src/app/crm/admin/bookings/[bookingId]/page.tsx` giờ check lot của booking thuộc `getAssignedLotIds(user.id)` với `resort_manager`, không thuộc → `notFound()`.
+- [x] **TD-11** (Trung bình) — **ĐÃ FIX 2026-10-08:** Room Calendar có toggle Tháng/Tuần (tuần bắt đầu thứ 2), drag & drop native HTML5 (kéo sang room row khác = đổi phòng, kéo sang day cell khác = dịch ngày giữ duration) qua server action `moveBooking` (validate quyền/lot, conflict check room_blocks + bookings, bắt GiST 23P01), booking `cancelled`/`expired` bị ẩn khỏi calendar.
+- [x] Chuẩn hóa pattern scoped data access — **ĐÃ FIX 2026-10-08:** helper `getScopedCrmClient()` + `assertOwnsUserId` (`src/lib/supabase/scopedClient.ts`), đã refactor 7 trang CRM user-facing (my-garden, my-garden/[orderId], harvest, my-bookings, my-bookings/[bookingId], referrals, my-store-orders).
+- [x] Thống nhất 404 — **ĐÃ FIX 2026-10-08:** `my-garden/[orderId]` và `harvest` dùng `notFound()` thay render "Truy cập bị từ chối" HTTP 200.
+- [x] Test date-dependent — **ĐÃ RÀ 2026-10-08:** audit toàn bộ `src/**/__tests__` — chỉ `book/__tests__/page.test.tsx` có nguy cơ fail (hardcode `2026-11-01`) → đã chuyển sang ngày động `getFutureDates()`. Các test khác an toàn (fake timers hoặc ngày động sẵn).
+
+Không còn item nào tồn lại cho Epic 11. Epic 12 (Trầm Hương Store) sẵn sàng kickoff.

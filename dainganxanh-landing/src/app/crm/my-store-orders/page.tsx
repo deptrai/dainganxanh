@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getImpersonationContext } from '@/lib/getImpersonationContext'
+import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { StoreOrdersList } from '@/components/crm/StoreOrdersList'
 import { captureError } from '@/lib/monitoring'
 import type { StoreOrderWithItems } from '@/types/database.types'
@@ -16,20 +15,19 @@ interface MyStoreOrdersPageProps {
 }
 
 export default async function MyStoreOrdersPage({ searchParams }: MyStoreOrdersPageProps) {
-    const ctx = await getImpersonationContext()
+    // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
+    const scoped = await getScopedCrmClient()
 
-    if (!ctx) {
+    if (!scoped) {
         redirect('/login?redirect=/crm/my-store-orders')
     }
 
-    const { effectiveUserId } = ctx
+    const { client: serviceClient, effectiveUserId } = scoped
     const { page: pageParam } = await searchParams
     const page = Math.max(1, parseInt(pageParam || '1', 10) || 1)
     const pageSize = 20
     const start = (page - 1) * pageSize
     const end = start + pageSize - 1
-
-    const serviceClient = createServiceRoleClient()
 
     const {
         data: orders,

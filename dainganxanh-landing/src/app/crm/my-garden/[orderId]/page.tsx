@@ -1,5 +1,4 @@
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getImpersonationContext } from '@/lib/getImpersonationContext'
+import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { redirect, notFound } from 'next/navigation'
 import PackageDetailHeader from '@/components/crm/PackageDetailHeader'
 import LotMap from '@/components/crm/LotMap'
@@ -13,25 +12,23 @@ import { CertificateDownloadButton } from '@/components/crm/CertificateDownloadB
 import Link from 'next/link'
 
 interface PackageDetailPageProps {
-    params: {
+    params: Promise<{
         orderId: string
-    }
+    }>
 }
 
 export default async function PackageDetailPage({ params }: PackageDetailPageProps) {
     // Next.js 16: params is a Promise, must await it
     const { orderId } = await params
 
-    const ctx = await getImpersonationContext()
+    // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
+    const scoped = await getScopedCrmClient()
 
-    if (!ctx) {
+    if (!scoped) {
         redirect('/login?redirect=/crm/my-garden')
     }
 
-    const { effectiveUserId } = ctx
-
-    // Use service role to fetch data for the effective user (bypasses RLS when impersonating)
-    const serviceClient = createServiceRoleClient()
+    const { client: serviceClient, effectiveUserId } = scoped
 
     // Fetch order detail
     const { data: order, error } = await serviceClient
@@ -54,26 +51,8 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
         .single()
 
     if (error || !order) {
-        console.error('Error fetching order:', error?.message)
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50 flex items-center justify-center">
-                <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
-                    <div className="text-6xl mb-4">🚫</div>
-                    <h1 className="text-2xl font-bold text-red-600 mb-2">
-                        Truy cập bị từ chối
-                    </h1>
-                    <p className="text-gray-600 mb-6">
-                        Bạn không có quyền xem đơn hàng này hoặc đơn hàng không tồn tại.
-                    </p>
-                    <a
-                        href="/crm/my-garden"
-                        className="inline-block bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
-                    >
-                        Quay lại Vườn Cây
-                    </a>
-                </div>
-            </div>
-        )
+        // Thống nhất 404: nếu record không tồn tại hoặc không thuộc quyền -> notFound()
+        notFound()
     }
 
     // Try to fetch lot info separately (if lot_id exists and lots table exists)
@@ -99,7 +78,7 @@ export default async function PackageDetailPage({ params }: PackageDetailPagePro
             if (photos) {
                 treePhotos = photos
             }
-        } catch (lotError) {
+        } catch {
             console.log('Lots table not available or lot not found')
         }
     }

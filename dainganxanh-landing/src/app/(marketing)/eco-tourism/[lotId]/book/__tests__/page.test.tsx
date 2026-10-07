@@ -20,6 +20,8 @@ jest.mock('@/lib/supabase/server', () => ({
 }))
 
 jest.mock('../BookingPageClient', () => {
+  // Trả về function trực tiếp — babel interop sẽ wrap thành { default: fn } cho default import.
+  // Nếu return object { default: fn } không có __esModule thì bị wrap 2 lớp → element type là object.
   return function MockBookingPageClient(props: { room: { name: string }; lot: { name: string }; checkIn: string; checkOut: string }) {
     return (
       <div data-testid="booking-page-client">
@@ -33,6 +35,12 @@ jest.mock('../BookingPageClient', () => {
 })
 
 describe('BookingPage SSR', () => {
+  // Dùng ngày động ở tương lai để tránh test fail khi vượt qua mốc thời gian cố định
+  const getFutureDates = (inDays: number, outDays: number) => {
+    const checkIn = new Date(Date.now() + inDays * 86400000).toISOString().slice(0, 10)
+    const checkOut = new Date(Date.now() + outDays * 86400000).toISOString().slice(0, 10)
+    return { checkIn, checkOut }
+  }
   beforeEach(() => {
     jest.clearAllMocks()
     mockFrom.mockImplementation(() => ({
@@ -59,22 +67,24 @@ describe('BookingPage SSR', () => {
     await BookingPage({ params, searchParams })
     expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
 
+    const { checkIn: invIn, checkOut: invOut } = getFutureDates(35, 32)
     const invalidDates = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-10-05',
-      check_out: '2026-10-02',
+      check_in: invIn,
+      check_out: invOut,
     })
     await BookingPage({ params, searchParams: invalidDates })
     expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
   })
 
   it('renders room not found when room query returns null', async () => {
+    const { checkIn, checkOut } = getFutureDates(30, 32)
     mockMaybeSingle.mockResolvedValue({ data: null, error: null })
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-11-01',
-      check_out: '2026-11-03',
+      check_in: checkIn,
+      check_out: checkOut,
     })
 
     const element = await BookingPage({ params, searchParams })
@@ -83,6 +93,7 @@ describe('BookingPage SSR', () => {
   })
 
   it('calls notFound when room is inactive or from another lot', async () => {
+    const { checkIn, checkOut } = getFutureDates(30, 32)
     mockMaybeSingle.mockResolvedValue({
       data: {
         id: 'r1',
@@ -97,8 +108,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-11-01',
-      check_out: '2026-11-03',
+      check_in: checkIn,
+      check_out: checkOut,
     })
 
     await BookingPage({ params, searchParams })
@@ -106,6 +117,7 @@ describe('BookingPage SSR', () => {
   })
 
   it('renders "Phòng đã được đặt" when blocking booking overlaps dates', async () => {
+    const { checkIn, checkOut } = getFutureDates(30, 32)
     mockMaybeSingle.mockResolvedValue({
       data: {
         id: 'r1',
@@ -126,8 +138,8 @@ describe('BookingPage SSR', () => {
         {
           id: 'b1',
           room_id: 'r1',
-          check_in_date: '2026-11-01',
-          check_out_date: '2026-11-03',
+          check_in_date: checkIn,
+          check_out_date: checkOut,
           status: 'confirmed',
           expires_at: null,
         },
@@ -137,8 +149,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-11-01',
-      check_out: '2026-11-03',
+      check_in: checkIn,
+      check_out: checkOut,
     })
 
     const element = await BookingPage({ params, searchParams })
@@ -147,6 +159,7 @@ describe('BookingPage SSR', () => {
   })
 
   it('renders BookingPageClient when room is available', async () => {
+    const { checkIn, checkOut } = getFutureDates(30, 32)
     mockMaybeSingle.mockResolvedValue({
       data: {
         id: 'r1',
@@ -167,8 +180,8 @@ describe('BookingPage SSR', () => {
     const params = Promise.resolve({ lotId: 'lot-1' })
     const searchParams = Promise.resolve({
       room_id: 'r1',
-      check_in: '2026-11-01',
-      check_out: '2026-11-03',
+      check_in: checkIn,
+      check_out: checkOut,
     })
 
     const element = await BookingPage({ params, searchParams })

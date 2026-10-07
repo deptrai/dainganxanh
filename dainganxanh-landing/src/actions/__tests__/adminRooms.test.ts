@@ -2,7 +2,7 @@
  * Unit Tests: adminRooms.ts
  */
 
-import { blockRoomForMaintenance, unblockRoom, fetchRoomCalendarData } from '../adminRooms'
+import { blockRoomForMaintenance, unblockRoom, fetchRoomCalendarData, getAssignedLotIds, moveBooking } from '../adminRooms'
 
 const mockServiceFrom = jest.fn()
 const mockServerFrom = jest.fn()
@@ -160,5 +160,141 @@ describe('adminRooms', () => {
     expect(result.error).toBeUndefined()
     expect(result.lots).toHaveLength(1)
     expect(result.lots[0].rooms[0].name).toBe('Deluxe')
+  })
+
+  it('getAssignedLotIds returns lot_id array for resort_manager', async () => {
+    mockServiceFrom.mockReturnValueOnce(
+      makeQueryChain({
+        data: [{ lot_id: 'lot-1' }, { lot_id: 'lot-2' }],
+        error: null,
+      })
+    )
+
+    const lots = await getAssignedLotIds('user-mgr-1')
+    expect(lots).toEqual(['lot-1', 'lot-2'])
+  })
+
+  it('getAssignedLotIds returns empty array on error', async () => {
+    mockServiceFrom.mockReturnValueOnce(
+      makeQueryChain({
+        data: null,
+        error: { message: 'Database error' },
+      })
+    )
+
+    const lots = await getAssignedLotIds('user-mgr-1')
+    expect(lots).toEqual([])
+  })
+
+  describe('moveBooking', () => {
+    const validBookingId = '11111111-1111-1111-1111-111111111111'
+    const validTargetRoomId = '22222222-2222-2222-2222-222222222222'
+
+    it('rejects unauthenticated user', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null })
+      const result = await moveBooking({ bookingId: validBookingId, newRoomId: validTargetRoomId })
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Unauthorized')
+    })
+
+    it('rejects invalid UUID bookingId', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+      mockServiceFrom.mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+
+      const result = await moveBooking({ bookingId: 'invalid-uuid', newRoomId: validTargetRoomId })
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Mã đơn đặt phòng không hợp lệ')
+    })
+
+    it('rejects missing booking', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+      mockServiceFrom
+        .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+        .mockReturnValueOnce(makeQueryChain({ data: null, error: null }))
+
+      const result = await moveBooking({ bookingId: validBookingId, newRoomId: validTargetRoomId })
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Không tìm thấy đơn đặt phòng')
+    })
+
+    it('rejects moving a cancelled booking', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+      mockServiceFrom
+        .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+        .mockReturnValueOnce(makeQueryChain({
+          data: {
+            id: validBookingId,
+            room_id: '33333333-3333-3333-3333-333333333333',
+            check_in_date: '2026-10-10',
+            check_out_date: '2026-10-12',
+            status: 'cancelled',
+            rooms: { lot_id: 'l1' }
+          },
+          error: null
+        }))
+
+      const result = await moveBooking({ bookingId: validBookingId, newRoomId: validTargetRoomId })
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Không thể di chuyển đơn đặt phòng đã hủy hoặc hết hạn')
+    })
+
+    it('rejects when target room has overlapping active booking', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+      mockServiceFrom
+        .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+        .mockReturnValueOnce(makeQueryChain({
+          data: {
+            id: validBookingId,
+            room_id: '33333333-3333-3333-3333-333333333333',
+            check_in_date: '2026-10-10',
+            check_out_date: '2026-10-12',
+            status: 'confirmed',
+            rooms: { lot_id: 'l1' }
+          },
+          error: null
+        }))
+        // room info
+        .mockReturnValueOnce(makeQueryChain({ data: { id: validTargetRoomId, status: 'active', lot_id: 'l1' }, error: null }))
+        // overlapping blocks (none)
+        .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+        // overlapping bookings (has one)
+        .mockReturnValueOnce(makeQueryChain({
+          data: [{ id: '44444444-4444-4444-4444-444444444444', room_id: validTargetRoomId, status: 'confirmed' }],
+          error: null
+        }))
+
+      const result = await moveBooking({ bookingId: validBookingId, newRoomId: validTargetRoomId })
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Phòng đã có khách đặt hoặc đang giữ chỗ trong khoảng thời gian này')
+    })
+
+    it('successfully moves booking to new room', async () => {
+      mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+      mockServiceFrom
+        .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+        .mockReturnValueOnce(makeQueryChain({
+          data: {
+            id: validBookingId,
+            room_id: '33333333-3333-3333-3333-333333333333',
+            check_in_date: '2026-10-10',
+            check_out_date: '2026-10-12',
+            status: 'confirmed',
+            rooms: { lot_id: 'l1' }
+          },
+          error: null
+        }))
+        // room info
+        .mockReturnValueOnce(makeQueryChain({ data: { id: validTargetRoomId, status: 'active', lot_id: 'l1' }, error: null }))
+        // overlapping blocks
+        .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+        // overlapping bookings
+        .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+        // update query
+        .mockReturnValueOnce(makeQueryChain({ data: { id: validBookingId, room_id: validTargetRoomId }, error: null }))
+
+      const result = await moveBooking({ bookingId: validBookingId, newRoomId: validTargetRoomId })
+      expect(result.success).toBe(true)
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/crm/admin/rooms')
+    })
   })
 })

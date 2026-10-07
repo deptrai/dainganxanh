@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { EcoTourismClient } from '@/components/eco-tourism/EcoTourismClient'
+import { calculateEffectiveRoomPrices, type RoomPricingRule } from '@/lib/pricing'
 
 export const revalidate = 3600
 
@@ -24,7 +25,7 @@ interface LotWithRooms {
     name: string
     region: string
     images: string[] | null
-    rooms: Array<{ status: string; price_per_night: number }>
+    rooms: Array<{ id: string; status: string; price_per_night: number }>
 }
 
 function buildJsonLd(lots: LotWithRooms[]) {
@@ -63,6 +64,7 @@ export default async function EcoTourismPage({ searchParams }: EcoTourismPagePro
             region,
             images,
             rooms!inner (
+                id,
                 status,
                 price_per_night
             )
@@ -74,10 +76,34 @@ export default async function EcoTourismPage({ searchParams }: EcoTourismPagePro
         console.error('Error fetching eco-tourism lots:', error)
     }
 
-    const gardenLots = ((lots ?? []) as LotWithRooms[]).map(lot => {
+    const rawLots = (lots ?? []) as LotWithRooms[]
+    const allActiveRooms = rawLots.flatMap(lot =>
+        (lot.rooms ?? []).filter(r => r.status === 'active')
+    )
+    const roomIds = allActiveRooms.map(r => r.id)
+
+    let pricingRules: RoomPricingRule[] = []
+    if (roomIds.length > 0) {
+        // Query thứ 2: lấy pricing rules cho các phòng active (TD-01)
+        const { data: rules, error: rulesError } = await supabase
+            .from('room_pricing_rules')
+            .select('id, room_id, start_date, end_date, price_per_night')
+            .in('room_id', roomIds)
+
+        if (rulesError) {
+            console.error('Error fetching room pricing rules:', rulesError)
+        } else if (rules) {
+            pricingRules = rules
+        }
+    }
+
+    // Tính giá từ hiệu dụng cho từng phòng (min giữa base price và các pricing rule áp dụng được trong 90 ngày tới)
+    const effectivePrices = calculateEffectiveRoomPrices(allActiveRooms, pricingRules)
+
+    const gardenLots = rawLots.map(lot => {
         const activeRooms = lot.rooms?.filter(r => r.status === 'active') ?? []
         const priceFrom = activeRooms.length
-            ? Math.min(...activeRooms.map(r => r.price_per_night))
+            ? Math.min(...activeRooms.map(r => effectivePrices.get(r.id) ?? r.price_per_night))
             : null
         return {
             id: lot.id,
@@ -88,7 +114,7 @@ export default async function EcoTourismPage({ searchParams }: EcoTourismPagePro
         }
     })
 
-    const jsonLd = buildJsonLd((lots ?? []) as LotWithRooms[])
+    const jsonLd = buildJsonLd(rawLots)
 
     return (
         <>

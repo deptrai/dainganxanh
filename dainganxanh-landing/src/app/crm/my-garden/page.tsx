@@ -1,21 +1,18 @@
 import { redirect } from 'next/navigation'
-import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getImpersonationContext } from '@/lib/getImpersonationContext'
+import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import PackageGrid from '@/components/crm/PackageGrid'
 import EmptyGarden from '@/components/crm/EmptyGarden'
 import MyGardenHeader from '@/components/crm/MyGardenHeader'
 
 export default async function MyGardenPage() {
-    const ctx = await getImpersonationContext()
+    // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
+    const scoped = await getScopedCrmClient()
 
-    if (!ctx) {
+    if (!scoped) {
         redirect('/login?redirect=/crm/my-garden')
     }
 
-    const { effectiveUserId } = ctx
-
-    // Use service role to bypass RLS when impersonating (or for consistency)
-    const serviceClient = createServiceRoleClient()
+    const { client: serviceClient, effectiveUserId } = scoped
 
     // Fetch user's orders (packages) instead of individual trees
     // Each order represents a "package" of trees that are tracked together

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect, notFound } from 'next/navigation'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getAssignedLotIds } from '@/actions/adminRooms'
 import AdminBookingDetailClient from '@/components/admin/AdminBookingDetailClient'
 import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
 
@@ -55,6 +56,16 @@ export default async function AdminBookingDetailPage({
     const roomData = Array.isArray(bookingRow.rooms) ? bookingRow.rooms[0] : bookingRow.rooms
     const lotData = roomData?.lots
     const lot = Array.isArray(lotData) ? lotData[0] : lotData
+
+    // Kiểm tra quyền theo lô: resort_manager chỉ được xem booking thuộc lô được phân công (TD-10)
+    // admin_full (admin, super_admin) có quyền xem mọi booking không phụ thuộc vào lô
+    const isGlobalAdmin = profile.role === 'admin' || profile.role === 'super_admin'
+    if (!isGlobalAdmin) {
+        const assignedLotIds = await getAssignedLotIds(user.id)
+        if (!roomData?.lot_id || !assignedLotIds.includes(roomData.lot_id)) {
+            notFound()
+        }
+    }
 
     return (
         <AdminBookingDetailClient

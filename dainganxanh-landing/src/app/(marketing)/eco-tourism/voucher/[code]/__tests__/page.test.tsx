@@ -33,6 +33,9 @@ jest.mock('next/navigation', () => ({
 }))
 
 jest.mock('qrcode', () => ({
+  default: {
+    toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,mock-qr'),
+  },
   toDataURL: jest.fn().mockResolvedValue('data:image/png;base64,mock-qr'),
 }))
 
