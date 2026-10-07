@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Star, ShoppingBag, Minus, Plus, Truck, Shield, ArrowLeft, Loader2 } from 'lucide-react'
+import { ShoppingBag, Minus, Plus, Truck, Shield, ArrowLeft, Loader2 } from 'lucide-react'
 import { originLabel, type ProductOriginType } from './originLabels'
 
-interface Product {
+export interface Product {
   id: string
   name: string
   slug: string
@@ -15,31 +15,48 @@ interface Product {
   compare_at_price: number | null
   stock_quantity: number
   sku: string | null
-  images: string[]
-  specifications: Record<string, string>
+  images: string[] | null
+  specifications?: Record<string, string> | null
   origin_type: ProductOriginType
-  batch_certificate_url: string | null
-  product_categories: { id: string; name: string; slug: string } | null
-  lots: { id: string; name: string; region: string } | null
+  batch_certificate_url?: string | null
+  product_categories?: { id?: string; name: string; slug?: string } | null
+  lots?: { id?: string; name: string; region: string } | null
+}
+
+export interface RelatedProduct {
+  id: string
+  name: string
+  slug: string
+  price: number
+  compare_at_price?: number | null
+  stock_quantity?: number
+  images?: string[] | null
+  product_categories?: { name: string } | { name: string }[] | null
 }
 
 function formatPrice(amount: number) {
   return amount.toLocaleString('vi-VN') + 'đ'
 }
 
-export function ProductDetailClient({ product, related }: { product: Product; related: any[] }) {
+export function ProductDetailClient({ product, related = [] }: { product: Product; related?: RelatedProduct[] }) {
   const router = useRouter()
   const [qty, setQty] = useState(1)
   const [activeImage, setActiveImage] = useState(product.images?.[0])
   const [buying, setBuying] = useState(false)
 
-  const outOfStock = product.stock_quantity === 0
-  const maxQty = Math.min(product.stock_quantity, 10)
+  useEffect(() => {
+    setActiveImage(product.images?.[0])
+    setQty(1)
+    setBuying(false)
+  }, [product.id, product.images])
+
+  const outOfStock = product.stock_quantity <= 0
+  const maxQty = Math.max(1, Math.min(product.stock_quantity, 10))
 
   const handleBuyNow = () => {
-    if (outOfStock || qty < 1) return
+    if (outOfStock || buying || qty < 1) return
     setBuying(true)
-    router.push(`/store/checkout?slug=${product.slug}&quantity=${qty}`)
+    router.push(`/store/checkout?slug=${encodeURIComponent(product.slug)}&quantity=${qty}`)
   }
 
   return (
@@ -63,7 +80,7 @@ export function ProductDetailClient({ product, related }: { product: Product; re
                 {activeImage ? (
                   <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-6xl">🌿</div>
+                  <div className="w-full h-full flex items-center justify-center text-6xl" aria-hidden="true">🌿</div>
                 )}
               </div>
               {product.images && product.images.length > 1 && (
@@ -75,6 +92,8 @@ export function ProductDetailClient({ product, related }: { product: Product; re
                       className={`w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 ${
                         activeImage === img ? 'border-emerald-600' : 'border-stone-200'
                       }`}
+                      aria-label={`Ảnh ${i + 1}`}
+                      aria-current={activeImage === img ? 'true' : undefined}
                     >
                       <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
@@ -99,10 +118,12 @@ export function ProductDetailClient({ product, related }: { product: Product; re
                 )}
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-                <Shield className="w-4 h-4 text-emerald-600" />
-                <span>{originLabel(product.origin_type)}</span>
-              </div>
+              {originLabel(product.origin_type) && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+                  <Shield className="w-4 h-4 text-emerald-600" />
+                  <span>{originLabel(product.origin_type)}</span>
+                </div>
+              )}
 
               {product.lots && (
                 <p className="text-sm text-gray-500 mb-4">
@@ -122,16 +143,16 @@ export function ProductDetailClient({ product, related }: { product: Product; re
                 <div className="flex items-center border border-stone-300 rounded-lg bg-white">
                   <button
                     onClick={() => setQty(q => Math.max(1, q - 1))}
-                    disabled={outOfStock}
+                    disabled={outOfStock || buying || qty <= 1}
                     className="p-2 hover:bg-stone-100 disabled:opacity-40"
                     aria-label="Giảm"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="w-12 text-center font-semibold">{qty}</span>
+                  <span className="w-12 text-center font-semibold" aria-live="polite">{qty}</span>
                   <button
                     onClick={() => setQty(q => Math.min(maxQty, q + 1))}
-                    disabled={outOfStock || qty >= maxQty}
+                    disabled={outOfStock || buying || qty >= maxQty}
                     className="p-2 hover:bg-stone-100 disabled:opacity-40"
                     aria-label="Tăng"
                   >
@@ -150,7 +171,7 @@ export function ProductDetailClient({ product, related }: { product: Product; re
               >
                 {buying ? (
                   <>
-                    <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Đang chuyển đến thanh toán...
                   </>
                 ) : (
@@ -173,26 +194,31 @@ export function ProductDetailClient({ product, related }: { product: Product; re
         </div>
 
         {/* Specifications */}
-        {Object.keys(product.specifications).length > 0 && (
+        {product.specifications &&
+        typeof product.specifications === 'object' &&
+        !Array.isArray(product.specifications) &&
+        Object.keys(product.specifications).length > 0 ? (
           <div className="mt-8 bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Thông số kỹ thuật</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {Object.entries(product.specifications).map(([k, v]) => (
                 <div key={k} className="flex justify-between border-b border-stone-100 pb-2">
                   <span className="text-gray-500">{k}</span>
-                  <span className="font-medium text-gray-900">{v}</span>
+                  <span className="font-medium text-gray-900">
+                    {typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Related */}
-        {related.length > 0 && (
+        {related && related.length > 0 ? (
           <div className="mt-8">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Sản phẩm liên quan</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {related.map((p: any) => (
+              {related.map((p) => (
                 <Link
                   key={p.id}
                   href={`/store/${p.slug}`}
@@ -203,11 +229,14 @@ export function ProductDetailClient({ product, related }: { product: Product; re
                     {p.images?.[0] ? (
                       <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-4xl">🌿</span>
+                      <span className="text-4xl" aria-hidden="true">🌿</span>
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="text-xs text-gray-400 mb-1">{p.product_categories?.name}</p>
+                    {(() => {
+                      const cat = Array.isArray(p.product_categories) ? p.product_categories[0] : p.product_categories
+                      return cat?.name ? <p className="text-xs text-gray-400 mb-1">{cat.name}</p> : null
+                    })()}
                     <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">{p.name}</h3>
                     <p className="text-emerald-700 font-bold mt-1">{formatPrice(p.price)}</p>
                   </div>
@@ -215,7 +244,7 @@ export function ProductDetailClient({ product, related }: { product: Product; re
               ))}
             </div>
           </div>
-        )}
+        ) : null}
       </main>
     </div>
   )

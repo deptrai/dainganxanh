@@ -68,6 +68,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <ProductDetailClient
+      key={product.id}
       product={product}
       related={related ?? []}
     />
