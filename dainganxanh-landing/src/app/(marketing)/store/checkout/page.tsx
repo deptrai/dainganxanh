@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { getEffectiveUser } from '@/lib/getEffectiveUser'
 import { StoreCheckoutClient } from '@/components/store/StoreCheckoutClient'
 
 export const metadata: Metadata = {
@@ -43,10 +44,24 @@ export default async function StoreCheckoutPage({ searchParams }: { searchParams
     )
   }
 
+  let user = null
+  try {
+    user = await getEffectiveUser()
+  } catch {
+    // Guest or auth error
+  }
+  const prefill = user
+    ? {
+        name: user.name || undefined,
+        email: user.email || undefined,
+      }
+    : undefined
+
   return (
     <StoreCheckoutClient
       product={product}
       quantity={qty}
+      prefill={prefill}
     />
   )
 }

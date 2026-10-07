@@ -22,7 +22,8 @@ export const createOrderSchema = z.object({
 })
 
 function generateStoreOrderCode(): string {
-  return 'ST' + Math.random().toString(36).substring(2, 8).toUpperCase()
+  // padEnd: base-36 ngẫu nhiên có thể < 6 ký tự; status route bắt đúng 6
+  return 'ST' + Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0')
 }
 
 export async function POST(req: NextRequest) {

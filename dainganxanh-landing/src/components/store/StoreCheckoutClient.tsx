@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Copy, Check, Loader2, CheckCircle2, Clock, Truck, Banknote, ShoppingBag } from 'lucide-react'
+import { VN_PROVINCES } from '@/lib/constants/provinces'
+import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '@/lib/pricing/store'
 
 interface Product {
   id: string
@@ -34,16 +36,31 @@ function formatElapsed(seconds: number) {
   return m > 0 ? `${m} phút ${s.toString().padStart(2, '0')} giây` : `${s} giây`
 }
 
-export function StoreCheckoutClient({ product, quantity }: { product: Product; quantity: number }) {
+export function StoreCheckoutClient({
+  product,
+  quantity,
+  prefill,
+}: {
+  product: Product
+  quantity: number
+  prefill?: { name?: string; email?: string }
+}) {
   const router = useRouter()
   const [step, setStep] = useState<'form' | 'payment' | 'cod-confirm' | 'confirmed'>('form')
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{
+    customer_name?: string
+    customer_phone?: string
+    customer_email?: string
+    shipping_address?: string
+    shipping_province?: string
+  }>({})
 
   const [form, setForm] = useState({
-    customer_name: '',
+    customer_name: prefill?.name ?? '',
     customer_phone: '',
-    customer_email: '',
+    customer_email: prefill?.email ?? '',
     shipping_address: '',
     shipping_province: '',
     shipping_note: '',
@@ -61,24 +78,61 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
   const [qrUrl, setQrUrl] = useState('')
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  const [expired, setExpired] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const redirectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const fieldRefs = {
+    customer_name: useRef<HTMLInputElement | null>(null),
+    customer_phone: useRef<HTMLInputElement | null>(null),
+    customer_email: useRef<HTMLInputElement | null>(null),
+    shipping_address: useRef<HTMLTextAreaElement | null>(null),
+    shipping_province: useRef<HTMLSelectElement | null>(null),
+  }
 
   const subtotal = product.price * quantity
-  const freeShippingThreshold = 500000
-  const standardShippingFee = 30000
-  const shippingFee = subtotal >= freeShippingThreshold ? 0 : standardShippingFee
+  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE
   const total = subtotal + shippingFee
 
   const handlePlaceOrder = async () => {
-    if (!form.customer_name || !form.customer_phone || !form.shipping_address || !form.shipping_province) {
-      setError('Vui lòng điền đầy đủ thông tin bắt buộc.')
-      return
+    const errors: {
+      customer_name?: string
+      customer_phone?: string
+      customer_email?: string
+      shipping_address?: string
+      shipping_province?: string
+    } = {}
+
+    if (!form.customer_name.trim()) {
+      errors.customer_name = 'Vui lòng nhập họ và tên'
     }
 
     const phoneRegex = /^0\d{9}$/
-    if (!phoneRegex.test(form.customer_phone)) {
-      setError('Số điện thoại không hợp lệ.')
+    if (!form.customer_phone.trim()) {
+      errors.customer_phone = 'Vui lòng nhập số điện thoại'
+    } else if (!phoneRegex.test(form.customer_phone.trim())) {
+      errors.customer_phone = 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)'
+    }
+
+    if (!form.shipping_address.trim()) {
+      errors.shipping_address = 'Vui lòng nhập địa chỉ giao hàng'
+    }
+
+    if (form.customer_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email.trim())) {
+      errors.customer_email = 'Email không hợp lệ'
+    }
+
+    if (!form.shipping_province) {
+      errors.shipping_province = 'Vui lòng chọn tỉnh/thành phố'
+    }
+
+    setFieldErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      setError('')
+      const order = ['customer_name', 'customer_phone', 'customer_email', 'shipping_address', 'shipping_province'] as const
+      const firstInvalid = order.find(k => errors[k])
+      if (firstInvalid) fieldRefs[firstInvalid].current?.focus()
       return
     }
 
@@ -92,12 +146,18 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
         body: JSON.stringify({
           product_slug: product.slug,
           quantity,
-          ...form,
+          customer_name: form.customer_name.trim(),
+          customer_phone: form.customer_phone.trim(),
+          customer_email: form.customer_email.trim(),
+          shipping_address: form.shipping_address.trim(),
+          shipping_province: form.shipping_province,
+          shipping_note: form.shipping_note.trim(),
+          payment_method: form.payment_method,
         }),
       })
 
-      const data = await res.json()
-      if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.orderCode) {
         throw new Error(data.error || 'Không thể tạo đơn hàng')
       }
 
@@ -125,17 +185,27 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
         setStep('confirmed')
         if (pollRef.current) clearInterval(pollRef.current)
         if (timerRef.current) clearInterval(timerRef.current)
-        setTimeout(() => {
+        redirectRef.current = setTimeout(() => {
           router.push(`/store/checkout/success?code=${order.orderCode}&total=${order.totalAmount}`)
         }, 2000)
+      } else if (data.status === 'expired') {
+        setExpired(true)
+        if (pollRef.current) clearInterval(pollRef.current)
+        if (timerRef.current) clearInterval(timerRef.current)
       }
     } catch {
       // Silent fail
     }
   }, [order, router])
 
+  // Redirect timeout chỉ clear khi unmount — nếu clear trong payment effect cleanup
+  // thì setStep('confirmed') sẽ hủy luôn redirect vừa schedule
+  useEffect(() => () => {
+    if (redirectRef.current) clearTimeout(redirectRef.current)
+  }, [])
+
   useEffect(() => {
-    if (step === 'payment' && order) {
+    if (step === 'payment' && order && !expired) {
       const vietQRUrl = `https://img.vietqr.io/image/MB-${BANK_INFO.accountNumber}-compact.png?amount=${order.totalAmount}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=${encodeURIComponent(BANK_INFO.accountName)}`
       setQrUrl(vietQRUrl)
 
@@ -159,14 +229,16 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
         if (timerRef.current) clearInterval(timerRef.current)
       }
     }
-  }, [step, order, pollStatus])
+  }, [step, order, expired, pollStatus])
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedField(field)
       setTimeout(() => setCopiedField(null), 2000)
-    } catch { /* */ }
+    } catch (err) {
+      console.warn('Failed to copy text:', err)
+    }
   }
 
   const CopyBtn = ({ text, field, label }: { text: string; field: string; label: string }) => (
@@ -221,6 +293,9 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
   }
 
   if (step === 'payment' && order) {
+    const remainingSec = order.expiresAt
+      ? Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - Date.now()) / 1000))
+      : Math.max(0, Math.floor(POLL_TIMEOUT / 1000) - elapsed)
     return (
       <div className="min-h-screen bg-stone-50">
         <nav className="container mx-auto px-4 py-4">
@@ -283,17 +358,29 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-600" />
-                  <p className="text-sm font-semibold text-amber-900">
-                    Đang chờ xác nhận... ({formatElapsed(elapsed)})
+              {expired || remainingSec <= 0 ? (
+                <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
+                  <p className="text-sm font-semibold text-red-900">Đơn hàng đã hết hạn thanh toán</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Mã đơn {order.orderCode} đã quá thời gian chờ. Vui lòng quay lại cửa hàng và đặt hàng lại.
+                  </p>
+                  <Link href={`/store/${product.slug}`} className="inline-block mt-3 text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+                    Đặt hàng lại →
+                  </Link>
+                </div>
+              ) : (
+                <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-semibold text-amber-900">
+                      Đang chờ xác nhận... (còn {formatElapsed(remainingSec)})
+                    </p>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Vui lòng chuyển khoản đúng số tiền và nội dung trong thời gian còn lại. Hệ thống tự động xác nhận trong ít phút.
                   </p>
                 </div>
-                <p className="text-xs text-amber-700 mt-1">
-                  Vui lòng chuyển khoản đúng số tiền và nội dung. Hệ thống tự động xác nhận trong ít phút.
-                </p>
-              </div>
+              )}
             </div>
           </motion.div>
         </main>
@@ -327,65 +414,162 @@ export function StoreCheckoutClient({ product, quantity }: { product: Product; q
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên <span className="text-red-500">*</span></label>
+                <label htmlFor="customer_name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Họ và tên <span className="text-red-500">*</span>
+                </label>
                 <input
+                  ref={fieldRefs.customer_name}
+                  id="customer_name"
                   type="text"
                   value={form.customer_name}
-                  onChange={e => setForm({ ...form, customer_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                  onChange={e => {
+                    setForm({ ...form, customer_name: e.target.value })
+                    if (fieldErrors.customer_name) {
+                      setFieldErrors(prev => ({ ...prev, customer_name: undefined }))
+                    }
+                  }}
+                  aria-invalid={!!fieldErrors.customer_name}
+                  aria-describedby={fieldErrors.customer_name ? 'customer_name_error' : undefined}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none ${
+                    fieldErrors.customer_name
+                      ? 'border-red-400 bg-red-50/30 focus:border-red-500'
+                      : 'border-stone-300 focus:border-emerald-500'
+                  }`}
                   placeholder="Nguyễn Văn A"
                 />
+                {fieldErrors.customer_name && (
+                  <p id="customer_name_error" className="text-sm text-red-600 mt-1" role="alert">
+                    {fieldErrors.customer_name}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại <span className="text-red-500">*</span></label>
+                  <label htmlFor="customer_phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Số điện thoại <span className="text-red-500">*</span>
+                  </label>
                   <input
+                    ref={fieldRefs.customer_phone}
+                    id="customer_phone"
                     type="tel"
                     value={form.customer_phone}
-                    onChange={e => setForm({ ...form, customer_phone: e.target.value })}
-                    className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    onChange={e => {
+                      setForm({ ...form, customer_phone: e.target.value })
+                      if (fieldErrors.customer_phone) {
+                        setFieldErrors(prev => ({ ...prev, customer_phone: undefined }))
+                      }
+                    }}
+                    aria-invalid={!!fieldErrors.customer_phone}
+                    aria-describedby={fieldErrors.customer_phone ? 'customer_phone_error' : undefined}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none ${
+                      fieldErrors.customer_phone
+                        ? 'border-red-400 bg-red-50/30 focus:border-red-500'
+                        : 'border-stone-300 focus:border-emerald-500'
+                    }`}
                     placeholder="0912345678"
                   />
+                  {fieldErrors.customer_phone && (
+                    <p id="customer_phone_error" className="text-sm text-red-600 mt-1" role="alert">
+                      {fieldErrors.customer_phone}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label htmlFor="customer_email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
+                    ref={fieldRefs.customer_email}
+                    id="customer_email"
                     type="email"
                     value={form.customer_email}
-                    onChange={e => setForm({ ...form, customer_email: e.target.value })}
-                    className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    onChange={e => {
+                      setForm({ ...form, customer_email: e.target.value })
+                      if (fieldErrors.customer_email) {
+                        setFieldErrors(prev => ({ ...prev, customer_email: undefined }))
+                      }
+                    }}
+                    aria-invalid={!!fieldErrors.customer_email}
+                    aria-describedby={fieldErrors.customer_email ? 'customer_email_error' : undefined}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none ${
+                      fieldErrors.customer_email
+                        ? 'border-red-400 bg-red-50/30 focus:border-red-500'
+                        : 'border-stone-300 focus:border-emerald-500'
+                    }`}
                     placeholder="email@example.com"
                   />
+                  {fieldErrors.customer_email && (
+                    <p id="customer_email_error" className="text-sm text-red-600 mt-1" role="alert">
+                      {fieldErrors.customer_email}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ giao hàng <span className="text-red-500">*</span></label>
+                <label htmlFor="shipping_address" className="block text-sm font-medium text-gray-700 mb-1">
+                  Địa chỉ giao hàng <span className="text-red-500">*</span>
+                </label>
                 <textarea
+                  ref={fieldRefs.shipping_address}
+                  id="shipping_address"
                   value={form.shipping_address}
-                  onChange={e => setForm({ ...form, shipping_address: e.target.value })}
+                  onChange={e => {
+                    setForm({ ...form, shipping_address: e.target.value })
+                    if (fieldErrors.shipping_address) {
+                      setFieldErrors(prev => ({ ...prev, shipping_address: undefined }))
+                    }
+                  }}
                   rows={3}
-                  className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
+                  aria-invalid={!!fieldErrors.shipping_address}
+                  aria-describedby={fieldErrors.shipping_address ? 'shipping_address_error' : undefined}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none resize-none ${
+                    fieldErrors.shipping_address
+                      ? 'border-red-400 bg-red-50/30 focus:border-red-500'
+                      : 'border-stone-300 focus:border-emerald-500'
+                  }`}
                   placeholder="Số nhà, đường, phường/xã, quận/huyện"
                 />
+                {fieldErrors.shipping_address && (
+                  <p id="shipping_address_error" className="text-sm text-red-600 mt-1" role="alert">
+                    {fieldErrors.shipping_address}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh / Thành phố <span className="text-red-500">*</span></label>
+                <label htmlFor="shipping_province" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tỉnh / Thành phố <span className="text-red-500">*</span>
+                </label>
                 <select
+                  ref={fieldRefs.shipping_province}
+                  id="shipping_province"
                   value={form.shipping_province}
-                  onChange={e => setForm({ ...form, shipping_province: e.target.value })}
-                  className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white"
+                  onChange={e => {
+                    setForm({ ...form, shipping_province: e.target.value })
+                    if (fieldErrors.shipping_province) {
+                      setFieldErrors(prev => ({ ...prev, shipping_province: undefined }))
+                    }
+                  }}
+                  aria-invalid={!!fieldErrors.shipping_province}
+                  aria-describedby={fieldErrors.shipping_province ? 'shipping_province_error' : undefined}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white ${
+                    fieldErrors.shipping_province
+                      ? 'border-red-400 bg-red-50/30 focus:border-red-500'
+                      : 'border-stone-300 focus:border-emerald-500'
+                  }`}
                 >
                   <option value="">Chọn tỉnh/thành phố</option>
-                  <option value="Hà Nội">Hà Nội</option>
-                  <option value="Hồ Chí Minh">Hồ Chí Minh</option>
-                  <option value="Đà Nẵng">Đà Nẵng</option>
-                  <option value="Hải Phòng">Hải Phòng</option>
-                  <option value="Cần Thơ">Cần Thơ</option>
-                  <option value="Khác">Khác</option>
+                  {VN_PROVINCES.map(province => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
                 </select>
+                {fieldErrors.shipping_province && (
+                  <p id="shipping_province_error" className="text-sm text-red-600 mt-1" role="alert">
+                    {fieldErrors.shipping_province}
+                  </p>
+                )}
               </div>
 
               <div>
