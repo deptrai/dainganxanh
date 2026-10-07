@@ -83,7 +83,7 @@ BEGIN
         PERFORM cron.schedule(
           'expire-pending-bookings',
           '*/15 * * * *',
-          $$SELECT public.expire_pending_bookings()$$
+          'SELECT public.expire_pending_bookings()'
         );
         RAISE NOTICE 'Đã tạo pg_cron job expire-pending-bookings chạy mỗi 15 phút.';
       ELSE
