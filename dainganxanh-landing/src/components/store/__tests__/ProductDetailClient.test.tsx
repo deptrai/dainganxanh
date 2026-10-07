@@ -343,7 +343,7 @@ describe('ProductDetailClient', () => {
     })
 
     it('does not render origin badge when origin_type is unmapped or returns null', () => {
-      const { container } = renderProductDetail({ product: { origin_type: 'unknown_origin' } })
+      const { container } = renderProductDetail({ product: { origin_type: JSON.parse('"unknown_origin"') } })
       expect(container.querySelector('.lucide-shield')).not.toBeInTheDocument()
     })
   })

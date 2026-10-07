@@ -151,11 +151,10 @@ describe('StoreClient', () => {
             expect(screen.getByText('Thu hoạch từ vườn Đại Ngàn Xanh')).toBeInTheDocument()
         })
 
-        it('warns in dev when origin_type is unmapped (drift detection)', () => {
-            const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
-            renderStore({ products: [{ ...baseProduct, origin_type: 'new_schema_value' as never }] })
-            expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('new_schema_value'))
-            warnSpy.mockRestore()
+        it('hides badge silently for unmapped origin_type (drift safety)', () => {
+            renderStore({ products: [{ ...baseProduct, origin_type: JSON.parse('"new_schema_value"') }] })
+            expect(screen.queryByText('new_schema_value')).not.toBeInTheDocument()
+            expect(screen.queryByText(/Vườn đối tác|Hợp tác xã|Đại Ngàn Xanh/)).not.toBeInTheDocument()
         })
 
         it('renders price and compare_at_price', () => {

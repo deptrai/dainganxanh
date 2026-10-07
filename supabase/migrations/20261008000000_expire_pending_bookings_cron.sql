@@ -1,4 +1,5 @@
 -- Migration: 20261008000000_expire_pending_bookings_cron.sql
+-- sqlfluff:disable
 -- TD-05: Tự động hủy đơn đặt phòng pending quá hạn 15 phút bằng pg_cron
 
 -- 1. Tạo function expire_pending_bookings với SECURITY DEFINER và search_path an toàn

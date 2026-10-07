@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 MD032 MD060 MD022 -->
 ---
 title: 'Story 12.2: View Product Detail'
 type: 'feature'

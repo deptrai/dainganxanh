@@ -39,27 +39,29 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     .eq('status', 'active')
     .maybeSingle()
 
+  const pickFirst = <T,>(v: T | T[] | null | undefined): T | null =>
+    Array.isArray(v) ? v[0] ?? null : v ?? null
+
   const product = rawProduct
     ? {
         ...rawProduct,
-        product_categories: Array.isArray(rawProduct.product_categories)
-          ? rawProduct.product_categories[0] ?? null
-          : rawProduct.product_categories,
-        lots: Array.isArray(rawProduct.lots) ? rawProduct.lots[0] ?? null : rawProduct.lots,
+        product_categories: pickFirst(rawProduct.product_categories),
+        lots: pickFirst(rawProduct.lots),
       }
     : null
 
   if (!product) notFound()
 
-  const { data: related } = product.category_id
-    ? await supabase
+  const relatedQuery = product.category_id
+    ? supabase
         .from('products')
         .select('id, name, slug, price, compare_at_price, stock_quantity, images, product_categories(name)')
         .eq('status', 'active')
         .neq('slug', slug)
         .eq('category_id', product.category_id)
         .limit(4)
-    : { data: [] }
+    : null
+  const { data: related } = relatedQuery ? await relatedQuery : { data: null }
 
   return (
     <ProductDetailClient
