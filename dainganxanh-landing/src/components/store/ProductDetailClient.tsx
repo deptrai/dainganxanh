@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Star, ShoppingBag, Minus, Plus, Truck, Shield, ArrowLeft, Loader2 } from 'lucide-react'
-import { ORIGIN_LABELS, type ProductOriginType } from './originLabels'
+import { originLabel, type ProductOriginType } from './originLabels'
 
 interface Product {
   id: string
@@ -101,7 +101,7 @@ export function ProductDetailClient({ product, related }: { product: Product; re
 
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
                 <Shield className="w-4 h-4 text-emerald-600" />
-                <span>{ORIGIN_LABELS[product.origin_type]}</span>
+                <span>{originLabel(product.origin_type)}</span>
               </div>
 
               {product.lots && (

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Star, Search } from 'lucide-react'
-import { ORIGIN_LABELS, type ProductOriginType } from './originLabels'
+import { originLabel, type ProductOriginType } from './originLabels'
 
 interface Category {
     id: string
@@ -11,7 +11,7 @@ interface Category {
     slug: string
 }
 
-interface Product {
+export interface Product {
     id: string
     name: string
     slug: string
@@ -62,9 +62,9 @@ function ProductCard({ product }: { product: Product }) {
                             Hết hàng
                         </span>
                     )}
-                    {product.origin_type && ORIGIN_LABELS[product.origin_type] && (
+                    {originLabel(product.origin_type) && (
                         <span className="absolute bottom-2 left-2 bg-emerald-700/80 text-white text-xs px-2 py-0.5 rounded-full">
-                            {ORIGIN_LABELS[product.origin_type]}
+                            {originLabel(product.origin_type)}
                         </span>
                     )}
                 </div>
