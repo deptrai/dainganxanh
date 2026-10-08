@@ -1181,7 +1181,7 @@ _Stories bổ sung vào Epic 3 sau MVP_
 ## Summary Statistics (Updated 2026-03-29)
 
 | Metric | Value |
-|--------|-------|
+| ------ | ----- |
 | Total Epics | 10 |
 | Total Stories | 47 |
 | Total Story Points | ~263 |
@@ -1747,6 +1747,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **Goal:** Toàn bộ nền tảng phục vụ song ngữ — tiếng Việt (mặc định) + tiếng Anh — trên UI, content DB, email, hợp đồng, certificate và SEO. Backward-compat: URL tiếng Việt giữ nguyên không prefix, `/en` là prefix as-needed.
 
 **Success Metrics:**
+
 - Mọi trang public + CRM + admin render đầy đủ khi `locale=en`, không còn hardcoded tiếng Việt trong UI
 - SEO giữ nguyên URL VI; sitemap/hreflang expose cả 2 locales
 - Email, contract, certificate, notification gửi đúng `users.locale`, fallback `vi`
@@ -1777,6 +1778,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **And** at least one page (landing) renders fully translated end-to-end as pilot
 
 **Technical Constraints:**
+
 - Use `next-intl` (App Router + RSC + React 19 verified); `getRequestConfig`, `NextIntlClientProvider`, `getTranslations`/`useTranslations`.
 - Middleware order: next-intl resolves locale + creates response → Supabase `getUser()` refresh + `/crm` guard → CSP/security headers on the response.
 - Locale negotiation: prefix → cookie → `Accept-Language` → default `vi`.
@@ -1824,6 +1826,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **And** public pages resolve translation by request locale with fallback to `vi` when `en` is missing
 
 **Technical Constraints:**
+
 - JSONB `translations` (`{"vi":{...},"en":{...}}`) for simple fields; `post_translations` ONLY for blog (needs UNIQUE slug index per locale).
 - `notifications` store template key + params in `data` jsonb; render text at runtime by `user.locale`.
 
@@ -1856,11 +1859,10 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 
 ---
 
-
 ## Summary Statistics
 
 | Metric | Value |
-|--------|-------|
+| ------ | ----- |
 | New Epics | 4 |
 | New Stories | 25 |
 | P0 Stories | 15 |
