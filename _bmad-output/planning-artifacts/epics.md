@@ -1243,6 +1243,10 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 | F-SH-04 | Inventory reservation & release | P0 | Epic 13 |
 | F-SH-05 | Three transactional email templates | P1 | Epic 13 |
 | F-SH-06 | Lot-scoped admin roles | P2 | Epic 13 |
+| F-I18N-01 | i18n foundation: next-intl routing, middleware compose, `users.locale`, language switcher, SEO hreflang | P0 | Epic 14 |
+| F-I18N-02 | Full UI localization (marketing, CRM, admin, store, error messages) | P1 | Epic 14 |
+| F-I18N-03 | Content database i18n (JSONB translations, post_translations) & admin VI/EN entry | P1 | Epic 14 |
+| F-I18N-04 | Email, contract, certificate & notification localization per `users.locale` | P1 | Epic 14 |
 
 ### FR Coverage Map
 
@@ -1251,6 +1255,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 | Epic 11: Eco-Stay | F-ES-01 → F-ES-10 | 8 P0, 1 P1, 1 P2 |
 | Epic 12: Trầm Hương Store | F-ST-01 → F-ST-10 | 7 P0, 2 P1, 1 P2 |
 | Epic 13: Shared Infrastructure | F-SH-01 → F-SH-06 | 4 P0, 1 P1, 1 P2 |
+| Epic 14: Multi-Language (i18n) | F-I18N-01 → F-I18N-04 | 1 P0, 3 P1 |
 
 ## Epic List
 
@@ -1259,6 +1264,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 | 11 | Eco-Stay (Room Booking) | Guest có thể tìm garden, xem phòng, đặt chỗ, thanh toán | 8 | P0 |
 | 12 | Trầm Hương Store | Customer có thể duyệt sản phẩm, mua hàng, theo dõi đơn | 7 | P0 |
 | 13 | Shared Payment & Inventory Infrastructure | Payment reconciliation, inventory reservation, security chung cho 3 verticals | 6 | P0 |
+| 14 | Multi-Language (i18n) | Nền tảng song ngữ VI/EN — UI, content DB, email, hợp đồng, SEO (PRD NFR-05) | 4 | P1 |
 
 ---
 
@@ -1736,12 +1742,127 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 
 ---
 
+## Epic 14: Multi-Language (i18n) — Added 2026-10-09
+
+**Goal:** Toàn bộ nền tảng phục vụ song ngữ — tiếng Việt (mặc định) + tiếng Anh — trên UI, content DB, email, hợp đồng, certificate và SEO. Backward-compat: URL tiếng Việt giữ nguyên không prefix, `/en` là prefix as-needed.
+
+**Success Metrics:**
+- Mọi trang public + CRM + admin render đầy đủ khi `locale=en`, không còn hardcoded tiếng Việt trong UI
+- SEO giữ nguyên URL VI; sitemap/hreflang expose cả 2 locales
+- Email, contract, certificate, notification gửi đúng `users.locale`, fallback `vi`
+
+**Source:** Fulfills PRD **NFR-05** (Multi-language: Vietnamese primary, English secondary). Kiến trúc đã chốt trong `planning-artifacts/research/technical-i18n-multi-language-research-2026-09-21.md`: framework `next-intl`, middleware compose (i18n ∘ Supabase auth ∘ CSP), DB pattern JSONB `translations` + bảng `post_translations` riêng cho blog SEO, `users.locale` làm source of truth, fallback về `vi` ở mọi tầng.
+
+### Story 14.1: i18n Foundation — Routing, Middleware & Switcher
+
+**As a** visitor,
+**I want** the site to detect and serve my language,
+**So that** I can read the platform in Vietnamese or English.
+
+**Acceptance Criteria:**
+
+**Given** a request to `/`
+**When** locale resolves to `vi`
+**Then** URL has no prefix and renders Vietnamese (backward-compat with existing URLs/SEO)
+**And** a request to `/en/...` renders English via `localePrefix: 'as-needed'`
+
+**Given** the middleware chain runs
+**When** next-intl middleware composes with existing Supabase auth refresh + CSP headers
+**Then** auth redirects, session refresh, and CSP all keep working on both locales
+
+**Given** the foundation is deployed
+**Then** `users.locale` column exists (text NOT NULL DEFAULT 'vi') as source of truth for email/notification language
+**And** a language switcher exists in MarketingHeader + CRMHeader, persisting choice via cookie
+**And** `generateMetadata`, sitemap `alternates`, and hreflang cover both locales
+**And** at least one page (landing) renders fully translated end-to-end as pilot
+
+**Technical Constraints:**
+- Use `next-intl` (App Router + RSC + React 19 verified); `getRequestConfig`, `NextIntlClientProvider`, `getTranslations`/`useTranslations`.
+- Middleware order: next-intl resolves locale + creates response → Supabase `getUser()` refresh + `/crm` guard → CSP/security headers on the response.
+- Locale negotiation: prefix → cookie → `Accept-Language` → default `vi`.
+
+**FRs:** F-I18N-01
+**Story Points:** 8
+**Priority:** P0
+
+### Story 14.2: Full UI Localization (Marketing + CRM + Admin + Store)
+
+**As a** user,
+**I want** every screen available in my language,
+**So that** no Vietnamese-only text remains when I browse in English.
+
+**Acceptance Criteria:**
+
+**Given** the foundation from Story 14.1
+**When** UI strings are extracted into `vi`/`en` message catalogs
+**Then** all user-facing surfaces are covered: marketing pages (~28 files), CRM/dashboard (~42 files), admin (~37 files), store/checkout, plus Server Action and API error messages
+**And** missing `en` keys fall back to `vi` via next-intl fallback
+
+**Given** the extraction is complete
+**Then** no hardcoded Vietnamese string remains in JSX or UI logic
+**And** ~124 test files asserting Vietnamese text are migrated (render with `vi` default locale or assert message keys)
+
+**FRs:** F-I18N-02
+**Story Points:** 8
+**Priority:** P1
+
+### Story 14.3: Content Database i18n & Admin VI/EN Entry
+
+**As an** admin,
+**I want** to enter Vietnamese and English content side-by-side,
+**So that** products, posts, rooms, and lots display in the visitor's language.
+
+**Acceptance Criteria:**
+
+**Given** content tables (products, product_categories, rooms, lots, notifications, email_templates)
+**When** the migration runs
+**Then** each has a JSONB `translations` column backfilled with `vi` content
+**And** `posts` gets a `post_translations` table (post_id, locale, slug UNIQUE, title, excerpt, content, meta_*) for per-locale SEO slugs
+
+**Given** an admin edits a product or post
+**Then** the form shows VI/EN tabs (TipTap for rich content)
+**And** public pages resolve translation by request locale with fallback to `vi` when `en` is missing
+
+**Technical Constraints:**
+- JSONB `translations` (`{"vi":{...},"en":{...}}`) for simple fields; `post_translations` ONLY for blog (needs UNIQUE slug index per locale).
+- `notifications` store template key + params in `data` jsonb; render text at runtime by `user.locale`.
+
+**FRs:** F-I18N-03
+**Story Points:** 5
+**Priority:** P1
+
+### Story 14.4: Email, Contract & Notification Localization
+
+**As a** customer,
+**I want** transactional emails, contracts, and certificates in my language,
+**So that** legal and transactional documents are readable to me.
+
+**Acceptance Criteria:**
+
+**Given** an email trigger (order paid, booking confirmed, store order shipped)
+**When** the email renders
+**Then** React Email templates render per `users.locale` via dict prop (no RSC hooks in email)
+**And** Edge Functions with inline HTML are migrated to per-locale templates or delegate to the shared send-email path with locale
+**And** notifications render runtime text by template key + params
+
+**Given** a contract or certificate is generated
+**Then** docx template is selected per `order.locale` (`contract-template.vi.docx` / `.en.docx`)
+**And** the pdf-lib certificate embeds a Unicode font (Noto Sans/Roboto) rendering both accented Vietnamese and English
+**And** everything falls back to `vi` when the user's locale content is missing
+
+**FRs:** F-I18N-04
+**Story Points:** 5
+**Priority:** P1
+
+---
+
+
 ## Summary Statistics
 
 | Metric | Value |
 |--------|-------|
-| New Epics | 3 |
-| New Stories | 21 |
-| P0 Stories | 14 |
-| P1 Stories | 4 |
+| New Epics | 4 |
+| New Stories | 25 |
+| P0 Stories | 15 |
+| P1 Stories | 7 |
 | P2 Stories | 3 |

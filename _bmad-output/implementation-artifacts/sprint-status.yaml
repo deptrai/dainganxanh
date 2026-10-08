@@ -32,7 +32,7 @@ development_status:
   1-6-payment-gateway: done
   1-7-success-animation-share: done
   1-8-email-confirmation-contract: done
-  epic-1-retrospective: backlog
+  epic-1-retrospective: optional
 
   # Epic 2: Tree Tracking & Dashboard (P0/P1)
   epic-2: done
@@ -45,7 +45,7 @@ development_status:
   2-7-harvest-keep-growing: done
   2-8-harvest-receive-product: done
   2-9-farm-camera-live-stream: done
-  epic-2-retrospective: backlog
+  epic-2-retrospective: optional
 
   # Epic 3: Admin Operations (P0/P1)
   epic-3: done
@@ -58,7 +58,7 @@ development_status:
   3-7-analytics-reporting: done
   3-8-admin-user-management: done
   3-9-admin-user-impersonation: done
-  epic-3-retrospective: backlog
+  epic-3-retrospective: optional
 
   # Epic 4: Viral & Growth (P1/P2)
   epic-4: done
@@ -68,7 +68,7 @@ development_status:
   4-4-admin-settings-profile: done
   4-5-admin-settings-system: done
   4-6-referral-code-improvements: done
-  epic-4-retrospective: backlog
+  epic-4-retrospective: optional
 
   # Epic 5: Payment Automation — Casso Integration (Sprint 1)
   epic-5: done
@@ -79,24 +79,24 @@ development_status:
   5-5-order-cancellation: done
   5-6-casso-hmac-v2-verification: done
   5-7-order-refund-completed: done
-  epic-5-retrospective: backlog
+  epic-5-retrospective: optional
 
   # Epic 6: SEO Optimization (Sprint 1)
   epic-6: done
   6-1-seo-core-setup: done
   6-2-seo-structured-data: done
-  epic-6-retrospective: backlog
+  epic-6-retrospective: optional
 
   # Epic 7: Blog System (Sprint 2)
   epic-7: done
   7-1-blog-schema-public-pages: done
   7-2-blog-admin-cms: done
-  epic-7-retrospective: backlog
+  epic-7-retrospective: optional
 
   # Epic 8: Notifications & Alerts (2026-03-28)
   epic-8: done
   8-1-telegram-group-notifications: done
-  epic-8-retrospective: backlog
+  epic-8-retrospective: optional
 
   # Epic 9: Admin Operations Extended (2026-03-28)
   # Stories folded into Epic 3 (3-8)
@@ -107,7 +107,7 @@ development_status:
   10-1-customer-identity-checkout: done
   10-2-docx-contract-generation: done
   10-3-auto-send-contract-email: done
-  epic-10-retrospective: backlog
+  epic-10-retrospective: optional
 
   # Epic 11: Eco-Stay (Room Booking) - Added 2026-09-05
   epic-11: done
@@ -144,14 +144,22 @@ development_status:
   13-6-lot-scoped-admin-roles: done
   epic-13-retrospective: optional
 
+  # Epic 14: Multi-Language (i18n) - Added 2026-10-09
+  epic-14: backlog
+  14-1-i18n-foundation-routing-middleware-switcher: backlog
+  14-2-full-ui-localization-marketing-crm-admin-store: backlog
+  14-3-content-database-i18n-admin-vi-en-entry: backlog
+  14-4-email-contract-notification-localization: backlog
+  epic-14-retrospective: optional
+
 # Summary
 summary:
-  total_epics: 13
-  total_stories: 70
+  total_epics: 14
+  total_stories: 74
   stories_ready: 0
   stories_in_progress: 0
   stories_review: 0
   stories_done: 64
-  stories_backlog: 7
+  stories_backlog: 11
   current_velocity: 11
-  last_updated: "2026-10-08T04:45:00+07:00"
+  last_updated: "2026-10-09T05:00:00+07:00"
