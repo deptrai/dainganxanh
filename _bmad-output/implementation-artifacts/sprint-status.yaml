@@ -126,7 +126,7 @@ development_status:
   12-1-browse-products: done
   12-2-view-product-detail: done
   12-3-store-checkout-form: done
-  12-4-create-store-order: backlog
+  12-4-create-store-order: done
   12-5-confirm-store-payment: backlog
   12-6-view-my-store-orders: backlog
   12-7-admin-product-crud: backlog
