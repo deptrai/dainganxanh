@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { STORE_ORDER_STATUS_CONFIG, type StoreOrderStatus } from '@/lib/store-order-status'
 import { CheckCircle2, Package, Truck, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -23,6 +24,15 @@ export default async function StoreSuccessPage({ searchParams }: { searchParams:
   if (!order) notFound()
 
   const amount = parseInt(total || String(order.total_amount), 10)
+  const statusLabel = STORE_ORDER_STATUS_CONFIG[order.status as StoreOrderStatus]?.label ?? order.status
+  const heading =
+    order.payment_method === 'cod'
+      ? 'Đặt hàng thành công!'
+      : order.status === 'confirmed'
+        ? 'Thanh toán thành công!'
+        : order.status === 'cancelled'
+          ? 'Đơn hàng đã bị hủy'
+          : 'Đơn hàng đang chờ thanh toán'
 
   return (
     <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4 py-12">
@@ -32,7 +42,7 @@ export default async function StoreSuccessPage({ searchParams }: { searchParams:
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {order.payment_method === 'cod' ? 'Đặt hàng thành công!' : 'Thanh toán thành công!'}
+          {heading}
         </h1>
         <p className="text-gray-600 mb-6">
           Cảm ơn <span className="font-semibold text-gray-900">{order.customer_name}</span> đã tin tưởng Đại Ngàn Xanh.
@@ -53,7 +63,7 @@ export default async function StoreSuccessPage({ searchParams }: { searchParams:
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">Trạng thái</span>
-            <span className="font-medium text-emerald-700 capitalize">{order.status}</span>
+            <span className="font-medium text-emerald-700">{statusLabel}</span>
           </div>
         </div>
 

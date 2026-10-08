@@ -126,3 +126,22 @@ describe('POST /api/cron/expire-pending — Execution & RPC calls', () => {
     expect(body.expiredOrders).toBe(5)
   })
 })
+
+describe('CRON_COD_SAFE — migration guard (Story 12.4)', () => {
+  // expire_pending_store_orders() filter lives in SQL, not mockable via unit test.
+  // Guard the safety property directly: pending COD orders (expires_at NULL) must
+  // never be picked up — the WHERE clause must pin payment_method='banking' AND expires_at.
+  test('expire_pending_store_orders() only expires banking orders with expires_at set', async () => {
+    const fs = await import('fs')
+    const path = await import('path')
+    const sql = fs.readFileSync(
+      path.resolve(__dirname, '../../../../../../..', 'supabase/migrations/20260906000001_atomic_expire_pending_inventory.sql'),
+      'utf8'
+    )
+    const fnBody = sql.slice(sql.indexOf('CREATE OR REPLACE FUNCTION public.expire_pending_store_orders'))
+    expect(fnBody).toMatch(/status\s*=\s*'pending'/)
+    expect(fnBody).toMatch(/payment_method\s*=\s*'banking'/)
+    expect(fnBody).toMatch(/expires_at\s+IS\s+NOT\s+NULL/)
+    expect(fnBody).toMatch(/expires_at\s*<\s*now\(\)/)
+  })
+})
