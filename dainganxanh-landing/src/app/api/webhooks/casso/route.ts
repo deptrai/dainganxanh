@@ -382,6 +382,19 @@ async function processBooking(
   return { ok: true }
 }
 
+// Late payment on an already-cancelled store order: money arrived but stock was
+// released — alert ops for manual refund/confirm instead of silently accepting.
+async function alertLateStorePayment(orderCode: string, txId: string) {
+  console.error(`[Casso] Payment received for cancelled store order ${orderCode}`)
+  captureError(new Error(`Payment received for cancelled store order ${orderCode}`), {
+    route: '/api/webhooks/casso',
+    orderType: 'store',
+    orderCode,
+    action: 'late_payment_cancelled_order',
+  })
+  await notifyWebhookError('store', orderCode, `Payment received for cancelled order ${orderCode}`, txId)
+}
+
 export async function processStoreOrder(
   supabase: ReturnType<typeof createServiceRoleClient>,
   tx: any,
@@ -404,16 +417,8 @@ export async function processStoreOrder(
   if (!current) return { ok: false, error: 'Store order not found' }
 
   if (current.status === 'cancelled') {
-    // Late payment on a cancelled order: money arrived but stock was released.
-    // Alert ops for manual handling (refund or manual confirm); still mark processed.
-    console.error(`[Casso] Payment received for cancelled store order ${orderCode}`)
-    captureError(new Error(`Payment received for cancelled store order ${orderCode}`), {
-      route: '/api/webhooks/casso',
-      orderType: 'store',
-      orderCode,
-      action: 'late_payment_cancelled_order',
-    })
-    notifyWebhookError('store', orderCode, `Payment received for cancelled order ${orderCode}`, String(tx.id ?? tx.tid ?? ''))
+    // Still mark the transaction processed — payment DID arrive — but alert ops.
+    await alertLateStorePayment(orderCode, String(tx.id ?? tx.tid ?? ''))
     return { ok: true }
   }
 
@@ -441,7 +446,16 @@ export async function processStoreOrder(
   }
 
   if (!updatedRows || updatedRows.length === 0) {
-    return { ok: true } // another delivery already confirmed this order
+    // Status changed between the read and the update — find out who won the race.
+    const { data: latest } = await supabase
+      .from('store_orders')
+      .select('status')
+      .eq('id', order.id)
+      .single()
+    if (latest?.status === 'cancelled') {
+      await alertLateStorePayment(orderCode, String(tx.id ?? tx.tid ?? ''))
+    }
+    return { ok: true }
   }
 
   if (items && items.length > 0) {
@@ -472,6 +486,7 @@ export async function processStoreOrder(
   try {
     revalidatePath('/store')
     revalidatePath('/store/[slug]', 'page')
+    revalidatePath('/crm/my-store-orders')
   } catch {
     // best-effort revalidation
   }

@@ -8,14 +8,7 @@ review_loop_iteration: 1
 followup_review_recommended: false
 context: []
 warnings: ['oversized']
-deferred: |
-  - [low] Reorder trên success page chỉ link tới sản phẩm đầu tiên của đơn nhiều item (ponytail comment trong page.tsx; multi-item cart re-pick thủ công).
-  - [low] Đơn pending quá expires_at nhưng cron chưa flip vẫn giữ reserved_quantity → reorder ngay có thể fail reserve trong cửa sổ chờ cron (~1 chu kỳ).
-  - [low] Detect hết hạn qua substring 'timeout' trong cancellation_reason — fragile nếu message cron đổi; nâng cấp = reason code riêng (schema change).
-  - [low] Chưa revalidate `/crm/my-store-orders` sau confirm (trang customer dashboard, likely dynamic).
-  - [medium] Execute permission của confirm_product_stock trên PostgREST production chưa verify — cần Supabase env thật.
-  - [low] `(order as any)` cast cho relational join store_order_items(products) trên success page.
-  - [low] Race edge: cron flip status giữa fetch-current và conditional update → silent ok:true (không alert) — cửa sổ cực nhỏ.
+deferred: []  # all 7 items resolved in defer-resolution pass — see Review Triage Log
 ---
 
 <intent-contract>
@@ -104,9 +97,18 @@ Iteration 1 — 4 layers (blind-hunter N=5→13 findings, edge-case-hunter `[]`,
 - StoreCheckoutClient: ẩn QR + bank details + đổi h2 khi expiredNow — tránh khách vẫn ck cho đơn hết hạn.
 - Tests: +CONFIRM_UPDATE_FAIL, +CONFIRM_RACE_LOST, +CONFIRM_CANCELLED_LATE_PAYMENT, +revalidatePath assert, +cancelled-COD heading, +'Hết hạn' chip, +QR-hidden assert trong expired test.
 
-**DEFERRED (7):** xem `deferred:` frontmatter.
+**DEFERRED (7):** tất cả đã resolve trong defer-resolution pass bên dưới.
 
 **REJECTED (2):** intent-alignment claim "migration omitted from diff" — sai (migration được append vào diff file); Reading-A prescriptive (live deploy/webhook thật) — ngoài surface của pipeline, E2E manual sau run.
+
+Defer-resolution pass (user-requested, post-finalize):
+- Multi-item reorder → typed join + guard `orderItems.length === 1` fallback `/store` (orders single-item by design).
+- Cron-lag window → lazy-expire: status route + success page gọi `rpc('expire_pending_store_orders')` khi thấy pending quá hạn → giải phóng reserved ngay.
+- 'timeout' substring → detect bằng `expires_at < now` cho mọi cancelled/pending; bỏ `cancellation_reason` khỏi select.
+- Revalidate → thêm `revalidatePath('/crm/my-store-orders')`.
+- Exec perms → migration mới `20261008030000_harden_stock_rpc_perms.sql`: REVOKE PUBLIC/anon/authenticated + GRANT service_role cho 5 RPC mutating (confirm/reserve/release + expire_store/expire_bookings).
+- `as any` cast → typed inline object với store_order_items shape.
+- Race edge → updateNoRows re-fetch `status`; nếu cancelled → `alertLateStorePayment` (helper chung với nhánh cancelled ban đầu).
 
 ## Design Notes
 

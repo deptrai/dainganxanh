@@ -41,6 +41,12 @@ export async function GET(req: NextRequest) {
     const isExpired = new Date(order.expires_at).getTime() <= Date.now()
     if (isExpired) {
       effectiveStatus = 'expired'
+      // Lazily run the same expiry the cron would: flips to cancelled and releases
+      // reserved stock now, so an immediate reorder doesn't hit a stale reservation.
+      const { error: expireError } = await supabase.rpc('expire_pending_store_orders')
+      if (expireError) {
+        captureError(expireError, { route: '/api/store/orders/status', action: 'lazy_expire' })
+      }
     }
   }
 

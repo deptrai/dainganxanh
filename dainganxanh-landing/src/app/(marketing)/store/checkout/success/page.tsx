@@ -24,7 +24,6 @@ export default async function StoreSuccessPage({ searchParams }: { searchParams:
       customer_name,
       total_amount,
       payment_method,
-      cancellation_reason,
       expires_at,
       created_at,
       store_order_items(product_id, products(slug))
@@ -34,23 +33,33 @@ export default async function StoreSuccessPage({ searchParams }: { searchParams:
 
   if (!order) notFound()
 
-  const isTimeoutCancelled =
-    order.status === 'cancelled' &&
-    Boolean(order.cancellation_reason?.toLowerCase().includes('timeout'))
-
-  const isPendingOverdue =
-    order.status === 'pending' &&
-    Boolean(order.expires_at && new Date(order.expires_at).getTime() < Date.now())
-
-  const isExpired = isTimeoutCancelled || isPendingOverdue
+  // Expired = the 15-min payment window elapsed — regardless of who/what cancelled.
+  // COD orders never carry expires_at, so a cancelled COD is never "expired".
+  const isExpired = Boolean(order.expires_at && new Date(order.expires_at).getTime() < Date.now())
   const isCancelled = order.status === 'cancelled'
   const isBadState = isExpired || isCancelled
 
-  // ponytail: reorder links to the first item's product page; multi-item carts re-pick manually
-  const firstItem = (order as any).store_order_items?.[0]
+  if (isExpired && order.status === 'pending') {
+    // Cron hasn't flipped it yet — expire now so reserved stock frees before a reorder.
+    try {
+      await supabase.rpc('expire_pending_store_orders')
+    } catch {
+      // best effort; the cron will pick it up
+    }
+  }
+
+  // ponytail: reorder links to the first item's product page; orders are single-item
+  // by design (create route inserts exactly one item) — multi-item guard falls back to /store.
+  const orderItems = (order as {
+    store_order_items?: Array<{
+      product_id: string
+      products: { slug: string } | Array<{ slug: string }> | null
+    }>
+  }).store_order_items ?? []
+  const firstItem = orderItems[0]
   const productInfo = Array.isArray(firstItem?.products) ? firstItem.products[0] : firstItem?.products
-  const productSlug = productInfo?.slug as string | undefined
-  const reorderHref = productSlug ? `/store/${productSlug}` : '/store'
+  const productSlug = productInfo?.slug
+  const reorderHref = orderItems.length === 1 && productSlug ? `/store/${productSlug}` : '/store'
 
   const amount = order.total_amount
   const statusConfig = STORE_ORDER_STATUS_CONFIG[order.status as StoreOrderStatus]

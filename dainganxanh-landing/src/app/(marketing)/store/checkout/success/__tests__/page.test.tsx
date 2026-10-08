@@ -9,6 +9,7 @@ const mockMaybeSingle = jest.fn()
 const mockEq = jest.fn()
 const mockSelect = jest.fn()
 const mockFrom = jest.fn()
+const mockRpc = jest.fn().mockResolvedValue({ data: 1, error: null })
 
 jest.mock('next/navigation', () => ({
   notFound: jest.fn().mockImplementation(() => {
@@ -19,6 +20,7 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/lib/supabase/server', () => ({
   createServiceRoleClient: () => ({
     from: mockFrom,
+    rpc: mockRpc,
   }),
 }))
 
@@ -239,6 +241,8 @@ describe('StoreSuccessPage', () => {
     const reorderLink = screen.getByRole('link', { name: 'Đặt hàng lại' })
     expect(reorderLink).toBeInTheDocument()
     expect(reorderLink).toHaveAttribute('href', '/store')
+    // Lazily expires the pending order so reserved stock frees before a reorder
+    expect(mockRpc).toHaveBeenCalledWith('expire_pending_store_orders')
   })
 
   it('renders "Đơn hàng đã bị hủy" and no reorder button when cancelled for reason other than timeout', async () => {

@@ -8,6 +8,7 @@ const mockMaybeSingle = jest.fn()
 const mockEq = jest.fn()
 const mockSelect = jest.fn()
 const mockFrom = jest.fn()
+const mockRpc = jest.fn().mockResolvedValue({ data: 1, error: null })
 
 let mockRateLimitResult: { ok: boolean; remaining: number; retryAfterSec?: number } = {
   ok: true,
@@ -17,6 +18,7 @@ let mockRateLimitResult: { ok: boolean; remaining: number; retryAfterSec?: numbe
 jest.mock('@/lib/supabase/server', () => ({
   createServiceRoleClient: () => ({
     from: mockFrom,
+    rpc: mockRpc,
   }),
 }))
 
@@ -157,6 +159,8 @@ describe('GET /api/store/orders/status', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.status).toBe('expired')
+    // Lazily expires the order so reserved stock frees before a reorder
+    expect(mockRpc).toHaveBeenCalledWith('expire_pending_store_orders')
   })
 
   it('keeps confirmed status as confirmed even if expires_at was in past', async () => {
