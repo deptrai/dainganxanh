@@ -82,3 +82,7 @@ Không còn item nào tồn lại cho Epic 11. Epic 12 (Trầm Hương Store) s�
 
 - `URL.createObjectURL` không được revoke trong `src/components/admin/PhotoUploader.tsx:43` — mỗi file chọn tạo blob URL leak nhỏ cho tới khi đóng trang. Pre-existing shared component (blog + products đều dùng); fix nên revoke trong `onPhotoRemove` + unmount cleanup. Low.
 - Orphan storage: xóa ảnh trong ProductForm / hủy form không cleanup file đã upload vào bucket `product-images` — deliberate scope (blog flow cũng vậy); cần policy dọn rác bucket định kỳ nếu muốn xử lý.
+
+## Deferred from: sprint planning of epic-12 (2026-10-09)
+
+- Story `12-9-multi-item-persistent-cart` deferred to post-MVP **by design** (epics.md:1588, F-ST-10, P2). Lý do: single-item "Mua ngay" checkout phủ ~80% MVP use cases; multi-item cart thêm độ phức tạp lớn về inventory reservation (giữ nhiều items đồng thời + TTL policy) và payment reconciliation (1 code → nhiều items). Giữ `backlog` trong sprint-status.yaml vì vocabulary không có status `deferred`; key story đã mang suffix `-deferred`. Kích hoạt lại khi: khách phàn nàn phải mua từng món, hoặc có nhu cầu bundle sản phẩm.
