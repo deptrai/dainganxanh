@@ -130,7 +130,7 @@ development_status:
   12-5-confirm-store-payment: done
   12-6-view-my-store-orders: done
   12-7-admin-product-crud: done
-  12-8-admin-store-order-fulfillment: backlog
+  12-8-admin-store-order-fulfillment: done
   12-9-multi-item-persistent-cart-deferred: backlog
   epic-12-retrospective: optional
 

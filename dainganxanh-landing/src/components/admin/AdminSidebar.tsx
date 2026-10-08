@@ -20,6 +20,7 @@ import {
     CalendarIcon,
     WrenchScrewdriverIcon,
     ShoppingBagIcon,
+    TruckIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
@@ -27,6 +28,7 @@ const navigation = [
     { name: 'Đặt phòng', href: '/crm/admin/bookings', icon: CalendarIcon },
     { name: 'Lịch phòng', href: '/crm/admin/rooms', icon: WrenchScrewdriverIcon },
     { name: 'Sản phẩm', href: '/crm/admin/products', icon: ShoppingBagIcon },
+    { name: 'Đơn hàng shop', href: '/crm/admin/store-orders', icon: TruckIcon },
     { name: 'Người dùng', href: '/crm/admin/users', icon: UsersIcon },
     { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
     { name: 'Hoa hồng', href: '/crm/admin/referrals', icon: GiftIcon },
