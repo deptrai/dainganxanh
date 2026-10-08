@@ -481,6 +481,25 @@ describe('StoreCheckoutClient', () => {
         jest.advanceTimersByTime(5000)
       })
       expect(screen.getByText('Đơn hàng đã hết hạn thanh toán')).toBeInTheDocument()
+      // QR and bank details must not stay payable after expiry
+      expect(screen.queryByAltText('QR thanh toán')).not.toBeInTheDocument()
+      expect(screen.queryByText('Số tài khoản')).not.toBeInTheDocument()
+
+      fetchMock.mockClear()
+      await act(async () => {
+        jest.advanceTimersByTime(10000)
+      })
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('shows expired notice and stops polling when status returns cancelled', async () => {
+      const fetchMock = await submitBankingOrder()
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: 'cancelled' }) })
+
+      await act(async () => {
+        jest.advanceTimersByTime(5000)
+      })
+      expect(screen.getByText('Đơn hàng đã hết hạn thanh toán')).toBeInTheDocument()
 
       fetchMock.mockClear()
       await act(async () => {

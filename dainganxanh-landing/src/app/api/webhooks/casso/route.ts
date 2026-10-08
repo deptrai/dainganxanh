@@ -11,7 +11,7 @@ import { sendEcoStayVoucherEmail } from '@/lib/email'
 const ORDER_CODE_REGEX = /\b((?:DH|BK|ST)[A-Z0-9]{6})\b/i
 const POLYMORPHIC_WEBHOOK_ENABLED = process.env.POLYMORPHIC_WEBHOOK_ENABLED !== 'false'
 
-interface OrderLike {
+export interface OrderLike {
   id: string
   code: string
   user_id: string | null
@@ -382,7 +382,7 @@ async function processBooking(
   return { ok: true }
 }
 
-async function processStoreOrder(
+export async function processStoreOrder(
   supabase: ReturnType<typeof createServiceRoleClient>,
   tx: any,
   orderCode: string,
@@ -402,43 +402,79 @@ async function processStoreOrder(
     .single()
 
   if (!current) return { ok: false, error: 'Store order not found' }
+
+  if (current.status === 'cancelled') {
+    // Late payment on a cancelled order: money arrived but stock was released.
+    // Alert ops for manual handling (refund or manual confirm); still mark processed.
+    console.error(`[Casso] Payment received for cancelled store order ${orderCode}`)
+    captureError(new Error(`Payment received for cancelled store order ${orderCode}`), {
+      route: '/api/webhooks/casso',
+      orderType: 'store',
+      orderCode,
+      action: 'late_payment_cancelled_order',
+    })
+    notifyWebhookError('store', orderCode, `Payment received for cancelled order ${orderCode}`, String(tx.id ?? tx.tid ?? ''))
+    return { ok: true }
+  }
+
   if (current.status !== 'pending') return { ok: true } // already processed
 
-  // Get items and decrement reserved stock atomically
+  // Get items for stock confirmation after the status flip
   const { data: items } = await supabase
     .from('store_order_items')
     .select('id, product_id, quantity')
     .eq('store_order_id', order.id)
 
-  if (items && items.length > 0) {
-    for (const item of items) {
-      await supabase.rpc('release_product_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })
-      // release_product_stock adds stock back and removes reserved;
-      // we then want to decrement actual stock (not reserved)
-      const { error: stockError } = await supabase.rpc('reserve_product_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })
-      if (stockError) {
-        console.error('[Casso] Stock finalization failed:', stockError)
-      }
-    }
-  }
-
-  const { error: updateError } = await supabase
+  // Flip status first with a conditional update: only the delivery that wins the
+  // pending→confirmed transition proceeds to confirm stock — prevents double
+  // decrement on concurrent webhooks or retries after a failed update.
+  const { data: updatedRows, error: updateError } = await supabase
     .from('store_orders')
     .update({ status: 'confirmed', payment_ref: String(tx.id ?? tx.tid), expires_at: null })
     .eq('id', order.id)
+    .eq('status', 'pending')
+    .select('id')
 
   if (updateError) {
     console.error('[Casso] Store order confirm failed:', updateError)
     return { ok: false, error: updateError.message }
   }
 
-  revalidatePath('/store')
+  if (!updatedRows || updatedRows.length === 0) {
+    return { ok: true } // another delivery already confirmed this order
+  }
+
+  if (items && items.length > 0) {
+    for (const item of items) {
+      const { error: stockError } = await supabase.rpc('confirm_product_stock', {
+        p_product_id: item.product_id,
+        p_qty: item.quantity,
+      })
+      if (stockError) {
+        console.error('[Casso] Stock confirmation failed:', stockError)
+        const errorMessage =
+          stockError instanceof Error
+            ? stockError.message
+            : typeof stockError === 'object' && stockError !== null && 'message' in stockError
+              ? String((stockError as { message: unknown }).message)
+              : String(stockError)
+        captureError(stockError instanceof Error ? stockError : new Error(errorMessage), {
+          route: '/api/webhooks/casso',
+          orderType: 'store',
+          orderCode,
+          action: 'confirm_product_stock',
+        })
+        notifyWebhookError('store', orderCode, `confirm_product_stock failed: ${errorMessage}`, String(tx.id ?? tx.tid ?? ''))
+      }
+    }
+  }
+
+  try {
+    revalidatePath('/store')
+    revalidatePath('/store/[slug]', 'page')
+  } catch {
+    // best-effort revalidation
+  }
   notifyStoreOrderConfirmed(orderCode, order.customer_name ?? '', order.total_amount)
   return { ok: true }
 }

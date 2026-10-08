@@ -188,7 +188,7 @@ export function StoreCheckoutClient({
         redirectRef.current = setTimeout(() => {
           router.push(`/store/checkout/success?code=${order.orderCode}&total=${order.totalAmount}`)
         }, 2000)
-      } else if (data.status === 'expired') {
+      } else if (data.status === 'expired' || data.status === 'cancelled') {
         setExpired(true)
         if (pollRef.current) clearInterval(pollRef.current)
         if (timerRef.current) clearInterval(timerRef.current)
@@ -296,6 +296,7 @@ export function StoreCheckoutClient({
     const remainingSec = order.expiresAt
       ? Math.max(0, Math.floor((new Date(order.expiresAt).getTime() - Date.now()) / 1000))
       : Math.max(0, Math.floor(POLL_TIMEOUT / 1000) - elapsed)
+    const expiredNow = expired || remainingSec <= 0
     return (
       <div className="min-h-screen bg-stone-50">
         <nav className="container mx-auto px-4 py-4">
@@ -311,15 +312,18 @@ export function StoreCheckoutClient({
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden"
           >
-            {qrUrl && (
+            {qrUrl && !expiredNow && (
               <div className="flex justify-center p-6 bg-gradient-to-br from-amber-50 to-orange-50">
                 <img src={qrUrl} alt="QR thanh toán" className="w-52 h-52 rounded-xl" />
               </div>
             )}
 
             <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Thanh toán chuyển khoản</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                {expiredNow ? 'Đơn hàng đã hết hạn' : 'Thanh toán chuyển khoản'}
+              </h2>
 
+              {!expiredNow && (
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between border-b border-stone-100 pb-2">
                   <span className="text-gray-500">Ngân hàng</span>
@@ -357,8 +361,9 @@ export function StoreCheckoutClient({
                   </div>
                 </div>
               </div>
+              )}
 
-              {expired || remainingSec <= 0 ? (
+              {expiredNow ? (
                 <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
                   <p className="text-sm font-semibold text-red-900">Đơn hàng đã hết hạn thanh toán</p>
                   <p className="text-xs text-red-700 mt-1">

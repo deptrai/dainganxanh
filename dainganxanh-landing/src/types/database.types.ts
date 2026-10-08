@@ -1552,6 +1552,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      confirm_product_stock: {
+        Args: { p_product_id: string; p_qty: number }
+        Returns: undefined
+      }
       get_my_role: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       release_product_stock: {
