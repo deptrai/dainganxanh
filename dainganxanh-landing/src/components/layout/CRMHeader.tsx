@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Home, TreePine, Share2, Package, UserCircle, ShieldCheck, Calendar, ShoppingBag, Compass } from 'lucide-react'
+import { Home, TreePine, Share2, Package, UserCircle, ShieldCheck, Calendar, ShoppingBag, PackageCheck, Compass } from 'lucide-react'
 import { UserHeader } from './UserHeader'
 import { createBrowserClient } from '@/lib/supabase/client'
 
@@ -14,6 +14,7 @@ const baseNavItems = [
     { name: 'Du lịch & Tour', href: '/eco-tourism', icon: Compass },
     { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
     { name: 'Lịch đặt', href: '/crm/my-bookings', icon: Calendar },
+    { name: 'Đơn hàng', href: '/crm/my-store-orders', icon: PackageCheck },
     { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
     { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
 ]

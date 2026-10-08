@@ -23,6 +23,19 @@ export default async function MyStoreOrdersPage({ searchParams }: MyStoreOrdersP
     }
 
     const { client: serviceClient, effectiveUserId } = scoped
+
+    // Lazily expire overdue pending store orders before querying
+    try {
+        const { error: expireError } = await serviceClient.rpc('expire_pending_store_orders')
+        if (expireError) {
+            console.error('Error expiring pending store orders:', expireError.message)
+            captureError(new Error(expireError.message), { context: 'MyStoreOrdersPage.lazyExpire', effectiveUserId })
+        }
+    } catch (err) {
+        console.error('Unexpected error running expire_pending_store_orders:', err)
+        captureError(err instanceof Error ? err : new Error(String(err)), { context: 'MyStoreOrdersPage.lazyExpire', effectiveUserId })
+    }
+
     const { page: pageParam } = await searchParams
     const page = Math.max(1, parseInt(pageParam || '1', 10) || 1)
     const pageSize = 20

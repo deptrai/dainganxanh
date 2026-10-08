@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import { Home, TreePine, Share2, Package, User, LogIn, BookOpen, UserCircle, ShoppingBag, Compass } from "lucide-react";
+import { Home, TreePine, Share2, Package, LogIn, BookOpen, UserCircle, ShoppingBag, PackageCheck, Compass } from "lucide-react";
 import { UserHeader } from "./UserHeader";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -27,6 +27,7 @@ const sharedNavItems = [
 ]
 
 const authOnlyItems = [
+    { name: 'Đơn hàng', href: '/crm/my-store-orders', icon: PackageCheck },
     { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
 ]
 
