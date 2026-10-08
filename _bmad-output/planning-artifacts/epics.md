@@ -1762,6 +1762,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 - **Formatting:** `formatCurrency(val, locale)` + `formatDate(val, locale)` thay mọi call site hardcode `'vi-VN'` (~40 chỗ); số tiền bằng chữ dùng `numberToVietnameseWords` (vi) / `numberToEnglishWords` (en).
 - **Zero hardcode áp cho CẢ UI mới:** mọi component mới thêm trong story sau (VI/EN tabs, switcher…) đều phải extract catalog key, không ngoại lệ.
 - **ICU pluralization:** message phụ thuộc số lượng dùng ICU format (`{count, plural, one {# item} other {# items}}`) — VI không flex theo số, EN có; next-intl hỗ trợ sẵn.
+- **Message layout:** `messages/{vi,en}/<domain>.json` khớp key taxonomy; không monolithic một file.
 
 ### Story 14.1: i18n Foundation — Routing, Middleware, Locale Schema & Switcher
 
@@ -1777,7 +1778,8 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **And** a request to `/en/...` renders English via `localePrefix: 'as-needed'`
 
 **Given** the App Router tree is migrated under `src/app/[locale]/`
-**Then** `(marketing)` group, `page.tsx` ở root, và folder URL thật `crm/` đều nằm dưới `[locale]`; `api/` giữ NGUYÊN ở ngoài `[locale]` (webhooks/cron không localized)
+**Then** `(marketing)` group, `page.tsx` ở root, và folder URL thật `crm/` đều nằm dưới `[locale]`
+**And** `api/`, `(auth)/auth/callback` (OAuth redirect URI đã đăng ký Supabase — `/auth/callback` phải giữ resolve không prefix), và metadata routes root (`sitemap.ts`, `robots.ts`, `opengraph-image.tsx`, `icon*.png`) giữ NGUYÊN ở ngoài `[locale]`
 
 **Given** the middleware chain runs
 **When** next-intl middleware composes with existing Supabase auth refresh + CSP headers
@@ -1787,7 +1789,8 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 
 **Given** the foundation is deployed
 **Then** `users.locale` (text NOT NULL DEFAULT 'vi') AND `orders.locale` + `store_orders.locale` (text NOT NULL DEFAULT 'vi') tồn tại qua migration
-**And** checkout/booking/order-creation actions ghi locale hiện tại vào `orders.locale`/`store_orders.locale`
+**And** checkout/booking/order-creation actions ghi locale hiện tại vào `orders.locale`/`store_orders.locale` — API routes nằm ngoài `[locale]` nên lấy locale từ `NEXT_LOCALE` cookie (hoặc field `locale` trong body, cookie ưu tiên)
+**And** sau khi move tree: mọi import path test đến page modules cập nhật sang `app/[locale]/...`, `params` giờ chứa `locale`, và toàn bộ test suite hiện có vẫn xanh
 **And** language switcher ở MarketingHeader + CRMHeader: guest → set cookie; logged-in → set cookie + Server Action update `users.locale`
 **And** switcher trigger full navigation — nếu user đang ở trang có form đã nhập dở (dirty state) thì hiện `confirm` trước khi đổi ngôn ngữ (tránh mất input giữa checkout/admin form)
 **And** `generateMetadata`/sitemap `alternates`/hreflang cover cả 2 locales CHỈ cho static marketing routes (blog/product alternates là trách nhiệm Story 14.4 sau khi có slug per-locale)
@@ -1798,6 +1801,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 - Use `next-intl` (App Router + RSC + React 19 verified); `getRequestConfig`, `NextIntlClientProvider`, `getTranslations`/`useTranslations`.
 - Middleware order: next-intl resolves locale + creates response → Supabase `getUser()` refresh + `/crm` guard → CSP/security headers on the response.
 - Locale negotiation: prefix → cookie → default `vi`; logged-in user: `users.locale` (DB) override cookie. **`Accept-Language` KHÔNG tự đổi ngôn ngữ** — tối đa làm hint hiện banner "View in English?" cho user chọn tường minh (audience Vietnam-first: KH không đọc tiếng Anh vẫn thấy VI ngay lần đầu).
+- `[locale]/layout.tsx` khai `generateStaticParams()` trả `[{locale:'vi'},{locale:'en'}]` + `setRequestLocale()` cho static rendering; `next.config.js` (CommonJS) wrap bằng `withNextIntl`.
 
 **FRs:** F-I18N-01
 **Story Points:** 8
@@ -1820,7 +1824,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **Given** the extraction is complete
 **Then** `formatCurrency(val, locale)` + `formatDate(val, locale)` helpers thay toàn bộ hardcode `Intl.NumberFormat('vi-VN')`/`toLocaleDateString('vi-VN')` trong scope
 **And** no hardcoded Vietnamese string remains in scope JSX/UI logic
-**And** test files trong scope assert message keys hoặc render với `vi` default locale
+**And** test files trong scope assert message keys hoặc render với `vi` default locale — qua helper dùng chung `renderWithIntl` (jest setup load sẵn catalog `vi`), KHÔNG để từng file tự invent wrapper
 
 **FRs:** F-I18N-02
 **Story Points:** 8
