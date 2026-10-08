@@ -73,3 +73,7 @@ Không còn item nào tồn lại cho Epic 11. Epic 12 (Trầm Hương Store) s�
 ## Deferred from: code review of spec-12-2-view-product-detail (2026-10-08)
 
 - Raw `<img>` thay vì Next.js `<Image>` trong `ProductDetailClient.tsx` (và pattern tương tự ở `StoreClient.tsx`) — pre-existing, không phát sinh từ Story 12.2. Nâng cấp cần `remotePatterns` config trong `next.config` cho Supabase storage URLs + kiểm tra CLS.
+
+## Deferred from: code review of spec-12-6-view-my-store-orders (2026-10-08)
+
+- Layout-level auth redirect làm mất `?redirect=` cho guest — `src/app/crm/layout.tsx:18` gọi `redirect('/login')` khi `getUser()` null, chạy trước mọi page nên branch `redirect('/login?redirect=/crm/my-store-orders')` trong `my-store-orders/page.tsx` không bao giờ đến được. Guest vẫn redirect về login (AC thỏa) nhưng sau login không quay lại trang đơn hàng. Pre-existing từ scaffold epic-12; fix gợi ý: layout truyền `redirect` param theo pathname, hoặc chấp nhận vì ảnh hưởng UX nhỏ (low).
