@@ -1761,6 +1761,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 - **Locale source of truth:** `users.locale` (DB) cho user đăng nhập — switcher BẮT BUỘC vừa set cookie `NEXT_LOCALE` vừa gọi Server Action update `users.locale`. Cookie/URL chỉ áp cho guest. `orders.locale` đóng băng ngôn ngữ lúc tạo đơn cho tài liệu pháp lý.
 - **Formatting:** `formatCurrency(val, locale)` + `formatDate(val, locale)` thay mọi call site hardcode `'vi-VN'` (~40 chỗ); số tiền bằng chữ dùng `numberToVietnameseWords` (vi) / `numberToEnglishWords` (en).
 - **Zero hardcode áp cho CẢ UI mới:** mọi component mới thêm trong story sau (VI/EN tabs, switcher…) đều phải extract catalog key, không ngoại lệ.
+- **ICU pluralization:** message phụ thuộc số lượng dùng ICU format (`{count, plural, one {# item} other {# items}}`) — VI không flex theo số, EN có; next-intl hỗ trợ sẵn.
 
 ### Story 14.1: i18n Foundation — Routing, Middleware, Locale Schema & Switcher
 
@@ -1788,6 +1789,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **Then** `users.locale` (text NOT NULL DEFAULT 'vi') AND `orders.locale` + `store_orders.locale` (text NOT NULL DEFAULT 'vi') tồn tại qua migration
 **And** checkout/booking/order-creation actions ghi locale hiện tại vào `orders.locale`/`store_orders.locale`
 **And** language switcher ở MarketingHeader + CRMHeader: guest → set cookie; logged-in → set cookie + Server Action update `users.locale`
+**And** switcher trigger full navigation — nếu user đang ở trang có form đã nhập dở (dirty state) thì hiện `confirm` trước khi đổi ngôn ngữ (tránh mất input giữa checkout/admin form)
 **And** `generateMetadata`/sitemap `alternates`/hreflang cover cả 2 locales CHỈ cho static marketing routes (blog/product alternates là trách nhiệm Story 14.4 sau khi có slug per-locale)
 **And** at least one page (landing) renders fully translated end-to-end as pilot
 
@@ -1795,7 +1797,7 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 
 - Use `next-intl` (App Router + RSC + React 19 verified); `getRequestConfig`, `NextIntlClientProvider`, `getTranslations`/`useTranslations`.
 - Middleware order: next-intl resolves locale + creates response → Supabase `getUser()` refresh + `/crm` guard → CSP/security headers on the response.
-- Locale negotiation: prefix → cookie → `Accept-Language` → default `vi`; logged-in user: `users.locale` (DB) override cookie.
+- Locale negotiation: prefix → cookie → default `vi`; logged-in user: `users.locale` (DB) override cookie. **`Accept-Language` KHÔNG tự đổi ngôn ngữ** — tối đa làm hint hiện banner "View in English?" cho user chọn tường minh (audience Vietnam-first: KH không đọc tiếng Anh vẫn thấy VI ngay lần đầu).
 
 **FRs:** F-I18N-01
 **Story Points:** 8
@@ -1860,7 +1862,8 @@ Phân rã Epic 11-13 từ PRD đã merge cho Eco-Stay (đặt phòng vườn tr�
 **And** `notifications.title`/`body` được chuyển nullable (runtime render sẽ đọc `data.templateKey` + params từ Story 14.5)
 
 **Given** an admin edits a product or post
-**Then** the form shows VI/EN tabs (TipTap for rich content) — mọi string của UI tab mới dùng catalog key, KHÔNG hardcode
+**Then** the form shows VI/EN tabs (TipTap for rich content) với **VI là tab mặc định** — mọi string của UI tab mới dùng catalog key, KHÔNG hardcode
+**And** form hiển thị **translation status badge** (vd "VI only" / "VI + EN") per entity để admin biết content nào chưa có bản dịch
 **And** public pages resolve translation theo request locale qua helper `getTranslatedField` (field-level fallback về `vi`)
 
 **Given** `post_translations` và JSONB translations đã tồn tại
