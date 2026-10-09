@@ -65,9 +65,9 @@ export function useAuth(): UseAuthReturn {
         } catch (err) {
             console.error("Send OTP error:", err);
             setError(
-                err instanceof Error
+                err instanceof Error && err.message.startsWith("errors.")
                     ? err.message
-                    : "Không thể gửi OTP. Vui lòng thử lại."
+                    : "errors.auth.sendOtpFailed"
             );
         } finally {
             setLoading(false);
@@ -98,7 +98,7 @@ export function useAuth(): UseAuthReturn {
                     });
 
                     if (bypassError) throw bypassError;
-                    if (!bypassData.session) throw new Error("Không thể tạo phiên đăng nhập");
+                    if (!bypassData.session) throw new Error("errors.common.serverError");
 
                     await supabase.auth.setSession({
                         access_token: bypassData.session.access_token,
@@ -125,7 +125,7 @@ export function useAuth(): UseAuthReturn {
             }
 
             if (!data.session) {
-                throw new Error("Không thể tạo phiên đăng nhập");
+                throw new Error("errors.common.serverError");
             }
 
             await supabase.auth.setSession({
@@ -135,7 +135,7 @@ export function useAuth(): UseAuthReturn {
 
             const { data: { session: savedSession } } = await supabase.auth.getSession();
             if (!savedSession) {
-                throw new Error("Session không được lưu. Vui lòng thử lại.");
+                throw new Error("errors.common.serverError");
             }
 
             if (data.user) {
@@ -146,9 +146,9 @@ export function useAuth(): UseAuthReturn {
         } catch (err) {
             console.error("Verify OTP error:", err);
             setError(
-                err instanceof Error
+                err instanceof Error && err.message.startsWith("errors.")
                     ? err.message
-                    : "Mã OTP không hợp lệ hoặc đã hết hạn"
+                    : "errors.auth.otpFailed"
             );
             throw err;
         } finally {

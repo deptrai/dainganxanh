@@ -22,6 +22,19 @@ function deepMerge<T extends Record<string, unknown>>(base: T, override: Record<
   return result as T;
 }
 
+const DOMAINS = [
+  'common',
+  'landing',
+  'pricing',
+  'crm',
+  'store',
+  'checkout',
+  'eco',
+  'blog',
+  'auth',
+  'errors',
+] as const;
+
 export default getRequestConfig(async ({ requestLocale }) => {
   let locale = await requestLocale;
 
@@ -29,45 +42,30 @@ export default getRequestConfig(async ({ requestLocale }) => {
     locale = routing.defaultLocale;
   }
 
-  const viCommonMod = await import('../../messages/vi/common.json');
-  const viLandingMod = await import('../../messages/vi/landing.json');
-  const viPricingMod = await import('../../messages/vi/pricing.json');
-  const viCrmMod = await import('../../messages/vi/crm.json');
-
-  const viCommon = (viCommonMod as any).default ?? viCommonMod;
-  const viLanding = (viLandingMod as any).default ?? viLandingMod;
-  const viPricing = (viPricingMod as any).default ?? viPricingMod;
-  const viCrm = (viCrmMod as any).default ?? viCrmMod;
+  // Load Vietnamese base catalogs
+  const viMessages: Record<string, Record<string, unknown>> = {};
+  for (const domain of DOMAINS) {
+    const mod = await import(`../../messages/vi/${domain}.json`);
+    viMessages[domain] = (mod as any).default ?? mod;
+  }
 
   if (locale === 'vi') {
     return {
       locale,
-      messages: {
-        common: viCommon,
-        landing: viLanding,
-        pricing: viPricing,
-        crm: viCrm,
-      },
+      messages: viMessages,
     };
   }
 
-  const locCommonMod = await import(`../../messages/${locale}/common.json`);
-  const locLandingMod = await import(`../../messages/${locale}/landing.json`);
-  const locPricingMod = await import(`../../messages/${locale}/pricing.json`);
-  const locCrmMod = await import(`../../messages/${locale}/crm.json`);
-
-  const locCommon = (locCommonMod as any).default ?? locCommonMod;
-  const locLanding = (locLandingMod as any).default ?? locLandingMod;
-  const locPricing = (locPricingMod as any).default ?? locPricingMod;
-  const locCrm = (locCrmMod as any).default ?? locCrmMod;
+  // Load target locale catalogs and merge with VI fallback
+  const locMessages: Record<string, Record<string, unknown>> = {};
+  for (const domain of DOMAINS) {
+    const mod = await import(`../../messages/${locale}/${domain}.json`);
+    const locCatalog = (mod as any).default ?? mod;
+    locMessages[domain] = deepMerge(viMessages[domain], locCatalog);
+  }
 
   return {
     locale,
-    messages: {
-      common: deepMerge(viCommon, locCommon),
-      landing: deepMerge(viLanding, locLanding),
-      pricing: deepMerge(viPricing, locPricing),
-      crm: deepMerge(viCrm, locCrm),
-    },
+    messages: locMessages,
   };
 });

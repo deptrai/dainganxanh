@@ -60,5 +60,23 @@
     "paymentMethod": "Phương thức thanh toán",
     "bankTransfer": "Chuyển khoản ngân hàng (VietQR)",
     "confirmButton": "Xác Nhận & Thanh Toán"
+  },
+  "page": {
+    "title": "Gói Trồng Cây Dó Đen",
+    "subtitle": "Mỗi cây bạn trồng là một đóng góp cho tương lai xanh của Việt Nam",
+    "trustCare": "Cam kết chăm sóc",
+    "trustCareYears": "10 năm",
+    "trustGps": "Minh bạch GPS",
+    "trustGpsRate": "100%",
+    "trustCo2": "CO₂ hấp thụ/năm",
+    "trustCo2Rate": "20kg"
+  },
+  "card": {
+    "withInsurance": "Kèm Bảo Hiểm",
+    "perTree": "/cây",
+    "breakdownTitle": "Chi phí bao gồm:",
+    "featuresTitle": "Quyền lợi:",
+    "customize": "Tùy chỉnh số lượng",
+    "customizeAria": "Tùy chỉnh số lượng cây muốn trồng"
   }
 }

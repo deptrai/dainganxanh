@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import BookingPage from '../page'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 
 const mockMaybeSingle = jest.fn()
 const mockIn = jest.fn()
@@ -9,7 +10,6 @@ const mockSelect = jest.fn()
 const mockFrom = jest.fn()
 
 jest.mock('next/navigation', () => ({
-  redirect: jest.fn(),
   notFound: jest.fn(),
 }))
 
@@ -65,7 +65,7 @@ describe('BookingPage SSR', () => {
     const searchParams = Promise.resolve({ room_id: '', check_in: '', check_out: '' })
 
     await BookingPage({ params, searchParams })
-    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+    expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
 
     const { checkIn: invIn, checkOut: invOut } = getFutureDates(35, 32)
     const invalidDates = Promise.resolve({
@@ -74,7 +74,7 @@ describe('BookingPage SSR', () => {
       check_out: invOut,
     })
     await BookingPage({ params, searchParams: invalidDates })
-    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+    expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
   })
 
   it('renders room not found when room query returns null', async () => {
@@ -197,7 +197,7 @@ describe('BookingPage SSR', () => {
       const searchParams = Promise.resolve({ code: 'INVALID' })
 
       await BookingPage({ params, searchParams })
-      expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+      expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
     })
 
     it('redirects if booking not found', async () => {
@@ -206,7 +206,7 @@ describe('BookingPage SSR', () => {
       const searchParams = Promise.resolve({ code: 'BKABC123' })
 
       await BookingPage({ params, searchParams })
-      expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+      expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
     })
 
     it('redirects to correct lot if booking belongs to a different lot', async () => {
@@ -227,7 +227,7 @@ describe('BookingPage SSR', () => {
       const searchParams = Promise.resolve({ code: 'bkabc123' })
 
       await BookingPage({ params, searchParams })
-      expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-2/book?code=BKABC123')
+      expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-2/book?code=BKABC123', locale: 'vi' })
     })
 
     it('redirects to success page if booking is already confirmed', async () => {
@@ -247,7 +247,7 @@ describe('BookingPage SSR', () => {
       const searchParams = Promise.resolve({ code: 'BKABC123' })
 
       await BookingPage({ params, searchParams })
-      expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1/book/success?code=BKABC123')
+      expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1/book/success?code=BKABC123', locale: 'vi' })
     })
 
     it('renders "Đơn đặt phòng đã bị hủy" if status is cancelled', async () => {

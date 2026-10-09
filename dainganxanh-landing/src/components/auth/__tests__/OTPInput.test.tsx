@@ -6,8 +6,9 @@
  */
 
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { OTPInput } from '../OTPInput'
 
 // Silence framer-motion animations in tests
@@ -28,7 +29,7 @@ const defaultProps = {
 }
 
 function renderOTPInput(props = {}) {
-    return render(<OTPInput {...defaultProps} {...props} />)
+    return renderWithIntl(<OTPInput {...defaultProps} {...props} />)
 }
 
 function getOTPInputs() {
@@ -203,7 +204,7 @@ describe('[P2] OTPInput — accessibility', () => {
         const inputs = getOTPInputs()
 
         inputs.forEach((input, i) => {
-            expect(input).toHaveAttribute('aria-label', `Digit ${i + 1}`)
+            expect(input.getAttribute('aria-label')).toMatch(new RegExp(`(Digit|Chữ số) ${i + 1}`))
         })
     })
 })

@@ -1,13 +1,15 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Link } from '@/i18n/navigation'
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter } from '@/i18n/navigation'
 import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslations, useLocale } from "next-intl";
 import { BankingPayment } from "@/components/checkout/BankingPayment";
 import { PACKAGES, isValidPackageType, type PackageType } from "@/lib/constants";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { formatCurrency, formatNumber } from "@/lib/format";
 import Cookies from "js-cookie";
 import { validateReferralCode } from "@/actions/validateReferralCode";
 
@@ -30,6 +32,9 @@ function OrderSummary({ quantity, unitPrice, orderCode, orderAmount }: {
     orderCode: string;
     orderAmount: number;
 }) {
+    const t = useTranslations('checkout');
+    const locale = useLocale();
+
     return (
         <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -38,44 +43,44 @@ function OrderSummary({ quantity, unitPrice, orderCode, orderAmount }: {
             className="bg-white rounded-2xl p-6 shadow-xl border border-emerald-100 h-fit"
         >
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Đơn hàng của bạn
+                {t('order.summaryTitle')}
             </h2>
             <div className="space-y-3 pb-4 border-b border-gray-200">
                 <div className="flex justify-between">
-                    <span className="text-gray-600">Số lượng cây:</span>
-                    <span className="font-semibold">{quantity} cây</span>
+                    <span className="text-gray-600">{t('summary.treeCountLabel')}</span>
+                    <span className="font-semibold">{formatNumber(quantity, locale)} {t('quantity.unit', { count: quantity })}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span className="text-gray-600">Đơn giá:</span>
-                    <span className="font-semibold">{unitPrice.toLocaleString("vi-VN")} ₫</span>
+                    <span className="text-gray-600">{t('summary.unitPriceLabel')}</span>
+                    <span className="font-semibold">{formatCurrency(unitPrice, locale)}</span>
                 </div>
                 <div className="flex justify-between">
-                    <span className="text-gray-600">Mã đơn hàng:</span>
+                    <span className="text-gray-600">{t('summary.orderCodeLabel')}</span>
                     <span className="font-mono font-semibold text-emerald-600">{orderCode}</span>
                 </div>
             </div>
             <div className="pt-4">
                 <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-gray-900">Tổng cộng:</span>
+                    <span className="text-lg font-semibold text-gray-900">{t('summary.total')}</span>
                     <span className="text-2xl font-bold text-emerald-600">
-                        {orderAmount.toLocaleString("vi-VN")} ₫
+                        {formatCurrency(orderAmount, locale)}
                     </span>
                 </div>
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">Tác động của bạn:</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">{t('summary.yourImpact')}</h3>
                 <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">🌳</span>
-                        <span className="text-gray-600">{quantity} cây Dó đen được trồng</span>
+                        <span className="text-gray-600">{t('summary.treesPlanted', { count: formatNumber(quantity, locale) })}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">💨</span>
-                        <span className="text-gray-600">~{(quantity * 20).toLocaleString()} kg CO₂/năm</span>
+                        <span className="text-gray-600">{t('summary.co2PerYear', { amount: formatNumber(quantity * 20, locale) })}</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">🌍</span>
-                        <span className="text-gray-600">Hỗ trợ cộng đồng bản địa</span>
+                        <span className="text-gray-600">{t('summary.supportCommunity')}</span>
                     </div>
                 </div>
             </div>
@@ -86,6 +91,10 @@ function OrderSummary({ quantity, unitPrice, orderCode, orderAmount }: {
 function CheckoutContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const t = useTranslations('checkout');
+    const tCommon = useTranslations('common');
+    const locale = useLocale();
+
     const raw = parseInt(searchParams.get("quantity") || "1");
     const quantity = Math.max(1, Math.min(raw || 1, 1000000));
     const packageParam = searchParams.get("package") || "standard";
@@ -218,13 +227,13 @@ function CheckoutContent() {
                 body: JSON.stringify(body),
             });
             if (!res.ok) {
-                setCancelError("Không thể hủy đơn hàng. Vui lòng thử lại.");
+                setCancelError(t('order.cancelFailed'));
                 setCancelling(false);
                 return;
             }
             router.push(`/quantity?quantity=${quantity}&package=${packageType}`);
         } catch {
-            setCancelError("Lỗi kết nối. Vui lòng thử lại.");
+            setCancelError(t('order.connectionError'));
             setCancelling(false);
         }
     };
@@ -237,7 +246,7 @@ function CheckoutContent() {
                     className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Quay lại</span>
+                    <span>{tCommon('actions.back')}</span>
                 </Link>
             </nav>
 
@@ -251,10 +260,10 @@ function CheckoutContent() {
                         <Shield className="w-8 h-8 text-emerald-600" />
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                        Thanh toán
+                        {t('payment.title')}
                     </h1>
                     <p className="text-gray-600">
-                        Chuyển khoản để hoàn tất đơn hàng
+                        {t('payment.subtitle')}
                     </p>
                 </motion.div>
 
@@ -271,19 +280,19 @@ function CheckoutContent() {
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-white rounded-2xl p-6 shadow-xl border border-emerald-100 space-y-4"
                         >
-                            <h2 className="text-xl font-bold text-gray-900">Xác nhận đơn hàng</h2>
+                            <h2 className="text-xl font-bold text-gray-900">{t('order.confirmTitle')}</h2>
                             <div className="space-y-3 text-sm text-gray-700">
                                 <div className="flex justify-between">
-                                    <span>Số lượng cây:</span>
-                                    <span className="font-semibold">{quantity} cây</span>
+                                    <span>{t('summary.treeCountLabel')}</span>
+                                    <span className="font-semibold">{formatNumber(quantity, locale)} {t('quantity.unit', { count: quantity })}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>Đơn giá:</span>
-                                    <span className="font-semibold">{unitPrice.toLocaleString("vi-VN")} ₫</span>
+                                    <span>{t('summary.unitPriceLabel')}</span>
+                                    <span className="font-semibold">{formatCurrency(unitPrice, locale)}</span>
                                 </div>
                                 <div className="flex justify-between border-t pt-3 text-base">
-                                    <span className="font-semibold">Tổng cộng:</span>
-                                    <span className="font-bold text-emerald-600">{orderAmount.toLocaleString("vi-VN")} ₫</span>
+                                    <span className="font-semibold">{t('summary.total')}</span>
+                                    <span className="font-bold text-emerald-600">{formatCurrency(orderAmount, locale)}</span>
                                 </div>
                             </div>
                             <button
@@ -292,13 +301,13 @@ function CheckoutContent() {
                                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
                             >
                                 {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                                {placing ? "Đang tạo đơn..." : "🌳 Đặt đơn ngay"}
+                                {placing ? t('order.creatingOrder') : t('order.placeOrderNow')}
                             </button>
                             <Link
                                 href={`/quantity?quantity=${quantity}&package=${packageType}`}
                                 className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
                             >
-                                Quay lại chọn số lượng
+                                {t('order.backToQuantity')}
                             </Link>
                         </motion.div>
                     </div>
@@ -334,12 +343,13 @@ function CheckoutContent() {
 }
 
 export default function CheckoutPage() {
+    const tCommon = useTranslations('common');
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Đang tải...</p>
+                    <p className="text-gray-600">{tCommon('actions.loading')}</p>
                 </div>
             </div>
         }>

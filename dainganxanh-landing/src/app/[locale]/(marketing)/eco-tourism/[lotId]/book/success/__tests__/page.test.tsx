@@ -1,15 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import BookingSuccessPage from '../page'
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 
 const mockMaybeSingle = jest.fn()
 const mockEq = jest.fn()
 const mockSelect = jest.fn()
 const mockFrom = jest.fn()
-
-jest.mock('next/navigation', () => ({
-  redirect: jest.fn(),
-}))
 
 jest.mock('@/lib/supabase/server', () => ({
   createServiceRoleClient: () => ({
@@ -30,7 +26,7 @@ describe('BookingSuccessPage', () => {
     const searchParams = Promise.resolve({})
 
     await BookingSuccessPage({ params, searchParams })
-    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+    expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
   })
 
   it('redirects if booking not found', async () => {
@@ -39,7 +35,7 @@ describe('BookingSuccessPage', () => {
     const searchParams = Promise.resolve({ code: 'BKUNKNOWN' })
 
     await BookingSuccessPage({ params, searchParams })
-    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+    expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
   })
 
   it('redirects if booking is not confirmed or completed', async () => {
@@ -63,7 +59,7 @@ describe('BookingSuccessPage', () => {
     const searchParams = Promise.resolve({ code: 'BKABC123' })
 
     await BookingSuccessPage({ params, searchParams })
-    expect(redirect).toHaveBeenCalledWith('/eco-tourism/lot-1')
+    expect(redirect).toHaveBeenCalledWith({ href: '/eco-tourism/lot-1', locale: 'vi' })
   })
 
   it('renders booking details when booking is found', async () => {

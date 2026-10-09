@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { StoreClient, type Product } from '../StoreClient'
 
 const categories = [
@@ -20,7 +21,7 @@ const baseProduct: Product = {
 }
 
 function renderStore(overrides: { categories?: typeof categories; products?: Product[] } = {}) {
-    return render(
+    return renderWithIntl(
         <StoreClient
             categories={overrides.categories ?? categories}
             products={overrides.products ?? [baseProduct]}
@@ -159,8 +160,26 @@ describe('StoreClient', () => {
 
         it('renders price and compare_at_price', () => {
             renderStore({ products: [{ ...baseProduct, compare_at_price: 700000 }] })
-            expect(screen.getByText('500.000đ')).toBeInTheDocument()
-            expect(screen.getByText('700.000đ')).toBeInTheDocument()
+            expect(screen.getByText(/500\.000/)).toBeInTheDocument()
+            expect(screen.getByText(/700\.000/)).toBeInTheDocument()
+        })
+    })
+
+    describe('English localization (en)', () => {
+        it('renders EN hero title, filter button, and search placeholder', () => {
+            renderWithIntl(
+                <StoreClient
+                    categories={categories}
+                    products={[{ ...baseProduct, is_featured: true }]}
+                />,
+                { locale: 'en' }
+            )
+
+            expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Pure Vietnamese Agarwood Products')
+            expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument()
+            expect(screen.getByRole('heading', { name: /Featured Products/i })).toBeInTheDocument()
+            expect(screen.getByRole('heading', { name: /All Products/i })).toBeInTheDocument()
+            expect(screen.getByPlaceholderText('Search by product name, description or category...')).toBeInTheDocument()
         })
     })
 })

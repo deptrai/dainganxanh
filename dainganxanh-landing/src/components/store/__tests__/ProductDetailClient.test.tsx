@@ -1,12 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { ProductDetailClient, type Product, type RelatedProduct } from '../ProductDetailClient'
 
 const pushMock = jest.fn()
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: pushMock,
-  }),
-}))
+jest.mock('@/i18n/navigation', () => {
+  const React = require('react')
+  return {
+    Link: React.forwardRef(({ href, children, ...rest }: any, ref: any) =>
+      React.createElement('a', { href, ref, ...rest }, children)
+    ),
+    useRouter: () => ({
+      push: pushMock,
+    }),
+    usePathname: () => '/',
+  }
+})
 
 const baseProduct: Product = {
   id: 'prod-1',
@@ -47,7 +55,7 @@ function renderProductDetail(overrides: {
 } = {}) {
   const product = { ...baseProduct, ...overrides.product } as Product
   const related = overrides.related ?? baseRelated
-  return render(<ProductDetailClient product={product} related={related} />)
+  return renderWithIntl(<ProductDetailClient product={product} related={related} />)
 }
 
 describe('ProductDetailClient', () => {
@@ -65,8 +73,8 @@ describe('ProductDetailClient', () => {
       // Main product info
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Nước hoa trầm hương Hoàng Gia')
       expect(screen.getByText('Nước hoa')).toBeInTheDocument()
-      expect(screen.getByText('1.200.000đ')).toBeInTheDocument()
-      expect(screen.getByText('1.500.000đ')).toBeInTheDocument()
+      expect(screen.getByText(/1\.200\.000/)).toBeInTheDocument()
+      expect(screen.getByText(/1\.500\.000/)).toBeInTheDocument()
       expect(screen.getByText('Thu hoạch từ vườn Đại Ngàn Xanh')).toBeInTheDocument()
       expect(screen.getByText(/Vườn Đắk Lắk — Tây Nguyên/i)).toBeInTheDocument()
       expect(screen.getByText('Mùi hương quý phái chiết xuất từ trầm tự nhiên lâu năm.')).toBeInTheDocument()
@@ -84,7 +92,7 @@ describe('ProductDetailClient', () => {
       expect(screen.getByRole('heading', { name: /Sản phẩm liên quan/i })).toBeInTheDocument()
       expect(screen.getByText('Tinh dầu trầm tự nhiên')).toBeInTheDocument()
       expect(screen.getByText('Tinh dầu')).toBeInTheDocument()
-      expect(screen.getByText('800.000đ')).toBeInTheDocument()
+      expect(screen.getByText(/800\.000/)).toBeInTheDocument()
     })
   })
 
@@ -147,8 +155,8 @@ describe('ProductDetailClient', () => {
         },
       })
 
-      expect(screen.getByText('500.000đ')).toBeInTheDocument()
-      const originalPrice = screen.getByText('700.000đ')
+      expect(screen.getByText(/500\.000/)).toBeInTheDocument()
+      const originalPrice = screen.getByText(/700\.000/)
       expect(originalPrice).toBeInTheDocument()
       expect(originalPrice).toHaveClass('line-through')
     })
@@ -161,7 +169,7 @@ describe('ProductDetailClient', () => {
         },
       })
 
-      expect(screen.getByText('500.000đ')).toBeInTheDocument()
+      expect(screen.getByText(/500\.000/)).toBeInTheDocument()
       expect(container.querySelector('.line-through')).not.toBeInTheDocument()
     })
 
@@ -173,8 +181,8 @@ describe('ProductDetailClient', () => {
         },
       })
 
-      expect(screen.getByText('500.000đ')).toBeInTheDocument()
-      expect(screen.queryByText('450.000đ')).not.toBeInTheDocument()
+      expect(screen.getByText(/500\.000/)).toBeInTheDocument()
+      expect(screen.queryByText(/450\.000/)).not.toBeInTheDocument()
     })
   })
 
@@ -316,7 +324,7 @@ describe('ProductDetailClient', () => {
       expect(screen.getByRole('heading', { name: /Sản phẩm liên quan/i })).toBeInTheDocument()
       expect(screen.getByText('Nụ trầm cao cấp')).toBeInTheDocument()
       expect(screen.getByText('Nụ trầm')).toBeInTheDocument()
-      expect(screen.getByText('350.000đ')).toBeInTheDocument()
+      expect(screen.getByText(/350\.000/)).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /Nụ trầm cao cấp/i })).toHaveAttribute(
         'href',
         '/store/nu-tram-cao-cap'
@@ -338,7 +346,7 @@ describe('ProductDetailClient', () => {
 
     it('renders correctly when related prop is omitted (undefined)', () => {
       const product = { ...baseProduct }
-      render(<ProductDetailClient product={product} />)
+      renderWithIntl(<ProductDetailClient product={product} />)
       expect(screen.queryByRole('heading', { name: /Sản phẩm liên quan/i })).not.toBeInTheDocument()
     })
 
@@ -351,7 +359,7 @@ describe('ProductDetailClient', () => {
   describe('review patches', () => {
     it('resets state when product.id changes (rerender)', () => {
       const productA = { ...baseProduct, id: 'a', images: ['a1.jpg', 'a2.jpg'], stock_quantity: 5 }
-      const { rerender } = render(
+      const { rerender } = renderWithIntl(
         <ProductDetailClient product={productA} related={[]} />
       )
       // đổi số lượng và chọn ảnh thứ 2

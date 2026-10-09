@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
-import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { formatDate } from '@/lib/format'
 import { ArrowLeft, Calendar, Eye } from 'lucide-react'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { PostContent } from '@/components/blog/PostContent'
@@ -13,7 +13,7 @@ import { BlogSidebar } from '@/components/blog/BlogSidebar'
 export const revalidate = 3600 // ISR: revalidate every 1 hour
 
 interface PostPageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ locale: string; slug: string }>
 }
 
 // Pre-generate paths for published posts at build time
@@ -34,7 +34,9 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const { slug } = await params
+  const { locale, slug } = await params
+  setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: 'blog.meta' })
   try {
     const supabase = createServiceRoleClient()
     const { data: post } = await supabase
@@ -45,11 +47,12 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       .single()
 
     if (!post) {
-      return { title: 'Không tìm thấy bài viết — Đại Ngàn Xanh' }
+      return { title: t('notFound') }
     }
 
     const title = post.meta_title || post.title
     const description = post.meta_desc || post.excerpt || ''
+    const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/blog/${slug}` : `https://dainganxanh.com.vn/en/blog/${slug}`
 
     return {
       title,
@@ -63,16 +66,24 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
         tags: post.tags ?? [],
       },
       alternates: {
-        canonical: `/blog/${slug}`,
+        canonical,
+        languages: {
+          vi: `https://dainganxanh.com.vn/blog/${slug}`,
+          en: `https://dainganxanh.com.vn/en/blog/${slug}`,
+          'x-default': `https://dainganxanh.com.vn/blog/${slug}`,
+        },
       },
     }
   } catch {
-    return { title: 'Bài viết — Đại Ngàn Xanh' }
+    return { title: t('defaultPostTitle') }
   }
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { slug } = await params
+  const { locale, slug } = await params
+  setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: 'blog' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
   const supabase = createServiceRoleClient()
 
   const { data: post } = await supabase
@@ -98,22 +109,23 @@ export default async function PostPage({ params }: PostPageProps) {
     .limit(6)
 
   const publishedDate = post.published_at
-    ? format(new Date(post.published_at), "dd MMMM yyyy", { locale: vi })
+    ? formatDate(post.published_at, locale, { day: '2-digit', month: 'long', year: 'numeric' })
     : null
 
+  const baseUrl = locale === 'vi' ? 'https://dainganxanh.com.vn' : 'https://dainganxanh.com.vn/en'
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: 'https://dainganxanh.com.vn' },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://dainganxanh.com.vn/blog' },
-      { '@type': 'ListItem', position: 3, name: post.title, item: `https://dainganxanh.com.vn/blog/${slug}` },
+      { '@type': 'ListItem', position: 1, name: tCommon('nav.home'), item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `${baseUrl}/blog/${slug}` },
     ],
   }
 
   return (
     <>
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+    <script type="application/ld+json">{JSON.stringify(breadcrumbJsonLd)}</script>
     <div className="container mx-auto px-4 py-10 max-w-6xl">
       {/* Back link */}
       <Link
@@ -121,7 +133,7 @@ export default async function PostPage({ params }: PostPageProps) {
         className="inline-flex items-center gap-1.5 text-sm text-emerald-600 hover:text-emerald-800 mb-8 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Quay lại Blog
+        {t('post.backToBlog')}
       </Link>
 
       <div className="flex flex-col lg:flex-row gap-10">
@@ -165,7 +177,7 @@ export default async function PostPage({ params }: PostPageProps) {
               {post.view_count != null && post.view_count > 0 && (
                 <span className="flex items-center gap-1.5">
                   <Eye className="w-4 h-4" />
-                  {post.view_count.toLocaleString('vi-VN')} lượt xem
+                  {t('post.views', { count: post.view_count })}
                 </span>
               )}
             </div>
@@ -187,7 +199,7 @@ export default async function PostPage({ params }: PostPageProps) {
               className="inline-flex items-center gap-1.5 text-sm text-emerald-600 hover:text-emerald-800 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Xem thêm bài viết
+              {t('post.viewMore')}
             </Link>
           </div>
         </article>

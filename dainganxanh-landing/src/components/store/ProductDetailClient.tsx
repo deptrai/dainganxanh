@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Link } from '@/i18n/navigation'
-import { useRouter } from 'next/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { ShoppingBag, Minus, Plus, Truck, Shield, ArrowLeft, Loader2 } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import { originLabel, type ProductOriginType } from './originLabels'
+import { formatCurrency } from '@/lib/format'
 
 export interface Product {
   id: string
@@ -34,12 +35,11 @@ export interface RelatedProduct {
   product_categories?: { name: string } | { name: string }[] | null
 }
 
-function formatPrice(amount: number) {
-  return amount.toLocaleString('vi-VN') + 'đ'
-}
-
 export function ProductDetailClient({ product, related = [] }: { product: Product; related?: RelatedProduct[] }) {
   const router = useRouter()
+  const t = useTranslations('store')
+  const locale = useLocale()
+
   const [qty, setQty] = useState(1)
   const [activeImage, setActiveImage] = useState(product.images?.[0])
   const [buying, setBuying] = useState(false)
@@ -61,6 +61,8 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
     setTimeout(() => setBuying(false), 5000)
   }
 
+  const origin = originLabel(product.origin_type, (k) => t(k as any))
+
   return (
     <div className="min-h-screen bg-stone-50">
       <nav className="container mx-auto px-4 py-4">
@@ -69,7 +71,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
           className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại cửa hàng</span>
+          <span>{t('product.backToStore')}</span>
         </Link>
       </nav>
 
@@ -95,7 +97,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                       className={`w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 ${
                         activeImage === img ? 'border-emerald-600' : 'border-stone-200'
                       }`}
-                      aria-label={`Ảnh ${i + 1}`}
+                      aria-label={t('product.photoLabel', { number: i + 1 })}
                       aria-current={activeImage === img ? 'true' : undefined}
                     >
                       <img src={img} alt="" className="w-full h-full object-cover" />
@@ -115,22 +117,22 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{product.name}</h1>
 
               <div className="flex items-baseline gap-3 mb-4">
-                <span className="text-3xl font-bold text-emerald-700">{formatPrice(product.price)}</span>
+                <span className="text-3xl font-bold text-emerald-700">{formatCurrency(product.price, locale)}</span>
                 {product.compare_at_price && product.compare_at_price > product.price && (
-                  <span className="text-lg text-gray-400 line-through">{formatPrice(product.compare_at_price)}</span>
+                  <span className="text-lg text-gray-400 line-through">{formatCurrency(product.compare_at_price, locale)}</span>
                 )}
               </div>
 
-              {originLabel(product.origin_type) && (
+              {origin && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
                   <Shield className="w-4 h-4 text-emerald-600" />
-                  <span>{originLabel(product.origin_type)}</span>
+                  <span>{origin}</span>
                 </div>
               )}
 
               {product.lots && (
                 <p className="text-sm text-gray-500 mb-4">
-                  Xuất xứ: <span className="text-gray-700">{product.lots.name} — {product.lots.region}</span>
+                  {t('product.origin')}: <span className="text-gray-700">{product.lots.name} — {product.lots.region}</span>
                 </p>
               )}
 
@@ -142,14 +144,14 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
 
               {/* Quantity */}
               <div className="flex items-center gap-4 mb-6">
-                <span className="text-gray-700 font-medium">Số lượng:</span>
+                <span className="text-gray-700 font-medium">{t('product.quantity')}:</span>
                 <div className="flex items-center border border-stone-300 rounded-lg bg-white">
                   <button
                     type="button"
                     onClick={() => setQty(q => Math.max(1, q - 1))}
                     disabled={outOfStock || buying || qty <= 1}
                     className="p-2 hover:bg-stone-100 disabled:opacity-40"
-                    aria-label="Giảm số lượng"
+                    aria-label={t('product.decreaseQty')}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -159,13 +161,13 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                     onClick={() => setQty(q => Math.min(maxQty, q + 1))}
                     disabled={outOfStock || buying || qty >= maxQty}
                     className="p-2 hover:bg-stone-100 disabled:opacity-40"
-                    aria-label="Tăng số lượng"
+                    aria-label={t('product.increaseQty')}
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
                 <span className={`text-sm ${outOfStock ? 'text-red-600' : 'text-gray-500'}`}>
-                  {outOfStock ? 'Hết hàng' : `Còn ${product.stock_quantity} sản phẩm`}
+                  {outOfStock ? t('product.outOfStock') : t('product.inStockCount', { count: product.stock_quantity })}
                 </span>
               </div>
 
@@ -178,12 +180,12 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                 {buying ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Đang chuyển đến thanh toán...
+                    {t('product.redirectingCheckout')}
                   </>
                 ) : (
                   <>
                     <ShoppingBag className="w-5 h-5" />
-                    {outOfStock ? 'Hết hàng' : 'Mua ngay'}
+                    {outOfStock ? t('product.outOfStock') : t('product.buyNow')}
                   </>
                 )}
               </button>
@@ -191,9 +193,9 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
               <div className="mt-6 p-4 bg-stone-100 rounded-xl text-sm text-gray-600">
                 <div className="flex items-center gap-2 mb-2">
                   <Truck className="w-4 h-4" />
-                  <span className="font-medium">Giao hàng toàn quốc</span>
+                  <span className="font-medium">{t('product.nationwideShipping')}</span>
                 </div>
-                <p>Hỗ trợ thanh toán chuyển khoản hoặc COD. Đơn hàng sẽ được xử lý trong 24h làm việc.</p>
+                <p>{t('product.shippingDesc')}</p>
               </div>
             </div>
           </div>
@@ -205,7 +207,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
         !Array.isArray(product.specifications) &&
         Object.keys(product.specifications).length > 0 ? (
           <div className="mt-8 bg-white rounded-2xl shadow-sm border border-stone-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Thông số kỹ thuật</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('product.specifications')}</h2>
             <div className="grid sm:grid-cols-2 gap-4">
               {Object.entries(product.specifications).map(([k, v]) => (
                 <div key={k} className="flex justify-between border-b border-stone-100 pb-2">
@@ -222,7 +224,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
         {/* Related */}
         {related && related.length > 0 ? (
           <div className="mt-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Sản phẩm liên quan</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('product.relatedProducts')}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {related.map((p) => (
                 <Link
@@ -244,7 +246,7 @@ export function ProductDetailClient({ product, related = [] }: { product: Produc
                       return cat?.name ? <p className="text-xs text-gray-400 mb-1">{cat.name}</p> : null
                     })()}
                     <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">{p.name}</h3>
-                    <p className="text-emerald-700 font-bold mt-1">{formatPrice(p.price)}</p>
+                    <p className="text-emerald-700 font-bold mt-1">{formatCurrency(p.price, locale)}</p>
                   </div>
                 </Link>
               ))}

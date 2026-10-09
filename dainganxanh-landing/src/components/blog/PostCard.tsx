@@ -1,7 +1,7 @@
 import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
-import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { useLocale } from 'next-intl'
+import { formatDate } from '@/lib/format'
 import { TagBadge } from './TagBadge'
 import { Calendar } from 'lucide-react'
 
@@ -21,8 +21,9 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, currentTag }: PostCardProps) {
+  const locale = useLocale()
   const publishedDate = post.published_at
-    ? format(new Date(post.published_at), 'dd MMM yyyy', { locale: vi })
+    ? formatDate(post.published_at, locale, { day: '2-digit', month: 'short', year: 'numeric' })
     : null
 
   return (

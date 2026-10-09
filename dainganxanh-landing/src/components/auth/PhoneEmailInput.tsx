@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { Phone, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "phone" | "email";
@@ -28,6 +29,8 @@ export function PhoneEmailInput({
     error = null,
     className,
 }: PhoneEmailInputProps) {
+    const t = useTranslations('auth.input');
+    const tErrors = useTranslations('errors');
     const [validationError, setValidationError] = useState<string | null>(null);
 
     const validatePhone = (phone: string): boolean => {
@@ -46,12 +49,12 @@ export function PhoneEmailInput({
 
         if (mode === "phone") {
             if (!validatePhone(value)) {
-                setValidationError("Số điện thoại không hợp lệ (VD: 0912345678)");
+                setValidationError(t('phoneInvalid'));
                 return;
             }
         } else {
             if (!validateEmail(value)) {
-                setValidationError("Email không hợp lệ");
+                setValidationError(t('emailInvalid'));
                 return;
             }
         }
@@ -59,28 +62,24 @@ export function PhoneEmailInput({
         onSubmit();
     };
 
-    const displayError = error || validationError;
+    const resolvedError = error
+        ? error.startsWith('errors.')
+            ? (() => {
+                try {
+                    return tErrors(error.slice(7) as any)
+                } catch {
+                    return error
+                }
+            })()
+            : error
+        : null
+
+    const displayError = resolvedError || validationError;
 
     return (
         <div className={cn("space-y-4", className)}>
             {/* Mode Toggle - Phone tab hidden, Email only */}
             <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
-                {/* Phone tab commented out - Email only
-                <button
-                    type="button"
-                    onClick={() => onModeChange("phone")}
-                    className={cn(
-                        "flex-1 py-2 px-4 rounded-lg font-medium transition-all",
-                        "flex items-center justify-center gap-2",
-                        mode === "phone"
-                            ? "bg-white text-emerald-600 shadow-sm"
-                            : "text-gray-600 hover:text-gray-900"
-                    )}
-                >
-                    <Phone className="w-4 h-4" />
-                    <span>Số điện thoại</span>
-                </button>
-                */}
                 <button
                     type="button"
                     onClick={() => onModeChange("email")}
@@ -91,14 +90,14 @@ export function PhoneEmailInput({
                     )}
                 >
                     <Mail className="w-4 h-4" />
-                    <span>Email</span>
+                    <span>{t('emailMode')}</span>
                 </button>
             </div>
 
             {/* Input Field */}
             <div className="space-y-2">
                 <label htmlFor="identifier-input" className="block text-sm font-semibold text-gray-700">
-                    {mode === "phone" ? "Số điện thoại" : "Địa chỉ email"}
+                    {mode === "phone" ? t('phoneLabel') : t('emailLabel')}
                 </label>
                 <input
                     id="identifier-input"
@@ -138,7 +137,7 @@ export function PhoneEmailInput({
                 {/* Helper Text */}
                 {!displayError && (
                     <p className="text-sm text-gray-500">
-                        Nhập email để nhận mã OTP
+                        {t('helperText')}
                     </p>
                 )}
             </div>
@@ -162,10 +161,10 @@ export function PhoneEmailInput({
                 {loading ? (
                     <>
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Đang gửi...</span>
+                        <span>{t('sending')}</span>
                     </>
                 ) : (
-                    <span>Gửi mã OTP</span>
+                    <span>{t('sendOtp')}</span>
                 )}
             </motion.button>
         </div>

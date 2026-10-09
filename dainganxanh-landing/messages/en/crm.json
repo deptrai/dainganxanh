@@ -11,7 +11,7 @@
   },
   "dashboard": {
     "greeting": "Hello",
-    "welcomeSubtitle": "Welcome back to your Dai Ngan Xanh sanctuary.",
+    "welcomeSubtitle": "Welcome back to your Đại Ngàn Xanh sanctuary.",
     "statsTrees": "Total Owned Trees",
     "statsValue": "Estimated Valuation",
     "statsHectares": "Equivalent Area",
@@ -34,7 +34,7 @@
   },
   "referrals": {
     "title": "Referral Program",
-    "subtitle": "Share the green mission with friends and earn honorary rewards from Dai Ngan Xanh.",
+    "subtitle": "Share the green mission with friends and earn honorary rewards from Đại Ngàn Xanh.",
     "codeLabel": "Your Referral Code",
     "copyCode": "Copy Code",
     "copied": "Copied!",

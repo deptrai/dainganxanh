@@ -1,5 +1,5 @@
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import BookingVoucherPage, { generateMetadata } from '../page'
 import { _resetRateLimitStore } from '@/lib/rate-limit'
 
@@ -82,7 +82,7 @@ describe('BookingVoucherPage', () => {
     })
 
     const element = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123', locale: 'vi' }) })
-    render(element)
+    renderWithIntl(element)
 
     expect(screen.getAllByText('BKABC123').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument()
@@ -136,7 +136,7 @@ describe('BookingVoucherPage', () => {
     })
 
     const element = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123', locale: 'vi' }) })
-    const { container } = render(element)
+    const { container } = renderWithIntl(element)
     const html = container.innerHTML
 
     expect(html).not.toContain('secret@example.com')
@@ -169,7 +169,7 @@ describe('BookingVoucherPage', () => {
     const printSpy = jest.spyOn(window, 'print').mockImplementation(() => {})
 
     const element = await BookingVoucherPage({ params: Promise.resolve({ code: 'bkabc123', locale: 'vi' }) })
-    render(element)
+    renderWithIntl(element)
 
     expect(mockEq).toHaveBeenCalledWith('code', 'BKABC123')
     const printButton = screen.getByRole('button', { name: /In vé \/ Lưu PDF/i })
@@ -213,7 +213,7 @@ describe('BookingVoucherPage', () => {
     // Request thứ 21 từ cùng IP bị rate-limit
     mockFrom.mockClear()
     const rateLimitedElement = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123', locale: 'vi' }) })
-    render(rateLimitedElement)
+    renderWithIntl(rateLimitedElement)
 
     expect(screen.getByText('Quá nhiều yêu cầu')).toBeInTheDocument()
     expect(screen.getByText(/Bạn đã gửi quá nhiều yêu cầu trong thời gian ngắn/)).toBeInTheDocument()
@@ -251,7 +251,7 @@ describe('BookingVoucherPage', () => {
 
     mockFrom.mockClear()
     const rlEl = await BookingVoucherPage({ params: Promise.resolve({ code: 'BKABC123', locale: 'vi' }) })
-    render(rlEl)
+    renderWithIntl(rlEl)
     expect(screen.getByText('Quá nhiều yêu cầu')).toBeInTheDocument()
     expect(mockFrom).not.toHaveBeenCalled()
   })

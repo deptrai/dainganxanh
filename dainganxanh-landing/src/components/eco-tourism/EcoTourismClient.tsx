@@ -1,27 +1,30 @@
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useRouter, usePathname } from '@/i18n/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { BedDouble } from 'lucide-react'
 import { GardenCard, type GardenLot } from './GardenCard'
 
-const REGIONS = [
-    { label: 'Tất cả', value: 'all' },
-    { label: 'Miền Bắc', value: 'Miền Bắc' },
-    { label: 'Miền Trung', value: 'Miền Trung' },
-    { label: 'Miền Nam', value: 'Miền Nam' },
-] as const
+const REGION_VALUES = ['all', 'Miền Bắc', 'Miền Trung', 'Miền Nam'] as const
 
 function normalizeRegion(val?: string | null): string {
     if (!val) return 'all'
-    const matched = REGIONS.find(r => r.value.toLowerCase() === val.trim().toLowerCase())
-    return matched ? matched.value : val
+    const matched = REGION_VALUES.find(r => r.toLowerCase() === val.trim().toLowerCase())
+    return matched ?? val
 }
 
-function RegionFilter({ active, onChange }: { active: string; onChange: (v: string) => void }) {
+function RegionFilter({ active, onChange, t }: { active: string; onChange: (v: string) => void; t: (key: string) => string }) {
+    const regions = [
+        { label: t('regions.all'), value: 'all' },
+        { label: t('regions.north'), value: 'Miền Bắc' },
+        { label: t('regions.central'), value: 'Miền Trung' },
+        { label: t('regions.south'), value: 'Miền Nam' },
+    ]
     return (
         <div className="flex flex-wrap gap-2 mb-8">
-            {REGIONS.map(r => (
+            {regions.map(r => (
                 <button
                     key={r.value}
                     onClick={() => onChange(r.value)}
@@ -44,6 +47,7 @@ export interface EcoTourismClientProps {
 }
 
 export function EcoTourismClient({ lots, initialRegion }: EcoTourismClientProps) {
+    const t = useTranslations('eco')
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -96,24 +100,24 @@ export function EcoTourismClient({ lots, initialRegion }: EcoTourismClientProps)
             <section className="bg-gradient-to-br from-[#2C2E1B] to-[#16321F] text-white py-16 px-4">
                 <div className="max-w-3xl mx-auto text-center">
                     <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-400/20 border border-emerald-400/40 text-emerald-200 text-sm mb-4">
-                        🌿 Nghỉ Dưỡng Sinh Thái
+                        {t('hero.badge')}
                     </span>
                     <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4">
-                        Vườn Trầm Hương Có Phòng Nghỉ
+                        {t('hero.title')}
                     </h1>
                     <p className="text-white/70 text-lg max-w-xl mx-auto">
-                        Chọn một vườn Dó Đen để trải nghiệm nghỉ dưỡng, học hỏi về trầm hương và tận hưởng thiên nhiên.
+                        {t('hero.subtitle')}
                     </p>
                 </div>
             </section>
 
             <div className="max-w-6xl mx-auto px-4 py-10">
-                <RegionFilter active={activeRegion} onChange={handleRegionChange} />
+                <RegionFilter active={activeRegion} onChange={handleRegionChange} t={t} />
 
                 {filteredLots.length === 0 ? (
                     <div className="text-center py-20 text-gray-500">
                         <BedDouble className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p>Chưa có vườn nào mở phòng. Vui lòng quay lại sau.</p>
+                        <p>{t('empty.noGardens')}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">

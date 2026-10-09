@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import BookingPageClient from '../BookingPageClient'
 
 jest.mock('next/navigation', () => ({
@@ -68,27 +69,27 @@ describe('BookingPageClient', () => {
   }
 
   it('renders form and order summary in initial form step', () => {
-    render(<BookingPageClient {...defaultProps} />)
+    renderWithIntl(<BookingPageClient {...defaultProps} />)
     expect(screen.getByText('Đặt phòng tại Vườn Trầm Hương A')).toBeInTheDocument()
     expect(screen.getByTestId('mock-booking-form')).toBeInTheDocument()
     expect(screen.getByTestId('mock-order-summary')).toBeInTheDocument()
   })
 
   it('switches to payment step when form succeeds', () => {
-    render(<BookingPageClient {...defaultProps} />)
+    renderWithIntl(<BookingPageClient {...defaultProps} />)
     fireEvent.click(screen.getByText('Submit Form'))
     expect(screen.getByTestId('mock-vietqr-display')).toBeInTheDocument()
   })
 
   it('switches to expired screen when hold expires', () => {
-    render(<BookingPageClient {...defaultProps} />)
+    renderWithIntl(<BookingPageClient {...defaultProps} />)
     fireEvent.click(screen.getByText('Submit Form'))
     fireEvent.click(screen.getByText('Trigger Expired'))
     expect(screen.getByText('Đơn đặt phòng đã hết hạn')).toBeInTheDocument()
   })
 
   it('switches to success screen when payment confirms', () => {
-    render(<BookingPageClient {...defaultProps} />)
+    renderWithIntl(<BookingPageClient {...defaultProps} />)
     fireEvent.click(screen.getByText('Submit Form'))
     fireEvent.click(screen.getByText('Trigger Success'))
     expect(screen.getByText('Thanh toán thành công!')).toBeInTheDocument()

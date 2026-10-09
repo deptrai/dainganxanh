@@ -1,21 +1,25 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Link } from '@/i18n/navigation'
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter } from '@/i18n/navigation'
 import { ArrowLeft, Shield, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
 import { OTPInput } from "@/components/auth/OTPInput";
 import { PACKAGES, isValidPackageType, type PackageType } from "@/lib/constants";
+import { formatCurrency } from "@/lib/format";
 import Cookies from "js-cookie";
 import { checkUserExists } from "@/actions/checkUserExists";
 
 const DEFAULT_REF = "dainganxanh";
 
 function RegisterContent() {
+    const t = useTranslations('auth.register');
+    const locale = useLocale();
     const router = useRouter();
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
@@ -77,7 +81,7 @@ function RegisterContent() {
         // Validate referral code is entered
         const code = refInput.trim().toLowerCase();
         if (!code) {
-            setRefError("Vui lòng nhập mã giới thiệu");
+            setRefError(t('refRequired'));
             return;
         }
         setRefError("");
@@ -126,7 +130,7 @@ function RegisterContent() {
                     className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Quay lại</span>
+                    <span>{t('back')}</span>
                 </Link>
             </nav>
 
@@ -142,12 +146,12 @@ function RegisterContent() {
                         <Shield className="w-8 h-8 text-emerald-600" />
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                        {step === "input" ? "Đăng ký nhanh" : "Xác thực OTP"}
+                        {step === "input" ? t('title') : t('otpTitle')}
                     </h1>
                     <p className="text-gray-600">
                         {step === "input"
-                            ? "Nhập số điện thoại hoặc email để nhận mã OTP"
-                            : `Mã OTP đã được gửi đến ${identifier}`}
+                            ? t('inputDesc')
+                            : t('otpDesc', { identifier })}
                     </p>
                 </motion.div>
 
@@ -179,12 +183,12 @@ function RegisterContent() {
                             {/* Account already exists warning */}
                             {accountExists && (
                                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                                    Tài khoản này đã được đăng ký. Vui lòng{" "}
+                                    {t('accountExists')}{" "}
                                     <Link
                                         href={`/login?quantity=${quantity}&package=${packageType}`}
                                         className="font-semibold text-amber-900 underline hover:text-amber-700"
                                     >
-                                        đăng nhập
+                                        {t('loginLink')}
                                     </Link>
                                     .
                                 </div>
@@ -198,7 +202,7 @@ function RegisterContent() {
                             >
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                     <Gift className="inline w-4 h-4 mr-1 text-emerald-500" />
-                                    Mã giới thiệu <span className="text-red-500">*</span>
+                                    {t('refCodeLabel')} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -207,7 +211,7 @@ function RegisterContent() {
                                         setRefInput(e.target.value.toLowerCase());
                                         if (refError) setRefError("");
                                     }}
-                                    placeholder="VD: dainganxanh"
+                                    placeholder={t('refPlaceholder')}
                                     maxLength={20}
                                     className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${
                                         refError ? "border-red-400 bg-red-50" : "border-gray-300"
@@ -233,12 +237,12 @@ function RegisterContent() {
                     {/* Login Link */}
                     <div className="mt-6 pt-6 border-t border-gray-200">
                         <p className="text-center text-sm text-gray-600">
-                            Đã có tài khoản?{" "}
+                            {t('haveAccount')}{" "}
                             <Link
                                 href={`/login?quantity=${quantity}&package=${packageType}`}
                                 className="text-emerald-600 font-semibold hover:underline"
                             >
-                                Đăng nhập ngay
+                                {t('loginNow')}
                             </Link>
                         </p>
                     </div>
@@ -252,22 +256,22 @@ function RegisterContent() {
                     className="mt-8 space-y-4"
                 >
                     <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-                        <h3 className="font-semibold text-gray-900 mb-2">Đơn hàng của bạn:</h3>
+                        <h3 className="font-semibold text-gray-900 mb-2">{t('yourOrder')}</h3>
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Số lượng cây:</span>
-                            <span className="font-semibold text-gray-900">{quantity} cây</span>
+                            <span className="text-gray-600">{t('treeQuantity')}</span>
+                            <span className="font-semibold text-gray-900">{t('treeCount', { quantity })}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm mt-1">
-                            <span className="text-gray-600">Tổng tiền:</span>
+                            <span className="text-gray-600">{t('totalAmount')}</span>
                             <span className="font-semibold text-emerald-600">
-                                {(parseInt(quantity) * unitPrice).toLocaleString('vi-VN')} ₫
+                                {formatCurrency(parseInt(quantity, 10) * unitPrice, locale)}
                             </span>
                         </div>
                     </div>
 
                     <div className="text-center text-sm text-gray-600">
-                        <p>🔒 Thông tin của bạn được bảo mật tuyệt đối</p>
-                        <p className="mt-1">Mã OTP có hiệu lực trong 5 phút</p>
+                        <p>{t('securityNote')}</p>
+                        <p className="mt-1">{t('otpExpiryNote')}</p>
                     </div>
                 </motion.div>
             </div>
@@ -275,16 +279,21 @@ function RegisterContent() {
     );
 }
 
+function RegisterFallback() {
+    const t = useTranslations('auth.register');
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
+            <div className="text-center">
+                <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">{t('loading')}</p>
+            </div>
+        </div>
+    );
+}
+
 export default function RegisterPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Đang tải...</p>
-                </div>
-            </div>
-        }>
+        <Suspense fallback={<RegisterFallback />}>
             <RegisterContent />
         </Suspense>
     );

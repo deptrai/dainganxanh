@@ -52,7 +52,7 @@ describe('i18n Foundation Core Configuration', () => {
     expect(config.messages.landing).toBeDefined()
     expect(config.messages.pricing).toBeDefined()
     expect(config.messages.crm).toBeDefined()
-    expect(config.messages.common.brand.name).toBe('Dai Ngan Xanh')
+    expect(config.messages.common.brand.name).toBe('Đại Ngàn Xanh')
   })
 
   it('falls back to defaultLocale (vi) for invalid locale input', async () => {
@@ -70,7 +70,7 @@ describe('i18n Foundation Core Configuration', () => {
     })
 
     // Both catalogs have common.brand.name; verify en overrides vi
-    expect(config.messages.common.brand.name).toBe('Dai Ngan Xanh')
+    expect(config.messages.common.brand.name).toBe('Đại Ngàn Xanh')
     // Any vi base keys not defined in en will be retained from vi
     expect(config.messages.common.brand).toBeDefined()
     // Verify landing messages

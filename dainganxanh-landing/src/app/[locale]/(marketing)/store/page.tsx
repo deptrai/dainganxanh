@@ -1,16 +1,32 @@
 import type { Metadata } from 'next'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StoreClient } from '@/components/store/StoreClient'
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-    title: 'Cửa Hàng Trầm Hương — Đại Ngàn Xanh',
-    description: 'Mua sản phẩm trầm hương thuần Việt: nước hoa, tinh dầu, hương liệu, thủ công mỹ nghệ từ vườn cây Dó Đen.',
-    alternates: { canonical: 'https://dainganxanh.com.vn/store' },
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+    const { locale } = await params
+    setRequestLocale(locale)
+    const t = await getTranslations({ locale, namespace: 'store.metadata' })
+    const canonical = locale === 'vi' ? 'https://dainganxanh.com.vn/store' : 'https://dainganxanh.com.vn/en/store'
+    return {
+        title: t('title'),
+        description: t('description'),
+        alternates: {
+            canonical,
+            languages: {
+                vi: 'https://dainganxanh.com.vn/store',
+                en: 'https://dainganxanh.com.vn/en/store',
+                'x-default': 'https://dainganxanh.com.vn/store',
+            },
+        },
+    }
 }
 
-export default async function StorePage() {
+export default async function StorePage({ params = Promise.resolve({ locale: 'vi' }) }: { params?: Promise<{ locale: string }> } = {}) {
+    const { locale } = await params
+    setRequestLocale(locale)
     const supabase = createServiceRoleClient()
 
     const { data: categories } = await supabase

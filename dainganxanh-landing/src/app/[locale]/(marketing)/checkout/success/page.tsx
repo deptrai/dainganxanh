@@ -1,18 +1,24 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Link } from '@/i18n/navigation'
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter } from '@/i18n/navigation'
 import { motion } from "framer-motion";
 import { Home, Trees, FileText, CheckCircle } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import { SuccessAnimation } from "@/components/checkout/SuccessAnimation";
 import { ShareCardPreview } from "@/components/checkout/ShareCardPreview";
 import { ShareButton } from "@/components/shared/ShareButton";
 import { CustomerIdentityForm, CustomerIdentityData } from "@/components/checkout/CustomerIdentityForm";
+import { formatCurrency, formatNumber } from "@/lib/format";
 
 function SuccessContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const t = useTranslations('checkout');
+    const tCommon = useTranslations('common');
+    const locale = useLocale();
+
     const [orderCode, setOrderCode] = useState(searchParams.get("orderCode") || "");
     const quantity = parseInt(searchParams.get("quantity") || "1");
     const userName = searchParams.get("name") || "";
@@ -63,12 +69,12 @@ function SuccessContent() {
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                throw new Error(err.error || "Có lỗi xảy ra");
+                throw new Error(err.error || t('banking.genericError'));
             }
             setIdentityDone(true);
             setIdentitySuccess(true);
         } catch (err) {
-            setIdentityError(err instanceof Error ? err.message : "Có lỗi xảy ra");
+            setIdentityError(err instanceof Error ? err.message : t('banking.genericError'));
             throw err;
         } finally {
             setIdentitySubmitting(false);
@@ -85,7 +91,7 @@ function SuccessContent() {
             <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Đang tải...</p>
+                    <p className="text-gray-600">{tCommon('actions.loading')}</p>
                 </div>
             </div>
         );
@@ -105,28 +111,28 @@ function SuccessContent() {
                     className="bg-white rounded-2xl p-6 shadow-xl border border-emerald-100 my-8"
                 >
                     <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">
-                        Chi tiết đơn hàng
+                        {t('success.orderDetails')}
                     </h2>
                     <div className="space-y-3">
                         <div className="flex justify-between">
-                            <span className="text-gray-600">Mã đơn hàng:</span>
+                            <span className="text-gray-600">{t('summary.orderCodeLabel')}</span>
                             <span className="font-mono font-semibold text-emerald-600">{orderCode}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-600">Số cây:</span>
-                            <span className="font-semibold">{quantity} cây</span>
+                            <span className="text-gray-600">{t('summary.treeCountLabel')}</span>
+                            <span className="font-semibold">{formatNumber(quantity, locale)} {t('quantity.unit', { count: quantity })}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-600">Tổng tiền:</span>
+                            <span className="text-gray-600">{t('summary.total')}</span>
                             <span className="font-semibold text-emerald-600">
-                                {totalAmount ? `${totalAmount.toLocaleString("vi-VN")} ₫` : "—"}
+                                {totalAmount ? formatCurrency(totalAmount, locale) : "—"}
                             </span>
                         </div>
                         <div className="pt-3 border-t border-gray-100">
                             <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Tác động môi trường:</span>
+                                <span className="text-gray-500">{t('success.envImpact')}</span>
                                 <span className="text-emerald-600 font-medium">
-                                    ~{co2Impact.toLocaleString()} kg CO₂/năm 🌍
+                                    {t('success.co2ImpactYear', { amount: formatNumber(co2Impact, locale) })}
                                 </span>
                             </div>
                         </div>
@@ -143,10 +149,10 @@ function SuccessContent() {
                     >
                         <div className="flex items-center gap-3 mb-2">
                             <FileText className="w-6 h-6 text-amber-600" />
-                            <h2 className="text-lg font-bold text-gray-900">Thông tin để tạo hợp đồng</h2>
+                            <h2 className="text-lg font-bold text-gray-900">{t('success.contractInfoTitle')}</h2>
                         </div>
                         <p className="text-sm text-gray-500 mb-6">
-                            Điền thông tin CCCD để chúng tôi tạo hợp đồng trồng cây đúng mẫu pháp lý. Bạn có thể bỏ qua và điền sau.
+                            {t('success.contractInfoDesc')}
                         </p>
                         <CustomerIdentityForm
                             onSubmit={handleIdentitySubmit}
@@ -157,7 +163,7 @@ function SuccessContent() {
                             onClick={() => setIdentityDone(true)}
                             className="mt-3 w-full text-sm text-gray-400 hover:text-gray-600 transition-colors"
                         >
-                            Bỏ qua, điền sau →
+                            {t('success.skipForNow')}
                         </button>
                     </motion.div>
                 )}
@@ -171,8 +177,8 @@ function SuccessContent() {
                     >
                         <CheckCircle className="w-6 h-6 text-emerald-600 flex-shrink-0" />
                         <div>
-                            <p className="font-semibold text-emerald-800">Đã lưu thông tin hợp đồng!</p>
-                            <p className="text-sm text-emerald-600">Hợp đồng sẽ được gửi qua email trong 24 giờ.</p>
+                            <p className="font-semibold text-emerald-800">{t('success.contractSaved')}</p>
+                            <p className="text-sm text-emerald-600">{t('success.contractEmail24h')}</p>
                         </div>
                     </motion.div>
                 )}
@@ -206,7 +212,7 @@ function SuccessContent() {
                         className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold py-4 px-6 rounded-xl hover:from-emerald-700 hover:to-emerald-600 shadow-lg hover:shadow-xl transition-all"
                     >
                         <Trees className="w-6 h-6" />
-                        <span>Xem vườn cây của tôi</span>
+                        <span>{t('success.viewGarden')}</span>
                     </Link>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -215,14 +221,14 @@ function SuccessContent() {
                             className="flex items-center justify-center gap-2 bg-white border-2 border-emerald-500 text-emerald-700 font-semibold py-3 px-6 rounded-xl hover:bg-emerald-50 transition-colors"
                         >
                             <Home className="w-5 h-5" />
-                            <span>Về trang chủ</span>
+                            <span>{tCommon('actions.backToHome')}</span>
                         </Link>
                         <Link
                             href="/quantity"
                             className="flex items-center justify-center gap-2 bg-emerald-100 text-emerald-700 font-semibold py-3 px-6 rounded-xl hover:bg-emerald-200 transition-colors"
                         >
                             <Trees className="w-5 h-5" />
-                            <span>Mua thêm</span>
+                            <span>{t('success.buyMore')}</span>
                         </Link>
                     </div>
                 </motion.div>
@@ -233,7 +239,7 @@ function SuccessContent() {
                     transition={{ delay: 3.5 }}
                     className="text-center text-gray-500 text-sm mt-8"
                 >
-                    Chúng tôi sẽ gửi email xác nhận và mã cây của bạn trong 24 giờ.
+                    {t('success.confirmationEmail24h')}
                 </motion.p>
             </div>
         </div>
@@ -241,13 +247,14 @@ function SuccessContent() {
 }
 
 export default function SuccessPage() {
+    const tCommon = useTranslations('common');
     return (
         <Suspense
             fallback={
                 <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
                     <div className="text-center">
                         <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-gray-600">Đang tải...</p>
+                        <p className="text-gray-600">{tCommon('actions.loading')}</p>
                     </div>
                 </div>
             }

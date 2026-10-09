@@ -3,12 +3,9 @@
 import { useEffect, useState } from 'react'
 import { motion, useSpring, useTransform } from 'framer-motion'
 import { useTranslations, useLocale } from 'next-intl'
+import { formatNumber } from '@/lib/format'
 
 const GOAL = 1_000_000
-
-function formatNumber(n: number, locale: string): string {
-    return n.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')
-}
 
 function AnimatedNumber({ value, locale }: { value: number; locale: string }) {
     const spring = useSpring(0, { duration: 2000 })

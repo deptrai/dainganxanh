@@ -1,15 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { EcoTourismClient } from '../EcoTourismClient'
 
 const mockReplace = jest.fn()
 let mockSearchParams = new URLSearchParams()
 let mockPathname = '/eco-tourism'
 
-jest.mock('next/navigation', () => ({
+jest.mock('@/i18n/navigation', () => ({
     useRouter: () => ({
         replace: mockReplace,
     }),
     usePathname: () => mockPathname,
+    Link: ({ children, href, ...props }: any) => <a href={href} {...props}>{children}</a>,
+}))
+
+jest.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
 }))
 
@@ -27,14 +32,14 @@ describe('EcoTourismClient', () => {
     })
 
     test('renders all lots on "Tất cả" tab', () => {
-        render(<EcoTourismClient lots={lots} />)
+        renderWithIntl(<EcoTourismClient lots={lots} />)
         expect(screen.getByText('Vườn A')).toBeInTheDocument()
         expect(screen.getByText('Vườn B')).toBeInTheDocument()
         expect(screen.getByText('Vườn C')).toBeInTheDocument()
     })
 
     test('filters lots by selected region and syncs URL', () => {
-        render(<EcoTourismClient lots={lots} />)
+        renderWithIntl(<EcoTourismClient lots={lots} />)
         const mienBacBtn = screen.getByRole('button', { name: /Miền Bắc/i })
         fireEvent.click(mienBacBtn)
 
@@ -49,7 +54,7 @@ describe('EcoTourismClient', () => {
 
     test('removes region search param when clicking "Tất cả"', () => {
         mockSearchParams = new URLSearchParams('region=Miền Bắc')
-        render(<EcoTourismClient lots={lots} />)
+        renderWithIntl(<EcoTourismClient lots={lots} />)
         const tatCaBtn = screen.getByRole('button', { name: /Tất cả/i })
         fireEvent.click(tatCaBtn)
 
@@ -60,7 +65,7 @@ describe('EcoTourismClient', () => {
     })
 
     test('pre-selects region from initialRegion prop', () => {
-        render(<EcoTourismClient lots={lots} initialRegion="Miền Nam" />)
+        renderWithIntl(<EcoTourismClient lots={lots} initialRegion="Miền Nam" />)
         expect(screen.getByText('Vườn B')).toBeInTheDocument()
         expect(screen.queryByText('Vườn A')).not.toBeInTheDocument()
         expect(screen.queryByText('Vườn C')).not.toBeInTheDocument()
@@ -68,7 +73,7 @@ describe('EcoTourismClient', () => {
 
     test('pre-selects region from searchParams', () => {
         mockSearchParams = new URLSearchParams('region=Miền Nam')
-        render(<EcoTourismClient lots={lots} />)
+        renderWithIntl(<EcoTourismClient lots={lots} />)
         expect(screen.getByText('Vườn B')).toBeInTheDocument()
         expect(screen.queryByText('Vườn A')).not.toBeInTheDocument()
         expect(screen.queryByText('Vườn C')).not.toBeInTheDocument()
@@ -76,7 +81,7 @@ describe('EcoTourismClient', () => {
 
     test('preserves other query parameters when updating region', () => {
         mockSearchParams = new URLSearchParams('ref=promo123&utm_source=fb')
-        render(<EcoTourismClient lots={lots} />)
+        renderWithIntl(<EcoTourismClient lots={lots} />)
         const mienBacBtn = screen.getByRole('button', { name: /Miền Bắc/i })
         fireEvent.click(mienBacBtn)
 
@@ -94,19 +99,19 @@ describe('EcoTourismClient', () => {
         const mixedCase = [
             { id: 'lot-1', name: 'Vườn A', region: '  MIỀN BẮC  ', images: [], priceFrom: 800000 },
         ]
-        render(<EcoTourismClient lots={mixedCase} />)
+        renderWithIntl(<EcoTourismClient lots={mixedCase} />)
         const mienBacBtn = screen.getByRole('button', { name: /Miền Bắc/i })
         fireEvent.click(mienBacBtn)
         expect(screen.getByText('Vườn A')).toBeInTheDocument()
     })
 
     test('shows empty state when no lots', () => {
-        render(<EcoTourismClient lots={[]} />)
+        renderWithIntl(<EcoTourismClient lots={[]} />)
         expect(screen.getByText(/Chưa có vườn nào mở phòng/i)).toBeInTheDocument()
     })
 
     test('shows empty state when filter yields no results', () => {
-        render(<EcoTourismClient lots={lots} />)
+        renderWithIntl(<EcoTourismClient lots={lots} />)
         fireEvent.click(screen.getByRole('button', { name: /Miền Trung/i }))
         expect(screen.getByText(/Chưa có vườn nào mở phòng/i)).toBeInTheDocument()
     })

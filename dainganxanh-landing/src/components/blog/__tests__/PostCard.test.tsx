@@ -5,7 +5,8 @@
  */
 
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { PostCard, type PostCardData } from '../PostCard'
 
 // next/link passthrough
@@ -33,39 +34,39 @@ const basePost: PostCardData = {
 
 describe('[P1] PostCard — rendering', () => {
     test('[P1] renders post title', () => {
-        render(<PostCard post={basePost} />)
+        renderWithIntl(<PostCard post={basePost} />)
         expect(screen.getByRole('heading', { name: /cây dó đen là gì/i })).toBeInTheDocument()
     })
 
     test('[P1] renders excerpt when provided', () => {
-        render(<PostCard post={basePost} />)
+        renderWithIntl(<PostCard post={basePost} />)
         expect(screen.getByText(/giới thiệu cây dó đen việt nam/i)).toBeInTheDocument()
     })
 
     test('[P1] does not render excerpt paragraph when null', () => {
-        render(<PostCard post={{ ...basePost, excerpt: null }} />)
+        renderWithIntl(<PostCard post={{ ...basePost, excerpt: null }} />)
         expect(screen.queryByText(/giới thiệu cây dó đen/i)).not.toBeInTheDocument()
     })
 
     test('[P1] links to /blog/:slug', () => {
-        render(<PostCard post={basePost} />)
+        renderWithIntl(<PostCard post={basePost} />)
         const anchors = screen.getAllByRole('link')
         expect(anchors.some((a) => a.getAttribute('href') === '/blog/cay-do-den-la-gi')).toBe(true)
     })
 
     test('[P1] renders cover image when provided', () => {
-        render(<PostCard post={basePost} />)
+        renderWithIntl(<PostCard post={basePost} />)
         const img = screen.getByAltText(/cây dó đen là gì/i) as HTMLImageElement
         expect(img.src).toContain('cover.jpg')
     })
 
     test('[P1] shows emoji fallback when cover_image is null', () => {
-        render(<PostCard post={{ ...basePost, cover_image: null }} />)
+        renderWithIntl(<PostCard post={{ ...basePost, cover_image: null }} />)
         expect(screen.getByText('🌿')).toBeInTheDocument()
     })
 
     test('[P1] formats published_at with Vietnamese locale', () => {
-        render(<PostCard post={basePost} />)
+        renderWithIntl(<PostCard post={basePost} />)
         // April → "thg 4" or "Th04" depending on date-fns vi locale version; just assert year + day present
         expect(screen.getByText(/15/)).toBeInTheDocument()
         expect(screen.getByText(/2026/)).toBeInTheDocument()

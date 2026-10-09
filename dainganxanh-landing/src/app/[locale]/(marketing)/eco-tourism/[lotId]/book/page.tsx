@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
-import { Link } from '@/i18n/navigation'
-import { redirect, notFound } from 'next/navigation'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { Link, redirect } from '@/i18n/navigation'
+import { notFound } from 'next/navigation'
 import { Clock, AlertCircle } from 'lucide-react'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getBlockingBookings, isBlockOverlapping } from '@/lib/eco-tourism/availability'
@@ -32,7 +33,7 @@ function getFirstLot(lotData: Lot | Lot[] | null | undefined): Lot | null {
 }
 
 interface BookingPageProps {
-    params: Promise<{ lotId: string }>
+    params: Promise<{ locale: string; lotId: string }>
     searchParams: Promise<{
         room_id?: string | string[]
         check_in?: string | string[]
@@ -47,7 +48,9 @@ function isValidDate(value: string | undefined): value is string {
 }
 
 export async function generateMetadata({ params }: BookingPageProps): Promise<Metadata> {
-    const { lotId } = await params
+    const { locale, lotId } = await params
+    setRequestLocale(locale)
+    const t = await getTranslations({ locale, namespace: 'eco.meta' })
     const supabase = createServiceRoleClient()
     const { data: lot } = await supabase
         .from('lots')
@@ -55,16 +58,27 @@ export async function generateMetadata({ params }: BookingPageProps): Promise<Me
         .eq('id', lotId)
         .maybeSingle()
 
+    const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/eco-tourism/${lotId}/book` : `https://dainganxanh.com.vn/en/eco-tourism/${lotId}/book`
+
     return {
-        title: lot ? `Đặt phòng — ${lot.name}` : 'Đặt phòng — Đại Ngàn Xanh',
-        description: 'Đặt phòng nghỉ dưỡng tại vườn Dó Đen Đại Ngàn Xanh.',
-        alternates: { canonical: `https://dainganxanh.com.vn/eco-tourism/${lotId}/book` },
+        title: lot ? `${t('title')} — ${lot.name}` : `${t('title')}`,
+        description: t('description'),
+        alternates: {
+            canonical,
+            languages: {
+                vi: `https://dainganxanh.com.vn/eco-tourism/${lotId}/book`,
+                en: `https://dainganxanh.com.vn/en/eco-tourism/${lotId}/book`,
+                'x-default': `https://dainganxanh.com.vn/eco-tourism/${lotId}/book`,
+            },
+        },
         robots: { index: false, follow: false },
     }
 }
 
 export default async function BookingPage({ params, searchParams }: BookingPageProps) {
-    const { lotId } = await params
+    const { locale, lotId } = await params
+    setRequestLocale(locale)
+    const t = await getTranslations({ locale, namespace: 'eco.bookingPage' })
     const searchParamsResolved = await searchParams
     const rawCode = Array.isArray(searchParamsResolved.code)
         ? searchParamsResolved.code[0]
@@ -76,7 +90,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     // Handle resume/revisit booking via code query param
     if (codeParam) {
         if (!/^BK[A-Z0-9]{6}$/.test(codeParam)) {
-            redirect(`/eco-tourism/${encodeURIComponent(lotId)}`)
+            redirect({ href: `/eco-tourism/${encodeURIComponent(lotId)}`, locale })
             return null
         }
 
@@ -87,7 +101,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
             .maybeSingle()
 
         if (bookingError || !rawBooking) {
-            redirect(`/eco-tourism/${encodeURIComponent(lotId)}`)
+            redirect({ href: `/eco-tourism/${encodeURIComponent(lotId)}`, locale })
             return null
         }
 
@@ -98,13 +112,13 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
 
         // Guard against mismatched lot_id
         if (bookingLotId && bookingLotId !== lotId) {
-            redirect(`/eco-tourism/${encodeURIComponent(bookingLotId)}/book?code=${encodeURIComponent(codeParam)}`)
+            redirect({ href: `/eco-tourism/${encodeURIComponent(bookingLotId)}/book?code=${encodeURIComponent(codeParam)}`, locale })
             return null
         }
 
         // Already confirmed/completed -> redirect to success page
         if (rawBooking.status === 'confirmed' || rawBooking.status === 'completed') {
-            redirect(`/eco-tourism/${encodeURIComponent(lotId)}/book/success?code=${encodeURIComponent(codeParam)}`)
+            redirect({ href: `/eco-tourism/${encodeURIComponent(lotId)}/book/success?code=${encodeURIComponent(codeParam)}`, locale })
             return null
         }
 
@@ -129,25 +143,25 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
                             )}
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                            {isCancelled ? 'Đơn đặt phòng đã bị hủy' : 'Đơn đặt phòng đã hết hạn'}
+                            {isCancelled ? t('cancelledTitle') : t('expiredTitle')}
                         </h1>
                         <p className="text-gray-600 text-sm mb-6 leading-relaxed">
                             {isCancelled
-                                ? 'Đơn đặt phòng này đã được hủy. Thời gian giữ chỗ đã kết thúc và phòng đã được giải phóng.'
-                                : 'Thời gian giữ chỗ 15 phút cho đơn đặt phòng này đã hết hạn. Phòng đã được giải phóng cho khách hàng khác.'}
+                                ? t('cancelledDesc')
+                                : t('expiredDescLong')}
                         </p>
                         <div className="space-y-3">
                             <Link
                                 href={`/eco-tourism/${lotId}`}
                                 className="block w-full py-3 px-4 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-colors text-sm"
                             >
-                                Tạo đặt phòng mới / Chọn ngày khác
+                                {t('newBooking')}
                             </Link>
                             <Link
                                 href="/eco-tourism"
                                 className="block w-full py-2.5 px-4 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
                             >
-                                Khám phá các khu nghỉ dưỡng khác
+                                {t('exploreOther')}
                             </Link>
                         </div>
                     </div>
@@ -194,7 +208,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
 
         // Fallback when room or lot data is unexpectedly missing
         console.warn(`[Booking Resume] Missing room/lot relationship for booking ${codeParam}`)
-        redirect(`/eco-tourism/${lotId}`)
+        redirect({ href: `/eco-tourism/${lotId}`, locale })
         return null
     }
 
@@ -213,7 +227,7 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
     const todayVN = nowVN.toISOString().slice(0, 10)
 
     if (!roomId || !isValidDate(checkIn) || !isValidDate(checkOut) || checkIn >= checkOut || checkIn < todayVN) {
-        redirect(`/eco-tourism/${lotId}`)
+        redirect({ href: `/eco-tourism/${lotId}`, locale })
         return null
     }
 
@@ -231,11 +245,11 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
                 <div className="text-center text-gray-500">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy phòng</h1>
-                    <p>Phòng này không tồn tại hoặc đã ngừng hoạt động.</p>
-                    <a href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
-                        Quay lại trang vườn
-                    </a>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('roomNotFound')}</h1>
+                    <p>{t('roomNotFoundDesc')}</p>
+                    <Link href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
+                        {t('backToGardenPage')}
+                    </Link>
                 </div>
             </div>
         )
@@ -262,11 +276,11 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
                 <div className="text-center text-gray-500">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Phòng đã được đặt</h1>
-                    <p>Phòng này đã có người đặt hoặc đang giữ chỗ trong khoảng thời gian này.</p>
-                    <a href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
-                        Chọn phòng khác
-                    </a>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('roomBooked')}</h1>
+                    <p>{t('roomBookedDesc')}</p>
+                    <Link href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
+                        {t('chooseAnotherRoom')}
+                    </Link>
                 </div>
             </div>
         )
@@ -278,11 +292,11 @@ export default async function BookingPage({ params, searchParams }: BookingPageP
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
                 <div className="text-center text-gray-500">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Phòng đang bảo trì</h1>
-                    <p>Phòng này đang tạm khóa trong khoảng thời gian này.</p>
-                    <a href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
-                        Chọn phòng khác
-                    </a>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('roomMaintenance')}</h1>
+                    <p>{t('roomMaintenanceDesc')}</p>
+                    <Link href={`/eco-tourism/${lotId}`} className="mt-4 inline-block text-emerald-600 hover:underline">
+                        {t('chooseAnotherRoom')}
+                    </Link>
                 </div>
             </div>
         )

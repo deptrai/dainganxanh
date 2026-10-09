@@ -1,12 +1,15 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { ProductDetailClient } from '@/components/store/ProductDetailClient'
 
 export const revalidate = 300
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+  const { locale, slug } = await params
+  setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: 'store.metadata' })
   const supabase = createServiceRoleClient()
   const { data: product } = await supabase
     .from('products')
@@ -15,15 +18,25 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq('status', 'active')
     .maybeSingle()
 
-  if (!product) return { title: 'Sản phẩm không tồn tại — Đại Ngàn Xanh', robots: { index: false, follow: false } }
+  if (!product) return { title: t('notFoundTitle'), robots: { index: false, follow: false } }
+  const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/store/${slug}` : `https://dainganxanh.com.vn/en/store/${slug}`
   return {
-    title: `${product.name} — Cửa Hàng Trầm Hương`,
-    description: product.description ?? 'Sản phẩm trầm hương thuần Việt từ vườn cây Dó Đen.',
+    title: t('productDetailTitle', { name: product.name }),
+    description: product.description ?? t('productFallbackDesc'),
+    alternates: {
+      canonical,
+      languages: {
+        vi: `https://dainganxanh.com.vn/store/${slug}`,
+        en: `https://dainganxanh.com.vn/en/store/${slug}`,
+        'x-default': `https://dainganxanh.com.vn/store/${slug}`,
+      },
+    },
   }
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export default async function ProductPage({ params }: { params: Promise<{ slug: string; locale?: string }> }) {
+  const { slug, locale = 'vi' } = await params
+  setRequestLocale(locale)
   const supabase = createServiceRoleClient()
 
   const { data: rawProduct } = await supabase

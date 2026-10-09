@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import EcoTourismPage from '../page'
 import type { RoomPricingRule } from '@/lib/pricing'
 
@@ -62,7 +63,7 @@ describe('EcoTourismPage', () => {
 
     test('renders page with garden data', async () => {
         const PageComponent = await EcoTourismPage()
-        render(PageComponent)
+        renderWithIntl(PageComponent)
         expect(screen.getByRole('heading', { name: 'Vườn A' })).toBeInTheDocument()
         expect(screen.getByRole('heading', { name: 'Vườn B' })).toBeInTheDocument()
     })
@@ -86,7 +87,7 @@ describe('EcoTourismPage', () => {
         ]
 
         const PageComponent = await EcoTourismPage()
-        render(PageComponent)
+        renderWithIntl(PageComponent)
 
         // Vườn A có base price 800.000đ nhưng có rule 650.000đ nên hiển thị giá từ 650.000 ₫
         expect(screen.getByText('650.000 ₫')).toBeInTheDocument()
@@ -96,7 +97,7 @@ describe('EcoTourismPage', () => {
         const PageComponent = await EcoTourismPage({
             searchParams: Promise.resolve({ region: 'Miền Bắc' }),
         })
-        render(PageComponent)
+        renderWithIntl(PageComponent)
         expect(screen.getByRole('heading', { name: 'Vườn A' })).toBeInTheDocument()
         expect(screen.queryByRole('heading', { name: 'Vườn B' })).not.toBeInTheDocument()
     })

@@ -1,7 +1,8 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import StoreSuccessPage from '../page'
 import { notFound } from 'next/navigation'
 
@@ -61,14 +62,14 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'ST123456' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đặt hàng thành công!')).toBeInTheDocument()
     expect(screen.getByText('ST123456')).toBeInTheDocument()
     expect(screen.getByText('Chờ xác nhận')).toBeInTheDocument()
     expect(screen.getByText('COD')).toBeInTheDocument()
     expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument()
-    expect(screen.getByText('500.000đ')).toBeInTheDocument()
+    expect(screen.getByText(/500\.000/)).toBeInTheDocument()
   })
 
   it('renders "Đơn hàng đang chờ thanh toán" for banking order still pending', async () => {
@@ -87,7 +88,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STPEND1' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đơn hàng đang chờ thanh toán')).toBeInTheDocument()
     expect(screen.getByText('Chờ xác nhận')).toBeInTheDocument()
@@ -110,7 +111,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STCANCEL' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đơn hàng đã bị hủy')).toBeInTheDocument()
     expect(screen.queryByText('Thanh toán thành công!')).not.toBeInTheDocument()
@@ -133,7 +134,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STCODCAN' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đơn hàng đã bị hủy')).toBeInTheDocument()
     expect(screen.queryByText('Đặt hàng thành công!')).not.toBeInTheDocument()
@@ -155,7 +156,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STUNKNOWN' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('custom_state')).toBeInTheDocument()
   })
@@ -176,7 +177,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STBANK12' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Thanh toán thành công!')).toBeInTheDocument()
     expect(screen.getByText('Đã xác nhận')).toBeInTheDocument()
@@ -207,7 +208,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STEXPIRE1' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đơn hàng đã hết hạn')).toBeInTheDocument()
     // Status chip reflects the expired state, not the raw cancelled status
@@ -235,7 +236,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STEXPIRE2' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đơn hàng đã hết hạn')).toBeInTheDocument()
     const reorderLink = screen.getByRole('link', { name: 'Đặt hàng lại' })
@@ -268,7 +269,7 @@ describe('StoreSuccessPage', () => {
 
     const searchParams = Promise.resolve({ code: 'STCANCEL2' })
     const element = await StoreSuccessPage({ searchParams })
-    render(element as React.ReactElement)
+    renderWithIntl(element as React.ReactElement)
 
     expect(screen.getByText('Đơn hàng đã bị hủy')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Đặt hàng lại' })).not.toBeInTheDocument()

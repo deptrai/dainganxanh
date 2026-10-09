@@ -34,7 +34,14 @@
     "loading": "Đang tải...",
     "retry": "Thử lại",
     "delete": "Xóa",
-    "edit": "Chỉnh sửa"
+    "edit": "Chỉnh sửa",
+    "backToHome": "Về trang chủ",
+    "backToPricing": "Quay lại chọn gói"
+  },
+  "errors": {
+    "generic": "Đã có lỗi xảy ra",
+    "pageLoadError": "Rất tiếc, đã có lỗi khi tải trang. Vui lòng thử lại.",
+    "devOnlyDetails": "Chi tiết lỗi (Development only)"
   },
   "status": {
     "pending": "Chờ xử lý",
@@ -44,6 +51,19 @@
     "cancelled": "Đã hủy",
     "paid": "Đã thanh toán",
     "unpaid": "Chưa thanh toán"
+  },
+  "share": {
+    "button": "Chia sẻ thành tựu",
+    "via": "Chia sẻ qua:",
+    "copyLink": "Sao chép liên kết",
+    "copied": "Đã sao chép!",
+    "failed": "Không thể chia sẻ. Vui lòng thử lại hoặc sao chép link.",
+    "copyFailed": "Không thể sao chép. Vui lòng thử lại.",
+    "facebook": "Chia sẻ lên Facebook",
+    "zalo": "Chia sẻ lên Zalo",
+    "twitter": "Chia sẻ lên Twitter",
+    "linkedin": "Chia sẻ lên LinkedIn",
+    "email": "Chia sẻ qua Email"
   },
   "switcher": {
     "label": "Ngôn ngữ",

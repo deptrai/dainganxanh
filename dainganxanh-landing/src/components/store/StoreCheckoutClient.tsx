@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { Link } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Copy, Check, Loader2, CheckCircle2, Clock, Truck, Banknote, ShoppingBag } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import { VN_PROVINCES } from '@/lib/constants/provinces'
 import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from '@/lib/pricing/store'
+import { formatCurrency } from '@/lib/format'
 
 interface Product {
   id: string
@@ -26,16 +27,6 @@ const BANK_INFO = {
 const POLL_INTERVAL = 5000
 const POLL_TIMEOUT = 15 * 60 * 1000
 
-function formatPrice(amount: number) {
-  return amount.toLocaleString('vi-VN') + 'đ'
-}
-
-function formatElapsed(seconds: number) {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return m > 0 ? `${m} phút ${s.toString().padStart(2, '0')} giây` : `${s} giây`
-}
-
 export function StoreCheckoutClient({
   product,
   quantity,
@@ -46,6 +37,9 @@ export function StoreCheckoutClient({
   prefill?: { name?: string; email?: string }
 }) {
   const router = useRouter()
+  const t = useTranslations('store')
+  const locale = useLocale()
+
   const [step, setStep] = useState<'form' | 'payment' | 'cod-confirm' | 'confirmed'>('form')
   const [placing, setPlacing] = useState(false)
   const [error, setError] = useState('')
@@ -94,6 +88,14 @@ export function StoreCheckoutClient({
   const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE
   const total = subtotal + shippingFee
 
+  const formatElapsed = (seconds: number) => {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return m > 0
+      ? t('checkout.minutesSeconds', { m, s: s.toString().padStart(2, '0') })
+      : t('checkout.seconds', { s })
+  }
+
   const handlePlaceOrder = async () => {
     const errors: {
       customer_name?: string
@@ -104,34 +106,34 @@ export function StoreCheckoutClient({
     } = {}
 
     if (!form.customer_name.trim()) {
-      errors.customer_name = 'Vui lòng nhập họ và tên'
+      errors.customer_name = t('checkout.errors.nameRequired')
     }
 
     const phoneRegex = /^0\d{9}$/
     if (!form.customer_phone.trim()) {
-      errors.customer_phone = 'Vui lòng nhập số điện thoại'
+      errors.customer_phone = t('checkout.errors.phoneRequired')
     } else if (!phoneRegex.test(form.customer_phone.trim())) {
-      errors.customer_phone = 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)'
+      errors.customer_phone = t('checkout.errors.phoneInvalid')
     }
 
     if (!form.shipping_address.trim()) {
-      errors.shipping_address = 'Vui lòng nhập địa chỉ giao hàng'
+      errors.shipping_address = t('checkout.errors.addressRequired')
     }
 
     if (form.customer_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email.trim())) {
-      errors.customer_email = 'Email không hợp lệ'
+      errors.customer_email = t('checkout.errors.emailInvalid')
     }
 
     if (!form.shipping_province) {
-      errors.shipping_province = 'Vui lòng chọn tỉnh/thành phố'
+      errors.shipping_province = t('checkout.errors.provinceRequired')
     }
 
     setFieldErrors(errors)
 
     if (Object.keys(errors).length > 0) {
       setError('')
-      const order = ['customer_name', 'customer_phone', 'customer_email', 'shipping_address', 'shipping_province'] as const
-      const firstInvalid = order.find(k => errors[k])
+      const orderKeys = ['customer_name', 'customer_phone', 'customer_email', 'shipping_address', 'shipping_province'] as const
+      const firstInvalid = orderKeys.find(k => errors[k])
       if (firstInvalid) fieldRefs[firstInvalid].current?.focus()
       return
     }
@@ -158,7 +160,7 @@ export function StoreCheckoutClient({
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.orderCode) {
-        throw new Error(data.error || 'Không thể tạo đơn hàng')
+        throw new Error(data.error || t('checkout.errors.createOrderFailed'))
       }
 
       setOrder(data)
@@ -169,7 +171,7 @@ export function StoreCheckoutClient({
         setStep('payment')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra')
+      setError(err instanceof Error ? err.message : t('checkout.errors.generalError'))
     } finally {
       setPlacing(false)
     }
@@ -245,8 +247,8 @@ export function StoreCheckoutClient({
     <button
       onClick={() => copyToClipboard(text, field)}
       className="p-1.5 rounded hover:bg-gray-200 transition-colors shrink-0"
-      title={`Sao chép ${label}`}
-      aria-label={`Sao chép ${label}`}
+      title={t('checkout.copy', { label })}
+      aria-label={t('checkout.copy', { label })}
     >
       {copiedField === field ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
     </button>
@@ -261,8 +263,8 @@ export function StoreCheckoutClient({
           className="bg-emerald-50 rounded-2xl p-8 shadow-xl border-2 border-emerald-300 text-center max-w-md"
         >
           <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-emerald-900 mb-2">Thanh toán thành công!</h3>
-          <p className="text-emerald-700">Đang chuyển hướng đến trang xác nhận...</p>
+          <h3 className="text-xl font-bold text-emerald-900 mb-2">{t('checkout.paymentSuccess')}</h3>
+          <p className="text-emerald-700">{t('checkout.redirectingConfirmed')}</p>
           <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto mt-4" />
         </motion.div>
       </div>
@@ -278,14 +280,14 @@ export function StoreCheckoutClient({
           className="bg-white rounded-2xl p-8 shadow-xl border border-emerald-100 text-center max-w-md"
         >
           <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Đặt hàng thành công!</h3>
-          <p className="text-gray-600 mb-4">Mã đơn: <span className="font-mono font-bold text-emerald-700">{order?.orderCode}</span></p>
-          <p className="text-sm text-gray-500 mb-6">Bạn sẽ thanh toán khi nhận hàng. Chúng tôi sẽ liên hệ để xác nhận.</p>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">{t('checkout.orderSuccess')}</h3>
+          <p className="text-gray-600 mb-4">{t('checkout.orderCodeLabel')} <span className="font-mono font-bold text-emerald-700">{order?.orderCode}</span></p>
+          <p className="text-sm text-gray-500 mb-6">{t('checkout.codNote')}</p>
           <button
             onClick={() => router.push(`/store/checkout/success?code=${order?.orderCode}&total=${order?.totalAmount}`)}
             className="w-full py-3 bg-emerald-700 text-white font-bold rounded-xl hover:bg-emerald-800 transition-colors"
           >
-            Xem xác nhận đơn hàng
+            {t('checkout.viewOrderConfirmation')}
           </button>
         </motion.div>
       </div>
@@ -302,7 +304,7 @@ export function StoreCheckoutClient({
         <nav className="container mx-auto px-4 py-4">
           <Link href="/store" className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800">
             <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại cửa hàng</span>
+            <span>{t('product.backToStore')}</span>
           </Link>
         </nav>
 
@@ -314,50 +316,50 @@ export function StoreCheckoutClient({
           >
             {qrUrl && !expiredNow && (
               <div className="flex justify-center p-6 bg-gradient-to-br from-amber-50 to-orange-50">
-                <img src={qrUrl} alt="QR thanh toán" className="w-52 h-52 rounded-xl" />
+                <img src={qrUrl} alt={t('checkout.qrAlt')} className="w-52 h-52 rounded-xl" />
               </div>
             )}
 
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {expiredNow ? 'Đơn hàng đã hết hạn' : 'Thanh toán chuyển khoản'}
+                {expiredNow ? t('checkout.orderExpiredTitle') : t('checkout.transferPaymentTitle')}
               </h2>
 
               {!expiredNow && (
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-                  <span className="text-gray-500">Ngân hàng</span>
+                  <span className="text-gray-500">{t('checkout.bank')}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{BANK_INFO.bank}</span>
-                    <CopyBtn text={BANK_INFO.bank} field="bank" label="ngân hàng" />
+                    <CopyBtn text={BANK_INFO.bank} field="bank" label={t('checkout.bank')} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-                  <span className="text-gray-500">Số tài khoản</span>
+                  <span className="text-gray-500">{t('checkout.accountNumber')}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-semibold">{BANK_INFO.accountNumber}</span>
-                    <CopyBtn text={BANK_INFO.accountNumber} field="account" label="số tài khoản" />
+                    <CopyBtn text={BANK_INFO.accountNumber} field="account" label={t('checkout.accountNumber')} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-                  <span className="text-gray-500">Chủ tài khoản</span>
+                  <span className="text-gray-500">{t('checkout.accountName')}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{BANK_INFO.accountName}</span>
-                    <CopyBtn text={BANK_INFO.accountName} field="name" label="chủ tài khoản" />
+                    <CopyBtn text={BANK_INFO.accountName} field="name" label={t('checkout.accountName')} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-                  <span className="text-gray-500">Nội dung CK</span>
+                  <span className="text-gray-500">{t('checkout.transferContent')}</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-bold text-emerald-700">{order.orderCode}</span>
-                    <CopyBtn text={order.orderCode} field="orderCode" label="nội dung CK" />
+                    <CopyBtn text={order.orderCode} field="orderCode" label={t('checkout.transferContent')} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-gray-500">Số tiền</span>
+                  <span className="text-gray-500">{t('checkout.amount')}</span>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-emerald-700 text-lg">{formatPrice(order.totalAmount)}</span>
-                    <CopyBtn text={order.totalAmount.toString()} field="amount" label="số tiền" />
+                    <span className="font-bold text-emerald-700 text-lg">{formatCurrency(order.totalAmount, locale)}</span>
+                    <CopyBtn text={order.totalAmount.toString()} field="amount" label={t('checkout.amount')} />
                   </div>
                 </div>
               </div>
@@ -365,12 +367,12 @@ export function StoreCheckoutClient({
 
               {expiredNow ? (
                 <div className="mt-6 p-4 bg-red-50 rounded-xl border border-red-200">
-                  <p className="text-sm font-semibold text-red-900">Đơn hàng đã hết hạn thanh toán</p>
+                  <p className="text-sm font-semibold text-red-900">{t('checkout.orderExpiredHeading')}</p>
                   <p className="text-xs text-red-700 mt-1">
-                    Mã đơn {order.orderCode} đã quá thời gian chờ. Vui lòng quay lại cửa hàng và đặt hàng lại.
+                    {t('checkout.orderExpiredDesc', { code: order.orderCode })}
                   </p>
                   <Link href={`/store/${product.slug}`} className="inline-block mt-3 text-sm font-semibold text-emerald-700 hover:text-emerald-800">
-                    Đặt hàng lại →
+                    {t('checkout.orderAgain')}
                   </Link>
                 </div>
               ) : (
@@ -378,11 +380,11 @@ export function StoreCheckoutClient({
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-amber-600" />
                     <p className="text-sm font-semibold text-amber-900">
-                      Đang chờ xác nhận... (còn {formatElapsed(remainingSec)})
+                      {t('checkout.waitingConfirmation', { remaining: formatElapsed(remainingSec) })}
                     </p>
                   </div>
                   <p className="text-xs text-amber-700 mt-1">
-                    Vui lòng chuyển khoản đúng số tiền và nội dung trong thời gian còn lại. Hệ thống tự động xác nhận trong ít phút.
+                    {t('checkout.transferPrompt')}
                   </p>
                 </div>
               )}
@@ -398,7 +400,7 @@ export function StoreCheckoutClient({
       <nav className="container mx-auto px-4 py-4">
         <Link href={`/store/${product.slug}`} className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800">
           <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại sản phẩm</span>
+          <span>{t('checkout.backToProduct')}</span>
         </Link>
       </nav>
 
@@ -409,7 +411,7 @@ export function StoreCheckoutClient({
           className="grid md:grid-cols-3 gap-6"
         >
           <div className="md:col-span-2 bg-white rounded-2xl shadow-xl border border-stone-200 p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Thông tin đơn hàng</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('checkout.title')}</h1>
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -420,7 +422,7 @@ export function StoreCheckoutClient({
             <div className="space-y-4">
               <div>
                 <label htmlFor="customer_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Họ và tên <span className="text-red-500">*</span>
+                  {t('checkout.name')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   ref={fieldRefs.customer_name}
@@ -440,7 +442,7 @@ export function StoreCheckoutClient({
                       ? 'border-red-400 bg-red-50/30 focus:border-red-500'
                       : 'border-stone-300 focus:border-emerald-500'
                   }`}
-                  placeholder="Nguyễn Văn A"
+                  placeholder={t('checkout.fullNamePlaceholder')}
                 />
                 {fieldErrors.customer_name && (
                   <p id="customer_name_error" className="text-sm text-red-600 mt-1" role="alert">
@@ -452,7 +454,7 @@ export function StoreCheckoutClient({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="customer_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Số điện thoại <span className="text-red-500">*</span>
+                    {t('checkout.phone')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     ref={fieldRefs.customer_phone}
@@ -481,7 +483,7 @@ export function StoreCheckoutClient({
                   )}
                 </div>
                 <div>
-                  <label htmlFor="customer_email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label htmlFor="customer_email" className="block text-sm font-medium text-gray-700 mb-1">{t('checkout.email')}</label>
                   <input
                     ref={fieldRefs.customer_email}
                     id="customer_email"
@@ -512,7 +514,7 @@ export function StoreCheckoutClient({
 
               <div>
                 <label htmlFor="shipping_address" className="block text-sm font-medium text-gray-700 mb-1">
-                  Địa chỉ giao hàng <span className="text-red-500">*</span>
+                  {t('checkout.address')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   ref={fieldRefs.shipping_address}
@@ -532,7 +534,7 @@ export function StoreCheckoutClient({
                       ? 'border-red-400 bg-red-50/30 focus:border-red-500'
                       : 'border-stone-300 focus:border-emerald-500'
                   }`}
-                  placeholder="Số nhà, đường, phường/xã, quận/huyện"
+                  placeholder={t('checkout.addressPlaceholder')}
                 />
                 {fieldErrors.shipping_address && (
                   <p id="shipping_address_error" className="text-sm text-red-600 mt-1" role="alert">
@@ -543,7 +545,7 @@ export function StoreCheckoutClient({
 
               <div>
                 <label htmlFor="shipping_province" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tỉnh / Thành phố <span className="text-red-500">*</span>
+                  {t('checkout.province')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   ref={fieldRefs.shipping_province}
@@ -563,7 +565,7 @@ export function StoreCheckoutClient({
                       : 'border-stone-300 focus:border-emerald-500'
                   }`}
                 >
-                  <option value="">Chọn tỉnh/thành phố</option>
+                  <option value="">{t('checkout.selectProvince')}</option>
                   {VN_PROVINCES.map(province => (
                     <option key={province} value={province}>
                       {province}
@@ -578,18 +580,18 @@ export function StoreCheckoutClient({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('checkout.note')}</label>
                 <input
                   type="text"
                   value={form.shipping_note}
                   onChange={e => setForm({ ...form, shipping_note: e.target.value })}
                   className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                  placeholder="Ghi chú về giao hàng (không bắt buộc)"
+                  placeholder={t('checkout.notePlaceholder')}
                 />
               </div>
 
               <div>
-                <span className="block text-sm font-medium text-gray-700 mb-2">Phương thức thanh toán</span>
+                <span className="block text-sm font-medium text-gray-700 mb-2">{t('checkout.paymentMethod')}</span>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setForm({ ...form, payment_method: 'banking' })}
@@ -600,7 +602,7 @@ export function StoreCheckoutClient({
                     }`}
                   >
                     <Banknote className="w-6 h-6" />
-                    <span className="font-semibold text-sm">Chuyển khoản</span>
+                    <span className="font-semibold text-sm">{t('checkout.banking')}</span>
                   </button>
                   <button
                     onClick={() => setForm({ ...form, payment_method: 'cod' })}
@@ -611,7 +613,7 @@ export function StoreCheckoutClient({
                     }`}
                   >
                     <Truck className="w-6 h-6" />
-                    <span className="font-semibold text-sm">COD</span>
+                    <span className="font-semibold text-sm">{t('checkout.cod')}</span>
                   </button>
                 </div>
               </div>
@@ -623,12 +625,12 @@ export function StoreCheckoutClient({
               className="w-full mt-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               {placing ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingBag className="w-5 h-5" />}
-              {placing ? 'Đang xử lý...' : 'Đặt hàng'}
+              {placing ? t('checkout.placingOrder') : t('checkout.placeOrder')}
             </button>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl border border-stone-200 p-6 h-fit">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Tóm tắt đơn hàng</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">{t('checkout.orderSummary')}</h2>
             <div className="flex gap-3 mb-4">
               <div className="w-16 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
                 {product.images?.[0] ? (
@@ -639,27 +641,27 @@ export function StoreCheckoutClient({
               </div>
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                <p className="text-sm text-gray-500">SL: {quantity}</p>
+                <p className="text-sm text-gray-500">{t('checkout.quantityLabel', { quantity })}</p>
               </div>
             </div>
             <div className="space-y-2 text-sm border-t border-stone-100 pt-4">
               <div className="flex justify-between">
-                <span className="text-gray-500">Tạm tính</span>
-                <span className="font-semibold">{formatPrice(subtotal)}</span>
+                <span className="text-gray-500">{t('checkout.subtotal')}</span>
+                <span className="font-semibold">{formatCurrency(subtotal, locale)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Phí vận chuyển</span>
+                <span className="text-gray-500">{t('checkout.shippingFee')}</span>
                 <span className="font-semibold">
                   {shippingFee === 0 ? (
-                    <span className="text-emerald-600">Miễn phí</span>
+                    <span className="text-emerald-600">{t('checkout.freeShipping')}</span>
                   ) : (
-                    formatPrice(shippingFee)
+                    formatCurrency(shippingFee, locale)
                   )}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-stone-100">
-                <span className="font-bold text-gray-900">Tổng cộng</span>
-                <span className="font-bold text-emerald-700 text-lg">{formatPrice(total)}</span>
+                <span className="font-bold text-gray-900">{t('checkout.total')}</span>
+                <span className="font-bold text-emerald-700 text-lg">{formatCurrency(total, locale)}</span>
               </div>
             </div>
           </div>

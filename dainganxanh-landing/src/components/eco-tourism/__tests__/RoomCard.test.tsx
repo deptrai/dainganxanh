@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { RoomCard, type Room } from '../RoomCard'
 
 const sampleRoom: Room = {
@@ -14,7 +15,7 @@ const sampleRoom: Room = {
 
 describe('RoomCard', () => {
     it('renders room name, capacity, price, and booking CTA', () => {
-        render(<RoomCard room={sampleRoom} lotId="lot-1" checkIn="2026-09-10" checkOut="2026-09-12" />)
+        renderWithIntl(<RoomCard room={sampleRoom} lotId="lot-1" checkIn="2026-09-10" checkOut="2026-09-12" />)
         expect(screen.getByText('Phòng Đôi')).toBeInTheDocument()
         expect(screen.getByText('2 khách')).toBeInTheDocument()
         expect(screen.getByText('1.200.000 ₫')).toBeInTheDocument()
@@ -23,13 +24,13 @@ describe('RoomCard', () => {
     })
 
     it('disables CTA and shows booked badge when state is booked', () => {
-        render(<RoomCard room={sampleRoom} lotId="lot-1" state="booked" />)
+        renderWithIntl(<RoomCard room={sampleRoom} lotId="lot-1" state="booked" />)
         expect(screen.getByText('Đã được đặt')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Đã đặt' })).toBeDisabled()
     })
 
     it('disables CTA and shows maintenance badge when state is blocked', () => {
-        render(<RoomCard room={sampleRoom} lotId="lot-1" state="blocked" />)
+        renderWithIntl(<RoomCard room={sampleRoom} lotId="lot-1" state="blocked" />)
         expect(screen.getByText('Đang bảo trì')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Bảo trì' })).toBeDisabled()
     })

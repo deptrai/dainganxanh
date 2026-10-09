@@ -1,13 +1,21 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { StoreCheckoutClient } from '../StoreCheckoutClient'
 import { VN_PROVINCES } from '@/lib/constants/provinces'
 
 const pushMock = jest.fn()
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: pushMock,
-  }),
-}))
+jest.mock('@/i18n/navigation', () => {
+  const React = require('react')
+  return {
+    Link: React.forwardRef(({ href, children, ...rest }: any, ref: any) =>
+      React.createElement('a', { href, ref, ...rest }, children)
+    ),
+    useRouter: () => ({
+      push: pushMock,
+    }),
+    usePathname: () => '/',
+  }
+})
 
 jest.mock('framer-motion', () => ({
   motion: {
@@ -39,7 +47,7 @@ describe('StoreCheckoutClient', () => {
 
   describe('PROVINCES', () => {
     it('renders all 63 provinces from VN_PROVINCES plus placeholder option in order', () => {
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
 
       const select = screen.getByLabelText(/Tỉnh \/ Thành phố/i) as HTMLSelectElement
       expect(select).toBeInTheDocument()
@@ -61,7 +69,7 @@ describe('StoreCheckoutClient', () => {
 
   describe('PREFILL', () => {
     it('prefills customer_name and customer_email when prefill prop is provided for logged-in user', () => {
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -83,7 +91,7 @@ describe('StoreCheckoutClient', () => {
     })
 
     it('renders empty form without crashing when prefill is undefined (guest)', () => {
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
 
       const nameInput = screen.getByLabelText(/Họ và tên/i) as HTMLInputElement
       const emailInput = screen.getByLabelText(/Email/i) as HTMLInputElement
@@ -104,7 +112,7 @@ describe('StoreCheckoutClient', () => {
       const fetchMock = jest.fn()
       global.fetch = fetchMock
 
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
 
       const submitBtn = screen.getByRole('button', { name: /Đặt hàng/i })
       fireEvent.click(submitBtn)
@@ -126,7 +134,7 @@ describe('StoreCheckoutClient', () => {
       const fetchMock = jest.fn()
       global.fetch = fetchMock
 
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -167,7 +175,7 @@ describe('StoreCheckoutClient', () => {
     })
 
     it('clears inline errors when valid input is typed', async () => {
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
 
       const submitBtn = screen.getByRole('button', { name: /Đặt hàng/i })
       fireEvent.click(submitBtn)
@@ -183,20 +191,20 @@ describe('StoreCheckoutClient', () => {
   describe('PRICE_SUMMARY & FREESHIP', () => {
     it('charges standard shipping fee of 30,000đ when subtotal is below 500,000đ threshold', () => {
       // 200,000 * 2 = 400,000 < 500,000
-      render(<StoreCheckoutClient product={mockProduct} quantity={2} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={2} />)
 
-      expect(screen.getByText('400.000đ')).toBeInTheDocument() // subtotal
-      expect(screen.getByText('30.000đ')).toBeInTheDocument() // shipping fee
-      expect(screen.getByText('430.000đ')).toBeInTheDocument() // total
+      expect(screen.getByText(/400\.000/)).toBeInTheDocument() // subtotal
+      expect(screen.getByText(/^30\.000/)).toBeInTheDocument() // shipping fee
+      expect(screen.getByText(/430\.000/)).toBeInTheDocument() // total
     })
 
     it('grants free shipping when subtotal reaches 500,000đ threshold', () => {
       // 200,000 * 3 = 600,000 >= 500,000
-      render(<StoreCheckoutClient product={mockProduct} quantity={3} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={3} />)
 
       expect(screen.getByText('Miễn phí')).toBeInTheDocument() // free shipping
       // Total equals subtotal (600.000đ), which appears twice (subtotal and total)
-      const matchingAmounts = screen.getAllByText('600.000đ')
+      const matchingAmounts = screen.getAllByText(/600\.000/)
       expect(matchingAmounts).toHaveLength(2)
     })
   })
@@ -216,7 +224,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -262,7 +270,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -296,7 +304,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -326,7 +334,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -355,7 +363,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(
+      renderWithIntl(
         <StoreCheckoutClient
           product={mockProduct}
           quantity={1}
@@ -382,7 +390,7 @@ describe('StoreCheckoutClient', () => {
       const fetchMock = jest.fn()
       global.fetch = fetchMock
 
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
       fireEvent.change(screen.getByLabelText(/Họ và tên/i), { target: { value: 'Nguyễn Văn A' } })
       fireEvent.change(screen.getByLabelText(/Số điện thoại/i), { target: { value: '0912345678' } })
       fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'not-an-email' } })
@@ -409,7 +417,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
       fireEvent.change(screen.getByLabelText(/Họ và tên/i), { target: { value: '  Nguyễn Văn A  ' } })
       fireEvent.change(screen.getByLabelText(/Số điện thoại/i), { target: { value: ' 0912345678 ' } })
       fireEvent.change(screen.getByLabelText(/Địa chỉ giao hàng/i), { target: { value: ' 78 Hai Bà Trưng ' } })
@@ -446,7 +454,7 @@ describe('StoreCheckoutClient', () => {
       })
       global.fetch = fetchMock
 
-      render(<StoreCheckoutClient product={mockProduct} quantity={1} />)
+      renderWithIntl(<StoreCheckoutClient product={mockProduct} quantity={1} />)
       fireEvent.change(screen.getByLabelText(/Họ và tên/i), { target: { value: 'Nguyễn Văn A' } })
       fireEvent.change(screen.getByLabelText(/Số điện thoại/i), { target: { value: '0912345678' } })
       fireEvent.change(screen.getByLabelText(/Địa chỉ giao hàng/i), { target: { value: '78 Hai Bà Trưng' } })

@@ -1,10 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Link } from '@/i18n/navigation'
-import { ArrowLeft, LogIn, Gift } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Link, useRouter } from '@/i18n/navigation'
+import { LogIn, Gift } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { PhoneEmailInput } from "@/components/auth/PhoneEmailInput";
@@ -14,6 +15,7 @@ import Cookies from "js-cookie";
 const DEFAULT_REF = "dainganxanh";
 
 function RefCodeModal({ onDone }: { onDone: () => void }) {
+    const tModal = useTranslations('auth.login.refModal');
     const [refInput, setRefInput] = useState("");
     const [refError, setRefError] = useState("");
 
@@ -43,8 +45,8 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
                         <Gift className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-bold text-gray-900">Nhập mã giới thiệu</h2>
-                        <p className="text-xs text-gray-500">Ai đã giới thiệu bạn đến Đại Ngàn Xanh?</p>
+                        <h2 className="text-lg font-bold text-gray-900">{tModal('title')}</h2>
+                        <p className="text-xs text-gray-500">{tModal('desc')}</p>
                     </div>
                 </div>
 
@@ -55,7 +57,7 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
                         setRefInput(e.target.value.toLowerCase());
                         if (refError) setRefError("");
                     }}
-                    placeholder="VD: dainganxanh"
+                    placeholder={tModal('placeholder')}
                     maxLength={20}
                     autoFocus
                     className={`w-full border rounded-lg px-4 py-2.5 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
@@ -71,7 +73,7 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
                         onClick={handleSubmit}
                         className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors"
                     >
-                        Xác nhận
+                        {tModal('confirm')}
                     </button>
                 </div>
             </motion.div>
@@ -80,11 +82,14 @@ function RefCodeModal({ onDone }: { onDone: () => void }) {
 }
 
 function LoginContent() {
+    const t = useTranslations('auth.login');
     const router = useRouter();
     const searchParams = useSearchParams();
     const quantity = searchParams.get("quantity") || "1";
     const explicitRedirect = searchParams.get("redirect");
-    const redirectTo = explicitRedirect || (searchParams.get("quantity") ? `/checkout?quantity=${quantity}` : "/crm/my-garden");
+    const safeRedirect = (explicitRedirect && explicitRedirect.startsWith('/') && !explicitRedirect.startsWith('//'))
+        ? explicitRedirect
+        : (searchParams.get("quantity") ? `/checkout?quantity=${quantity}` : "/crm/my-garden");
     const [showRefModal, setShowRefModal] = useState(false);
 
     const {
@@ -111,12 +116,12 @@ function LoginContent() {
                 if (!Cookies.get("ref")) {
                     setShowRefModal(true);
                 } else {
-                    window.location.href = redirectTo;
+                    router.push(safeRedirect);
                 }
             }
         };
         checkSession();
-    }, [redirectTo]);
+    }, [router, safeRedirect]);
 
     const handleVerifyComplete = async (otpCode: string) => {
         try {
@@ -125,7 +130,7 @@ function LoginContent() {
             if (!Cookies.get("ref")) {
                 setShowRefModal(true);
             } else {
-                window.location.href = redirectTo;
+                router.push(safeRedirect);
             }
         } catch (err) {
             console.error("Verification failed:", err);
@@ -134,7 +139,7 @@ function LoginContent() {
 
     const handleRefDone = () => {
         setShowRefModal(false);
-        window.location.href = redirectTo;
+        router.push(safeRedirect);
     };
 
     return (
@@ -155,12 +160,12 @@ function LoginContent() {
                         <LogIn className="w-8 h-8 text-emerald-600" />
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                        {step === "input" ? "Đăng nhập" : "Xác thực OTP"}
+                        {step === "input" ? t('title') : t('otpTitle')}
                     </h1>
                     <p className="text-gray-600">
                         {step === "input"
-                            ? "Nhập số điện thoại hoặc email để nhận mã OTP"
-                            : `Mã OTP đã được gửi đến ${identifier}`}
+                            ? t('inputDesc')
+                            : t('otpDesc', { identifier })}
                     </p>
                 </motion.div>
 
@@ -195,12 +200,12 @@ function LoginContent() {
                     {/* Register Link */}
                     <div className="mt-6 pt-6 border-t border-gray-200">
                         <p className="text-center text-sm text-gray-600">
-                            Chưa có tài khoản?{" "}
+                            {t('noAccount')}{" "}
                             <Link
                                 href={`/register?quantity=${quantity}`}
                                 className="text-emerald-600 font-semibold hover:underline"
                             >
-                                Đăng ký ngay
+                                {t('registerNow')}
                             </Link>
                         </p>
                     </div>
@@ -214,8 +219,8 @@ function LoginContent() {
                     className="mt-8 space-y-4"
                 >
                     <div className="text-center text-sm text-gray-600">
-                        <p>🔒 Thông tin của bạn được bảo mật tuyệt đối</p>
-                        <p className="mt-1">Mã OTP có hiệu lực trong 5 phút</p>
+                        <p>{t('securityNote')}</p>
+                        <p className="mt-1">{t('otpExpiryNote')}</p>
                     </div>
                 </motion.div>
             </div>
@@ -223,16 +228,21 @@ function LoginContent() {
     );
 }
 
+function LoginFallback() {
+    const t = useTranslations('auth.login');
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
+            <div className="text-center">
+                <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">{t('loading')}</p>
+            </div>
+        </div>
+    );
+}
+
 export default function LoginPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Đang tải...</p>
-                </div>
-            </div>
-        }>
+        <Suspense fallback={<LoginFallback />}>
             <LoginContent />
         </Suspense>
     );

@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { VietQRDisplay } from '../VietQRDisplay'
 
 describe('VietQRDisplay Component', () => {
@@ -38,7 +39,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('renders booking code, bank details, and VietQR image', () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const codes = screen.getAllByText('BKABC123')
     expect(codes.length).toBeGreaterThanOrEqual(1)
     expect(codes[0]).toBeInTheDocument()
@@ -50,8 +51,8 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('allows copying bank info to clipboard', async () => {
-    render(<VietQRDisplay {...defaultProps} />)
-    const copyCodeBtn = screen.getByRole('button', { name: 'Sao chép nội dung CK' })
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
+    const copyCodeBtn = screen.getByRole('button', { name: /Sao chép nội dung CK/i })
     await act(async () => {
       fireEvent.click(copyCodeBtn)
     })
@@ -64,7 +65,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ ok: true }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const claimBtn = screen.getByRole('button', { name: /Đã chuyển tiền thành công/i })
     fireEvent.click(claimBtn)
 
@@ -78,7 +79,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('opens confirmation modal on "Hủy đặt phòng" click and can be dismissed', async () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -93,7 +94,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('closes confirmation modal on Escape key', async () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -109,7 +110,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ ok: true }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -131,7 +132,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ status: 'confirmed' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
 
     act(() => {
       jest.advanceTimersByTime(5000)
@@ -149,7 +150,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ status: 'cancelled' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
 
     act(() => {
       jest.advanceTimersByTime(5000)
@@ -169,12 +170,12 @@ describe('VietQRDisplay Component', () => {
       },
     }
 
-    render(<VietQRDisplay {...pastProps} />)
+    renderWithIntl(<VietQRDisplay {...pastProps} />)
     expect(defaultProps.onExpired).toHaveBeenCalled()
   })
 
   it('closes confirmation modal on backdrop click', () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -194,7 +195,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ error: 'Đơn đặt phòng không còn ở trạng thái chờ thanh toán' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -209,7 +210,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('cleans up intervals on unmount', () => {
-    const { unmount } = render(<VietQRDisplay {...defaultProps} />)
+    const { unmount } = renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
     unmount()
     expect(clearIntervalSpy).toHaveBeenCalledTimes(2)
@@ -222,7 +223,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ status: 'pending' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
 
     // Initial polling tick after 5s
     act(() => {
@@ -268,7 +269,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ status: 'confirmed' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
 
     // First poll confirms booking
     act(() => {

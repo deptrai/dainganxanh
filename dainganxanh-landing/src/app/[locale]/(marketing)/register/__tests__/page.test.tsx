@@ -4,8 +4,12 @@ jest.mock('@/lib/supabase/client', () => ({
 }))
 
 jest.mock('next/navigation', () => ({
-    useRouter: jest.fn(),
     useSearchParams: jest.fn(),
+}))
+
+jest.mock('@/i18n/navigation', () => ({
+    Link: ({ href, children, ...props }: any) => <a href={href} {...props}>{children}</a>,
+    useRouter: jest.fn(),
 }))
 
 jest.mock('@/hooks/useAuth', () => ({
@@ -28,9 +32,11 @@ jest.mock('framer-motion', () => ({
     AnimatePresence: ({ children }: any) => <>{children}</>,
 }))
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
 import Cookies from 'js-cookie'
@@ -105,7 +111,7 @@ describe('RegisterPage', () => {
 
     describe('Referral Code Validation', () => {
         it('should show error when trying to send OTP without referral code', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             // Wait for component to load
             await waitFor(() => {
@@ -134,7 +140,7 @@ describe('RegisterPage', () => {
             const existingRefCode = 'ABC123'
             mockCookies.get.mockReturnValue(existingRefCode)
 
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 const refInput = screen.getByPlaceholderText(/VD: dainganxanh/i)
@@ -143,7 +149,7 @@ describe('RegisterPage', () => {
         })
 
         it('should NOT show quick-fill default referral button', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText(/Đăng ký nhanh/i)).toBeInTheDocument()
@@ -155,7 +161,7 @@ describe('RegisterPage', () => {
         })
 
         it('should convert referral code to lowercase', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText(/Đăng ký nhanh/i)).toBeInTheDocument()
@@ -173,7 +179,7 @@ describe('RegisterPage', () => {
         })
 
         it('should limit referral code to 20 characters', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText(/Đăng ký nhanh/i)).toBeInTheDocument()
@@ -188,7 +194,7 @@ describe('RegisterPage', () => {
             mockUseAuth.step = 'verify'
             mockUseAuth.verifyOTP = jest.fn().mockResolvedValue(undefined)
 
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             // The component should be in OTP step
             // Since handleVerifyComplete is triggered by OTPInput component,
@@ -233,7 +239,7 @@ describe('RegisterPage', () => {
                 error: null,
             })
 
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(mockRouter.replace).toHaveBeenCalledWith('/checkout?quantity=5&package=standard')
@@ -241,7 +247,7 @@ describe('RegisterPage', () => {
         })
 
         it('should not redirect if no session', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText(/Đăng ký nhanh/i)).toBeInTheDocument()
@@ -253,7 +259,7 @@ describe('RegisterPage', () => {
 
     describe('Quantity Display', () => {
         it('should display correct quantity from URL params', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText('5 cây')).toBeInTheDocument()
@@ -261,18 +267,18 @@ describe('RegisterPage', () => {
         })
 
         it('should calculate correct total price', async () => {
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 // 5 cây × 410,000 = 2,050,000
-                expect(screen.getByText('2.050.000 ₫')).toBeInTheDocument()
+                expect(screen.getByText(/2\.050\.000/)).toBeInTheDocument()
             })
         })
 
         it('should default to 1 if no quantity param', async () => {
             mockSearchParams.get.mockReturnValue(null)
 
-            render(<RegisterPage />)
+            renderWithIntl(<RegisterPage />)
 
             await waitFor(() => {
                 expect(screen.getByText('1 cây')).toBeInTheDocument()

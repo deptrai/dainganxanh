@@ -1,19 +1,36 @@
 import type { Metadata } from 'next'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getEffectiveUser } from '@/lib/getEffectiveUser'
 import { StoreCheckoutClient } from '@/components/store/StoreCheckoutClient'
 
-export const metadata: Metadata = {
-  title: 'Thanh toán — Cửa Hàng Trầm Hương',
-  description: 'Hoàn tất đơn hàng sản phẩm trầm hương.',
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params
+  setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: 'store.metadata' })
+  return {
+    title: t('checkoutTitle'),
+    description: t('checkoutDesc'),
+    robots: { index: false, follow: false },
+  }
 }
 
-export default async function StoreCheckoutPage({ searchParams }: { searchParams: Promise<{ slug?: string; quantity?: string }> }) {
+export default async function StoreCheckoutPage({
+  params = Promise.resolve({ locale: 'vi' }),
+  searchParams,
+}: {
+  params?: Promise<{ locale: string }>
+  searchParams: Promise<{ slug?: string; quantity?: string }>
+}) {
+  const { locale } = await params
+  setRequestLocale(locale)
   const { slug, quantity } = await searchParams
+  const t = await getTranslations({ locale, namespace: 'store.checkoutPage' })
+
   if (!slug) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Không tìm thấy sản phẩm. Vui lòng chọn sản phẩm từ cửa hàng.</p>
+        <p className="text-gray-500">{t('noProduct')}</p>
       </div>
     )
   }
@@ -31,7 +48,7 @@ export default async function StoreCheckoutPage({ searchParams }: { searchParams
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Sản phẩm không tồn tại.</p>
+        <p className="text-gray-500">{t('notFound')}</p>
       </div>
     )
   }
@@ -39,7 +56,7 @@ export default async function StoreCheckoutPage({ searchParams }: { searchParams
   if (product.stock_quantity < qty) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-600">Sản phẩm không đủ tồn kho ({product.stock_quantity} còn lại, bạn yêu cầu {qty}).</p>
+        <p className="text-red-600">{t('outOfStock', { stock: product.stock_quantity, requested: qty })}</p>
       </div>
     )
   }

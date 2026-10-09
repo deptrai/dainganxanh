@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { GardenDetailClient, GardenDetail } from '../GardenDetailClient'
 import { useSearchParams } from 'next/navigation'
 
@@ -52,7 +53,7 @@ describe('GardenDetailClient Component', () => {
 
   it('renders garden details without cancellation banner when cancelled param is absent', () => {
     ;(useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams(''))
-    render(<GardenDetailClient garden={mockGarden} />)
+    renderWithIntl(<GardenDetailClient garden={mockGarden} />)
 
     expect(screen.getByText('Vườn Trầm Ba Vì')).toBeInTheDocument()
     expect(screen.getByText('Miền Bắc')).toBeInTheDocument()
@@ -61,7 +62,7 @@ describe('GardenDetailClient Component', () => {
 
   it('renders cancellation feedback banner when cancelled=1 in searchParams', () => {
     ;(useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams('cancelled=1'))
-    render(<GardenDetailClient garden={mockGarden} />)
+    renderWithIntl(<GardenDetailClient garden={mockGarden} />)
 
     expect(screen.getByText(/Đã hủy đơn đặt phòng thành công/i)).toBeInTheDocument()
 

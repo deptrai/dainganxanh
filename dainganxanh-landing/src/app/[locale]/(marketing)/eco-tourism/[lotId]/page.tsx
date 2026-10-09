@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { Link } from '@/i18n/navigation'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { GardenDetailClient, type GardenDetail } from '@/components/eco-tourism/GardenDetailClient'
 import type { RoomBooking, RoomBlock } from '@/lib/eco-tourism/availability'
@@ -6,8 +8,10 @@ import { applyEffectiveRoomPrices, type RoomPricingRule } from '@/lib/pricing'
 
 export const revalidate = 3600
 
-export async function generateMetadata({ params }: { params: Promise<{ lotId: string }> }): Promise<Metadata> {
-    const { lotId } = await params
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; lotId: string }> }): Promise<Metadata> {
+    const { locale, lotId } = await params
+    setRequestLocale(locale)
+    const t = await getTranslations({ locale, namespace: 'eco.meta' })
     const supabase = createServiceRoleClient()
     const { data: lot } = await supabase
         .from('lots')
@@ -16,18 +20,26 @@ export async function generateMetadata({ params }: { params: Promise<{ lotId: st
         .maybeSingle()
 
     const ogImage = Array.isArray(lot?.images) && lot.images.length > 0 ? lot.images[0] : undefined
+    const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/eco-tourism/${lotId}` : `https://dainganxanh.com.vn/en/eco-tourism/${lotId}`
 
     return {
-        title: lot ? `${lot.name} — Nghỉ Dưỡng Tại Vườn` : 'Vườn nghỉ dưỡng — Đại Ngàn Xanh',
-        description: lot?.description ?? 'Khám phá phòng nghỉ sinh thái tại vườn Dó Đen.',
-        alternates: { canonical: `https://dainganxanh.com.vn/eco-tourism/${lotId}` },
+        title: lot ? `${lot.name} — ${t('title')}` : `${t('title')}`,
+        description: lot?.description ?? t('description'),
+        alternates: {
+            canonical,
+            languages: {
+                vi: `https://dainganxanh.com.vn/eco-tourism/${lotId}`,
+                en: `https://dainganxanh.com.vn/en/eco-tourism/${lotId}`,
+                'x-default': `https://dainganxanh.com.vn/eco-tourism/${lotId}`,
+            },
+        },
         openGraph: {
-            title: lot ? `${lot.name} — Nghỉ Dưỡng Tại Vườn` : 'Vườn nghỉ dưỡng — Đại Ngàn Xanh',
-            description: lot?.description ?? 'Khám phá phòng nghỉ sinh thái tại vườn Dó Đen.',
-            url: `https://dainganxanh.com.vn/eco-tourism/${lotId}`,
+            title: lot ? `${lot.name} — ${t('title')}` : `${t('title')}`,
+            description: lot?.description ?? t('description'),
+            url: canonical,
             siteName: 'Đại Ngàn Xanh',
             type: 'website',
-            locale: 'vi_VN',
+            locale: locale === 'vi' ? 'vi_VN' : 'en_US',
             images: ogImage ? [{ url: ogImage }] : undefined,
         },
     }
@@ -55,11 +67,12 @@ interface LotWithRooms {
     rooms: Room[]
 }
 
-function buildJsonLd(lot: LotWithRooms) {
+function buildJsonLd(lot: LotWithRooms, locale: string) {
+    const baseUrl = locale === 'vi' ? 'https://dainganxanh.com.vn' : 'https://dainganxanh.com.vn/en'
     return {
         '@context': 'https://schema.org',
         '@type': 'LodgingBusiness',
-        '@id': `https://dainganxanh.com.vn/eco-tourism/${lot.id}`,
+        '@id': `${baseUrl}/eco-tourism/${lot.id}`,
         name: lot.name,
         description: lot.description ?? undefined,
         image: Array.isArray(lot.images) ? lot.images : [],
@@ -70,7 +83,7 @@ function buildJsonLd(lot: LotWithRooms) {
         },
         hasOfferCatalog: {
             '@type': 'OfferCatalog',
-            name: 'Phòng nghỉ',
+            name: locale === 'en' ? 'Rooms & Suites' : 'Phòng nghỉ',
             itemListElement: (Array.isArray(lot.rooms) ? lot.rooms : [])
                 .filter((r) => r.status === 'active')
                 .map((room) => ({
@@ -90,8 +103,10 @@ function buildJsonLd(lot: LotWithRooms) {
     }
 }
 
-export default async function GardenDetailPage({ params }: { params: Promise<{ lotId: string }> }) {
-    const { lotId } = await params
+export default async function GardenDetailPage({ params }: { params: Promise<{ locale: string; lotId: string }> }) {
+    const { locale, lotId } = await params
+    setRequestLocale(locale)
+    const t = await getTranslations({ locale, namespace: 'eco' })
     const supabase = createServiceRoleClient()
 
     const { data: rawLot, error } = await supabase
@@ -109,11 +124,11 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
                 <div className="text-center text-gray-500">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy vườn</h1>
-                    <p>Vườn này không tồn tại hoặc đã ngừng hoạt động.</p>
-                    <a href="/eco-tourism" className="mt-4 inline-block text-emerald-600 hover:underline">
-                        Quay lại danh sách vườn
-                    </a>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('detail.notFound')}</h1>
+                    <p>{t('detail.notFoundDesc')}</p>
+                    <Link href="/eco-tourism" className="mt-4 inline-block text-emerald-600 hover:underline">
+                        {t('detail.backToList')}
+                    </Link>
                 </div>
             </div>
         )
@@ -168,14 +183,15 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
         ...lot,
         rooms: effectiveRooms,
     }
-    const jsonLd = buildJsonLd(lotForJsonLd)
+    const jsonLd = buildJsonLd(lotForJsonLd, locale)
 
     return (
         <>
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\u003c') }}
-            />
+            >
+                {JSON.stringify(jsonLd).replace(/</g, '\\u003c')}
+            </script>
             <GardenDetailClient garden={garden} />
         </>
     )

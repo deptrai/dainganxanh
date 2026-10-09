@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Link } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
+import { useTranslations } from 'next-intl'
 import { BookingForm } from '@/components/eco-tourism/BookingForm'
 import { OrderSummary } from '@/components/eco-tourism/OrderSummary'
 import { VietQRDisplay } from '@/components/eco-tourism/VietQRDisplay'
@@ -56,6 +56,7 @@ export default function BookingPageClient({
     initialBooking = null,
     initialStep,
 }: BookingPageClientProps) {
+    const t = useTranslations('eco')
     const router = useRouter()
     const [step, setStep] = useState<Step>(initialStep || (initialBooking ? 'payment' : 'form'))
     const [booking, setBooking] = useState<BookingResponse | null>(initialBooking)
@@ -100,10 +101,10 @@ export default function BookingPageClient({
             <div className="max-w-6xl mx-auto">
                 <div className="mb-6">
                     <Link href={`/eco-tourism/${lot.id}`} className="text-sm text-emerald-600 hover:underline mb-2 inline-block">
-                        ← Quay lại trang vườn
+                        {t('bookingPage.backToGarden')}
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900">Đặt phòng tại {lot.name}</h1>
-                    <p className="text-gray-600 mt-1">Vùng {lot.region} • Check-in {checkIn} • Check-out {checkOut}</p>
+                    <h1 className="text-3xl font-bold text-gray-900">{t('bookingPage.title', { lotName: lot.name })}</h1>
+                    <p className="text-gray-600 mt-1">{t('bookingPage.subtitle', { region: lot.region, checkIn, checkOut })}</p>
                 </div>
 
                 {step === 'form' && (
@@ -149,8 +150,8 @@ export default function BookingPageClient({
                 {step === 'success' && (
                     <div className="max-w-md mx-auto bg-emerald-50 rounded-2xl p-8 text-center border border-emerald-200">
                         <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-emerald-900 mb-2">Thanh toán thành công!</h2>
-                        <p className="text-emerald-700">Đang chuyển hướng đến trang xác nhận...</p>
+                        <h2 className="text-xl font-bold text-emerald-900 mb-2">{t('bookingPage.successTitle')}</h2>
+                        <p className="text-emerald-700">{t('bookingPage.redirecting')}</p>
                         <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto mt-4" />
                     </div>
                 )}
@@ -158,13 +159,13 @@ export default function BookingPageClient({
                 {step === 'expired' && (
                     <div className="max-w-md mx-auto bg-amber-50 rounded-2xl p-8 text-center border border-amber-200">
                         <Clock className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-amber-900 mb-2">Đơn đặt phòng đã hết hạn</h2>
-                        <p className="text-amber-700 mb-4">Thời gian giữ chỗ 15 phút đã hết. Vui lòng chọn ngày khác.</p>
+                        <h2 className="text-xl font-bold text-amber-900 mb-2">{t('bookingPage.expiredTitle')}</h2>
+                        <p className="text-amber-700 mb-4">{t('bookingPage.expiredDesc')}</p>
                         <Link
                             href={`/eco-tourism/${lot.id}`}
                             className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700"
                         >
-                            Chọn ngày khác
+                            {t('bookingPage.chooseOtherDates')}
                         </Link>
                     </div>
                 )}

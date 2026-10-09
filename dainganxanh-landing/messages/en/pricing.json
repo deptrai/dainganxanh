@@ -60,5 +60,23 @@
     "paymentMethod": "Payment method",
     "bankTransfer": "Bank transfer (VietQR)",
     "confirmButton": "Confirm & Pay"
+  },
+  "page": {
+    "title": "Aquilaria Tree Planting Package",
+    "subtitle": "Every tree you plant is a contribution to Vietnam''s green future",
+    "trustCare": "Committed care",
+    "trustCareYears": "10 years",
+    "trustGps": "GPS transparency",
+    "trustGpsRate": "100%",
+    "trustCo2": "CO₂ absorbed/year",
+    "trustCo2Rate": "20kg"
+  },
+  "card": {
+    "withInsurance": "With Insurance",
+    "perTree": "/tree",
+    "breakdownTitle": "Included costs:",
+    "featuresTitle": "Benefits:",
+    "customize": "Customize Quantity",
+    "customizeAria": "Customize the number of trees to plant"
   }
 }
