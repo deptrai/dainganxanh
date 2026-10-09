@@ -1,11 +1,13 @@
-import { redirect, notFound } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { notFound } from 'next/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { BookingDetail } from '@/components/crm/BookingDetail'
 import { Metadata } from 'next'
 import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
 
 interface BookingDetailPageProps {
-    params: Promise<{ bookingId: string }>
+    params: Promise<{ locale: string; bookingId: string }>
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,12 +15,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BookingDetailPage({ params }: BookingDetailPageProps) {
-    const { bookingId } = await params
+    const { locale, bookingId } = await params
+    setRequestLocale(locale)
+
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
     if (!scoped) {
-        redirect(`/login?redirect=${encodeURIComponent(`/crm/my-bookings/${bookingId}`)}`)
+        redirect({ href: `/login?redirect=${encodeURIComponent(`/crm/my-bookings/${bookingId}`)}`, locale })
+        return null
     }
 
     const { client: serviceClient, effectiveUserId } = scoped

@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Link } from '@/i18n/navigation'
+import { useRouter, Link } from '@/i18n/navigation'
 import { generateSlug } from '@/lib/utils/formatters'
 import { compressImage } from '@/lib/imageProcessing'
 import { PhotoUploader, type PhotoFile } from '@/components/admin/PhotoUploader'

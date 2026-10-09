@@ -1,11 +1,22 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import MyStoreOrdersPage from '../page'
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 import { captureError } from '@/lib/monitoring'
+
+jest.mock('@/i18n/navigation', () => ({
+    redirect: jest.fn().mockImplementation((target: any) => {
+        const url = typeof target === 'string' ? target : target.href
+        throw new Error(`NEXT_REDIRECT: ${url}`)
+    }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+    useRouter: () => ({ push: jest.fn() }),
+    usePathname: () => '/crm/my-store-orders',
+}))
 
 jest.mock('next/navigation', () => ({
     redirect: jest.fn().mockImplementation((url: string) => {
@@ -82,7 +93,9 @@ describe('MyStoreOrdersPage', () => {
             MyStoreOrdersPage({ searchParams: Promise.resolve({}) })
         ).rejects.toThrow('NEXT_REDIRECT: /login?redirect=/crm/my-store-orders')
 
-        expect(redirect).toHaveBeenCalledWith('/login?redirect=/crm/my-store-orders')
+        expect(redirect).toHaveBeenCalledWith(
+            expect.objectContaining({ href: '/login?redirect=/crm/my-store-orders' })
+        )
     })
 
     it('calls rpc("expire_pending_store_orders") before querying store orders', async () => {
@@ -92,7 +105,7 @@ describe('MyStoreOrdersPage', () => {
         })
 
         const Page = await MyStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(Page)
+        renderWithIntl(Page)
 
         expect(mockSupabase.rpc).toHaveBeenCalledWith('expire_pending_store_orders')
         expect(mockSupabase.from).toHaveBeenCalledWith('store_orders')
@@ -112,7 +125,7 @@ describe('MyStoreOrdersPage', () => {
         })
 
         const Page = await MyStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(Page)
+        renderWithIntl(Page)
 
         expect(captureError).toHaveBeenCalledWith(
             expect.any(Error),
@@ -133,7 +146,7 @@ describe('MyStoreOrdersPage', () => {
         })
 
         const Page = await MyStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(Page)
+        renderWithIntl(Page)
 
         expect(
             screen.getByText('Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.')
@@ -188,7 +201,7 @@ describe('MyStoreOrdersPage', () => {
         })
 
         const Page = await MyStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(Page)
+        renderWithIntl(Page)
 
         expect(screen.getByText('ORD-ARRAY', { exact: false })).toBeInTheDocument()
     })

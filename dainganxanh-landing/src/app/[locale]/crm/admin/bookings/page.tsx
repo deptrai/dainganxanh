@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import AdminBookingClient from '@/components/admin/AdminBookingClient'
 
@@ -9,15 +10,21 @@ export const metadata: Metadata = {
 }
 
 export default async function AdminBookingsPage({
+    params,
     searchParams,
 }: {
+    params: Promise<{ locale: string }>
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+    const { locale } = await params
+    setRequestLocale(locale)
+
     const supabase = await createServerClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
-        redirect('/auth/login')
+        redirect({ href: '/auth/login', locale })
+        return null
     }
 
     const serviceSupabase = createServiceRoleClient()
@@ -29,7 +36,8 @@ export default async function AdminBookingsPage({
 
     const allowedRoles = new Set(['admin', 'super_admin', 'resort_manager'])
     if (!profile || !allowedRoles.has(profile.role)) {
-        redirect('/crm/my-bookings')
+        redirect({ href: '/crm/my-bookings', locale })
+        return null
     }
 
     const { page, status, search, dateFrom, dateTo, lotId } = await searchParams

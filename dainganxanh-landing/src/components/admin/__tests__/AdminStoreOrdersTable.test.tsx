@@ -1,7 +1,15 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import AdminStoreOrdersTable, { AdminStoreOrder } from '../AdminStoreOrdersTable'
 import { updateStoreOrderStatus } from '@/actions/adminStoreOrders'
+
+const mockPush = jest.fn()
+jest.mock('@/i18n/navigation', () => ({
+    useRouter: () => ({ push: mockPush, refresh: jest.fn() }),
+    usePathname: () => '/crm/admin/store-orders',
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+}))
 
 jest.mock('@/actions/adminStoreOrders', () => ({
     updateStoreOrderStatus: jest.fn(),
@@ -132,12 +140,17 @@ describe('AdminStoreOrdersTable', () => {
     })
 
     it('renders empty state when no orders provided', () => {
-        render(<AdminStoreOrdersTable orders={[]} />)
+        renderWithIntl(<AdminStoreOrdersTable orders={[]} />)
         expect(screen.getByText('Chưa có đơn hàng nào')).toBeInTheDocument()
     })
 
+    it('renders empty state in English when locale is en', () => {
+        renderWithIntl(<AdminStoreOrdersTable orders={[]} />, { locale: 'en' })
+        expect(screen.getByText('No store orders found')).toBeInTheDocument()
+    })
+
     it('renders table headers and filter tabs', () => {
-        render(<AdminStoreOrdersTable orders={mockOrders} currentStatus="pending" />)
+        renderWithIntl(<AdminStoreOrdersTable orders={mockOrders} currentStatus="pending" />)
 
         // Filter tab links
         expect(screen.getByRole('link', { name: 'Tất cả' })).toBeInTheDocument()
@@ -160,7 +173,7 @@ describe('AdminStoreOrdersTable', () => {
     })
 
     it('renders order summary details correctly in table rows', () => {
-        render(<AdminStoreOrdersTable orders={mockOrders} />)
+        renderWithIntl(<AdminStoreOrdersTable orders={mockOrders} />)
 
         expect(screen.getByText('ORD-PENDING-001')).toBeInTheDocument()
         expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument()
@@ -171,7 +184,7 @@ describe('AdminStoreOrdersTable', () => {
     })
 
     it('expands and collapses row details on accordion button click', () => {
-        render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+        renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
         const toggleBtn = screen.getByRole('button', { name: 'Xem chi tiết đơn hàng' })
         expect(toggleBtn).toHaveAttribute('aria-expanded', 'false')
@@ -196,7 +209,7 @@ describe('AdminStoreOrdersTable', () => {
     })
 
     it('renders tracking number and cancellation reason in expanded details when available', () => {
-        render(<AdminStoreOrdersTable orders={[mockOrders[3], mockOrders[5]]} />)
+        renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[3], mockOrders[5]]} />)
 
         // Expand shipped order
         const expandButtons = screen.getAllByRole('button', { name: 'Xem chi tiết đơn hàng' })
@@ -220,7 +233,7 @@ describe('AdminStoreOrdersTable', () => {
         it('pending order: allows confirming order', async () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
             const confirmBtn = screen.getByRole('button', { name: 'Xác nhận đơn' })
             expect(confirmBtn).toBeInTheDocument()
@@ -235,7 +248,7 @@ describe('AdminStoreOrdersTable', () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
             ;(window.confirm as jest.Mock).mockReturnValue(false)
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
             fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đơn' }))
 
@@ -248,7 +261,7 @@ describe('AdminStoreOrdersTable', () => {
         it('pending order: allows canceling with reason', async () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
             // Cancel order modal flow
             const cancelBtn = screen.getByRole('button', { name: 'Hủy đơn' })
@@ -274,7 +287,7 @@ describe('AdminStoreOrdersTable', () => {
         it('pending order: canceling with empty reason omits cancellationReason and closes modal on success', async () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
             fireEvent.click(screen.getByRole('button', { name: 'Hủy đơn' }))
             expect(screen.getByRole('dialog')).toBeInTheDocument()
@@ -300,7 +313,7 @@ describe('AdminStoreOrdersTable', () => {
                 error: 'Trạng thái đơn hàng đã thay đổi',
             })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
             fireEvent.click(screen.getByRole('button', { name: 'Hủy đơn' }))
             fireEvent.click(screen.getByRole('button', { name: 'Xác nhận hủy' }))
@@ -314,7 +327,7 @@ describe('AdminStoreOrdersTable', () => {
         it('confirmed order: allows moving to processing and canceling', async () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[1]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[1]]} />)
 
             const processBtn = screen.getByRole('button', { name: 'Bắt đầu xử lý' })
             expect(processBtn).toBeInTheDocument()
@@ -330,7 +343,7 @@ describe('AdminStoreOrdersTable', () => {
         it('processing order: requires tracking number to ship and does not have cancel button', async () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[2]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[2]]} />)
 
             expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
 
@@ -356,7 +369,7 @@ describe('AdminStoreOrdersTable', () => {
         it('shipped order: allows completing to delivered and does not have cancel button', async () => {
             ;(updateStoreOrderStatus as jest.Mock).mockResolvedValue({ success: true })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[3]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[3]]} />)
 
             expect(screen.queryByRole('button', { name: 'Hủy đơn' })).not.toBeInTheDocument()
 
@@ -369,7 +382,7 @@ describe('AdminStoreOrdersTable', () => {
         })
 
         it('delivered and cancelled orders: are terminal and show no action buttons', () => {
-            render(<AdminStoreOrdersTable orders={[mockOrders[4], mockOrders[5]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[4], mockOrders[5]]} />)
 
             expect(screen.queryByRole('button', { name: 'Xác nhận đơn' })).not.toBeInTheDocument()
             expect(screen.queryByRole('button', { name: 'Bắt đầu xử lý' })).not.toBeInTheDocument()
@@ -384,7 +397,7 @@ describe('AdminStoreOrdersTable', () => {
                 error: 'Trạng thái đơn hàng đã thay đổi',
             })
 
-            render(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
+            renderWithIntl(<AdminStoreOrdersTable orders={[mockOrders[0]]} />)
 
             const confirmBtn = screen.getByRole('button', { name: 'Xác nhận đơn' })
             fireEvent.click(confirmBtn)

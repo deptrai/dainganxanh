@@ -2,11 +2,21 @@
  * Unit Tests: AdminRoomsPage
  */
 
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 import AdminRoomsPage from '../page'
 
 const mockGetUser = jest.fn()
 const mockServiceFrom = jest.fn()
+
+jest.mock('@/i18n/navigation', () => ({
+  redirect: jest.fn((target: any) => {
+    const url = typeof target === 'string' ? target : target.href
+    throw new Error(`NEXT_REDIRECT: ${url}`)
+  }),
+  Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+  useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => '/crm/admin/rooms',
+}))
 
 jest.mock('next/navigation', () => ({
   redirect: jest.fn((url: string) => {

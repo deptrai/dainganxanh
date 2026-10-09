@@ -1,25 +1,26 @@
 'use client'
 
-import { Link } from '@/i18n/navigation'
-import { usePathname } from 'next/navigation'
+import { Link, usePathname } from '@/i18n/navigation'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Home, TreePine, Share2, Package, UserCircle, ShieldCheck, Calendar, ShoppingBag, PackageCheck, Compass } from 'lucide-react'
 import { UserHeader } from './UserHeader'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 const baseNavItems = [
-    { name: 'Trang chủ', href: '/', icon: Home },
-    { name: 'Mua cây', href: '/pricing', icon: Package },
-    { name: 'Cửa hàng', href: '/store', icon: ShoppingBag },
-    { name: 'Du lịch & Tour', href: '/eco-tourism', icon: Compass },
-    { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
-    { name: 'Lịch đặt', href: '/crm/my-bookings', icon: Calendar },
-    { name: 'Đơn hàng', href: '/crm/my-store-orders', icon: PackageCheck },
-    { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
-    { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
-]
+    { key: 'home', href: '/', icon: Home },
+    { key: 'buyTrees', href: '/pricing', icon: Package },
+    { key: 'store', href: '/store', icon: ShoppingBag },
+    { key: 'ecoTourism', href: '/eco-tourism', icon: Compass },
+    { key: 'myGarden', href: '/crm/my-garden', icon: TreePine },
+    { key: 'bookings', href: '/crm/my-bookings', icon: Calendar },
+    { key: 'orders', href: '/crm/my-store-orders', icon: PackageCheck },
+    { key: 'referrals', href: '/crm/referrals', icon: Share2 },
+    { key: 'profile', href: '/crm/profile', icon: UserCircle },
+] as const
 
 export function CRMHeader() {
+    const t = useTranslations('crm.nav')
     const pathname = usePathname()
     const [isAdmin, setIsAdmin] = useState(false)
 
@@ -33,7 +34,7 @@ export function CRMHeader() {
     }, [])
 
     const navItems = isAdmin
-        ? [...baseNavItems, { name: 'Admin', href: '/crm/admin', icon: ShieldCheck }]
+        ? [...baseNavItems, { key: 'admin' as const, href: '/crm/admin', icon: ShieldCheck }]
         : baseNavItems
 
     const isActive = (path: string) => {
@@ -66,7 +67,7 @@ export function CRMHeader() {
                                     `}
                                 >
                                     <item.icon className={`w-5 h-5 mb-1 ${active ? 'stroke-[2.5px]' : ''}`} />
-                                    <span>{item.name}</span>
+                                    <span>{t(item.key)}</span>
                                 </Link>
                             )
                         })}

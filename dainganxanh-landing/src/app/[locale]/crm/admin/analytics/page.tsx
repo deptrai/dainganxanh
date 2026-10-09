@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
+import { formatCurrency, formatNumber } from '@/lib/format'
 import KPICard from '@/components/admin/KPICard'
 import PlantingChart from '@/components/admin/PlantingChart'
 import RevenueChart from '@/components/admin/RevenueChart'
@@ -10,6 +12,7 @@ import { getAnalyticsKPIs, getPlantingChartData, getRevenueChartData, getConvers
 import type { AnalyticsKPIs, PlantingChartData, RevenueChartData, ConversionFunnelData } from '@/actions/analytics'
 
 export default function AnalyticsPage() {
+    const locale = useLocale()
     const [kpis, setKpis] = useState<AnalyticsKPIs | null>(null)
     const [plantingData, setPlantingData] = useState<PlantingChartData[] | null>(null)
     const [revenueData, setRevenueData] = useState<RevenueChartData[] | null>(null)
@@ -158,14 +161,14 @@ export default function AnalyticsPage() {
                     />
                     <KPICard
                         title="Tổng doanh thu"
-                        value={`${(kpis?.totalRevenue || 0).toLocaleString('vi-VN')} ₫`}
+                        value={formatCurrency(kpis?.totalRevenue || 0, locale)}
                         icon="💰"
                         color="purple"
                         trend={kpis?.trends?.revenue}
                     />
                     <KPICard
                         title="Carbon Offset"
-                        value={`${(kpis?.carbonOffset || 0).toLocaleString('vi-VN')} kg`}
+                        value={`${formatNumber(kpis?.carbonOffset || 0, locale)} kg`}
                         icon="🌍"
                         color="green"
                         trend={kpis?.trends?.carbon}

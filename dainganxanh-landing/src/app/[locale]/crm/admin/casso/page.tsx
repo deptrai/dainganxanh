@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase/server'
+import { setRequestLocale } from 'next-intl/server'
 import CassoTransactionTable from './CassoTransactionTable'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,7 @@ export interface CassoTransaction {
 }
 
 interface PageProps {
+    params: Promise<{ locale: string }>
     searchParams: Promise<{
         page?: string
         status?: string
@@ -28,12 +30,14 @@ interface PageProps {
 
 const PAGE_SIZE = 20
 
-export default async function CassoAdminPage({ searchParams }: PageProps) {
-    const params = await searchParams
-    const page = Math.max(1, parseInt(params.page || '1', 10))
-    const statusFilter = params.status || ''
-    const fromDate = params.from || ''
-    const toDate = params.to || ''
+export default async function CassoAdminPage({ params, searchParams }: PageProps) {
+    const { locale } = await params
+    setRequestLocale(locale)
+    const search = await searchParams
+    const page = Math.max(1, parseInt(search.page || '1', 10))
+    const statusFilter = search.status || ''
+    const fromDate = search.from || ''
+    const toDate = search.to || ''
 
     const offset = (page - 1) * PAGE_SIZE
     const supabase = await createServerClient()

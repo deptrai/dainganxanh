@@ -1,7 +1,15 @@
 import { Link } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import BlogEditor from '@/components/admin/blog/BlogEditor'
 
-export default function NewBlogPostPage() {
+interface NewBlogPostPageProps {
+  params: Promise<{ locale: string }>
+}
+
+export default async function NewBlogPostPage({ params }: NewBlogPostPageProps) {
+  const { locale } = await params
+  setRequestLocale(locale)
+
   return (
     <div className="space-y-6">
       {/* Header */}

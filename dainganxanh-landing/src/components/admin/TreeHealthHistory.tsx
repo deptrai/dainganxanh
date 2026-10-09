@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
 import { getTreeHealthHistory } from '@/actions/treeHealth'
+import { formatDateTime } from '@/lib/format'
 
 interface HealthLog {
     id: string
@@ -18,6 +20,7 @@ interface TreeHealthHistoryProps {
 }
 
 export default function TreeHealthHistory({ treeId }: TreeHealthHistoryProps) {
+    const locale = useLocale()
     const [logs, setLogs] = useState<HealthLog[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -162,7 +165,7 @@ export default function TreeHealthHistory({ treeId }: TreeHealthHistoryProps) {
                                         </div>
                                         <div className="whitespace-nowrap text-right text-sm text-gray-500">
                                             <time dateTime={log.changed_at}>
-                                                {new Date(log.changed_at).toLocaleString('vi-VN')}
+                                                {formatDateTime(log.changed_at, locale)}
                                             </time>
                                         </div>
                                     </div>

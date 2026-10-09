@@ -1,7 +1,10 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from '@/i18n/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { useLocale } from 'next-intl'
+import { formatCurrency, formatDateTime } from '@/lib/format'
 import { manualProcessTransaction, syncCassoTransactions, type SyncResult } from '@/actions/casso'
 import type { CassoTransaction } from './page'
 
@@ -33,23 +36,13 @@ function parseOrderCode(description: string | null): string | null {
     return match ? match[1].toUpperCase() : null
 }
 
-function formatAmount(amount: number): string {
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-    }).format(amount)
+function formatAmount(amount: number, locale: string): string {
+    return formatCurrency(amount, locale)
 }
 
-function formatDate(dateStr: string | null): string {
+function formatDate(dateStr: string | null, locale: string): string {
     if (!dateStr) return '—'
-    return new Intl.DateTimeFormat('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-    }).format(new Date(dateStr))
+    return formatDateTime(dateStr, locale)
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -176,6 +169,7 @@ export default function CassoTransactionTable({
     toDate,
 }: Props) {
     const router = useRouter()
+    const locale = useLocale()
     const searchParams = useSearchParams()
     const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -312,10 +306,10 @@ export default function CassoTransactionTable({
                                     return (
                                         <tr key={tx.id} className="hover:bg-gray-50">
                                             <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                                                {formatDate(tx.created_at)}
+                                                {formatDate(tx.created_at, locale)}
                                             </td>
                                             <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right whitespace-nowrap">
-                                                {formatAmount(tx.amount)}
+                                                {formatAmount(tx.amount, locale)}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title={tx.description ?? ''}>
                                                 {tx.description ?? '—'}

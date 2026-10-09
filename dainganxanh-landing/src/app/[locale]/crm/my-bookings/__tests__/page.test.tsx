@@ -1,8 +1,19 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import MyBookingsPage from '../page'
+
+jest.mock('@/i18n/navigation', () => ({
+  redirect: jest.fn().mockImplementation((target: any) => {
+    const url = typeof target === 'string' ? target : target.href
+    throw new Error(`NEXT_REDIRECT: ${url}`)
+  }),
+  useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => '/crm/my-bookings',
+  Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+}))
 
 jest.mock('next/navigation', () => ({
   redirect: jest.fn().mockImplementation((url: string) => {
@@ -23,7 +34,7 @@ jest.mock('@/lib/supabase/server', () => ({
 
 import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 
 describe('MyBookingsPage', () => {
   const mockSupabase = {
@@ -61,7 +72,9 @@ describe('MyBookingsPage', () => {
     await expect(MyBookingsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
       'NEXT_REDIRECT: /login?redirect=/crm/my-bookings'
     )
-    expect(redirect).toHaveBeenCalledWith('/login?redirect=/crm/my-bookings')
+    expect(redirect).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/login?redirect=/crm/my-bookings' })
+    )
   })
 
   it('renders bookings list', async () => {
@@ -76,7 +89,7 @@ describe('MyBookingsPage', () => {
     })
 
     const Page = await MyBookingsPage({ searchParams: Promise.resolve({}) })
-    render(Page)
+    renderWithIntl(Page)
     expect(screen.getByText('Lịch sử đặt phòng')).toBeInTheDocument()
     expect(screen.getAllByText('BKABC123').length).toBeGreaterThanOrEqual(1)
   })
@@ -89,7 +102,7 @@ describe('MyBookingsPage', () => {
     mockSupabase.range.mockResolvedValue({ data: [], error: null, count: 0 })
 
     const Page = await MyBookingsPage({ searchParams: Promise.resolve({}) })
-    render(Page)
+    renderWithIntl(Page)
     expect(screen.getByText(/Bạn chưa có đặt phòng nào/i)).toBeInTheDocument()
   })
 
@@ -101,7 +114,7 @@ describe('MyBookingsPage', () => {
     mockSupabase.range.mockResolvedValue({ data: [], error: null, count: 0 })
 
     const Page = await MyBookingsPage({ searchParams: Promise.resolve({ cancelled: '1' }) })
-    render(Page)
+    renderWithIntl(Page)
     expect(screen.getByText(/Đã hủy đặt phòng thành công/i)).toBeInTheDocument()
   })
 
@@ -113,7 +126,7 @@ describe('MyBookingsPage', () => {
     mockSupabase.range.mockResolvedValue({ data: null, error: { message: 'DB fail' }, count: null })
 
     const Page = await MyBookingsPage({ searchParams: Promise.resolve({}) })
-    render(Page)
+    renderWithIntl(Page)
     expect(screen.getByText(/Không thể tải danh sách đặt phòng/i)).toBeInTheDocument()
   })
 })

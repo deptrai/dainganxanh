@@ -1,6 +1,13 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 
 // Admin root redirects to Analytics Dashboard
-export default function AdminDashboardPage() {
-    redirect('/crm/admin/analytics')
+export default async function AdminDashboardPage({
+    params,
+}: {
+    params: Promise<{ locale: string }>
+}) {
+    const { locale } = await params
+    setRequestLocale(locale)
+    redirect({ href: '/crm/admin/analytics', locale })
 }

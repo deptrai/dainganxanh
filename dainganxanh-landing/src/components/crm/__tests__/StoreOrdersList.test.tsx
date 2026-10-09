@@ -1,5 +1,10 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import StoreOrdersList, { type StoreOrder } from '../StoreOrdersList'
+
+jest.mock('@/i18n/navigation', () => ({
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+}))
 
 describe('StoreOrdersList', () => {
     const mockOrder1: StoreOrder = {
@@ -47,7 +52,7 @@ describe('StoreOrdersList', () => {
     }
 
     it('renders empty state when orders is empty', () => {
-        render(
+        renderWithIntl(
             <StoreOrdersList
                 orders={[]}
                 page={1}
@@ -64,7 +69,7 @@ describe('StoreOrdersList', () => {
     })
 
     it('renders order cards in collapsed state by default', () => {
-        render(
+        renderWithIntl(
             <StoreOrdersList
                 orders={[mockOrder1, mockOrder2]}
                 page={1}
@@ -86,7 +91,7 @@ describe('StoreOrdersList', () => {
     })
 
     it('toggles expand and collapse on header button click', () => {
-        render(
+        renderWithIntl(
             <StoreOrdersList
                 orders={[mockOrder1]}
                 page={1}
@@ -119,7 +124,7 @@ describe('StoreOrdersList', () => {
     })
 
     it('supports independent expansion of multiple orders', () => {
-        render(
+        renderWithIntl(
             <StoreOrdersList
                 orders={[mockOrder1, mockOrder2]}
                 page={1}
@@ -147,7 +152,7 @@ describe('StoreOrdersList', () => {
     })
 
     it('hides tracking number when null or undefined', () => {
-        render(
+        renderWithIntl(
             <StoreOrdersList
                 orders={[mockOrder2]}
                 page={1}
@@ -166,7 +171,7 @@ describe('StoreOrdersList', () => {
     })
 
     it('does not render pagination when totalPages is 1', () => {
-        render(
+        renderWithIntl(
             <StoreOrdersList
                 orders={[mockOrder1]}
                 page={1}
@@ -180,7 +185,7 @@ describe('StoreOrdersList', () => {
     })
 
     it('renders pagination controls and handles boundaries when totalPages > 1', () => {
-        const { rerender } = render(
+        const { rerender } = renderWithIntl(
             <StoreOrdersList
                 orders={[mockOrder1]}
                 page={1}

@@ -1,14 +1,16 @@
 import { Link } from '@/i18n/navigation'
 import { notFound } from 'next/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { createServerClient } from '@/lib/supabase/server'
 import BlogEditor from '@/components/admin/blog/BlogEditor'
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ locale: string; id: string }>
 }
 
 export default async function EditBlogPostPage({ params }: Props) {
-  const { id } = await params
+  const { locale, id } = await params
+  setRequestLocale(locale)
   const supabase = await createServerClient()
 
   const { data: post, error } = await supabase

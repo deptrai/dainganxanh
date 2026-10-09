@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { Link } from '@/i18n/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { ChevronLeft, ChevronRight, ChevronDown, ShoppingBag, Truck, MapPin, CreditCard } from 'lucide-react'
 import StoreOrderStatusBadge from './StoreOrderStatusBadge'
-import { formatDateVN, formatVND } from '@/lib/date'
+import { formatDate, formatCurrency } from '@/lib/format'
 
 export interface StoreOrderItem {
     id: string
@@ -43,6 +44,8 @@ export default function StoreOrdersList({
     totalCount,
     totalPages,
 }: StoreOrdersListProps) {
+    const locale = useLocale()
+    const t = useTranslations('crm.storeOrders')
     const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({})
 
     const toggleOrder = (id: string) => {
@@ -58,15 +61,15 @@ export default function StoreOrdersList({
                 <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
                     <ShoppingBag className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Bạn chưa có đơn hàng nào</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{t('emptyTitle')}</h3>
                 <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
-                    Khám phá các sản phẩm trầm hương thuần Việt từ vườn cây của chúng tôi.
+                    {t('emptyDesc')}
                 </p>
                 <Link
                     href="/store"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm shadow-emerald-200"
                 >
-                    <span>Mua sắm ngay</span>
+                    <span>{t('shopNow')}</span>
                 </Link>
             </div>
         )
@@ -95,9 +98,9 @@ export default function StoreOrdersList({
                                     <StoreOrderStatusBadge status={order.status} />
                                 </div>
                                 <div className="flex items-center gap-3 text-xs text-gray-500">
-                                    <span>{formatDateVN(order.createdAt)}</span>
+                                    <span>{formatDate(order.createdAt, locale)}</span>
                                     <span className="font-bold text-emerald-700 text-sm">
-                                        {formatVND(order.totalAmount)}
+                                        {formatCurrency(order.totalAmount, locale)}
                                     </span>
                                     <ChevronDown
                                         className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
@@ -135,7 +138,7 @@ export default function StoreOrdersList({
                                                         </span>
                                                     )}
                                                     <p className="text-xs text-gray-500">
-                                                        {item.quantity} × {formatVND(item.unitPrice)}
+                                                        {item.quantity} × {formatCurrency(item.unitPrice, locale)}
                                                     </p>
                                                 </div>
                                             </div>
@@ -154,14 +157,14 @@ export default function StoreOrdersList({
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <Truck className="w-4 h-4 text-gray-400 shrink-0" />
                                                 <span className="text-xs">
-                                                    Mã vận đơn: <span className="font-mono font-medium">{order.trackingNumber}</span>
+                                                    {t('trackingNumber')}: <span className="font-mono font-medium">{order.trackingNumber}</span>
                                                 </span>
                                             </div>
                                         )}
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <CreditCard className="w-4 h-4 text-gray-400 shrink-0" />
                                             <span className="text-xs">
-                                                {order.paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản ngân hàng'}
+                                                {order.paymentMethod === 'cod' ? t('paymentCod') : t('paymentBanking')}
                                             </span>
                                         </div>
                                     </div>
@@ -169,10 +172,10 @@ export default function StoreOrdersList({
                                     {/* Footer */}
                                     <div className="p-4 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between">
                                         <span className="text-xs text-gray-500">
-                                            {order.shippingFee > 0 ? `Phí ship: ${formatVND(order.shippingFee)}` : 'Miễn phí vận chuyển'}
+                                            {order.shippingFee > 0 ? t('shippingFee', { fee: formatCurrency(order.shippingFee, locale) }) : t('freeShipping')}
                                         </span>
                                         <span className="font-bold text-emerald-700">
-                                            {formatVND(order.totalAmount)}
+                                            {formatCurrency(order.totalAmount, locale)}
                                         </span>
                                     </div>
                                 </div>
@@ -186,7 +189,7 @@ export default function StoreOrdersList({
             {safeTotalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-500">
-                        Hiển thị {orders.length} / {totalCount} đơn (Trang {page} / {safeTotalPages})
+                        {t('pagination.showing', { count: orders.length, total: totalCount, page, totalPages: safeTotalPages })}
                     </p>
                     <div className="flex items-center gap-2">
                         <Link
@@ -196,11 +199,11 @@ export default function StoreOrdersList({
                                     ? 'text-gray-400 cursor-not-allowed pointer-events-none'
                                     : 'text-gray-700 bg-white border border-gray-200 hover:bg-gray-50'
                             }`}
-                            aria-label="Trang trước"
+                            aria-label={t('pagination.prev')}
                             aria-disabled={page <= 1}
                         >
                             <ChevronLeft className="w-4 h-4" />
-                            <span>Trước</span>
+                            <span>{t('pagination.prev')}</span>
                         </Link>
                         <span className="text-xs font-medium text-gray-700 px-2">
                             {page} / {safeTotalPages}
@@ -212,10 +215,10 @@ export default function StoreOrdersList({
                                     ? 'text-gray-400 cursor-not-allowed pointer-events-none'
                                     : 'text-gray-700 bg-white border border-gray-200 hover:bg-gray-50'
                             }`}
-                            aria-label="Trang sau"
+                            aria-label={t('pagination.next')}
                             aria-disabled={page >= safeTotalPages}
                         >
-                            <span>Sau</span>
+                            <span>{t('pagination.next')}</span>
                             <ChevronRight className="w-4 h-4" />
                         </Link>
                     </div>

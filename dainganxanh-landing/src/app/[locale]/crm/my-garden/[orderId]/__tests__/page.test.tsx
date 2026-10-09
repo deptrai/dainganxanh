@@ -1,8 +1,19 @@
 /**
  * @jest-environment jsdom
  */
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import PackageDetailPage from '../page'
+
+jest.mock('@/i18n/navigation', () => ({
+    redirect: jest.fn().mockImplementation((target: any) => {
+        const url = typeof target === 'string' ? target : target.href
+        throw new Error(`NEXT_REDIRECT: ${url}`)
+    }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+    useRouter: () => ({ push: jest.fn() }),
+    usePathname: () => '/crm/my-garden/order-1',
+}))
 
 jest.mock('next/navigation', () => ({
     redirect: jest.fn().mockImplementation((url: string) => {
@@ -56,7 +67,8 @@ jest.mock('@/components/crm/CertificateDownloadButton', () => ({
 }))
 
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 
 describe('PackageDetailPage (my-garden/[orderId])', () => {
     const mockSupabase = {
@@ -91,7 +103,9 @@ describe('PackageDetailPage (my-garden/[orderId])', () => {
         await expect(PackageDetailPage({ params: Promise.resolve({ orderId: 'order-1', locale: 'vi' }) })).rejects.toThrow(
             'NEXT_REDIRECT: /login?redirect=/crm/my-garden'
         )
-        expect(redirect).toHaveBeenCalledWith('/login?redirect=/crm/my-garden')
+        expect(redirect).toHaveBeenCalledWith(
+            expect.objectContaining({ href: '/login?redirect=/crm/my-garden' })
+        )
     })
 
     it('throws notFound() khi order không tồn tại hoặc không thuộc user', async () => {
@@ -117,7 +131,7 @@ describe('PackageDetailPage (my-garden/[orderId])', () => {
         mockSupabase.order.mockResolvedValue({ data: [], error: null })
 
         const Page = await PackageDetailPage({ params: Promise.resolve({ orderId: 'order-1', locale: 'vi' }) })
-        render(Page)
+        renderWithIntl(Page)
         expect(screen.getByTestId('package-header')).toHaveTextContent('PKG-2026-ORD123')
     })
 })

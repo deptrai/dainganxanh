@@ -8,10 +8,22 @@
  * - Không có quyền -> gọi notFound() (chuẩn 404)
  */
 
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import AdminBookingDetailPage from '../page'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 import { getAssignedLotIds } from '@/actions/adminRooms'
+
+jest.mock('@/i18n/navigation', () => ({
+  redirect: jest.fn().mockImplementation((target: any) => {
+    const url = typeof target === 'string' ? target : target.href
+    throw new Error(`NEXT_REDIRECT: ${url}`)
+  }),
+  Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+  useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => '/crm/admin/bookings/b-100',
+}))
 
 jest.mock('next/navigation', () => ({
   redirect: jest.fn().mockImplementation((url: string) => {
@@ -97,7 +109,9 @@ describe('AdminBookingDetailPage — Phân quyền theo lô (TD-10)', () => {
     await expect(
       AdminBookingDetailPage({ params: Promise.resolve({ bookingId: 'b-100', locale: 'vi' }) })
     ).rejects.toThrow('NEXT_REDIRECT: /auth/login')
-    expect(redirect).toHaveBeenCalledWith('/auth/login')
+    expect(redirect).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/auth/login' })
+    )
   })
 
   it('chuyển hướng về my-bookings khi người dùng không có vai trò admin/manager', async () => {
@@ -109,7 +123,9 @@ describe('AdminBookingDetailPage — Phân quyền theo lô (TD-10)', () => {
     await expect(
       AdminBookingDetailPage({ params: Promise.resolve({ bookingId: 'b-100', locale: 'vi' }) })
     ).rejects.toThrow('NEXT_REDIRECT: /crm/my-bookings')
-    expect(redirect).toHaveBeenCalledWith('/crm/my-bookings')
+    expect(redirect).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/crm/my-bookings' })
+    )
   })
 
   it('gọi notFound() khi không tìm thấy booking trong cơ sở dữ liệu', async () => {
@@ -139,7 +155,7 @@ describe('AdminBookingDetailPage — Phân quyền theo lô (TD-10)', () => {
     )
 
     const Page = await AdminBookingDetailPage({ params: Promise.resolve({ bookingId: 'b-100', locale: 'vi' }) })
-    render(Page)
+    renderWithIntl(Page)
 
     expect(screen.getByText('BK-100')).toBeInTheDocument()
     expect(screen.getByText('Trần Văn B')).toBeInTheDocument()
@@ -157,7 +173,7 @@ describe('AdminBookingDetailPage — Phân quyền theo lô (TD-10)', () => {
     )
 
     const Page = await AdminBookingDetailPage({ params: Promise.resolve({ bookingId: 'b-100', locale: 'vi' }) })
-    render(Page)
+    renderWithIntl(Page)
 
     expect(screen.getByText('BK-100')).toBeInTheDocument()
     expect(getAssignedLotIds).not.toHaveBeenCalled()
@@ -177,7 +193,7 @@ describe('AdminBookingDetailPage — Phân quyền theo lô (TD-10)', () => {
     ;(getAssignedLotIds as jest.Mock).mockResolvedValueOnce(['lot-alpha', 'lot-beta'])
 
     const Page = await AdminBookingDetailPage({ params: Promise.resolve({ bookingId: 'b-100', locale: 'vi' }) })
-    render(Page)
+    renderWithIntl(Page)
 
     expect(screen.getByText('BK-100')).toBeInTheDocument()
     expect(screen.getByText('lot-alpha')).toBeInTheDocument()

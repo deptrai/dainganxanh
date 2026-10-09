@@ -107,7 +107,7 @@ export function getWeekBounds(currentDate: Date): {
 /**
  * Lấy danh sách các ngày trong tháng.
  */
-export function getMonthCalendarDays(year: number, month: number): {
+export function getMonthCalendarDays(year: number, month: number, locale = 'vi'): {
     startDate: string
     endDate: string
     days: CalendarDay[]
@@ -136,7 +136,7 @@ export function getMonthCalendarDays(year: number, month: number): {
 
     const startDate = formatYMD(year, month + 1, 1)
     const endDate = formatYMD(year, month + 1, daysInMonth)
-    const monthLabel = new Date(year, month).toLocaleString('vi-VN', { month: 'long', year: 'numeric' })
+    const monthLabel = new Date(year, month).toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN', { month: 'long', year: 'numeric' })
 
     return {
         startDate,

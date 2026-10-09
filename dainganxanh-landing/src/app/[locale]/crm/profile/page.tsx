@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/navigation'
+import { useLocale } from 'next-intl'
+import { formatDate as fmtDate, formatCurrency as fmtCurrency } from '@/lib/format'
 import { Save, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp, FileText, Download, Package, CreditCard, X } from 'lucide-react'
 
 interface IdentityData {
@@ -63,6 +65,7 @@ const statusColors: Record<string, string> = {
 
 export default function ProfilePage() {
     const router = useRouter()
+    const locale = useLocale()
     const [identity, setIdentity] = useState<IdentityData>(emptyIdentity)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -156,14 +159,11 @@ export default function ProfilePage() {
     }
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString('vi-VN')
+        return fmtDate(dateString, locale)
     }
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(amount)
+        return fmtCurrency(amount, locale)
     }
 
     const getOrderCode = (order: UserOrder) => {

@@ -1,5 +1,7 @@
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
-import { redirect, notFound } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { notFound } from 'next/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import PackageDetailHeader from '@/components/crm/PackageDetailHeader'
 import LotMap from '@/components/crm/LotMap'
 import TreeTimeline from '@/components/crm/TreeTimeline'
@@ -13,19 +15,22 @@ import { Link } from '@/i18n/navigation'
 
 interface PackageDetailPageProps {
     params: Promise<{
+        locale: string
         orderId: string
     }>
 }
 
 export default async function PackageDetailPage({ params }: PackageDetailPageProps) {
     // Next.js 16: params is a Promise, must await it
-    const { orderId } = await params
+    const { locale, orderId } = await params
+    setRequestLocale(locale)
 
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
     if (!scoped) {
-        redirect('/login?redirect=/crm/my-garden')
+        redirect({ href: '/login?redirect=/crm/my-garden', locale })
+        return null
     }
 
     const { client: serviceClient, effectiveUserId } = scoped

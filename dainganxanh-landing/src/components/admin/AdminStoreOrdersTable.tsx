@@ -6,8 +6,9 @@ import Image from 'next/image'
 import { ChevronDownIcon, ShoppingBagIcon } from '@heroicons/react/24/outline'
 import { StoreOrderStatus } from '@/lib/store-order-status'
 import StoreOrderStatusBadge from '@/components/crm/StoreOrderStatusBadge'
-import { formatDateVN, formatDateTimeVN, formatVND } from '@/lib/date'
+import { formatDate, formatDateTime, formatCurrency } from '@/lib/format'
 import { updateStoreOrderStatus } from '@/actions/adminStoreOrders'
+import { useLocale, useTranslations } from 'next-intl'
 
 export interface AdminStoreOrderItem {
     id: string
@@ -60,17 +61,9 @@ interface AdminStoreOrdersTableProps {
     currentStatus?: string
 }
 
-const STATUS_TABS: { label: string; value?: string }[] = [
-    { label: 'Tất cả', value: undefined },
-    { label: 'Chờ xác nhận', value: 'pending' },
-    { label: 'Đã xác nhận', value: 'confirmed' },
-    { label: 'Đang xử lý', value: 'processing' },
-    { label: 'Đang giao', value: 'shipped' },
-    { label: 'Đã giao', value: 'delivered' },
-    { label: 'Đã hủy', value: 'cancelled' },
-]
-
 export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminStoreOrdersTableProps) {
+    const locale = useLocale()
+    const t = useTranslations('admin.storeOrders')
     const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({})
     const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({})
     const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null)
@@ -114,7 +107,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
     const handleConfirmOrder = (order: AdminStoreOrder) => {
         if (
             order.payment_method === 'banking' &&
-            !window.confirm('Xác nhận đã nhận thanh toán chuyển khoản cho đơn này?')
+            !window.confirm(t('confirmBankingAlert'))
         ) {
             return
         }
@@ -124,7 +117,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
     const handleShipOrder = (orderId: string) => {
         const tracking = trackingInputs[orderId]?.trim()
         if (!tracking) {
-            setActionError('Vui lòng nhập mã vận đơn')
+            setActionError(t('errors.enterTracking'))
             return
         }
         handleUpdateStatus(orderId, 'shipped', { trackingNumber: tracking })
@@ -144,14 +137,14 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
     const orderToCancel = orders.find((o) => o.id === cancelModalOrderId)
 
     const getItemSummary = (items?: AdminStoreOrderItem[] | null) => {
-        if (!items || items.length === 0) return 'Không có sản phẩm'
+        if (!items || items.length === 0) return t('noProducts')
         const first = items[0]
         const firstProd = Array.isArray(first.products) ? first.products[0] : first.products
         const firstName = firstProd?.name || 'Sản phẩm'
         if (items.length === 1) {
             return `${firstName} (x${first.quantity})`
         }
-        return `${firstName} (x${first.quantity}) + ${items.length - 1} sp khác`
+        return `${firstName} (x${first.quantity}) + ${items.length - 1} ${t('otherProducts')}`
     }
 
     const renderActionCell = (order: AdminStoreOrder, status: StoreOrderStatus) => {
@@ -163,7 +156,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                         disabled={isPending}
                         className="px-2.5 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors whitespace-nowrap"
                     >
-                        Xác nhận đơn
+                        {t('actions.confirm')}
                     </button>
                     <button
                         onClick={() => {
@@ -173,7 +166,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                         disabled={isPending}
                         className="px-2.5 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap"
                     >
-                        Hủy đơn
+                        {t('actions.cancel')}
                     </button>
                 </div>
             )
@@ -186,7 +179,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                         disabled={isPending}
                         className="px-2.5 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors whitespace-nowrap"
                     >
-                        Bắt đầu xử lý
+                        {t('actions.process')}
                     </button>
                     <button
                         onClick={() => {
@@ -196,7 +189,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                         disabled={isPending}
                         className="px-2.5 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap"
                     >
-                        Hủy đơn
+                        {t('actions.cancel')}
                     </button>
                 </div>
             )
@@ -206,8 +199,8 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                 <div className="flex items-center gap-1">
                     <input
                         type="text"
-                        aria-label="Mã vận đơn"
-                        placeholder="Mã vận đơn"
+                        aria-label={t('trackingCode')}
+                        placeholder={t('trackingCode')}
                         value={trackingInputs[order.id] || ''}
                         onChange={(e) =>
                             setTrackingInputs({
@@ -226,7 +219,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                         disabled={isPending}
                         className="px-2.5 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors whitespace-nowrap"
                     >
-                        Giao hàng
+                        {t('actions.ship')}
                     </button>
                 </div>
             )
@@ -238,7 +231,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                     disabled={isPending}
                     className="px-2.5 py-1 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors whitespace-nowrap"
                 >
-                    Hoàn tất
+                    {t('actions.deliver')}
                 </button>
             )
         }
@@ -249,7 +242,15 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
         <div className="space-y-4">
             {/* Filter Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-200">
-                {STATUS_TABS.map((tab) => {
+                {[
+                    { label: t('tabs.all'), value: undefined },
+                    { label: t('tabs.pending'), value: 'pending' },
+                    { label: t('tabs.confirmed'), value: 'confirmed' },
+                    { label: t('tabs.processing'), value: 'processing' },
+                    { label: t('tabs.shipped'), value: 'shipped' },
+                    { label: t('tabs.delivered'), value: 'delivered' },
+                    { label: t('tabs.cancelled'), value: 'cancelled' },
+                ].map((tab) => {
                     const isActive = (!currentStatus && !tab.value) || currentStatus === tab.value
                     const href = tab.value
                         ? `/crm/admin/store-orders?status=${tab.value}`
@@ -280,7 +281,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                     <button
                         onClick={() => setActionError(null)}
                         className="text-red-500 hover:text-red-700 font-bold ml-2 px-1"
-                        aria-label="Đóng thông báo lỗi"
+                        aria-label={t('aria.closeError')}
                     >
                         ✕
                     </button>
@@ -291,11 +292,11 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
             {orders.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                     <ShoppingBagIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-base font-semibold text-gray-900 mb-1">Chưa có đơn hàng nào</h3>
+                    <h3 className="text-base font-semibold text-gray-900 mb-1">{t('emptyTitle')}</h3>
                     <p className="text-sm text-gray-500">
                         {currentStatus
-                            ? 'Không có đơn hàng nào với trạng thái này.'
-                            : 'Chưa có đơn hàng nào được tạo.'}
+                            ? t('emptyFiltered')
+                            : t('emptyDefault')}
                     </p>
                 </div>
             ) : (
@@ -305,14 +306,14 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                         <table className="w-full text-left text-sm text-gray-500">
                             <thead className="bg-gray-50 text-xs uppercase text-gray-700 border-b border-gray-200">
                                 <tr>
-                                    <th className="py-3 px-4">Mã đơn</th>
-                                    <th className="py-3 px-4">Khách hàng</th>
-                                    <th className="py-3 px-4">Sản phẩm</th>
-                                    <th className="py-3 px-4">Tổng tiền</th>
-                                    <th className="py-3 px-4">Địa chỉ</th>
-                                    <th className="py-3 px-4">Trạng thái</th>
-                                    <th className="py-3 px-4">Ngày tạo</th>
-                                    <th className="py-3 px-4 text-center">Thao tác</th>
+                                    <th className="py-3 px-4">{t('thCode')}</th>
+                                    <th className="py-3 px-4">{t('thCustomer')}</th>
+                                    <th className="py-3 px-4">{t('thProducts')}</th>
+                                    <th className="py-3 px-4">{t('thTotal')}</th>
+                                    <th className="py-3 px-4">{t('thAddress')}</th>
+                                    <th className="py-3 px-4">{t('thStatus')}</th>
+                                    <th className="py-3 px-4">{t('thDate')}</th>
+                                    <th className="py-3 px-4 text-center">{t('thActions')}</th>
                                     <th className="py-3 px-2 w-10"></th>
                                 </tr>
                             </thead>
@@ -343,7 +344,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                     {getItemSummary(order.store_order_items)}
                                                 </td>
                                                 <td className="py-3 px-4 font-semibold text-gray-900 whitespace-nowrap">
-                                                    {formatVND(order.total_amount)}
+                                                    {formatCurrency(order.total_amount, locale)}
                                                 </td>
                                                 <td className="py-3 px-4 text-xs text-gray-600 truncate max-w-[12rem]">
                                                     {order.shipping_province
@@ -354,7 +355,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                     <StoreOrderStatusBadge status={status} />
                                                 </td>
                                                 <td className="py-3 px-4 text-xs text-gray-500 whitespace-nowrap">
-                                                    {formatDateVN(order.created_at)}
+                                                    {formatDate(order.created_at, locale)}
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     {renderActionCell(order, status)}
@@ -366,8 +367,8 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                         aria-expanded={isExpanded}
                                                         aria-label={
                                                             isExpanded
-                                                                ? 'Thu gọn chi tiết'
-                                                                : 'Xem chi tiết đơn hàng'
+                                                                ? t('aria.collapseDetails')
+                                                                : t('aria.viewDetails')
                                                         }
                                                         className="p-1 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors"
                                                     >
@@ -391,7 +392,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                             {/* Column 1: Items List */}
                                                             <div className="space-y-2 md:col-span-2">
                                                                 <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                                                                    Chi tiết sản phẩm (
+                                                                    {t('productDetails')} (
                                                                     {order.store_order_items?.length || 0})
                                                                 </h4>
                                                                 {order.store_order_items &&
@@ -431,16 +432,16 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                                                                 {prod?.name || 'Sản phẩm'}
                                                                                             </p>
                                                                                             <p className="text-xs text-gray-500">
-                                                                                                Số lượng: {item.quantity}
+                                                                                                {t('quantity')}: {item.quantity}
                                                                                             </p>
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="text-right">
                                                                                         <p className="font-medium text-gray-900">
-                                                                                            {formatVND(item.unit_price * item.quantity)}
+                                                                                            {formatCurrency(item.unit_price * item.quantity, locale)}
                                                                                         </p>
                                                                                         <p className="text-xs text-gray-500">
-                                                                                            Đơn giá: {formatVND(item.unit_price)}
+                                                                                            {t('unitPrice')}: {formatCurrency(item.unit_price, locale)}
                                                                                         </p>
                                                                                     </div>
                                                                                 </div>
@@ -449,27 +450,27 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                                     </div>
                                                                 ) : (
                                                                     <p className="text-sm text-gray-500">
-                                                                        Không có thông tin sản phẩm
+                                                                        {t('noProducts')}
                                                                     </p>
                                                                 )}
 
                                                                 {/* Financial breakdown */}
                                                                 <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-1 text-sm">
                                                                     <div className="flex justify-between text-gray-600">
-                                                                        <span>Tạm tính</span>
-                                                                        <span>{formatVND(order.subtotal)}</span>
+                                                                        <span>{t('subtotal')}</span>
+                                                                        <span>{formatCurrency(order.subtotal, locale)}</span>
                                                                     </div>
                                                                     <div className="flex justify-between text-gray-600">
-                                                                        <span>Phí vận chuyển</span>
+                                                                        <span>{t('shippingFee')}</span>
                                                                         <span>
                                                                             {order.shipping_fee > 0
-                                                                                ? formatVND(order.shipping_fee)
-                                                                                : 'Miễn phí'}
+                                                                                ? formatCurrency(order.shipping_fee, locale)
+                                                                                : t('freeShipping')}
                                                                         </span>
                                                                     </div>
                                                                     <div className="flex justify-between font-semibold text-gray-900 pt-1 border-t border-gray-100">
-                                                                        <span>Tổng cộng</span>
-                                                                        <span>{formatVND(order.total_amount)}</span>
+                                                                        <span>{t('total')}</span>
+                                                                        <span>{formatCurrency(order.total_amount, locale)}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -479,19 +480,19 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                                 {/* Shipping Address */}
                                                                 <div>
                                                                     <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                                                                        Địa chỉ giao hàng
+                                                                        {t('shippingAddress')}
                                                                     </h4>
                                                                     <p className="text-gray-800">
                                                                         {order.shipping_address}
                                                                     </p>
                                                                     {order.shipping_province && (
                                                                         <p className="text-xs text-gray-500 mt-0.5">
-                                                                            Tỉnh/Thành phố: {order.shipping_province}
+                                                                            {t('province')}: {order.shipping_province}
                                                                         </p>
                                                                     )}
                                                                     {order.shipping_note && (
                                                                         <p className="text-xs text-gray-500 italic mt-0.5">
-                                                                            Ghi chú: {order.shipping_note}
+                                                                            {t('note')}: {order.shipping_note}
                                                                         </p>
                                                                     )}
                                                                 </div>
@@ -499,22 +500,22 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                                 {/* Payment Information */}
                                                                 <div className="pt-2 border-t border-gray-100">
                                                                     <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                                                                        Thanh toán
+                                                                        {t('payment')}
                                                                     </h4>
                                                                     <p className="text-gray-800">
                                                                         {order.payment_method === 'banking'
-                                                                            ? 'Chuyển khoản ngân hàng'
-                                                                            : 'Thanh toán khi nhận hàng (COD)'}
+                                                                            ? t('banking')
+                                                                            : t('cod')}
                                                                     </p>
                                                                     {order.payment_ref && (
                                                                         <p className="text-xs text-gray-500 font-mono mt-0.5">
-                                                                            Mã GD: {order.payment_ref}
+                                                                            {t('transactionCode')}: {order.payment_ref}
                                                                         </p>
                                                                     )}
                                                                     {order.expires_at && order.status === 'pending' && (
                                                                         <p className="text-xs text-amber-600 mt-0.5">
-                                                                            Hạn thanh toán:{' '}
-                                                                            {formatDateTimeVN(order.expires_at)}
+                                                                            {t('paymentDeadline')}:{' '}
+                                                                            {formatDateTime(order.expires_at, locale)}
                                                                         </p>
                                                                     )}
                                                                 </div>
@@ -526,17 +527,17 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                                                         {order.tracking_number && (
                                                                             <div>
                                                                                 <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                                                                                    Vận chuyển
+                                                                                    {t('shipping')}
                                                                                 </h4>
                                                                                 <p className="text-sm font-mono text-indigo-700 font-medium">
-                                                                                    Mã vận đơn: {order.tracking_number}
+                                                                                    {t('trackingCode')}: {order.tracking_number}
                                                                                 </p>
                                                                             </div>
                                                                         )}
                                                                         {order.cancellation_reason && (
                                                                             <div className="mt-2">
                                                                                 <h4 className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-1">
-                                                                                    Lý do hủy đơn
+                                                                                    {t('cancellationReason')}
                                                                                 </h4>
                                                                                 <p className="text-xs text-red-700">
                                                                                     {order.cancellation_reason}
@@ -575,22 +576,22 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                 >
                     <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
                         <h3 id="cancel-dialog-title" className="text-lg font-bold text-gray-900">
-                            Hủy đơn hàng #{orderToCancel.code}
+                            {t('cancelModal.title', { code: orderToCancel.code })}
                         </h3>
                         <p className="text-sm text-gray-600">
-                            Bạn có chắc chắn muốn hủy đơn hàng này? Thao tác này sẽ hoàn trả kho sản phẩm đã giữ.
+                            {t('cancelModal.description')}
                         </p>
                         <div>
                             <label
                                 htmlFor="cancel-reason-input"
                                 className="block text-xs font-medium text-gray-700 mb-1"
                             >
-                                Lý do hủy đơn (mặc định: Admin hủy đơn)
+                                {t('cancelModal.reasonLabel')}
                             </label>
                             <input
                                 id="cancel-reason-input"
                                 type="text"
-                                placeholder="Nhập lý do hủy..."
+                                placeholder={t('cancelModal.placeholder')}
                                 value={cancelReason}
                                 onChange={(e) => setCancelReason(e.target.value)}
                                 autoFocus
@@ -604,7 +605,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                 disabled={isPending}
                                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                             >
-                                Đóng
+                                {t('cancelModal.close')}
                             </button>
                             <button
                                 type="button"
@@ -612,7 +613,7 @@ export default function AdminStoreOrdersTable({ orders, currentStatus }: AdminSt
                                 disabled={isPending}
                                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg transition-colors"
                             >
-                                Xác nhận hủy
+                                {t('cancelModal.confirm')}
                             </button>
                         </div>
                     </div>

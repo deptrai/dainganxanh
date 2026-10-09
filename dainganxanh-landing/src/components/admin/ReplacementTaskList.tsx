@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
 import { getReplacementTasks, updateReplacementTask } from '@/actions/treeHealth'
+import { formatDate } from '@/lib/format'
 
 interface ReplacementTask {
     id: string
@@ -16,6 +18,7 @@ interface ReplacementTask {
 }
 
 export default function ReplacementTaskList() {
+    const locale = useLocale()
     const [tasks, setTasks] = useState<ReplacementTask[]>([])
     const [statusFilter, setStatusFilter] = useState<string>('pending')
     const [loading, setLoading] = useState(true)
@@ -182,7 +185,7 @@ export default function ReplacementTaskList() {
                                         {getStatusBadge(task.status)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {new Date(task.createdAt).toLocaleDateString('vi-VN')}
+                                        {formatDate(task.createdAt, locale)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                                         {task.status === 'pending' && (

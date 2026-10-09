@@ -1,7 +1,9 @@
 'use client'
 
 import { use, useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/i18n/navigation'
+import { useLocale } from 'next-intl'
+import { formatDate } from '@/lib/format'
 import {
     fetchUserLotAssignments,
     assignLotToUser,
@@ -29,6 +31,7 @@ const ROLE_OPTIONS = [
 export default function UserLotsPage({ params }: { params: Promise<PageParams> }) {
     const { id } = use(params)
     const router = useRouter()
+    const locale = useLocale()
     const [assignments, setAssignments] = useState<AdminUserLotAssignment[]>([])
     const [lots, setLots] = useState<LotOption[]>([])
     const [selectedLot, setSelectedLot] = useState('')
@@ -164,7 +167,7 @@ export default function UserLotsPage({ params }: { params: Promise<PageParams> }
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">
-                                        {new Date(assignment.updated_at).toLocaleDateString('vi-VN')}
+                                        {formatDate(assignment.updated_at, locale)}
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <button

@@ -1,10 +1,19 @@
 import { Link } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { formatDate } from '@/lib/format'
 import DeletePostButton from './DeletePostButton'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminBlogPage() {
+interface AdminBlogPageProps {
+  params: Promise<{ locale: string }>
+}
+
+export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
+  const { locale } = await params
+  setRequestLocale(locale)
+
   const supabase = await createServerClient()
 
   const { data: posts, error } = await supabase
@@ -69,11 +78,11 @@ export default async function AdminBlogPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-500">
                     {post.published_at
-                      ? new Date(post.published_at).toLocaleDateString('vi-VN')
+                      ? formatDate(post.published_at, locale)
                       : '—'}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
-                    {new Date(post.created_at).toLocaleDateString('vi-VN')}
+                    {formatDate(post.created_at, locale)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">

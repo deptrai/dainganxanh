@@ -27,6 +27,7 @@ const DOMAINS = [
   'landing',
   'pricing',
   'crm',
+  'admin',
   'store',
   'checkout',
   'eco',

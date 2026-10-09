@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { Metadata } from 'next'
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { BookingsList } from '@/components/crm/BookingsList'
@@ -11,19 +12,26 @@ export const metadata: Metadata = {
 }
 
 interface MyBookingsPageProps {
-    searchParams: Promise<{ page?: string; cancelled?: string }>
+    params?: Promise<{ locale?: string }>
+    searchParams?: Promise<{ page?: string; cancelled?: string }>
 }
 
-export default async function MyBookingsPage({ searchParams }: MyBookingsPageProps) {
+export default async function MyBookingsPage({ params, searchParams }: MyBookingsPageProps = {}) {
+    const resolvedParams = params ? await params : undefined
+    const locale = resolvedParams?.locale || 'vi'
+    setRequestLocale(locale)
+
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
     if (!scoped) {
-        redirect('/login?redirect=/crm/my-bookings')
+        redirect({ href: '/login?redirect=/crm/my-bookings', locale })
+        return null
     }
 
     const { client: serviceClient, effectiveUserId } = scoped
-    const { page: pageParam, cancelled } = await searchParams
+    const resolvedSearchParams = searchParams ? await searchParams : {}
+    const { page: pageParam, cancelled } = resolvedSearchParams || {}
     const page = Math.max(1, parseInt(pageParam || '1', 10) || 1)
     const pageSize = 20
     const start = (page - 1) * pageSize

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { useLocale } from 'next-intl'
+import { formatDate } from '@/lib/format'
 import {
     fetchPhantomUsers,
     togglePhantomUser,
@@ -215,6 +217,7 @@ function CreatePhantomOrderSection() {
 }
 
 function PhantomOrdersSection() {
+    const locale = useLocale()
     const [orders, setOrders] = useState<any[]>([])
     const [totalCount, setTotalCount] = useState(0)
     const [page, setPage] = useState(1)
@@ -280,7 +283,7 @@ function PhantomOrdersSection() {
                                         <td className="py-2 pr-4 text-gray-500">{order.user_email}</td>
                                         <td className="py-2 pr-4">{order.quantity}</td>
                                         <td className="py-2 pr-4 text-gray-500">
-                                            {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                                            {formatDate(order.created_at, locale)}
                                         </td>
                                         <td className="py-2 text-right">
                                             <button

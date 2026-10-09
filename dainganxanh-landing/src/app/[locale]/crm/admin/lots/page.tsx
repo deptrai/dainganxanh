@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
+import { formatNumber } from '@/lib/format'
 import { createBrowserClient } from '@/lib/supabase/client'
 import CreateLotForm from '@/components/admin/CreateLotForm'
 import EditLotForm from '@/components/admin/EditLotForm'
@@ -18,6 +20,7 @@ interface Lot {
 }
 
 export default function LotsPage() {
+    const locale = useLocale()
     const [lots, setLots] = useState<Lot[]>([])
     const [loading, setLoading] = useState(true)
     const [showCreateForm, setShowCreateForm] = useState(false)
@@ -125,7 +128,7 @@ export default function LotsPage() {
                             <div className="flex-1">
                                 <p className="text-sm text-gray-600">Tổng sức chứa</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {lots.reduce((sum, lot) => sum + lot.total_trees, 0).toLocaleString()}
+                                    {formatNumber(lots.reduce((sum, lot) => sum + lot.total_trees, 0), locale)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -151,7 +154,7 @@ export default function LotsPage() {
                             <div className="flex-1">
                                 <p className="text-sm text-gray-600">Đã trồng</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {lots.reduce((sum, lot) => sum + lot.planted, 0).toLocaleString()}
+                                    {formatNumber(lots.reduce((sum, lot) => sum + lot.planted, 0), locale)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -177,7 +180,7 @@ export default function LotsPage() {
                             <div className="flex-1">
                                 <p className="text-sm text-gray-600">Còn trống</p>
                                 <p className="text-2xl font-bold text-gray-900">
-                                    {lots.reduce((sum, lot) => sum + (lot.total_trees - lot.planted), 0).toLocaleString()}
+                                    {formatNumber(lots.reduce((sum, lot) => sum + (lot.total_trees - lot.planted), 0), locale)}
                                 </p>
                             </div>
                             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">

@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { ReferralLink } from '@/components/crm/ReferralLink'
 import { ReferralQRCode } from '@/components/crm/ReferralQRCode'
@@ -7,6 +8,7 @@ import WithdrawalButton from '@/components/crm/WithdrawalButton'
 import { getReferralStats, getReferralConversions } from '@/actions/referrals'
 import { ensureUserProfile } from '@/actions/ensureUserProfile'
 import { createServerClient } from '@/lib/supabase/server'
+import { formatCurrency, formatDate } from '@/lib/format'
 
 function maskEmail(email: string): string {
     const atIndex = email.indexOf('@')
@@ -21,7 +23,15 @@ function maskEmail(email: string): string {
     return `${start}***${end}${domain}`
 }
 
-export default async function ReferralsPage() {
+interface ReferralsPageProps {
+    params?: Promise<{ locale?: string }>
+}
+
+export default async function ReferralsPage({ params }: ReferralsPageProps = {}) {
+    const resolvedParams = params ? await params : undefined
+    const locale = resolvedParams?.locale || 'vi'
+    setRequestLocale(locale)
+
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
@@ -71,7 +81,8 @@ export default async function ReferralsPage() {
     }
 
     if (!userData?.referral_code) {
-        redirect('/crm/dashboard')
+        redirect({ href: '/crm/dashboard', locale })
+        return null
     }
 
     // Get referral stats
@@ -163,13 +174,13 @@ export default async function ReferralsPage() {
                                                 {conversion.customerName || conversion.customerEmail}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {conversion.orderAmount.toLocaleString('vi-VN')}đ
+                                                {formatCurrency(conversion.orderAmount, locale)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
-                                                +{conversion.commission.toLocaleString('vi-VN')}đ
+                                                +{formatCurrency(conversion.commission, locale)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {conversion.orderDate ? new Date(conversion.orderDate).toLocaleDateString('vi-VN') : '-'}
+                                                {conversion.orderDate ? formatDate(conversion.orderDate, locale) : '-'}
                                             </td>
                                         </tr>
                                     ))}

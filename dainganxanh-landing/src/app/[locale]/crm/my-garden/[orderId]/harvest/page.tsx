@@ -1,25 +1,30 @@
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
-import { notFound, redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { notFound } from 'next/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
-import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { formatDate } from '@/lib/format'
 import HarvestSellBack from '@/components/crm/HarvestSellBack'
 import HarvestKeepGrowing from '@/components/crm/HarvestKeepGrowing'
 import HarvestReceiveProduct from '@/components/crm/HarvestReceiveProduct'
 
 interface HarvestPageProps {
     params: Promise<{
+        locale: string
         orderId: string
     }>
 }
 
 export default async function HarvestPage({ params }: HarvestPageProps) {
-    const { orderId } = await params
+    const { locale, orderId } = await params
+    setRequestLocale(locale)
+
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
     if (!scoped) {
-        redirect('/login?redirect=/crm/my-garden')
+        redirect({ href: '/login?redirect=/crm/my-garden', locale })
+        return null
     }
 
     const { client: supabase, effectiveUserId } = scoped
@@ -83,7 +88,7 @@ export default async function HarvestPage({ params }: HarvestPageProps) {
                         <div>
                             <p className="text-sm text-gray-600">Ngày trồng</p>
                             <p className="text-lg font-bold text-emerald-700">
-                                {format(plantedDate, 'dd/MM/yyyy', { locale: vi })}
+                                {formatDate(plantedDate, locale)}
                             </p>
                         </div>
                         <div>

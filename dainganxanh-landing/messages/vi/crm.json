@@ -1,4 +1,16 @@
 {
+  "nav": {
+    "home": "Trang chủ",
+    "buyTrees": "Mua cây",
+    "store": "Cửa hàng",
+    "ecoTourism": "Du lịch & Tour",
+    "myGarden": "Vườn của tôi",
+    "bookings": "Lịch đặt",
+    "orders": "Đơn hàng",
+    "referrals": "Giới thiệu",
+    "profile": "Hồ sơ",
+    "admin": "Admin"
+  },
   "sidebar": {
     "dashboard": "Tổng quan",
     "myGarden": "Vườn của tôi",
@@ -10,6 +22,9 @@
     "logout": "Đăng xuất"
   },
   "dashboard": {
+    "title": "🌳 Dashboard",
+    "inDevelopment": "Trang dashboard đang được phát triển",
+    "backToGarden": "Quay lại Vườn Cây",
     "greeting": "Xin chào",
     "welcomeSubtitle": "Chào mừng bạn trở lại với khu vườn Đại Ngàn Xanh.",
     "statsTrees": "Tổng số cây sở hữu",
@@ -52,8 +67,75 @@
     "checkOut": "Trả phòng",
     "guests": "Số khách",
     "total": "Tổng tiền",
+    "totalAmount": "Tổng tiền",
     "status": "Trạng thái",
-    "emptyState": "Bạn chưa có chuyến đi nào được đặt"
+    "emptyState": "Bạn chưa có chuyến đi nào được đặt",
+    "emptyTitle": "Bạn chưa có đặt phòng nào",
+    "emptyDesc": "Hãy trải nghiệm không gian sinh thái xanh mát và dịch vụ nghỉ dưỡng độc đáo tại các khu vườn của chúng tôi.",
+    "exploreButton": "Khám phá vườn nghỉ dưỡng",
+    "lot": "Khu vườn",
+    "nights": "{count} đêm",
+    "detail": "Chi tiết",
+    "pageInfo": "Trang {page} / {totalPages} (Tổng số {totalCount} đơn)",
+    "table": {
+      "code": "Mã đặt phòng",
+      "room": "Phòng",
+      "lot": "Khu vườn",
+      "checkIn": "Nhận phòng",
+      "checkOut": "Trả phòng",
+      "status": "Trạng thái",
+      "totalAmount": "Tổng tiền"
+    },
+    "pagination": {
+      "showing": "Hiển thị {count} trên {total} đặt phòng (Trang {page}/{totalPages})",
+      "prev": "Trang trước",
+      "next": "Trang sau"
+    }
+  },
+  "bookingDetail": {
+    "backToList": "Quay lại danh sách",
+    "createdDate": "Ngày đặt: {date}",
+    "continuePayment": "Tiếp tục thanh toán",
+    "expiredTitle": "Thời gian giữ chỗ cho đơn này đã hết hạn",
+    "expiredDesc": "Phòng đã được giải phóng để phục vụ các khách hàng khác. Quý khách vui lòng tạo đặt phòng mới nếu vẫn có nhu cầu lưu trú.",
+    "newBooking": "Đặt phòng mới",
+    "cancellationTitle": "Thông tin hủy đặt phòng",
+    "cancellationReason": "Lý do hủy:",
+    "stayTitle": "Thông tin phòng & nghỉ dưỡng",
+    "room": "Phòng nghỉ",
+    "lot": "Khu vườn",
+    "checkIn": "Nhận phòng",
+    "checkOut": "Trả phòng",
+    "stayDuration": "Thời gian lưu trú:",
+    "nights": "{count} đêm",
+    "guestTitle": "Thông tin khách & thanh toán",
+    "guestName": "Khách đại diện",
+    "phone": "Số điện thoại",
+    "email": "Email",
+    "guestCount": "Số lượng khách:",
+    "guests": "{count} khách",
+    "paymentMethod": "Hình thức thanh toán",
+    "banking": "Chuyển khoản ngân hàng (VietQR)",
+    "transfer": "Chuyển khoản",
+    "total": "Tổng thanh toán:",
+    "specialRequests": "Yêu cầu đặc biệt"
+  },
+  "checkInInstructions": {
+    "title": "Hướng dẫn nhận phòng",
+    "subtitle": "Thông tin chi tiết dành cho kỳ nghỉ của bạn",
+    "destination": "Điểm đến",
+    "room": "Phòng đặt",
+    "stayTime": "Thời gian lưu trú",
+    "checkIn": "Nhận phòng",
+    "checkOut": "Trả phòng",
+    "hoursPolicy": "Quy định giờ giấc",
+    "hoursDesc": "Nhận phòng từ 14:00 - Trả phòng trước 12:00",
+    "supportHotline": "Hotline lễ tân & hỗ trợ",
+    "guestPhone": "SĐT liên hệ khách",
+    "specialRequests": "Yêu cầu đặc biệt đã ghi nhận",
+    "noticeTitle": "Lưu ý khi nhận phòng:",
+    "notice1": "Vui lòng mang theo CMND/CCCD hoặc Hộ chiếu của người đại diện nhận phòng.",
+    "notice2": "Nếu quý khách dự kiến đến sau 18:00, vui lòng liên hệ trước với ban quản lý vườn."
   },
   "storeOrders": {
     "title": "Đơn Hàng Cửa Hàng",
@@ -63,7 +145,22 @@
     "total": "Tổng thanh toán",
     "date": "Ngày đặt",
     "status": "Trạng thái",
-    "emptyState": "Chưa có đơn hàng nào"
+    "emptyState": "Chưa có đơn hàng nào",
+    "emptyTitle": "Bạn chưa có đơn hàng nào",
+    "emptyDesc": "Khám phá các sản phẩm trầm hương thuần Việt từ vườn cây của chúng tôi.",
+    "shopNow": "Mua sắm ngay",
+    "shippingAddress": "Địa chỉ nhận hàng",
+    "paymentMethod": "Thanh toán",
+    "paymentBanking": "Chuyển khoản ngân hàng (VietQR)",
+    "paymentCod": "Thanh toán khi nhận hàng",
+    "shippingFee": "Phí ship: {fee}",
+    "freeShipping": "Miễn phí vận chuyển",
+    "trackingNumber": "Mã vận đơn",
+    "pagination": {
+      "showing": "Hiển thị {count} / {total} đơn (Trang {page} / {totalPages})",
+      "prev": "Trang trước",
+      "next": "Trang sau"
+    }
   },
   "profile": {
     "title": "Hồ Sơ Cá Nhân",

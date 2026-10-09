@@ -124,7 +124,7 @@ describe('i18n Messages Parity & Integrity (vi vs en)', () => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name)
         if (entry.isDirectory()) {
-          if (['crm', 'admin', 'api', 'node_modules', '.next', '__tests__'].some((p) => full.includes(`/${p}`))) {
+          if (['api', 'node_modules', '.next', '__tests__'].some((p) => full.includes(`/${p}`))) {
             continue
           }
           results = results.concat(getScopedFiles(full))

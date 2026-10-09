@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useLocale } from 'next-intl'
+import { formatDateTime } from '@/lib/format'
 import { ChecklistItem as ChecklistItemType } from '@/actions/fieldChecklist'
 
 interface ChecklistItemProps {
@@ -16,6 +18,7 @@ export function ChecklistItem({
     onToggle,
     onNotesChange,
 }: ChecklistItemProps) {
+    const locale = useLocale()
     const [isTogglingLoading, setIsTogglingLoading] = useState(false)
     const [isNotesExpanded, setIsNotesExpanded] = useState(false)
     const [notesValue, setNotesValue] = useState(item.notes)
@@ -146,7 +149,7 @@ export function ChecklistItem({
                     {item.completed && item.completed_at && (
                         <div className="mt-1 text-xs text-gray-500">
                             Hoàn thành bởi {item.completed_by || 'Admin'} •{' '}
-                            {new Date(item.completed_at).toLocaleString('vi-VN')}
+                            {formatDateTime(item.completed_at, locale)}
                         </div>
                     )}
 

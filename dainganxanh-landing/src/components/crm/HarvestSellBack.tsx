@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useLocale } from 'next-intl'
 import { submitSellBack } from '@/actions/harvest'
+import { formatCurrency, formatDate } from '@/lib/format'
 
 interface HarvestSellBackProps {
     orderId: string
@@ -10,20 +12,13 @@ interface HarvestSellBackProps {
     plantedDate: string
 }
 
-function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-        maximumFractionDigits: 0,
-    }).format(amount)
-}
-
 export default function HarvestSellBack({
     orderId,
     totalAmount,
     orderCode,
     plantedDate,
 }: HarvestSellBackProps) {
+    const locale = useLocale()
     const [step, setStep] = useState<'info' | 'contract' | 'submitting' | 'success'>('info')
     const [error, setError] = useState<string | null>(null)
     const [agreed, setAgreed] = useState(false)
@@ -31,7 +26,7 @@ export default function HarvestSellBack({
 
     const buybackMultiplier = 2
     const buybackPrice = Math.round(totalAmount * buybackMultiplier)
-    const today = new Date().toLocaleDateString('vi-VN')
+    const today = formatDate(new Date(), locale)
 
     const handleShowContract = () => {
         setStep('contract')
@@ -81,7 +76,7 @@ export default function HarvestSellBack({
                         <div className="flex justify-between items-center">
                             <span className="text-gray-600">Số tiền sẽ nhận:</span>
                             <span className="text-2xl font-bold text-emerald-700">
-                                {formatCurrency(resultData.buybackPrice)}
+                                {formatCurrency(resultData.buybackPrice, locale)}
                             </span>
                         </div>
                     </div>
@@ -109,11 +104,11 @@ export default function HarvestSellBack({
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <p className="text-sm text-gray-500">Giá trị ban đầu</p>
-                            <p className="text-lg font-semibold text-gray-700">{formatCurrency(totalAmount)}</p>
+                            <p className="text-lg font-semibold text-gray-700">{formatCurrency(totalAmount, locale)}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Giá mua lại (x{buybackMultiplier})</p>
-                            <p className="text-lg font-bold text-emerald-700">{formatCurrency(buybackPrice)}</p>
+                            <p className="text-lg font-bold text-emerald-700">{formatCurrency(buybackPrice, locale)}</p>
                         </div>
                     </div>
                 </div>
@@ -142,7 +137,7 @@ export default function HarvestSellBack({
                     <div className="grid grid-cols-2 gap-2 text-gray-600">
                         <p>Mã đơn hàng: <strong>{orderCode || orderId.slice(0, 8).toUpperCase()}</strong></p>
                         <p>Ngày lập: <strong>{today}</strong></p>
-                        <p>Ngày trồng: <strong>{new Date(plantedDate).toLocaleDateString('vi-VN')}</strong></p>
+                        <p>Ngày trồng: <strong>{formatDate(plantedDate, locale)}</strong></p>
                     </div>
                 </div>
 
@@ -151,7 +146,7 @@ export default function HarvestSellBack({
                     <ul className="space-y-2 text-gray-600">
                         <li className="flex items-start gap-2">
                             <span className="text-emerald-500 mt-0.5">&#10003;</span>
-                            <span>Giá trị ban đầu: <strong>{formatCurrency(totalAmount)}</strong></span>
+                            <span>Giá trị ban đầu: <strong>{formatCurrency(totalAmount, locale)}</strong></span>
                         </li>
                         <li className="flex items-start gap-2">
                             <span className="text-emerald-500 mt-0.5">&#10003;</span>
@@ -159,7 +154,7 @@ export default function HarvestSellBack({
                         </li>
                         <li className="flex items-start gap-2">
                             <span className="text-emerald-500 mt-0.5">&#10003;</span>
-                            <span>Giá mua lại: <strong className="text-emerald-700">{formatCurrency(buybackPrice)}</strong></span>
+                            <span>Giá mua lại: <strong className="text-emerald-700">{formatCurrency(buybackPrice, locale)}</strong></span>
                         </li>
                     </ul>
                 </div>

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Link } from '@/i18n/navigation'
-import { useRouter } from 'next/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react'
 import BookingStatusBadge from '@/components/crm/BookingStatusBadge'
 import BookingDetail from '@/components/crm/BookingDetail'

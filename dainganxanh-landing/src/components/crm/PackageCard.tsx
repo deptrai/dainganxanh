@@ -2,9 +2,10 @@
 
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
-import { format, isValid } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { useLocale } from 'next-intl'
+import { isValid } from 'date-fns'
 import { PHOTO_PLACEHOLDER_MONTHS, TREE_STATUS_CONFIG } from '@/lib/constants'
+import { formatDate, formatCurrency } from '@/lib/format'
 
 interface PackageCardProps {
     order: {
@@ -30,6 +31,7 @@ function generatePackageCode(orderId: string, orderCode: string | null): string 
 }
 
 export default function PackageCard({ order }: PackageCardProps) {
+    const locale = useLocale()
     const treeStatus = order.tree_status || 'pending'
     const statusConfig = TREE_STATUS_CONFIG[treeStatus as keyof typeof TREE_STATUS_CONFIG] || TREE_STATUS_CONFIG.pending
 
@@ -98,7 +100,7 @@ export default function PackageCard({ order }: PackageCardProps) {
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                     <span>💰</span>
                     <span className="font-semibold text-emerald-700">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total_amount || 0)}
+                        {formatCurrency(order.total_amount || 0, locale)}
                     </span>
                 </div>
 
@@ -107,8 +109,8 @@ export default function PackageCard({ order }: PackageCardProps) {
                     <span>📅</span>
                     <span>
                         {order.planted_at && isValid(plantedDate)
-                            ? `Trồng: ${format(plantedDate!, 'dd/MM/yyyy', { locale: vi })}`
-                            : `Đặt: ${format(createdDate, 'dd/MM/yyyy', { locale: vi })}`
+                            ? `Trồng: ${formatDate(plantedDate!, locale)}`
+                            : `Đặt: ${formatDate(createdDate, locale)}`
                         }
                     </span>
                 </div>

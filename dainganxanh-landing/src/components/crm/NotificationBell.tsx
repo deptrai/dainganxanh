@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { formatDistanceToNow } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { useRouter } from '@/i18n/navigation'
+import { useLocale } from 'next-intl'
 import { createBrowserClient } from '@/lib/supabase/client'
 import {
     subscribeToNotifications,
@@ -18,8 +17,9 @@ export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false)
     const [notifications, setNotifications] = useState<NotificationType[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
-    const [isLoading, setIsLoading] = useState(true)
+    const [_isLoading, setIsLoading] = useState(true)
     const router = useRouter()
+    const locale = useLocale()
 
     // Get current user and setup subscription
     useEffect(() => {
@@ -100,10 +100,28 @@ export default function NotificationBell() {
     }, [router])
 
     const formatTimeAgo = (timestamp: string) => {
-        return formatDistanceToNow(new Date(timestamp), {
-            addSuffix: true,
-            locale: vi
-        })
+        try {
+            const date = new Date(timestamp)
+            const diffSeconds = Math.round((date.getTime() - Date.now()) / 1000)
+            if (Math.abs(diffSeconds) < 60) {
+                return locale === 'en' ? 'just now' : 'vừa xong'
+            }
+            const diffMinutes = Math.round(diffSeconds / 60)
+            if (Math.abs(diffMinutes) < 60) {
+                const rtf = new Intl.RelativeTimeFormat(locale === 'en' ? 'en' : 'vi', { numeric: 'auto' })
+                return rtf.format(diffMinutes, 'minute')
+            }
+            const diffHours = Math.round(diffMinutes / 60)
+            if (Math.abs(diffHours) < 24) {
+                const rtf = new Intl.RelativeTimeFormat(locale === 'en' ? 'en' : 'vi', { numeric: 'auto' })
+                return rtf.format(diffHours, 'hour')
+            }
+            const diffDays = Math.round(diffHours / 24)
+            const rtf = new Intl.RelativeTimeFormat(locale === 'en' ? 'en' : 'vi', { numeric: 'auto' })
+            return rtf.format(diffDays, 'day')
+        } catch {
+            return timestamp
+        }
     }
 
     const handleMarkAllAsRead = useCallback(async () => {

@@ -1,9 +1,20 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import AdminStoreOrdersPage from '../page'
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { captureError } from '@/lib/monitoring'
+
+jest.mock('@/i18n/navigation', () => ({
+    redirect: jest.fn((target: any) => {
+        const url = typeof target === 'string' ? target : target.href
+        throw new Error(`NEXT_REDIRECT: ${url}`)
+    }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+    useRouter: () => ({ push: jest.fn() }),
+    usePathname: () => '/crm/admin/store-orders',
+}))
 
 jest.mock('next/navigation', () => ({
     redirect: jest.fn((url: string) => {
@@ -64,7 +75,9 @@ describe('AdminStoreOrdersPage', () => {
         await expect(
             AdminStoreOrdersPage({ searchParams: Promise.resolve({}) })
         ).rejects.toThrow('NEXT_REDIRECT: /auth/login')
-        expect(redirect).toHaveBeenCalledWith('/auth/login')
+        expect(redirect).toHaveBeenCalledWith(
+            expect.objectContaining({ href: '/auth/login' })
+        )
     })
 
     it('redirects non-admin users to /crm', async () => {
@@ -82,7 +95,9 @@ describe('AdminStoreOrdersPage', () => {
         await expect(
             AdminStoreOrdersPage({ searchParams: Promise.resolve({}) })
         ).rejects.toThrow('NEXT_REDIRECT: /crm')
-        expect(redirect).toHaveBeenCalledWith('/crm')
+        expect(redirect).toHaveBeenCalledWith(
+            expect.objectContaining({ href: '/crm' })
+        )
     })
 
     it('runs expire_pending_store_orders and renders orders table for admin', async () => {
@@ -116,7 +131,7 @@ describe('AdminStoreOrdersPage', () => {
         })
 
         const ui = await AdminStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(ui)
+        renderWithIntl(ui)
 
         expect(mockServiceSupabase.rpc).toHaveBeenCalledWith('expire_pending_store_orders')
         expect(screen.getByText('Đơn hàng shop')).toBeInTheDocument()
@@ -153,7 +168,7 @@ describe('AdminStoreOrdersPage', () => {
         const ui = await AdminStoreOrdersPage({
             searchParams: Promise.resolve({ status: 'confirmed' }),
         })
-        render(ui)
+        renderWithIntl(ui)
 
         expect(queryChainWithFilter.eq).toHaveBeenCalledWith('status', 'confirmed')
         expect(screen.getByTestId('current-status')).toHaveTextContent('confirmed')
@@ -188,7 +203,7 @@ describe('AdminStoreOrdersPage', () => {
         const ui = await AdminStoreOrdersPage({
             searchParams: Promise.resolve({ status: 'unknown' }),
         })
-        render(ui)
+        renderWithIntl(ui)
 
         expect(queryChain.eq).not.toHaveBeenCalled()
         expect(screen.getByTestId('current-status')).toHaveTextContent('all')
@@ -222,7 +237,7 @@ describe('AdminStoreOrdersPage', () => {
         })
 
         const ui = await AdminStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(ui)
+        renderWithIntl(ui)
 
         expect(captureError).toHaveBeenCalledWith(
             expect.any(Error),
@@ -264,7 +279,7 @@ describe('AdminStoreOrdersPage', () => {
         })
 
         const ui = await AdminStoreOrdersPage({ searchParams: Promise.resolve({}) })
-        render(ui)
+        renderWithIntl(ui)
 
         expect(captureError).toHaveBeenCalledWith(
             expect.any(Error),

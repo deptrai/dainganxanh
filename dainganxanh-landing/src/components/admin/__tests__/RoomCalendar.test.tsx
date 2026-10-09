@@ -3,7 +3,8 @@
  * TD-11: Month view, Week view, Hide cancelled bookings, Native DnD & date shift helpers
  */
 
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { screen, waitFor, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import RoomCalendarClient from '../RoomCalendarClient'
 import {
   calculateShiftedDates,
@@ -163,7 +164,7 @@ describe('RoomCalendarClient', () => {
 
   it('renders loading then calendar with room', async () => {
     mockFetch.mockResolvedValue(mockData)
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
     expect(screen.getByText('Đang tải lịch phòng...')).toBeInTheDocument()
 
     await waitFor(() => {
@@ -177,7 +178,7 @@ describe('RoomCalendarClient', () => {
 
   it('changes month on navigation', async () => {
     mockFetch.mockResolvedValue(mockData)
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText(monthLabel(curMonth))).toBeInTheDocument()
@@ -200,7 +201,7 @@ describe('RoomCalendarClient', () => {
 
   it('shows error state on fetch failure', async () => {
     mockFetch.mockResolvedValue({ lots: [], error: 'Không thể tải dữ liệu' })
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Không thể tải dữ liệu')).toBeInTheDocument()
@@ -210,7 +211,7 @@ describe('RoomCalendarClient', () => {
   it('opens block modal and submits', async () => {
     mockFetch.mockResolvedValue(mockData)
     mockBlock.mockResolvedValue({ blockId: 'rb1' })
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Deluxe')).toBeInTheDocument()
@@ -278,7 +279,7 @@ describe('RoomCalendarClient', () => {
     }
 
     mockFetch.mockResolvedValue(dataWithCancelled)
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Deluxe')).toBeInTheDocument()
@@ -294,7 +295,7 @@ describe('RoomCalendarClient', () => {
   // TD-11: Week View toggle & navigation
   it('toggles to week view and allows navigation', async () => {
     mockFetch.mockResolvedValue(mockData)
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Lịch phòng')).toBeInTheDocument()
@@ -333,7 +334,7 @@ describe('RoomCalendarClient', () => {
   it('moves booking to another room on drag and drop', async () => {
     mockFetch.mockResolvedValue(multiRoomData)
     mockMove.mockResolvedValue({ success: true })
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Standard')).toBeInTheDocument()
@@ -383,7 +384,7 @@ describe('RoomCalendarClient', () => {
   it('shifts booking dates on drag and drop to another day in same room', async () => {
     mockFetch.mockResolvedValue(mockData)
     mockMove.mockResolvedValue({ success: true })
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Deluxe')).toBeInTheDocument()
@@ -428,7 +429,7 @@ describe('RoomCalendarClient', () => {
       success: false,
       error: 'Phòng đã có khách đặt trong khoảng thời gian này',
     })
-    render(<RoomCalendarClient userId="u1" />)
+    renderWithIntl(<RoomCalendarClient userId="u1" />)
 
     await waitFor(() => {
       expect(screen.getByText('Standard')).toBeInTheDocument()

@@ -1,15 +1,24 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import PackageGrid from '@/components/crm/PackageGrid'
 import EmptyGarden from '@/components/crm/EmptyGarden'
 import MyGardenHeader from '@/components/crm/MyGardenHeader'
 
-export default async function MyGardenPage() {
+export default async function MyGardenPage({
+    params,
+}: {
+    params: Promise<{ locale: string }>
+}) {
+    const { locale } = await params
+    setRequestLocale(locale)
+
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
     if (!scoped) {
-        redirect('/login?redirect=/crm/my-garden')
+        redirect({ href: '/login?redirect=/crm/my-garden', locale })
+        return null
     }
 
     const { client: serviceClient, effectiveUserId } = scoped

@@ -124,6 +124,7 @@ jest.mock('@/i18n/navigation', () => {
             replace: jest.fn(),
             prefetch: jest.fn(),
             back: jest.fn(),
+            refresh: jest.fn(),
         }),
         usePathname: () => '/',
         redirect: jest.fn(),

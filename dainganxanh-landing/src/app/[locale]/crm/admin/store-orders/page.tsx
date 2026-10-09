@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { captureError } from '@/lib/monitoring'
 import AdminStoreOrdersTable, { AdminStoreOrder } from '@/components/admin/AdminStoreOrdersTable'
@@ -12,12 +13,17 @@ export const metadata = {
 }
 
 interface AdminStoreOrdersPageProps {
-    searchParams: Promise<{ status?: string }>
+    params?: Promise<{ locale?: string }>
+    searchParams?: Promise<{ status?: string }>
 }
 
 const VALID_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
 
-export default async function AdminStoreOrdersPage({ searchParams }: AdminStoreOrdersPageProps) {
+export default async function AdminStoreOrdersPage({ params, searchParams }: AdminStoreOrdersPageProps = {}) {
+    const resolvedParams = params ? await params : undefined
+    const locale = resolvedParams?.locale || 'vi'
+    setRequestLocale(locale)
+
     const supabase = await createServerClient()
     const {
         data: { user },
@@ -25,7 +31,8 @@ export default async function AdminStoreOrdersPage({ searchParams }: AdminStoreO
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        redirect('/auth/login')
+        redirect({ href: '/auth/login', locale })
+        return null
     }
 
     const serviceSupabase = createServiceRoleClient()
@@ -36,7 +43,8 @@ export default async function AdminStoreOrdersPage({ searchParams }: AdminStoreO
         .single()
 
     if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
-        redirect('/crm')
+        redirect({ href: '/crm', locale })
+        return null
     }
 
     // Lazily expire overdue pending store orders before loading the list
@@ -55,8 +63,8 @@ export default async function AdminStoreOrdersPage({ searchParams }: AdminStoreO
         })
     }
 
-    const resolvedParams = await searchParams
-    const statusParam = resolvedParams?.status
+    const resolvedSearchParams = searchParams ? await searchParams : {}
+    const statusParam = resolvedSearchParams?.status
     const activeStatus = statusParam && VALID_STATUSES.includes(statusParam) ? statusParam : undefined
 
     let query = serviceSupabase

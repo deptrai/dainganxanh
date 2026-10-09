@@ -1,14 +1,15 @@
+import { setRequestLocale } from 'next-intl/server'
 import { fetchAdminReferrals } from '@/actions/adminReferrals'
+import { formatCurrency, formatDate } from '@/lib/format'
 
-function formatVND(amount: number) {
-    return amount.toLocaleString('vi-VN') + ' ₫'
+interface AdminReferralsPageProps {
+    params: Promise<{ locale: string }>
 }
 
-function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+export default async function AdminReferralsPage({ params }: AdminReferralsPageProps) {
+    const { locale } = await params
+    setRequestLocale(locale)
 
-export default async function AdminReferralsPage() {
     const { data, error } = await fetchAdminReferrals()
 
     return (
@@ -54,20 +55,20 @@ export default async function AdminReferralsPage() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wide">Doanh số</p>
-                                        <p className="text-xl font-bold text-gray-900">{formatVND(r.total_sales)}</p>
+                                        <p className="text-xl font-bold text-gray-900">{formatCurrency(r.total_sales, locale)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wide">Hoa hồng (10%)</p>
-                                        <p className="text-xl font-bold text-green-700">{formatVND(r.total_commission)}</p>
+                                        <p className="text-xl font-bold text-green-700">{formatCurrency(r.total_commission, locale)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wide">Đã rút</p>
-                                        <p className="text-xl font-bold text-red-500">{formatVND(r.total_withdrawn)}</p>
+                                        <p className="text-xl font-bold text-red-500">{formatCurrency(r.total_withdrawn, locale)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase tracking-wide">Khả dụng</p>
                                         <p className={`text-xl font-bold ${r.available_balance > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                            {formatVND(r.available_balance)}
+                                            {formatCurrency(r.available_balance, locale)}
                                         </p>
                                     </div>
                                 </div>
@@ -94,9 +95,9 @@ export default async function AdminReferralsPage() {
                                                 <div className="text-xs text-gray-500">{o.buyer_email}</div>
                                             </td>
                                             <td className="px-6 py-3 text-right text-sm text-gray-900">{o.quantity} cây</td>
-                                            <td className="px-6 py-3 text-right text-sm text-gray-900">{formatVND(o.total_amount)}</td>
-                                            <td className="px-6 py-3 text-right text-sm font-semibold text-green-700">{formatVND(o.commission)}</td>
-                                            <td className="px-6 py-3 text-right text-sm text-gray-500">{formatDate(o.created_at)}</td>
+                                            <td className="px-6 py-3 text-right text-sm text-gray-900">{formatCurrency(o.total_amount, locale)}</td>
+                                            <td className="px-6 py-3 text-right text-sm font-semibold text-green-700">{formatCurrency(o.commission, locale)}</td>
+                                            <td className="px-6 py-3 text-right text-sm text-gray-500">{formatDate(o.created_at, locale)}</td>
                                         </tr>
                                     ))}
                                 </tbody>

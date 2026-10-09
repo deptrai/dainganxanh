@@ -1,4 +1,16 @@
 {
+  "nav": {
+    "home": "Home",
+    "buyTrees": "Buy Trees",
+    "store": "Store",
+    "ecoTourism": "Eco-tourism",
+    "myGarden": "My Garden",
+    "bookings": "Bookings",
+    "orders": "Orders",
+    "referrals": "Referrals",
+    "profile": "Profile",
+    "admin": "Admin"
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "myGarden": "My Garden",
@@ -10,6 +22,9 @@
     "logout": "Sign Out"
   },
   "dashboard": {
+    "title": "🌳 Dashboard",
+    "inDevelopment": "The dashboard page is under development",
+    "backToGarden": "Back to My Garden",
     "greeting": "Hello",
     "welcomeSubtitle": "Welcome back to your Đại Ngàn Xanh sanctuary.",
     "statsTrees": "Total Owned Trees",
@@ -52,8 +67,75 @@
     "checkOut": "Check-out",
     "guests": "Guests",
     "total": "Total Amount",
+    "totalAmount": "Total Amount",
     "status": "Status",
-    "emptyState": "You have no scheduled bookings yet"
+    "emptyState": "You have no scheduled bookings yet",
+    "emptyTitle": "You do not have any bookings yet",
+    "emptyDesc": "Experience our refreshing eco spaces and unique retreat services at our gardens.",
+    "exploreButton": "Explore retreat gardens",
+    "lot": "Garden",
+    "nights": "{count, plural, one {1 night} other {# nights}}",
+    "detail": "Details",
+    "pageInfo": "Page {page} of {totalPages} ({totalCount} total bookings)",
+    "table": {
+      "code": "Booking code",
+      "room": "Room",
+      "lot": "Garden",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "status": "Status",
+      "totalAmount": "Total Amount"
+    },
+    "pagination": {
+      "showing": "Showing {count} of {total} bookings (Page {page}/{totalPages})",
+      "prev": "Previous page",
+      "next": "Next page"
+    }
+  },
+  "bookingDetail": {
+    "backToList": "Back to list",
+    "createdDate": "Booking date: {date}",
+    "continuePayment": "Continue payment",
+    "expiredTitle": "Holding time for this booking has expired",
+    "expiredDesc": "The room has been released to serve other guests. Please create a new booking if you still need accommodation.",
+    "newBooking": "New booking",
+    "cancellationTitle": "Cancellation information",
+    "cancellationReason": "Cancellation reason:",
+    "stayTitle": "Room & Stay Information",
+    "room": "Room",
+    "lot": "Garden",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "stayDuration": "Duration of stay:",
+    "nights": "{count, plural, one {1 night} other {# nights}}",
+    "guestTitle": "Guest & Payment Information",
+    "guestName": "Primary guest",
+    "phone": "Phone number",
+    "email": "Email",
+    "guestCount": "Number of guests:",
+    "guests": "{count, plural, one {1 guest} other {# guests}}",
+    "paymentMethod": "Payment method",
+    "banking": "Bank transfer (VietQR)",
+    "transfer": "Bank transfer",
+    "total": "Total amount:",
+    "specialRequests": "Special requests"
+  },
+  "checkInInstructions": {
+    "title": "Check-in Instructions",
+    "subtitle": "Detailed information for your stay",
+    "destination": "Destination",
+    "room": "Booked Room",
+    "stayTime": "Duration of Stay",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "hoursPolicy": "Hours Policy",
+    "hoursDesc": "Check-in from 14:00 - Check-out before 12:00",
+    "supportHotline": "Front Desk & Support Hotline",
+    "guestPhone": "Guest contact phone",
+    "specialRequests": "Recorded Special Requests",
+    "noticeTitle": "Check-in Notes:",
+    "notice1": "Please bring National ID / Passport of the primary guest.",
+    "notice2": "If arriving after 18:00, please notify garden management in advance."
   },
   "storeOrders": {
     "title": "Store Orders",
@@ -63,7 +145,22 @@
     "total": "Total Paid",
     "date": "Order Date",
     "status": "Status",
-    "emptyState": "No orders placed yet"
+    "emptyState": "No orders placed yet",
+    "emptyTitle": "You do not have any orders yet",
+    "emptyDesc": "Explore pure Vietnamese agarwood products from our tree gardens.",
+    "shopNow": "Shop now",
+    "shippingAddress": "Shipping address",
+    "paymentMethod": "Payment",
+    "paymentBanking": "Bank transfer (VietQR)",
+    "paymentCod": "Cash on delivery (COD)",
+    "shippingFee": "Shipping fee: {fee}",
+    "freeShipping": "Free shipping",
+    "trackingNumber": "Tracking number",
+    "pagination": {
+      "showing": "Showing {count} / {total} orders (Page {page} / {totalPages})",
+      "prev": "Previous",
+      "next": "Next"
+    }
   },
   "profile": {
     "title": "Personal Profile",

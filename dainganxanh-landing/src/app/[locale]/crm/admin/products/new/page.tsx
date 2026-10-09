@@ -1,5 +1,5 @@
-import { Link } from '@/i18n/navigation'
-import { redirect } from 'next/navigation'
+import { Link, redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { ProductForm } from '@/components/admin/ProductForm'
 import { ChevronRightIcon } from '@heroicons/react/24/outline'
@@ -12,12 +12,20 @@ export const metadata = {
     robots: { index: false },
 }
 
-export default async function NewProductPage() {
+export default async function NewProductPage({
+    params,
+}: {
+    params: Promise<{ locale: string }>
+}) {
+    const { locale } = await params
+    setRequestLocale(locale)
+
     const supabase = await createServerClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-        redirect('/auth/login')
+        redirect({ href: '/auth/login', locale })
+        return null
     }
 
     const serviceSupabase = createServiceRoleClient()
@@ -28,7 +36,8 @@ export default async function NewProductPage() {
         .single()
 
     if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
-        redirect('/crm')
+        redirect({ href: '/crm', locale })
+        return null
     }
 
     // Fetch categories and lots

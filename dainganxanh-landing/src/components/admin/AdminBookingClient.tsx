@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from '@/i18n/navigation'
+import { useSearchParams } from 'next/navigation'
 import { fetchAdminBookings, AdminBookingFilters } from '@/actions/adminBookings'
 import AdminBookingTable from './AdminBookingTable'
 import BookingFilterBar from './BookingFilterBar'

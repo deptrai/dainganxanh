@@ -1,12 +1,10 @@
 'use client'
 
-import { Link } from '@/i18n/navigation'
-import { useRouter } from 'next/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Bed, ArrowRight } from 'lucide-react'
 import BookingStatusBadge from './BookingStatusBadge'
-import { formatDateVN, formatVND } from '@/lib/date'
-
-export { formatDateVN, formatVND }
+import { formatDate, formatCurrency } from '@/lib/format'
 
 export interface MyBooking {
     id: string
@@ -44,6 +42,8 @@ export default function BookingTable({
     onPageChange,
 }: BookingTableProps) {
     const router = useRouter()
+    const locale = useLocale()
+    const t = useTranslations('crm.bookings')
 
     if (!bookings || bookings.length === 0) {
         return (
@@ -51,15 +51,15 @@ export default function BookingTable({
                 <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4">
                     <Bed className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Bạn chưa có đặt phòng nào</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{t('emptyTitle')}</h3>
                 <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
-                    Hãy trải nghiệm không gian sinh thái xanh mát và dịch vụ nghỉ dưỡng độc đáo tại các khu vườn của chúng tôi.
+                    {t('emptyDesc')}
                 </p>
                 <Link
                     href="/eco-tourism"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl transition-colors shadow-sm shadow-emerald-200"
                 >
-                    <span>Khám phá vườn nghỉ dưỡng</span>
+                    <span>{t('exploreButton')}</span>
                     <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
@@ -76,13 +76,13 @@ export default function BookingTable({
                     <table className="w-full text-left text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                             <tr>
-                                <th scope="col" className="px-6 py-4">Mã đặt phòng</th>
-                                <th scope="col" className="px-6 py-4">Phòng</th>
-                                <th scope="col" className="px-6 py-4">Khu vườn</th>
-                                <th scope="col" className="px-6 py-4">Nhận phòng</th>
-                                <th scope="col" className="px-6 py-4">Trả phòng</th>
-                                <th scope="col" className="px-6 py-4">Trạng thái</th>
-                                <th scope="col" className="px-6 py-4 text-right">Tổng tiền</th>
+                                <th scope="col" className="px-6 py-4">{t('table.code')}</th>
+                                <th scope="col" className="px-6 py-4">{t('table.room')}</th>
+                                <th scope="col" className="px-6 py-4">{t('table.lot')}</th>
+                                <th scope="col" className="px-6 py-4">{t('table.checkIn')}</th>
+                                <th scope="col" className="px-6 py-4">{t('table.checkOut')}</th>
+                                <th scope="col" className="px-6 py-4">{t('table.status')}</th>
+                                <th scope="col" className="px-6 py-4 text-right">{t('table.totalAmount')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -116,12 +116,12 @@ export default function BookingTable({
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="text-gray-700 block whitespace-nowrap">
-                                            {formatDateVN(booking.checkInDate)}
+                                            {formatDate(booking.checkInDate, locale)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="text-gray-700 block whitespace-nowrap">
-                                            {formatDateVN(booking.checkOutDate)}
+                                            {formatDate(booking.checkOutDate, locale)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -129,7 +129,7 @@ export default function BookingTable({
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <span className="font-bold text-emerald-700 block whitespace-nowrap">
-                                            {formatVND(booking.totalAmount)}
+                                            {formatCurrency(booking.totalAmount, locale)}
                                         </span>
                                     </td>
                                 </tr>
@@ -168,14 +168,14 @@ export default function BookingTable({
                         <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg">
                             <Calendar className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                             <span>
-                                {formatDateVN(booking.checkInDate)} - {formatDateVN(booking.checkOutDate)}
+                                {formatDate(booking.checkInDate, locale)} - {formatDate(booking.checkOutDate, locale)}
                             </span>
                         </div>
 
                         <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                            <span className="text-xs text-gray-500">Tổng tiền</span>
+                            <span className="text-xs text-gray-500">{t('totalAmount')}</span>
                             <span className="font-bold text-emerald-700 text-base">
-                                {formatVND(booking.totalAmount)}
+                                {formatCurrency(booking.totalAmount, locale)}
                             </span>
                         </div>
                     </Link>
@@ -186,7 +186,7 @@ export default function BookingTable({
             {safeTotalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-500">
-                        Hiển thị {bookings.length} / {totalCount} đơn (Trang {page} / {safeTotalPages})
+                        {t('pagination.showing', { count: bookings.length, total: totalCount, page, totalPages: safeTotalPages })}
                     </p>
                     <div className="flex items-center gap-2">
                         <button
@@ -194,10 +194,10 @@ export default function BookingTable({
                             onClick={() => onPageChange(page - 1)}
                             disabled={page <= 1}
                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            aria-label="Trang trước"
+                            aria-label={t('pagination.prev')}
                         >
                             <ChevronLeft className="w-4 h-4" />
-                            <span>Trước</span>
+                            <span>{t('pagination.prev')}</span>
                         </button>
                         <span className="text-xs font-medium text-gray-700 px-2">
                             {page} / {safeTotalPages}
@@ -207,9 +207,9 @@ export default function BookingTable({
                             onClick={() => onPageChange(page + 1)}
                             disabled={page >= safeTotalPages}
                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            aria-label="Trang sau"
+                            aria-label={t('pagination.next')}
                         >
-                            <span>Sau</span>
+                            <span>{t('pagination.next')}</span>
                             <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>

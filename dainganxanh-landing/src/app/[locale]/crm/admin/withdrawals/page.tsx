@@ -1,18 +1,27 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import WithdrawalsList from '@/components/admin/WithdrawalsList'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminWithdrawalsPage() {
+interface AdminWithdrawalsPageProps {
+    params: Promise<{ locale: string }>
+}
+
+export default async function AdminWithdrawalsPage({ params }: AdminWithdrawalsPageProps) {
+    const { locale } = await params
+    setRequestLocale(locale)
+
     const supabase = await createServerClient()
 
     // Check authentication
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
-        redirect('/login')
+        redirect({ href: '/login', locale })
+        return null
     }
 
     // Check admin role
@@ -24,12 +33,14 @@ export default async function AdminWithdrawalsPage() {
 
     if (profileError || !profile) {
         console.error('Failed to fetch user profile:', profileError)
-        redirect('/crm/dashboard')
+        redirect({ href: '/crm/dashboard', locale })
+        return null
     }
 
     // Only allow admin and super_admin roles
     if (!['admin', 'super_admin'].includes(profile.role)) {
-        redirect('/crm/dashboard')
+        redirect({ href: '/crm/dashboard', locale })
+        return null
     }
 
     // Fetch all withdrawals using service role client

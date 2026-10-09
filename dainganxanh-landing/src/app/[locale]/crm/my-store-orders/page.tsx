@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation'
+import { redirect } from '@/i18n/navigation'
+import { setRequestLocale } from 'next-intl/server'
 import { Metadata } from 'next'
 import { getScopedCrmClient } from '@/lib/supabase/scopedClient'
 import { StoreOrdersList } from '@/components/crm/StoreOrdersList'
@@ -11,15 +12,21 @@ export const metadata: Metadata = {
 }
 
 interface MyStoreOrdersPageProps {
-    searchParams: Promise<{ page?: string }>
+    params?: Promise<{ locale?: string }>
+    searchParams?: Promise<{ page?: string }>
 }
 
-export default async function MyStoreOrdersPage({ searchParams }: MyStoreOrdersPageProps) {
+export default async function MyStoreOrdersPage({ params, searchParams }: MyStoreOrdersPageProps = {}) {
+    const resolvedParams = params ? await params : undefined
+    const locale = resolvedParams?.locale || 'vi'
+    setRequestLocale(locale)
+
     // Lấy service client đã gắn quyền cùng effectiveUserId (hỗ trợ impersonation)
     const scoped = await getScopedCrmClient()
 
     if (!scoped) {
-        redirect('/login?redirect=/crm/my-store-orders')
+        redirect({ href: '/login?redirect=/crm/my-store-orders', locale })
+        return null
     }
 
     const { client: serviceClient, effectiveUserId } = scoped
@@ -36,7 +43,8 @@ export default async function MyStoreOrdersPage({ searchParams }: MyStoreOrdersP
         captureError(err instanceof Error ? err : new Error(String(err)), { context: 'MyStoreOrdersPage.lazyExpire', effectiveUserId })
     }
 
-    const { page: pageParam } = await searchParams
+    const resolvedSearchParams = searchParams ? await searchParams : {}
+    const { page: pageParam } = resolvedSearchParams || {}
     const page = Math.max(1, parseInt(pageParam || '1', 10) || 1)
     const pageSize = 20
     const start = (page - 1) * pageSize

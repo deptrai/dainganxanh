@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from '@/i18n/navigation'
+import { useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Calendar, Wrench, X, AlertCircle, CheckCircle2 } from 'lucide-react'
 import {
     fetchRoomCalendarData,
@@ -55,6 +56,7 @@ function getNextDay(dateString: string): string {
 }
 
 export default function RoomCalendarClient({ userId: _userId }: RoomCalendarClientProps) {
+    const locale = useLocale()
     const [viewMode, setViewMode] = useState<'month' | 'week'>('month')
     const [currentDate, setCurrentDate] = useState(new Date())
     const [calendarData, setCalendarData] = useState<RoomCalendarData | null>(null)
@@ -90,8 +92,8 @@ export default function RoomCalendarClient({ userId: _userId }: RoomCalendarClie
     const monthData = useMemo(() => {
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
-        return getMonthCalendarDays(year, month)
-    }, [currentDate])
+        return getMonthCalendarDays(year, month, locale)
+    }, [currentDate, locale])
 
     const weekData = useMemo(() => {
         return getWeekBounds(currentDate)

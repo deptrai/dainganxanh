@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
+import { formatDate } from '@/lib/format'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { updateTreeHealth } from '@/actions/treeHealth'
 import TreeHealthModal from '@/components/admin/TreeHealthModal'
@@ -21,6 +23,7 @@ interface Lot {
 }
 
 export default function TreesPage() {
+    const locale = useLocale()
     const [lots, setLots] = useState<Lot[]>([])
     const [selectedLotId, setSelectedLotId] = useState<string>('')
     const [healthFilter, setHealthFilter] = useState<string>('all')
@@ -303,7 +306,7 @@ export default function TreesPage() {
                                         <span className="text-sm text-gray-600">{tree.status}</span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {new Date(tree.created_at).toLocaleDateString('vi-VN')}
+                                        {formatDate(tree.created_at, locale)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button

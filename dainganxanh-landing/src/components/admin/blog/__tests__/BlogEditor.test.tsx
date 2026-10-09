@@ -13,6 +13,9 @@ import BlogEditor from '../BlogEditor'
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockPush = jest.fn()
+jest.mock('@/i18n/navigation', () => ({
+    useRouter: () => ({ push: mockPush }),
+}))
 jest.mock('next/navigation', () => ({
     useRouter: () => ({ push: mockPush }),
 }))

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale } from 'next-intl'
+import { formatDate } from '@/lib/format'
 import { getPrintQueue, updatePrintStatus } from '@/actions/printQueue'
 
 import { useToast } from '@/hooks/use-toast'
@@ -27,6 +29,7 @@ interface PrintQueueItem {
 }
 
 export default function PrintQueuePage() {
+    const locale = useLocale()
     const [queue, setQueue] = useState<PrintQueueItem[]>([])
     const [loading, setLoading] = useState(true)
     const [trackingNumbers, setTrackingNumbers] = useState<Record<string, string>>({})
@@ -154,7 +157,7 @@ export default function PrintQueuePage() {
                                         <td className="px-4 py-3">
                                             <div className="font-medium">{item.orders.order_code}</div>
                                             <div className="text-sm text-muted-foreground">
-                                                {new Date(item.created_at).toLocaleDateString('vi-VN')}
+                                                {formatDate(item.created_at, locale)}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">

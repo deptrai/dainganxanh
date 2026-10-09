@@ -4,6 +4,14 @@ import { ProductForm } from '../ProductForm'
 const mockPush = jest.fn()
 const mockRefresh = jest.fn()
 
+jest.mock('@/i18n/navigation', () => ({
+    useRouter: () => ({
+        push: mockPush,
+        refresh: mockRefresh,
+    }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+}))
+
 jest.mock('next/navigation', () => ({
     useRouter: () => ({
         push: mockPush,

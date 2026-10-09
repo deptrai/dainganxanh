@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useLocale } from 'next-intl'
 import { requestWithdrawal } from '@/actions/withdrawals'
+import { formatCurrency } from '@/lib/format'
 import { MIN_WITHDRAWAL } from '@/lib/constants'
 import type { SavedBankInfo } from './WithdrawalButton'
 
@@ -33,6 +35,7 @@ export default function WithdrawalForm({
     onSuccess,
     onCancel
 }: WithdrawalFormProps) {
+    const locale = useLocale()
     const [formData, setFormData] = useState({
         bankName: savedBankInfo?.bankName || '',
         bankAccountNumber: savedBankInfo?.bankAccountNumber || '',
@@ -111,7 +114,7 @@ export default function WithdrawalForm({
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
                     <p className="text-sm text-gray-600">Số dư khả dụng</p>
                     <p className="text-2xl font-bold text-emerald-700">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(availableBalance)}
+                        {formatCurrency(availableBalance, locale)}
                     </p>
                 </div>
 
