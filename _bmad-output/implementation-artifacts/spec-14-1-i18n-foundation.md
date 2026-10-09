@@ -2,7 +2,7 @@
 title: 'Story 14.1: i18n Foundation — Routing, Middleware, Locale Schema & Switcher'
 type: 'feature'
 created: '2026-10-09'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 baseline_revision: '966ce8698c5898f1febca1130ea6f6045b6b2150'
 followup_review_recommended: false

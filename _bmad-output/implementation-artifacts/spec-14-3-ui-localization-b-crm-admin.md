@@ -2,7 +2,7 @@
 title: 'UI Localization B — CRM & Admin'
 type: 'feature'
 created: '2026-10-09'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 1
 followup_review_recommended: false
 context: []
