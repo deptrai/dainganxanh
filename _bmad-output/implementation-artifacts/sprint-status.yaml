@@ -1,5 +1,5 @@
 # Sprint Status - Đại Ngàn Xanh
-last_updated: 10-09-2026 05:05
+last_updated: "10-09-2026 07:28"
 # Generated: 2026-09-05T08:15:00+07:00
 # ⚠️ DO NOT manually edit status values - use workflows to update
 
@@ -145,8 +145,8 @@ development_status:
   epic-13-retrospective: optional
 
   # Epic 14: Multi-Language (i18n) - Added 2026-10-09
-  epic-14: backlog
-  14-1-i18n-foundation-routing-middleware-locale-schema-switcher: backlog
+  epic-14: in-progress
+  14-1-i18n-foundation-routing-middleware-locale-schema-switcher: done
   14-2-ui-localization-a-marketing-store-shared-conventions: backlog
   14-3-ui-localization-b-crm-admin: backlog
   14-4-content-database-i18n-admin-vi-en-entry-dynamic-sitemap: backlog
@@ -160,7 +160,7 @@ summary:
   stories_ready: 0
   stories_in_progress: 0
   stories_review: 0
-  stories_done: 64
-  stories_backlog: 12
+  stories_done: 70
+  stories_backlog: 5
   current_velocity: 11
-  last_updated: "10-09-2026 05:05"
+  last_updated: "10-09-2026 07:28"
