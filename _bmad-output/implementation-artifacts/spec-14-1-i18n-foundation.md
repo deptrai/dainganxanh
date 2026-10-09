@@ -169,3 +169,11 @@ deferred: []
 **Deviation chấp nhận:** crm.json + pricing.json catalogs tạo sớm (14.2/14.3 dùng).
 **Defer:** silent-fallback warning, root not-found/global-error; file rác pre-existing CRMHeader (1).tsx + AdminSidebar (1).tsx (ngoài scope).
 **users.locale override design:** chỉ áp khi authenticated + cookie NEXT_LOCALE vắng + URL không prefix → redirect /en nếu DB=en; không bao giờ ép rời URL /en explicit (prefix = explicit choice; switcher giữ cookie↔DB đồng bộ, tránh per-request query).
+
+## Live E2E Verification (Browser Pilot, 2026-10-09)
+
+- `/` VI render đầy đủ; `/en` render English đầy đủ; link giữ prefix `/en`.
+- Switcher 2 chiều OK (`/`↔`/en`), cookie `NEXT_LOCALE` set; query params preserved.
+- Guard: `/crm`→`/login?redirect=/crm`, `/en/crm`→`/en/login?redirect=/en/crm`, `/fr/crm`→`/login` (invalid prefix).
+- `/api/*` giữ đủ CSP/HSTS/XFO/nosniff/Referrer/Permissions headers; robots disallow `/crm/`+`/en/crm/`; hreflang vi/en/x-default đúng cả head lẫn sitemap.
+- **Bug bắt được qua live verify:** 45 key `landing.*` bị tham chiếu nhưng thiếu trong CẢ vi lẫn en catalog (parity test mù vì hai bên cùng thiếu) → đã điền đủ 45/45, jest 118/1189 pass. Console chỉ còn 404 `hero-video.mp4` (asset pre-existing, không liên quan i18n).
