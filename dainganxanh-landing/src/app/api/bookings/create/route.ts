@@ -19,6 +19,7 @@ export const createBookingSchema = z.object({
   special_requests: z.string().max(500, 'Yêu cầu đặc biệt không quá 500 ký tự').optional().or(z.literal('')),
   payment_method: z.literal('banking'),
   total_amount: z.number().int().positive().optional(),
+  locale: z.enum(['vi', 'en']).optional(),
 })
 
 function generateBookingCode(): string {
@@ -121,6 +122,15 @@ export async function POST(req: NextRequest) {
   const bookingCode = generateBookingCode()
   const expiresAt = new Date(Date.now() + PAYMENT_TIMEOUT_MINUTES * 60 * 1000).toISOString()
 
+  const rawCookie = req.cookies.get('NEXT_LOCALE')?.value
+  const bodyLocale = data.locale
+  const locale: 'vi' | 'en' =
+    rawCookie === 'en' || rawCookie === 'vi'
+      ? rawCookie
+      : bodyLocale === 'en' || bodyLocale === 'vi'
+        ? bodyLocale
+        : 'vi'
+
   // Identify user if logged in, allow guest checkout if not
   const effectiveUser = await getEffectiveUser().catch(() => null)
 
@@ -141,6 +151,7 @@ export async function POST(req: NextRequest) {
       status: 'pending',
       special_requests: data.special_requests || null,
       expires_at: expiresAt,
+      locale,
     })
     .select('id, code, room_id, check_in_date, check_out_date, nights_count, total_amount, payment_method, expires_at, status')
     .single()

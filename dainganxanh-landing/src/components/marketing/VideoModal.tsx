@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 interface VideoModalProps {
     isOpen: boolean;
@@ -8,6 +9,8 @@ interface VideoModalProps {
 }
 
 export function VideoModal({ isOpen, onClose }: VideoModalProps) {
+    const t = useTranslations('landing');
+
     useEffect(() => {
         if (!isOpen) return;
         document.body.style.overflow = "hidden";
@@ -40,7 +43,7 @@ export function VideoModal({ isOpen, onClose }: VideoModalProps) {
                 <button
                     onClick={onClose}
                     className="absolute top-3 right-3 z-20 text-white/70 hover:text-white bg-black/30 hover:bg-black/50 rounded-full p-1.5 transition-all"
-                    aria-label="Đóng"
+                    aria-label={t('video.close')}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -52,7 +55,7 @@ export function VideoModal({ isOpen, onClose }: VideoModalProps) {
                     <iframe
                         className="absolute inset-0 w-full h-full"
                         src="https://www.youtube.com/embed/BsRAkZpQrX8?autoplay=1"
-                        title="Video Giới Thiệu Đại Ngàn Xanh"
+                        title={t('video.title')}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                     />

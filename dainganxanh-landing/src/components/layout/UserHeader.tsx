@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { LogOut, User, Shield } from "lucide-react";
-import Link from "next/link";
+import { Link } from '@/i18n/navigation'
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function UserHeader() {
@@ -86,6 +87,7 @@ export function UserHeader() {
                     <span className="hidden sm:inline">Admin</span>
                 </Link>
             )}
+            <LanguageSwitcher />
             <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"

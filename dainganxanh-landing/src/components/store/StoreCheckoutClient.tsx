@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Copy, Check, Loader2, CheckCircle2, Clock, Truck, Banknote, ShoppingBag } from 'lucide-react'
 import { VN_PROVINCES } from '@/lib/constants/provinces'

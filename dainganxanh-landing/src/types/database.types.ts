@@ -452,6 +452,7 @@ export type Database = {
           user_id: string | null
           user_name: string | null
           verified_at: string | null
+          locale: 'vi' | 'en'
         }
         Insert: {
           address?: string | null
@@ -488,6 +489,7 @@ export type Database = {
           user_id?: string | null
           user_name?: string | null
           verified_at?: string | null
+          locale?: 'vi' | 'en'
         }
         Update: {
           address?: string | null
@@ -524,6 +526,7 @@ export type Database = {
           user_id?: string | null
           user_name?: string | null
           verified_at?: string | null
+          locale?: 'vi' | 'en'
         }
         Relationships: [
           {
@@ -951,6 +954,7 @@ export type Database = {
           total_amount: number
           updated_at: string
           user_id: string | null
+          locale: 'vi' | 'en'
         }
         Insert: {
           cancellation_reason?: string | null
@@ -973,6 +977,7 @@ export type Database = {
           total_amount: number
           updated_at?: string
           user_id?: string | null
+          locale?: 'vi' | 'en'
         }
         Update: {
           cancellation_reason?: string | null
@@ -995,6 +1000,7 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           user_id?: string | null
+          locale?: 'vi' | 'en'
         }
         Relationships: [
           {
@@ -1158,6 +1164,7 @@ export type Database = {
           tracking_number: string | null
           updated_at: string
           user_id: string | null
+          locale: 'vi' | 'en'
         }
         Insert: {
           cancellation_reason?: string | null
@@ -1180,6 +1187,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
+          locale?: 'vi' | 'en'
         }
         Update: {
           cancellation_reason?: string | null
@@ -1202,6 +1210,7 @@ export type Database = {
           tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
+          locale?: 'vi' | 'en'
         }
         Relationships: []
       }
@@ -1431,6 +1440,7 @@ export type Database = {
           referred_by_user_id: string | null
           role: string | null
           updated_at: string | null
+          locale: 'vi' | 'en'
         }
         Insert: {
           created_at?: string | null
@@ -1445,6 +1455,7 @@ export type Database = {
           referred_by_user_id?: string | null
           role?: string | null
           updated_at?: string | null
+          locale?: 'vi' | 'en'
         }
         Update: {
           created_at?: string | null
@@ -1459,6 +1470,7 @@ export type Database = {
           referred_by_user_id?: string | null
           role?: string | null
           updated_at?: string | null
+          locale?: 'vi' | 'en'
         }
         Relationships: [
           {

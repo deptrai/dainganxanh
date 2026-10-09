@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import HarvestBadge from './HarvestBadge'

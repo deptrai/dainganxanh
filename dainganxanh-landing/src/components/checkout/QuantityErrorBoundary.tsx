@@ -1,7 +1,7 @@
 "use client";
 
 import { Component, ReactNode } from "react";
-import Link from "next/link";
+import { Link } from '@/i18n/navigation'
 import { AlertTriangle } from "lucide-react";
 
 interface Props {

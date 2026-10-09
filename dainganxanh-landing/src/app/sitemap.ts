@@ -8,12 +8,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
+      alternates: {
+        languages: {
+          vi: 'https://dainganxanh.com.vn',
+          en: 'https://dainganxanh.com.vn/en',
+          'x-default': 'https://dainganxanh.com.vn',
+        },
+      },
     },
     {
       url: 'https://dainganxanh.com.vn/pricing',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
+      alternates: {
+        languages: {
+          vi: 'https://dainganxanh.com.vn/pricing',
+          en: 'https://dainganxanh.com.vn/en/pricing',
+          'x-default': 'https://dainganxanh.com.vn/pricing',
+        },
+      },
     },
   ]
 
@@ -40,6 +54,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 0.9,
+        alternates: {
+          languages: {
+            vi: 'https://dainganxanh.com.vn/blog',
+            en: 'https://dainganxanh.com.vn/en/blog',
+            'x-default': 'https://dainganxanh.com.vn/blog',
+          },
+        },
       })
     }
   } catch {

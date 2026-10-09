@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { ShoppingBag, Star, Search } from 'lucide-react'
 import { originLabel, type ProductOriginType } from './originLabels'
 

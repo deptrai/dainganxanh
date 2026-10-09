@@ -1,0 +1,64 @@
+{
+  "header": {
+    "badge": "Planting Pricing",
+    "title": "Green Investment – Enduring Returns",
+    "subtitle": "Only 410,000 VND per native Aquilaria tree. All-inclusive: seedling, land, professional care, and 5-year replacement insurance."
+  },
+  "unitPrice": {
+    "amount": "410,000",
+    "currency": "VND",
+    "perUnit": "tree",
+    "treeType": "2-Year-Old Native Aquilaria Seedling"
+  },
+  "packages": {
+    "single": {
+      "name": "Seedling of Blessing",
+      "quantity": "1 tree",
+      "tag": "Starter",
+      "desc": "Perfect for individuals seeking to sow good fortune and experience digital arboriculture."
+    },
+    "starter": {
+      "name": "Family Orchard",
+      "quantity": "10 trees",
+      "tag": "Most Popular",
+      "desc": "Created for families building an enduring green legacy for future generations."
+    },
+    "estate": {
+      "name": "Forest of Gratitude",
+      "quantity": "50 trees",
+      "tag": "Best Value",
+      "desc": "Dedicated grove featuring an honorary nameplate for your family or organization."
+    },
+    "corporate": {
+      "name": "Enterprise Canopy",
+      "quantity": "100+ trees",
+      "tag": "ESG & Net Zero",
+      "desc": "Comprehensive carbon offset and sustainable development package for forward-looking enterprises."
+    }
+  },
+  "benefits": {
+    "title": "Included Privileges",
+    "item1": "Digital ownership certificate (NFT Certificate)",
+    "item2": "Precise GPS coordinates pinned on high-resolution satellite imagery",
+    "item3": "1-for-1 replacement guarantee over 5 years against all natural hazards",
+    "item4": "Live photos and care logs updated directly through the application",
+    "item5": "100% entitlement to harvested agarwood yields upon maturity"
+  },
+  "calculator": {
+    "title": "Quantity Calculator",
+    "quantityLabel": "Number of trees:",
+    "min": "Minimum 1 tree",
+    "totalLabel": "Total investment:",
+    "button": "Proceed to Order"
+  },
+  "checkout": {
+    "title": "Order Information",
+    "fullName": "Full name for certificate",
+    "email": "Email for invoice & certificate",
+    "phone": "Contact phone number",
+    "address": "Contact address",
+    "paymentMethod": "Payment method",
+    "bankTransfer": "Bank transfer (VietQR)",
+    "confirmButton": "Confirm & Pay"
+  }
+}

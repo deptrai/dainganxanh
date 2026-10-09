@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { PostCard, type PostCardData } from './PostCard'
 import { TagBadge } from './TagBadge'
 import { ChevronLeft, ChevronRight } from 'lucide-react'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { ChevronLeft, ChevronRight, ChevronDown, ShoppingBag, Truck, MapPin, CreditCard } from 'lucide-react'
 import StoreOrderStatusBadge from './StoreOrderStatusBadge'
 import { formatDateVN, formatVND } from '@/lib/date'

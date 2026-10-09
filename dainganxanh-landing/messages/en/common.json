@@ -1,0 +1,65 @@
+{
+  "brand": {
+    "name": "Dai Ngan Xanh",
+    "tagline": "Sowing Good Deeds, Reaping Blessings",
+    "description": "Platform to plant 1,000,000 native Aquilaria (Agarwood) trees in Vietnam, with transparent tracking and carbon credits."
+  },
+  "nav": {
+    "home": "Home",
+    "pricing": "Plant Trees",
+    "store": "Store",
+    "ecoTourism": "Eco-Tourism",
+    "blog": "Blog",
+    "myGarden": "My Garden",
+    "referrals": "Referrals",
+    "myBookings": "My Bookings",
+    "orders": "Orders",
+    "profile": "Profile",
+    "admin": "Admin",
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "register": "Register"
+  },
+  "actions": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "continue": "Continue",
+    "search": "Search",
+    "filter": "Filter",
+    "viewDetails": "View Details",
+    "loading": "Loading...",
+    "retry": "Try Again",
+    "delete": "Delete",
+    "edit": "Edit"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "paid": "Paid",
+    "unpaid": "Unpaid"
+  },
+  "switcher": {
+    "label": "Language",
+    "ariaLabel": "Switch language",
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "viShort": "VN",
+    "enShort": "EN",
+    "dirtyFormWarning": "You have unsaved changes. Are you sure you want to switch language?"
+  },
+  "footer": {
+    "rights": "All rights reserved by Dai Ngan Xanh.",
+    "companyName": "Dai Ngan Xanh Joint Stock Company",
+    "address": "Ea Ktur Commune, Cu Kuin District, Dak Lak Province, Vietnam",
+    "contact": "Contact Support",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  }
+}

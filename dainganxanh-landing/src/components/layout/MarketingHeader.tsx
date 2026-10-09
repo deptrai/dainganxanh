@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from '@/i18n/navigation'
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import { Home, TreePine, Share2, Package, LogIn, BookOpen, UserCircle, ShoppingBag, PackageCheck, Compass } from "lucide-react";
 import { UserHeader } from "./UserHeader";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -80,14 +81,17 @@ export function MarketingHeader() {
                             <span className="font-bold text-lg text-emerald-800">Đại Ngàn Xanh</span>
                         </Link>
                         
-                        {/* Login Button */}
-                        <Link 
-                            href="/login"
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                        >
-                            <LogIn className="w-4 h-4" />
-                            <span>Đăng nhập</span>
-                        </Link>
+                        {/* Language Switcher + Login Button */}
+                        <div className="flex items-center gap-2">
+                            <LanguageSwitcher />
+                            <Link 
+                                href="/login"
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                            >
+                                <LogIn className="w-4 h-4" />
+                                <span>Đăng nhập</span>
+                            </Link>
+                        </div>
                     </div>
                 )
             )}

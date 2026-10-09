@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { Bed, ArrowRight } from 'lucide-react'
 import BookingStatusBadge from '@/components/crm/BookingStatusBadge'
 import { formatDateVN, formatVND } from '@/lib/date'

@@ -1,0 +1,65 @@
+{
+  "brand": {
+    "name": "Đại Ngàn Xanh",
+    "tagline": "Gieo Hạt Lành, Gặt Phước Báu",
+    "description": "Nền tảng trồng 1 triệu cây Dó Đen bản địa tại Việt Nam, theo dõi minh bạch và tín chỉ carbon."
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "pricing": "Mua cây",
+    "store": "Cửa hàng",
+    "ecoTourism": "Du lịch & Tour",
+    "blog": "Blog",
+    "myGarden": "Vườn của tôi",
+    "referrals": "Giới thiệu",
+    "myBookings": "Lịch đặt",
+    "orders": "Đơn hàng",
+    "profile": "Hồ sơ",
+    "admin": "Quản trị",
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "register": "Đăng ký"
+  },
+  "actions": {
+    "submit": "Gửi",
+    "cancel": "Hủy",
+    "save": "Lưu thay đổi",
+    "confirm": "Xác nhận",
+    "close": "Đóng",
+    "back": "Quay lại",
+    "continue": "Tiếp tục",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "viewDetails": "Xem chi tiết",
+    "loading": "Đang tải...",
+    "retry": "Thử lại",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa"
+  },
+  "status": {
+    "pending": "Chờ xử lý",
+    "confirmed": "Đã xác nhận",
+    "processing": "Đang xử lý",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy",
+    "paid": "Đã thanh toán",
+    "unpaid": "Chưa thanh toán"
+  },
+  "switcher": {
+    "label": "Ngôn ngữ",
+    "ariaLabel": "Chuyển đổi ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "viShort": "VN",
+    "enShort": "EN",
+    "dirtyFormWarning": "Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn chuyển ngôn ngữ không?"
+  },
+  "footer": {
+    "rights": "Bản quyền thuộc về Đại Ngàn Xanh. Bảo lưu mọi quyền.",
+    "companyName": "Công ty Cổ phần Đại Ngàn Xanh",
+    "address": "Xã Ea Ktur, Huyện Cư Kuin, Tỉnh Đắk Lắk, Việt Nam",
+    "contact": "Liên hệ hỗ trợ",
+    "terms": "Điều khoản dịch vụ",
+    "privacy": "Chính sách bảo mật"
+  }
+}

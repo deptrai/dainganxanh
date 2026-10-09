@@ -1,0 +1,185 @@
+{
+  "hero": {
+    "badge": "Dự Án Trồng 1 Triệu Cây Dó Đen Bản Địa",
+    "title": "Gieo Một Mầm Xanh, Dệt Nên Đại Ngàn Vĩnh Cửu",
+    "subtitle": "Trồng và sở hữu cây Dó Đen bản địa tại Đắk Lắk. Theo dõi sinh trưởng thực tế qua camera và tọa độ GPS, minh bạch từ 410.000 VNĐ/cây.",
+    "ctaPrimary": "Trồng Ngay",
+    "ctaSecondary": "Xem Câu Chuyện",
+    "counterLabel": "cây đã được gieo trồng",
+    "headline": "Dệt Đại Ngàn, Gặt Phước Báu",
+    "lead": "Cùng viết tên bạn vào 1.000.000 cây rừng Dó Đen Việt. Bạn đang gửi một lời tạ lỗi chân thành đến Mẹ Thiên Nhiên.",
+    "ctaSeed": "Gieo Mầm Ngay",
+    "introVideo": "Video Giới Thiệu",
+    "exploreEco": "Khám Phá & Đặt Tour Nghỉ Dưỡng",
+    "exploreStore": "Cửa Hàng Trầm Hương Thuần Việt",
+    "rootedTrees": "cây đã bén rễ"
+  },
+  "stats": {
+    "targetTrees": "1.000.000",
+    "targetLabel": "Mục tiêu cây xanh",
+    "survivalRate": "95%",
+    "survivalLabel": "Tỷ lệ sống bảo hiểm",
+    "hectares": "500+",
+    "hectaresLabel": "Hecta rừng canh tác",
+    "community": "10.000+",
+    "communityLabel": "Người gieo hạt"
+  },
+  "story": {
+    "badge": "Khởi Nguồn Ý Niệm",
+    "title": "Hành Trình Tái Sinh Rừng Già",
+    "p1": "Đại Ngàn Xanh ra đời từ khát vọng phủ xanh đất trống đồi trọc bằng cây Dó Đen – báu vật ngàn năm của đại ngàn Tây Nguyên.",
+    "p2": "Mỗi cây bạn trồng không chỉ là một tài sản sinh lời mà còn là lá phổi xanh bảo vệ đất mẹ và nguồn nước đầu nguồn."
+  },
+  "product": {
+    "badge": "Giá Trị Bền Vững",
+    "title": "Cây Dó Đen Bản Địa – Trầm Hương Tự Nhiên",
+    "desc": "Cây Dó Đen (Aquilaria crassna) bản địa sinh trưởng tại vùng đất bazan màu mỡ Đắk Lắk, mang giá trị tâm linh, sinh thái và kinh tế vượt trội.",
+    "card1Title": "Định Danh GPS & Camera 24/7",
+    "card1Desc": "Mỗi cây được gắn mã định danh duy nhất, tọa độ GPS chính xác và giám sát qua hệ thống camera thực địa.",
+    "card2Title": "Bảo Hiểm 100% Cây Trồng",
+    "card2Desc": "Cam kết trồng bù miễn phí 1-đổi-1 trong suốt 5 năm nếu cây gặp rủi ro thiên tai hay sâu bệnh.",
+    "card3Title": "Khai Thác Bền Vững & Chia Sẻ Lợi Nhuận",
+    "card3Desc": "Hưởng trọn giá trị trầm hương và chứng chỉ carbon khi đến kỳ thu hoạch với quy trình minh bạch."
+  },
+  "ecoTourism": {
+    "badge": "Trải Nghiệm Thực Địa",
+    "title": "Thăm Vườn & Nghỉ Dưỡng Sinh Thái",
+    "desc": "Trực tiếp chạm vào cây xanh của bạn, hít thở không khí đại ngàn và trải nghiệm lưu trú giữa lòng vườn trầm.",
+    "cta": "Khám Phá Tour & Phòng"
+  },
+  "store": {
+    "badge": "Tinh Hoa Đại Ngàn",
+    "title": "Sản Phẩm Trầm Hương Thuần Khiết",
+    "desc": "Nhang trầm, nụ trầm và vòng tay tự nhiên từ nguồn Dó Đen canh tác bền vững.",
+    "cta": "Ghé Thăm Cửa Hàng"
+  },
+  "faq": {
+    "title": "Câu Hỏi Thường Gặp",
+    "q1": "Tôi có được quyền sở hữu cây sau khi thanh toán không?",
+    "a1": "Có. Bạn nhận được giấy chứng nhận điện tử và mã định danh GPS kèm quyền sở hữu hợp pháp theo hợp đồng hợp tác.",
+    "q2": "Nếu cây bị chết hoặc thiên tai thì sao?",
+    "a2": "Chúng tôi áp dụng chính sách bảo hiểm 100%: đội ngũ kỹ sư lâm nghiệp sẽ trồng mới thay thế miễn phí.",
+    "q3": "Làm thế nào để theo dõi cây của tôi?",
+    "a3": "Bạn đăng nhập vào CRM 'Vườn của tôi' để xem vị trí trên bản đồ vệ tinh, hình ảnh cập nhật định kỳ và nhật ký chăm sóc."
+  },
+  "ctaBanner": {
+    "title": "Cùng Nhau Tạo Nên Màu Xanh Cho Thế Hệ Mai Sau",
+    "subtitle": "Chỉ từ 410.000 VNĐ để gieo một mầm sống vĩnh cửu. Đăng ký ngay hôm nay.",
+    "button": "Bắt Đầu Trồng Cây"
+  },
+  "nav": {
+    "story": "Câu Chuyện",
+    "product": "Dó Đen Việt",
+    "ecoTourism": "Du Lịch & Tour",
+    "store": "Cửa Hàng Trầm",
+    "blog": "Blog",
+    "myGarden": "Vườn Của Tôi",
+    "tourMobile": "Tour/Phòng",
+    "storeMobile": "Cửa hàng",
+    "plantNow": "Trồng Ngay"
+  },
+  "video": {
+    "close": "Đóng",
+    "title": "Video Giới Thiệu Đại Ngàn Xanh"
+  },
+  "socialProof": {
+    "close": "Đóng",
+    "justNow": "vừa xong",
+    "minutesAgo": "{minutes} phút trước",
+    "hoursAgo": "{hours} giờ trước",
+    "daysAgo": "{days} ngày trước",
+    "justBought": "vừa mua",
+    "trees": "{count} cây",
+    "activeOrdering": "🔥 {count} người đang đặt mua"
+  },
+  "why": {
+    "title": "Tại Sao Phải Là Bây Giờ?",
+    "desc": "Những cánh rừng Việt Nam đang ngày càng thu hẹp, những cơn bão dữ dội hơn, những trận lũ lụt kinh hoàng, và thời tiết ngày càng thay đổi cực đoan hơn là những lời thì thầm mà Mẹ Thiên Nhiên đang cảnh báo chúng ta. <strong >Dó Đen</strong> - một loài cây bản địa kiên cường, lá xanh quanh năm, âm thầm lọc sạch không khí, trả lại bầu khí quyển trong lành.",
+    "quote": "“Bạn không cần rời bỏ phố thị phồn hoa để lấm lem bùn đất. Ngay tại đây, chỉ với một cú chạm, bạn đã có thể trở thành một phần của Đại Ngàn.”",
+    "imageAlt": "Mầm sống trên tay"
+  },
+  "benefits": {
+    "badge": "Giá Trị Của Người Gieo Mầm",
+    "title": "Hơn Cả Một Cái Cây, <br />Bạn Sở Hữu Một Di Sản",
+    "b1Title": "Một Sinh Mệnh Thật",
+    "b1Desc": "Cây Dó Đen được ươm mầm và nâng niu, đang hít thở và âm thầm phát triển tại Cao nguyên Bình Phước, và cái cây ấy ngày càng lớn lên mang theo Tình Yêu và lòng Tri Ân mà Bạn dành tặng lại cho Mẹ Thiên Nhiên.",
+    "b2Title": "Minh Bạch Tuyệt Đối",
+    "b2Desc": "Sổ Khai Sinh Xanh (Hợp đồng pháp lý & Giấy chứng nhận) gửi tận tay. Cam kết nuôi sống, hoặc trồng lại nếu cây chết.",
+    "b3Title": "Trang Quản Lý Số",
+    "b3Desc": "Theo dõi cây lớn lên từng ngày qua \"Vườn Của Tôi\". Ảnh chụp thực tế và video cập nhật mỗi quý.",
+    "b4Title": "Phước Báu Trao Tay",
+    "b4Desc": "Bình an khi biết rằng đâu đó có một mầm sống đang lớn lên nhờ tình yêu của bạn."
+  },
+  "showcase": {
+    "badge": "Hệ Sinh Thái Toàn Diện",
+    "title": "Trải Nghiệm Nghỉ Dưỡng & Sản Phẩm Thuần Việt",
+    "desc": "Không chỉ gieo mầm cây, bạn còn có thể trực tiếp đến thăm vườn, nghỉ dưỡng giữa rừng Dó Đen và thưởng thức các sản phẩm trầm hương thượng hạng.",
+    "ecoBadge": "Du Lịch & Tour Nghỉ Dưỡng",
+    "ecoLocation": "Ba Vì • Đồng Nai • Tây Nguyên",
+    "ecoTitle": "Vườn Trầm Hương Có Phòng Nghỉ",
+    "ecoDesc": "Hòa mình vào không gian rừng tự nhiên trong lành. Nghỉ dưỡng tại các bungalow view rừng, tham gia workshop tạo trầm, xông trầm thư giãn và thưởng trà đạo.",
+    "ecoPriceLabel": "Giá phòng từ",
+    "ecoPrice": "650.000₫ / đêm",
+    "ecoCta": "Đặt Tour / Phòng",
+    "ecoAlt": "Du lịch sinh thái nghỉ dưỡng tại vườn trầm hương",
+    "storeBadge": "Cửa Hàng Trầm Hương Thuần Việt",
+    "storePurity": "100% Nguyên Chất Tự Nhiên",
+    "storeTitle": "Sản Phẩm Trầm Hương Cao Cấp",
+    "storeDesc": "Chắt lọc từ những cây Dó Đen trưởng thành: Nhang nụ thanh lọc không gian, nhang không tăm thiền định, tinh dầu nguyên chất, nước hoa sang trọng và vòng tay may mắn.",
+    "storePriceLabel": "Sản phẩm từ",
+    "storePrice": "180.000₫",
+    "storeCta": "Ghé Cửa Hàng",
+    "storeAlt": "Cửa hàng sản phẩm Trầm Hương Đại Ngàn Xanh"
+  },
+  "dashboard": {
+    "alt": "Dashboard Vườn Của Tôi",
+    "badge": "Thiên Nhiên và Công Nghệ được ứng dụng",
+    "title": "Khu Vườn Trong Túi Bạn",
+    "quote": "“Đây không phải dự án trên giấy. Đây là sự sống thật, đang sinh sôi và được theo dõi, giám sát thông qua công nghệ.”",
+    "feature1": "Bản đồ vệ tinh vị trí cây chính xác",
+    "feature2": "Hệ thống camera/ drone trực tiếp cập nhật hình ảnh",
+    "feature3": "Chỉ số CO2 hấp thụ & sự phát triển của cây",
+    "cta": "Xem Vườn Trồng Tập Trung"
+  },
+  "howItWorks": {
+    "title": "Hành Trình Trao Gửi Sự Sống",
+    "step1Title": "Chọn Số Lượng",
+    "step1Desc": "Bạn muốn gieo bao nhiêu mầm xanh?",
+    "step2Title": "Đăng Ký",
+    "step2Desc": "Để lại thông tin để cây nhận chủ nhân.",
+    "step3Title": "Thanh Toán",
+    "step3Desc": "Cổng thanh toán bảo mật, an toàn và nhanh chóng.",
+    "step4Title": "Nhận Di Sản",
+    "step4Desc": "Nhận Hợp đồng và Mã cây. Bắt đầu theo dõi quá trình phát triển."
+  },
+  "faqSection": {
+    "title": "Những Lời Giải Đáp Chân Thành",
+    "q1": "Cây có thật không? Tôi có thể đến thăm không?",
+    "a1": "Thật như hơi thở của bạn. Chúng tôi chào đón bạn ghé thăm vườn bất cứ lúc nào để tận tay chạm vào thân cây xù xì và thoang thoảng mùi trầm tự nhiên khi cây lớn.",
+    "q2": "Nếu cây không may qua đời thì sao?",
+    "a2": "Luôn có những rủi ro và những biến cố bất ngờ. Tuy nhiên, chúng tôi cam kết rằng nếu không phải vì nguyên nhân do thiên tai, dịch bệnh thì trong suốt 10 năm, Bạn trồng 1 cây, chắc chắn sẽ có 1 cây trưởng thành.",
+    "q3": "Tại sao lại là 410.000 VNĐ?",
+    "a3": "410.000 VNĐ là chi phí trọn gói: cây giống, đất thuê và 10 năm chăm sóc chuyên nghiệp. Đây là mức giá minh bạch, không phát sinh thêm bất kỳ chi phí nào khác trong suốt hành trình đồng hành cùng cây của bạn."
+  },
+  "finalCta": {
+    "quote": "“Hôm nay bạn gieo một hạt mầm xanh, <br />10 năm nữa con bạn sẽ có bóng mát của cả một khu rừng.”",
+    "button": "Bắt Đầu Hành Trình Gieo Hạt",
+    "subtext": "Bạn hoàn toàn có thể trồng thêm bất cứ lúc nào trong Vườn Của Tôi."
+  },
+  "footer": {
+    "brandTagline": "Dệt đại ngàn Dó Đen Việt — Gặt phước báu cho thế hệ mai sau.",
+    "explore": "Khám phá",
+    "story": "Câu chuyện",
+    "product": "Dó Đen Việt",
+    "ecoTourism": "🌿 Du lịch & Đặt tour",
+    "store": "✨ Cửa hàng Trầm Hương",
+    "howItWorks": "Cách tham gia",
+    "plantTrees": "Mua cây",
+    "blog": "Blog",
+    "companyInfo": "Thông tin công ty",
+    "companyName": "CÔNG TY CỔ PHẦN ĐẠI NGÀN XANH GROUP",
+    "taxId": "MST: ",
+    "address": "Số 53 Đường số 1, Khu phố 36,<br />Phường Hiệp Bình, TP. Hồ Chí Minh",
+    "copyright": "© 2026 Công ty Cổ phần Đại Ngàn Xanh Group. Bảo lưu mọi quyền."
+  }
+}

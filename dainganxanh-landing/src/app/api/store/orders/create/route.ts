@@ -19,6 +19,7 @@ export const createOrderSchema = z.object({
   shipping_note: z.string().optional(),
   payment_method: z.enum(['banking', 'cod']),
   total_amount: z.number().int().positive().optional(),
+  locale: z.enum(['vi', 'en']).optional(),
 })
 
 function generateStoreOrderCode(): string {
@@ -95,6 +96,15 @@ export async function POST(req: NextRequest) {
     ? new Date(Date.now() + PAYMENT_TIMEOUT_MINUTES * 60 * 1000).toISOString()
     : null
 
+  const rawCookie = req.cookies.get('NEXT_LOCALE')?.value
+  const bodyLocale = data.locale
+  const locale: 'vi' | 'en' =
+    rawCookie === 'en' || rawCookie === 'vi'
+      ? rawCookie
+      : bodyLocale === 'en' || bodyLocale === 'vi'
+        ? bodyLocale
+        : 'vi'
+
   // Create store order with retry on unique code collision (23505)
   const MAX_RETRIES = 3
   let order: {
@@ -125,6 +135,7 @@ export async function POST(req: NextRequest) {
         payment_method: data.payment_method,
         status: 'pending',
         expires_at: expiresAt,
+        locale,
       })
       .select('id, code, total_amount, payment_method, expires_at')
       .single()

@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
+import { useTranslations } from 'next-intl'
 import { createBrowserClient } from '@/lib/supabase/client'
 
 export function AuthNavLink() {
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
+    const t = useTranslations('landing')
 
     useEffect(() => {
         const supabase = createBrowserClient()
@@ -38,7 +40,7 @@ export function AuthNavLink() {
                 href="#dashboard"
                 className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200"
             >
-                Vườn Của Tôi
+                {t('nav.myGarden')}
             </a>
         )
     }
@@ -49,7 +51,7 @@ export function AuthNavLink() {
                 href="/crm/my-garden"
                 className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200"
             >
-                Vườn Của Tôi
+                {t('nav.myGarden')}
             </Link>
         )
     }
@@ -60,7 +62,7 @@ export function AuthNavLink() {
             href="#dashboard"
             className="text-brand-600 hover:text-brand-500 font-medium transition-colors hover:scale-105 transform duration-200"
         >
-            Vườn Của Tôi
+            {t('nav.myGarden')}
         </a>
     )
 }

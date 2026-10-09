@@ -1,0 +1,64 @@
+{
+  "header": {
+    "badge": "Bảng Giá Gieo Trồng",
+    "title": "Đầu Tư Xanh – Sinh Lời Bền Vững",
+    "subtitle": "Chỉ 410.000 VNĐ cho mỗi cây Dó Đen bản địa. Trọn gói cây giống, đất đai, chăm sóc và bảo hiểm trong 5 năm."
+  },
+  "unitPrice": {
+    "amount": "410.000",
+    "currency": "VNĐ",
+    "perUnit": "cây",
+    "treeType": "Dó Đen Bản Địa 2 Năm Tuổi"
+  },
+  "packages": {
+    "single": {
+      "name": "Mầm Xanh May Mắn",
+      "quantity": "1 cây",
+      "tag": "Khởi đầu",
+      "desc": "Phù hợp cá nhân muốn gieo duyên lành và trải nghiệm chăm sóc cây xanh."
+    },
+    "starter": {
+      "name": "Khu Vườn Gia Đình",
+      "quantity": "10 cây",
+      "tag": "Phổ biến nhất",
+      "desc": "Dành cho gia đình tạo lập tài sản xanh tích lũy cho con cháu."
+    },
+    "estate": {
+      "name": "Khu Rừng Tri Ân",
+      "quantity": "50 cây",
+      "tag": "Ưu đãi",
+      "desc": "Khuôn viên riêng biệt gắn biển tên danh dự của gia tộc hoặc nhóm bạn."
+    },
+    "corporate": {
+      "name": "Đại Ngàn Doanh Nghiệp",
+      "quantity": "100+ cây",
+      "tag": "ESG & Net Zero",
+      "desc": "Giải pháp bù trừ carbon và phát triển bền vững cho doanh nghiệp tiên phong."
+    }
+  },
+  "benefits": {
+    "title": "Đặc Quyền Kèm Theo",
+    "item1": "Giấy chứng nhận quyền sở hữu điện tử (NFT Certificate)",
+    "item2": "Tọa độ GPS định vị chính xác vị trí cây trên bản đồ vệ tinh",
+    "item3": "Bảo hiểm 1-đổi-1 trong 5 năm trước mọi rủi ro thiên tai",
+    "item4": "Xem hình ảnh và nhật ký chăm sóc cập nhật qua ứng dụng",
+    "item5": "Hưởng toàn bộ sản lượng thu hoạch trầm hương sau chu kỳ sinh trưởng"
+  },
+  "calculator": {
+    "title": "Tính Toán Số Lượng",
+    "quantityLabel": "Số lượng cây:",
+    "min": "Tối thiểu 1 cây",
+    "totalLabel": "Tổng chi phí:",
+    "button": "Tiến Hành Đặt Cây"
+  },
+  "checkout": {
+    "title": "Thông Tin Đơn Hàng",
+    "fullName": "Họ và tên người nhận chứng nhận",
+    "email": "Email nhận hóa đơn & chứng nhận",
+    "phone": "Số điện thoại liên hệ",
+    "address": "Địa chỉ liên hệ",
+    "paymentMethod": "Phương thức thanh toán",
+    "bankTransfer": "Chuyển khoản ngân hàng (VietQR)",
+    "confirmButton": "Xác Nhận & Thanh Toán"
+  }
+}

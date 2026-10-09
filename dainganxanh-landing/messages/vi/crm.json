@@ -1,0 +1,81 @@
+{
+  "sidebar": {
+    "dashboard": "Tổng quan",
+    "myGarden": "Vườn của tôi",
+    "referrals": "Giới thiệu bạn bè",
+    "bookings": "Lịch đặt phòng",
+    "storeOrders": "Đơn hàng cửa hàng",
+    "profile": "Thông tin cá nhân",
+    "admin": "Quản trị hệ thống",
+    "logout": "Đăng xuất"
+  },
+  "dashboard": {
+    "greeting": "Xin chào",
+    "welcomeSubtitle": "Chào mừng bạn trở lại với khu vườn Đại Ngàn Xanh.",
+    "statsTrees": "Tổng số cây sở hữu",
+    "statsValue": "Ước tính giá trị",
+    "statsHectares": "Diện tích tương đương",
+    "statsHarvest": "Kỳ thu hoạch dự kiến",
+    "recentTreesTitle": "Cây mới được gieo trồng",
+    "emptyTrees": "Bạn chưa có cây nào trong vườn. Hãy gieo hạt đầu tiên ngay hôm nay!"
+  },
+  "myGarden": {
+    "title": "Vườn Cây Của Tôi",
+    "subtitle": "Theo dõi sinh trưởng thực tế, định vị GPS và xem camera trực tuyến.",
+    "treeCode": "Mã cây",
+    "lot": "Khu vườn",
+    "plantedDate": "Ngày trồng",
+    "ageMonths": "tháng tuổi",
+    "coordinates": "Tọa độ GPS",
+    "viewMap": "Xem trên bản đồ",
+    "liveCamera": "Camera trực tiếp",
+    "certificate": "Xem chứng nhận",
+    "emptyState": "Chưa tìm thấy cây nào phù hợp"
+  },
+  "referrals": {
+    "title": "Chương Trình Giới Thiệu",
+    "subtitle": "Lan tỏa mầm xanh đến bạn bè và nhận quà tri ân từ Đại Ngàn Xanh.",
+    "codeLabel": "Mã giới thiệu của bạn",
+    "copyCode": "Sao chép mã",
+    "copied": "Đã sao chép!",
+    "linkLabel": "Liên kết giới thiệu",
+    "copyLink": "Sao chép liên kết",
+    "totalInvited": "Số người đã giới thiệu",
+    "rewardEarned": "Phần thưởng tích lũy"
+  },
+  "bookings": {
+    "title": "Lịch Đặt Phòng & Tour",
+    "subtitle": "Quản lý các chuyến thăm vườn và đặt phòng sinh thái của bạn.",
+    "bookingCode": "Mã đặt phòng",
+    "room": "Phòng / Tour",
+    "checkIn": "Nhận phòng",
+    "checkOut": "Trả phòng",
+    "guests": "Số khách",
+    "total": "Tổng tiền",
+    "status": "Trạng thái",
+    "emptyState": "Bạn chưa có chuyến đi nào được đặt"
+  },
+  "storeOrders": {
+    "title": "Đơn Hàng Cửa Hàng",
+    "subtitle": "Lịch sử mua sắm các sản phẩm trầm hương tự nhiên.",
+    "orderCode": "Mã đơn hàng",
+    "items": "Sản phẩm",
+    "total": "Tổng thanh toán",
+    "date": "Ngày đặt",
+    "status": "Trạng thái",
+    "emptyState": "Chưa có đơn hàng nào"
+  },
+  "profile": {
+    "title": "Hồ Sơ Cá Nhân",
+    "subtitle": "Cập nhật thông tin định danh và tùy chọn tài khoản.",
+    "fullName": "Họ và tên",
+    "email": "Địa chỉ Email",
+    "phone": "Số điện thoại",
+    "idNumber": "Số CCCD / Hộ chiếu",
+    "address": "Địa chỉ thường trú",
+    "language": "Ngôn ngữ ưa thích",
+    "saveSuccess": "Cập nhật hồ sơ thành công",
+    "saveError": "Không thể lưu thông tin. Vui lòng thử lại sau.",
+    "btnSave": "Lưu thay đổi"
+  }
+}

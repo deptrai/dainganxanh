@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Copy, Check, Loader2, Clock, XCircle } from 'lucide-react'
-import { BookingResponse } from '@/app/(marketing)/eco-tourism/[lotId]/book/BookingPageClient'
+import { BookingResponse } from '@/app/[locale]/(marketing)/eco-tourism/[lotId]/book/BookingPageClient'
 
 interface VietQRDisplayProps {
     booking: BookingResponse
@@ -136,7 +136,9 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
             await navigator.clipboard.writeText(text)
             setCopiedField(field)
             setTimeout(() => setCopiedField(null), 2000)
-        } catch {}
+        } catch (err) {
+            console.error('Copy to clipboard failed:', err)
+        }
     }
 
     const handleClaim = async () => {

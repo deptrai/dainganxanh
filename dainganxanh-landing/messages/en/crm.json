@@ -1,0 +1,81 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "myGarden": "My Garden",
+    "referrals": "Refer Friends",
+    "bookings": "Room Bookings",
+    "storeOrders": "Store Orders",
+    "profile": "Profile Info",
+    "admin": "Administration",
+    "logout": "Sign Out"
+  },
+  "dashboard": {
+    "greeting": "Hello",
+    "welcomeSubtitle": "Welcome back to your Dai Ngan Xanh sanctuary.",
+    "statsTrees": "Total Owned Trees",
+    "statsValue": "Estimated Valuation",
+    "statsHectares": "Equivalent Area",
+    "statsHarvest": "Expected Harvest",
+    "recentTreesTitle": "Recently Planted Trees",
+    "emptyTrees": "You do not own any trees yet. Plant your very first seed today!"
+  },
+  "myGarden": {
+    "title": "My Tree Garden",
+    "subtitle": "Track physical growth, GPS coordinates, and stream live field cameras.",
+    "treeCode": "Tree Code",
+    "lot": "Garden Lot",
+    "plantedDate": "Planted Date",
+    "ageMonths": "months old",
+    "coordinates": "GPS Coordinates",
+    "viewMap": "View on Map",
+    "liveCamera": "Live Camera",
+    "certificate": "View Certificate",
+    "emptyState": "No matching trees found"
+  },
+  "referrals": {
+    "title": "Referral Program",
+    "subtitle": "Share the green mission with friends and earn honorary rewards from Dai Ngan Xanh.",
+    "codeLabel": "Your Referral Code",
+    "copyCode": "Copy Code",
+    "copied": "Copied!",
+    "linkLabel": "Referral Link",
+    "copyLink": "Copy Link",
+    "totalInvited": "Friends Invited",
+    "rewardEarned": "Accumulated Rewards"
+  },
+  "bookings": {
+    "title": "Bookings & Tours",
+    "subtitle": "Manage your garden visits and eco-resort reservations.",
+    "bookingCode": "Booking Code",
+    "room": "Room / Tour",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Guests",
+    "total": "Total Amount",
+    "status": "Status",
+    "emptyState": "You have no scheduled bookings yet"
+  },
+  "storeOrders": {
+    "title": "Store Orders",
+    "subtitle": "Purchase history of natural agarwood products.",
+    "orderCode": "Order Code",
+    "items": "Products",
+    "total": "Total Paid",
+    "date": "Order Date",
+    "status": "Status",
+    "emptyState": "No orders placed yet"
+  },
+  "profile": {
+    "title": "Personal Profile",
+    "subtitle": "Update your identity credentials and account preferences.",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "idNumber": "National ID / Passport",
+    "address": "Permanent Address",
+    "language": "Preferred Language",
+    "saveSuccess": "Profile updated successfully",
+    "saveError": "Failed to update profile. Please try again later.",
+    "btnSave": "Save Changes"
+  }
+}

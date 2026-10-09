@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Bed, ArrowRight } from 'lucide-react'
 import BookingStatusBadge from './BookingStatusBadge'

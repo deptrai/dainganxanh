@@ -19,3 +19,23 @@ Object.defineProperty(process.env, 'NODE_ENV', {
     writable: true,
     configurable: true,
 })
+
+// Mock @/i18n/navigation for components rendering localized Link / useRouter / usePathname in tests
+jest.mock('@/i18n/navigation', () => {
+    const React = require('react')
+    return {
+        Link: React.forwardRef(({ href, children, prefetch, ...rest }: any, ref: any) =>
+            React.createElement('a', { href, ref, ...rest }, children)
+        ),
+        useRouter: () => ({
+            push: jest.fn(),
+            replace: jest.fn(),
+            prefetch: jest.fn(),
+            back: jest.fn(),
+        }),
+        usePathname: () => '/',
+        redirect: jest.fn(),
+        getPathname: jest.fn((opts: any) => (typeof opts === 'string' ? opts : opts?.href ?? '/')),
+    }
+})
+

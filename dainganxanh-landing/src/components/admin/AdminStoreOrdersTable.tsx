@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useState, useTransition } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import Image from 'next/image'
 import { ChevronDownIcon, ShoppingBagIcon } from '@heroicons/react/24/outline'
 import { StoreOrderStatus } from '@/lib/store-order-status'
