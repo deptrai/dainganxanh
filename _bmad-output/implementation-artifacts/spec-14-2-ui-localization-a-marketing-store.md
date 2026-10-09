@@ -104,3 +104,16 @@ export function formatDate(val: Date|string, locale: string, opts?): string
 - **Review (4 layers):** REQUEST_CHANGES ×3 + COMMENT ×1. Patched: P1 `next/navigation`→`@/i18n/navigation` (14 files, locale prefix loss); P2 `setRequestLocale` 12 pages; P3 xóa `zodErrorMap.ts` dead code (routes không dùng zod) + `useAuth` trả error keys; P4 sót hardcode VI (ImageGallery, StoreCheckoutClient placeholder, CTAButton default, login/register placeholder, blog ternary, auth/callback locale redirect); P5 canonical `/vi/` redirect-loop fix + JSON-LD localize; P6 format.ts edge (string coerce, UTC normalize) + format.test.ts; P7 ICU plurals en; P8 jest.setup prefetch/has/JEST_LOCALE; P9 parity test +keys-USED-exist + EN render test; P10 brand diacritics nhất quán EN + nationality locale.
 - **Verify:** tsc 0 · jest **120 suites / 1229 tests** · build 114 routes.
 - **Deferred:** banking strings ×3 domains → `common.banking.*` (14.5); `date.ts` adapter + crm/admin format migration (14.3); zod error map đầy đủ (14.3); renderWithIntl chỉ client components.
+
+## Live E2E Verification (Browser Pilot, 2026-10-09)
+
+Dev server `:3050`. Audit per-page: leaked i18n keys = 0 on every page.
+
+- `/en` landing: EN render, lang=en, viChars=24 (brand "Đại Ngàn Xanh" only — by design).
+- `/en/store`, `/en/pricing`, `/en/eco-tourism`, `/en/blog`, `/en/login`, `/en/register`, `/en/checkout`: all EN; canonical `/en/...` correct (P5 verified live); register shows "1 tree"/"410,000 ₫" (en-US + ICU plural).
+- **P1 verified:** "Buy now" → `/en/store/checkout?slug=…&quantity=1` (prefix kept through `router.push`); nav click Blog → `/en/blog`; header links all `/en/*`; active nav "Store" emerald on `/en/store` (usePathname fix works).
+- Checkout EN: labels + `John Doe` placeholder (P4); province names VI (proper nouns, expected).
+- Switcher `/en/store`→`/store` + `NEXT_LOCALE=vi`; VI page canonical `…/store` + hreflang vi/en/x-default correct.
+- DB content VI on EN pages (product names/categories, price breakdown "Gói Trồng Cây Dó Đen") — **by design, Story 14.4 scope**.
+- Console errors benign: product image 404s (pre-existing assets), 401 unauthenticated APIs.
+- eco-tourism EN empty-state renders ("No gardens have open rooms yet").
