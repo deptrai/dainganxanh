@@ -2,9 +2,9 @@
 title: 'Story 14.4: Content Database i18n, Admin VI/EN Entry & Dynamic Sitemap'
 type: 'feature'
 created: '2026-10-10'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context: ['_bmad-output/implementation-artifacts/epic-14-context.md']
 warnings: ['oversized']
 deferred: []
@@ -134,3 +134,53 @@ baseline_revision: '3101fcd93b5b3c19953d42dcbb1d2550cf77ff47'
 **Manual checks (if no CLI):**
 - Apply migration trên Supabase staging/local: `select translations from products limit 1` → `{"vi": {...}}`; `select * from post_translations` → schema đúng; `notifications.title` accepts NULL.
 - Mở `/en/store/<slug>` (product có EN) → text EN; product chưa dịch → VI fallback; `view-source` kiểm `alternates` trong metadata + `sitemap.xml` entries.
+
+## Review Triage Log
+
+### 2026-10-10 — Review pass
+- verdicts: 30 findings — high 0, medium 17, low 10, false 3, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` RLS `post_translations` check roles `superadmin`/`editor`/`author` không tồn tại — sửa 3 policy về `('admin','super_admin')` theo pattern `posts` (`20260407000000_baseline_from_remote.sql:1674`).
+  - `[medium]` `[patch]` `BlogEditor.tsx` toolbar (Bold/Italic/H2-H4/List/Blockquote/CodeBlock) hardcode `editor?.` (instance VI) thay vì `activeEditor` — format trên tab EN sửa editor ẩn; đổi toàn bộ sang `activeEditor` + test EN-tab toolbar.
+  - `[medium]` `[patch]` `BlogEditor.tsx` `if (post || enTitle || enSlug)` — create rơi mất en_content khi chưa có title/slug; update gửi `en_title` rỗng kích nhánh delete — cùng root cause partial-EN, fix chung guard server.
+  - `[medium]` `[patch]` `blog.ts` createPost/updatePost guard `if (enTitle || enSlug)` bypass khi chỉ có en_content/excerpt/meta_* — mở rộng đủ 6 `en_*` fields; partial EN reject đúng spec PARTIAL_EN_ROW.
+  - `[medium]` `[patch]` `blog.ts` nuốt `enError`/`enUpdateError`/`enInsertError` (console.error rồi `success:true`) — giờ return `success:false` khi mutation post_translations lỗi.
+  - `[medium]` `[patch]` `CreateLotForm`/`EditLotForm` EN tab thiếu input `region` (spec: name+description+region) — thêm `regionEn` qua `t('admin.translation.fieldRegion')` vào payload.
+  - `[low]` `[patch]` `EditLotForm` spread `translations.en` cũ → không xóa được từng field EN riêng — bỏ spread cho managed fields, server strip empty để xóa.
+  - `[medium]` `[patch]` eco-tourism pages dùng `lot.region` trần không qua `getTranslatedField` — apply cho `region` cả 2 page.
+  - `[medium]` `[patch]` sitemap posts query thiếu `.lte('published_at', now)` → future-dated leak vào sitemap — thêm filter; (phần "unfiltered lots" của finding này là false — bảng `lots` không có cột status).
+  - `[medium]` `[patch]` `/en/blog/[slug]` step-1 chỉ check `status='published'` thiếu `published_at <= now` (VI path có) → scheduled post lộ qua en slug — thêm check cho enTrans + `generateStaticParams`.
+  - `[low]` `[patch]` `getTranslatedField` thiếu `fallbackLocale='vi'` + chain order sai spec — thêm param; chain chuẩn `translations[locale] → translations[fallback] → record[field]` + trim guards.
+  - `[low]` `[patch]` `buildProductTranslations`/`buildLotTranslations` spread `rawEn` giữ empty strings (vi phạm strip-empty) — filter entries non-empty + trim.
+  - `[low]` `[patch]` hardcoded strings mới (`'SEO (tùy chọn)'`, counter, placeholders EN trong BlogEditor; `'Thông báo'` trong NotificationBell) — qua `admin.translation.*` / `crm.notifications.untitled`.
+  - `[low]` `[patch]` `deletePost` thiếu `/en/blog`; `updatePost` không revalidate en slug cũ khi đổi — thêm revalidatePath đủ.
+  - `[medium]` `[patch]` (edge-case) toolbar `activeEditor` — cùng root cause finding trên, fix chung.
+  - `[medium]` `[patch]` (edge-case) en-route `published_at` — cùng root cause sitemap/en lookup, fix chung.
+  - `[false]` `[reject]` (edge-case) `generateStaticParams` "không check status" → bác: query đã `posts!inner` + `.eq('posts.status','published')`; phần `published_at` thiếu gộp vào nhóm published_at đã patch.
+  - `[low]` `[patch]` (edge-case) EditLotForm clear-field — cùng finding trên.
+  - `[medium]` `[patch]` (edge-case) partial EN validation — cùng finding blog.ts guard.
+  - `[low]` `[patch]` (edge-case) rawEn empty strings — cùng finding build*Translations.
+  - `[medium]` `[patch]` (edge-case) seed EN names sai spec — đổi 4 names đúng spec (`Agarwood Perfume`, `Agarwood Essential Oil`, `Incense & Agarwood Sticks`, `Handicrafts`).
+  - `[low]` `[patch]` (edge-case) `getTranslatedField` signature/chain — cùng finding helper.
+  - `[medium]` `[patch]` (verification-gap) `fetchRoomCalendarData` select `translations` nhưng projection bỏ sót → badge phòng luôn "Chỉ có VI" — thêm `translations: r.translations` + tests.
+  - `[medium]` `[patch]` (verification-gap) toolbar EN-tab chưa có test — đã thêm test trong BlogEditor.test.tsx.
+  - `[low]` `[patch]` (verification-gap) ProductForm chưa test EN tab/payload — thêm cases vào ProductForm.test.tsx.
+  - `[medium]` `[patch]` (verification-gap) marketingI18n thiếu BLOG_VI_FALLBACK, canonical vi, generateMetadata — thêm cases.
+  - `[low]` `[patch]` (verification-gap) LotForms không có test — tạo `LotForms.test.tsx` (EN tab, regionEn, clear-field).
+  - `[low]` `[reject]` (intent-align) `generateStaticParams` trả en slugs cho cả `/vi` → `/vi/blog/<en-slug>` prerender 404 — dead routes không link/sitemap nào trỏ tới; unlikely met, fix phức tạp.
+  - `[false]` `[reject]` (intent-align) sitemap thiếu product_categories — không có route `/store/category` trong app; spec "không trỏ URL chưa tồn tại" → bỏ là đúng.
+  - `[false]` `[reject]` (intent-align) sitemap en alternate trỏ vi-slug khi chưa dịch — spec tự quy định `en-slug ?? vi-slug` (line 101 spec) và URL tồn tại qua fallback render.
+
+## Auto Run Result
+
+**Summary:** Story 14.4 — content DB i18n. Migration `20261010000000_content_i18n.sql` (cả 2 dir): `translations` JSONB + vi-mirror backfill 6 bảng, `notifications.title` DROP NOT NULL, `post_translations` (UNIQUE(locale,slug)+(post_id,locale), locale CHECK vi/en, RLS admin/super_admin + public-published read), en backfill 4 category seed. Helper `src/lib/translations.ts` (getTranslatedField + hasEnTranslation). Admin: `LocaleTabs` + `TranslationBadge`, VI/EN tabs trong ProductForm/BlogEditor/CreateLotForm/EditLotForm (BlogEditor dual TipTap), badge trên products/blog/lots lists + room calendar. Server actions re-sync vi mirror + persist en + validate partial EN + delete-on-empty-title. Public store/blog/eco-tourism render qua getTranslatedField; `/en/blog/<en-slug>` per-locale slug, fallback vi-slug render VI. Sitemap bilingual entries (10 static + products/lots/blog), alternates vi/en/x-default.
+
+**Files changed (45):** 2 migration SQL (root + landing mirror); `database.types.ts`; `src/lib/translations.ts`; actions `adminProducts|adminRooms|blog|lots`; pages store(2)/blog(2)/eco-tourism(2)/sitemap; admin pages blog edit+blog/lots/products lists; components `LocaleTabs`(new)/`TranslationBadge`(new)/`ProductForm`/`BlogEditor`/`CreateLotForm`/`EditLotForm`/`AdminProductsTable`/`RoomCalendarClient`/`NotificationBell`; messages vi+en `admin.json`/`crm.json`; tests: translations, migration-content-i18n, marketingI18n, sitemap, adminProducts, adminRooms, blog, lots, LotForms, ProductForm, BlogEditor, NotificationBell, LocaleTabs, TranslationBadge; spec file.
+
+**Review findings:** 30 findings → 17 medium, 10 low, 3 false. Patches applied: 16 nhóm (RLS roles, seed names, toolbar activeEditor, partial-EN guard, swallowed en errors, region EN inputs, clear-field semantics, eco region localized, published_at filters sitemap+en route, helper signature/chain, empty-strip, catalog keys, revalidation, rooms badge projection, missing tests). Rejected: 3 false (drafts-in-static-params đã có inner join, categories route không tồn tại, en-fallback-vi-slug theo spec) + 1 low (cross-locale en-slug prerender — unlikely met).
+
+**Verification performed:** `npx tsc --noEmit` exit 0; `npx jest` 128/128 suites, 1287/1287 tests; `npm run build` exit 0 (sitemap.xml prerender OK). Diff cuối 5971 lines / 49 files staged vs baseline `3101fcd9`.
+
+**Follow-up review recommendation:** `true` — nhiều hơn 2 medium entries được patch lần pass này. Unverified risk cụ thể: các patch chạm RLS policy (role list), semantics delete-on-empty-title và toolbar `activeEditor` mới chỉ verify qua unit mock + build — chưa có live-DB/browser pass; một follow-up pass nên nhắm đúng 3 surface đó.
+
+**Residual risks:** migration chưa apply lên remote Supabase (cần qua pipeline/CLI trước khi deploy code mới); `post_translations` en-route dùng service-role bypass RLS nên policies chỉ là defense-in-depth cho tương lai; `/vi/blog/<en-slug>` prerendered-404 chấp nhận.
