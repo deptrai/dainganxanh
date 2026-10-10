@@ -222,4 +222,37 @@ describe('NotificationBell', () => {
             expect(screen.getByText('Chưa có thông báo mới')).toBeInTheDocument()
         })
     })
+
+    it('[NOTIF_NULL] renders row with title: null without crashing, displaying fallback title', async () => {
+        const notifWithNullTitle = [
+            {
+                id: 'notif-null-1',
+                user_id: 'user-123',
+                type: 'harvest_ready',
+                title: null,
+                body: 'Nội dung thông báo không có tiêu đề',
+                data: {},
+                read: false,
+                created_at: FIXED_NOW.toISOString(),
+            },
+        ]
+        ;(fetchNotifications as jest.Mock).mockResolvedValueOnce(notifWithNullTitle)
+        ;(getUnreadCount as jest.Mock).mockResolvedValueOnce(1)
+
+        renderWithIntl(<NotificationBell />)
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
+        })
+
+        const bellButton = screen.getByLabelText('Notifications')
+        fireEvent.click(bellButton)
+
+        await waitFor(() => {
+            expect(screen.getByText('Nội dung thông báo không có tiêu đề')).toBeInTheDocument()
+            // In dropdown, header title is 'Thông báo' and row fallback is also 'Thông báo'
+            const fallbackTitles = screen.getAllByText('Thông báo')
+            expect(fallbackTitles.length).toBeGreaterThanOrEqual(2)
+        })
+    })
 })

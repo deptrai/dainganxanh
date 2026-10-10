@@ -6,6 +6,8 @@ import { formatNumber } from '@/lib/format'
 import { createBrowserClient } from '@/lib/supabase/client'
 import CreateLotForm from '@/components/admin/CreateLotForm'
 import EditLotForm from '@/components/admin/EditLotForm'
+import TranslationBadge from '@/components/admin/TranslationBadge'
+import { hasEnTranslation } from '@/lib/translations'
 
 interface Lot {
     id: string
@@ -17,6 +19,7 @@ interface Lot {
     total_trees: number
     planted: number
     created_at: string
+    translations?: Record<string, unknown> | null
 }
 
 export default function LotsPage() {
@@ -263,9 +266,12 @@ export default function LotsPage() {
                                     <div className="p-6">
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h3 className="text-lg font-semibold text-gray-900">
-                                                    {lot.name}
-                                                </h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                        {lot.name}
+                                                    </h3>
+                                                    <TranslationBadge hasEn={hasEnTranslation(lot)} />
+                                                </div>
                                                 <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
                                                     {lot.region}
                                                 </span>

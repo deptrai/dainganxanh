@@ -54,7 +54,10 @@ export default async function BlogPage({ params, searchParams }: BlogPageProps) 
   // Build query
   let query = supabase
     .from('posts')
-    .select('id, title, slug, excerpt, cover_image, published_at, tags', { count: 'exact' })
+    .select(`
+      id, title, slug, excerpt, cover_image, published_at, tags,
+      post_translations ( id, locale, slug, title, excerpt )
+    `, { count: 'exact' })
     .eq('status', 'published')
     .lte('published_at', new Date().toISOString())
     .order('published_at', { ascending: false })
@@ -63,6 +66,23 @@ export default async function BlogPage({ params, searchParams }: BlogPageProps) 
   if (tag) query = query.contains('tags', [tag])
 
   const { data: posts, count, error } = await query
+
+  const localizedPosts = (posts ?? []).map((post) => {
+    if (locale === 'en') {
+      const enTrans = Array.isArray(post.post_translations)
+        ? post.post_translations.find((t: any) => t.locale === 'en')
+        : null
+      if (enTrans) {
+        return {
+          ...post,
+          title: enTrans.title || post.title,
+          slug: enTrans.slug || post.slug,
+          excerpt: enTrans.excerpt || post.excerpt,
+        }
+      }
+    }
+    return post
+  })
 
   // Fetch all tags for the filter bar (published posts only)
   const { data: allPostsForTags } = await supabase
@@ -91,7 +111,7 @@ export default async function BlogPage({ params, searchParams }: BlogPageProps) 
     <div className="container mx-auto px-4 py-12 max-w-5xl">
       <BlogHeader currentTag={tag} t={t} />
       <PostList
-        posts={posts ?? []}
+        posts={localizedPosts}
         currentTag={tag}
         allTags={allTags}
         page={page}

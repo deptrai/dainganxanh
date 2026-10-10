@@ -217,6 +217,7 @@ export type Database = {
           id: string
           subject: string
           template_key: string
+          translations: Json
           updated_at: string | null
           updated_by: string | null
           variables: Json | null
@@ -227,6 +228,7 @@ export type Database = {
           id?: string
           subject: string
           template_key: string
+          translations?: Json
           updated_at?: string | null
           updated_by?: string | null
           variables?: Json | null
@@ -237,6 +239,7 @@ export type Database = {
           id?: string
           subject?: string
           template_key?: string
+          translations?: Json
           updated_at?: string | null
           updated_by?: string | null
           variables?: Json | null
@@ -353,6 +356,7 @@ export type Database = {
           planted: number | null
           region: string
           total_trees: number | null
+          translations: Json
           updated_at: string | null
         }
         Insert: {
@@ -366,6 +370,7 @@ export type Database = {
           planted?: number | null
           region: string
           total_trees?: number | null
+          translations?: Json
           updated_at?: string | null
         }
         Update: {
@@ -379,6 +384,7 @@ export type Database = {
           planted?: number | null
           region?: string
           total_trees?: number | null
+          translations?: Json
           updated_at?: string | null
         }
         Relationships: []
@@ -390,7 +396,8 @@ export type Database = {
           data: Json | null
           id: string
           read: boolean | null
-          title: string
+          title: string | null
+          translations: Json
           type: string
           user_id: string
         }
@@ -400,7 +407,8 @@ export type Database = {
           data?: Json | null
           id?: string
           read?: boolean | null
-          title: string
+          title?: string | null
+          translations?: Json
           type: string
           user_id: string
         }
@@ -410,7 +418,8 @@ export type Database = {
           data?: Json | null
           id?: string
           read?: boolean | null
-          title?: string
+          title?: string | null
+          translations?: Json
           type?: string
           user_id?: string
         }
@@ -631,6 +640,56 @@ export type Database = {
         }
         Relationships: []
       }
+      post_translations: {
+        Row: {
+          content: string | null
+          created_at: string
+          excerpt: string | null
+          id: string
+          locale: string
+          meta_desc: string | null
+          meta_title: string | null
+          post_id: string
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          locale: string
+          meta_desc?: string | null
+          meta_title?: string | null
+          post_id: string
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          locale?: string
+          meta_desc?: string | null
+          meta_title?: string | null
+          post_id?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_translations_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       print_queue: {
         Row: {
           created_at: string
@@ -684,6 +743,7 @@ export type Database = {
           name: string
           slug: string
           sort_order: number
+          translations: Json
         }
         Insert: {
           created_at?: string
@@ -693,6 +753,7 @@ export type Database = {
           name: string
           slug: string
           sort_order?: number
+          translations?: Json
         }
         Update: {
           created_at?: string
@@ -702,6 +763,7 @@ export type Database = {
           name?: string
           slug?: string
           sort_order?: number
+          translations?: Json
         }
         Relationships: []
       }
@@ -725,6 +787,7 @@ export type Database = {
           specifications: Json
           status: string
           stock_quantity: number
+          translations: Json
           updated_at: string
         }
         Insert: {
@@ -746,6 +809,7 @@ export type Database = {
           specifications?: Json
           status?: string
           stock_quantity?: number
+          translations?: Json
           updated_at?: string
         }
         Update: {
@@ -767,6 +831,7 @@ export type Database = {
           specifications?: Json
           status?: string
           stock_quantity?: number
+          translations?: Json
           updated_at?: string
         }
         Relationships: [
@@ -1059,6 +1124,7 @@ export type Database = {
           name: string
           price_per_night: number
           status: string
+          translations: Json
           updated_at: string
         }
         Insert: {
@@ -1072,6 +1138,7 @@ export type Database = {
           name: string
           price_per_night: number
           status?: string
+          translations?: Json
           updated_at?: string
         }
         Update: {
@@ -1085,6 +1152,7 @@ export type Database = {
           name?: string
           price_per_night?: number
           status?: string
+          translations?: Json
           updated_at?: string
         }
         Relationships: [

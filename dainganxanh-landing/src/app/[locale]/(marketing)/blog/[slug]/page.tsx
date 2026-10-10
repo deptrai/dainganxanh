@@ -20,13 +20,23 @@ interface PostPageProps {
 export async function generateStaticParams() {
   try {
     const supabase = createServiceRoleClient()
-    const { data } = await supabase
+    const now = new Date().toISOString()
+    const { data: posts } = await supabase
       .from('posts')
       .select('slug')
       .eq('status', 'published')
-      .lte('published_at', new Date().toISOString())
+      .lte('published_at', now)
 
-    return (data ?? []).map((p: { slug: string }) => ({ slug: p.slug }))
+    const { data: translations } = await supabase
+      .from('post_translations')
+      .select('slug, posts!inner(status, published_at)')
+      .eq('locale', 'en')
+      .eq('posts.status', 'published')
+      .lte('posts.published_at', now)
+
+    const viSlugs = (posts ?? []).map((p: { slug: string }) => ({ slug: p.slug }))
+    const enSlugs = (translations ?? []).map((t: { slug: string }) => ({ slug: t.slug }))
+    return [...viSlugs, ...enSlugs]
   } catch (err) {
     console.warn('[build] generateStaticParams for blog posts skipped or failed:', err instanceof Error ? err.message : err)
     return []
@@ -39,20 +49,71 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   const t = await getTranslations({ locale, namespace: 'blog.meta' })
   try {
     const supabase = createServiceRoleClient()
-    const { data: post } = await supabase
-      .from('posts')
-      .select('title, excerpt, cover_image, published_at, tags, meta_title, meta_desc')
-      .eq('slug', slug)
-      .eq('status', 'published')
-      .single()
+    let title: string | undefined
+    let description: string | undefined
+    let coverImage: string | null = null
+    let publishedAt: string | null = null
+    let tags: string[] = []
+    let viSlug = slug
+    let enSlug = slug
 
-    if (!post) {
-      return { title: t('notFound') }
+    if (locale === 'en') {
+      const { data: enTrans } = await supabase
+        .from('post_translations')
+        .select(`
+          title, excerpt, meta_title, meta_desc, slug,
+          posts ( title, excerpt, cover_image, published_at, tags, meta_title, meta_desc, status, slug )
+        `)
+        .eq('locale', 'en')
+        .eq('slug', slug)
+        .maybeSingle()
+
+      const p = enTrans?.posts as any
+      const isPublished = p?.status === 'published' && (!p?.published_at || new Date(p.published_at) <= new Date())
+      if (enTrans && isPublished) {
+        title = enTrans.meta_title || enTrans.title || p.meta_title || p.title
+        description = enTrans.meta_desc || enTrans.excerpt || p.meta_desc || p.excerpt || ''
+        coverImage = p.cover_image
+        publishedAt = p.published_at
+        tags = p.tags ?? []
+        viSlug = p.slug
+        enSlug = enTrans.slug
+      }
     }
 
-    const title = post.meta_title || post.title
-    const description = post.meta_desc || post.excerpt || ''
-    const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/blog/${slug}` : `https://dainganxanh.com.vn/en/blog/${slug}`
+    if (!title) {
+      const { data: post } = await supabase
+        .from('posts')
+        .select(`
+          title, slug, excerpt, cover_image, published_at, tags, meta_title, meta_desc,
+          post_translations ( locale, title, excerpt, meta_title, meta_desc, slug )
+        `)
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .maybeSingle()
+
+      if (!post) {
+        return { title: t('notFound') }
+      }
+
+      viSlug = post.slug
+      if (locale === 'en') {
+        const en = Array.isArray(post.post_translations) ? post.post_translations.find((t: any) => t.locale === 'en') : null
+        title = en?.meta_title || en?.title || post.meta_title || post.title
+        description = en?.meta_desc || en?.excerpt || post.meta_desc || post.excerpt || ''
+        enSlug = en?.slug || post.slug
+      } else {
+        title = post.meta_title || post.title
+        description = post.meta_desc || post.excerpt || ''
+        const en = Array.isArray(post.post_translations) ? post.post_translations.find((t: any) => t.locale === 'en') : null
+        enSlug = en?.slug || post.slug
+      }
+      coverImage = post.cover_image
+      publishedAt = post.published_at
+      tags = post.tags ?? []
+    }
+
+    const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/blog/${viSlug}` : `https://dainganxanh.com.vn/en/blog/${enSlug}`
 
     return {
       title,
@@ -60,17 +121,17 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       openGraph: {
         title,
         description,
-        images: post.cover_image ? [{ url: post.cover_image, alt: title }] : [],
+        images: coverImage ? [{ url: coverImage, alt: title }] : [],
         type: 'article',
-        publishedTime: post.published_at ?? undefined,
-        tags: post.tags ?? [],
+        publishedTime: publishedAt ?? undefined,
+        tags,
       },
       alternates: {
         canonical,
         languages: {
-          vi: `https://dainganxanh.com.vn/blog/${slug}`,
-          en: `https://dainganxanh.com.vn/en/blog/${slug}`,
-          'x-default': `https://dainganxanh.com.vn/blog/${slug}`,
+          vi: `https://dainganxanh.com.vn/blog/${viSlug}`,
+          en: `https://dainganxanh.com.vn/en/blog/${enSlug}`,
+          'x-default': `https://dainganxanh.com.vn/blog/${viSlug}`,
         },
       },
     }
@@ -86,13 +147,80 @@ export default async function PostPage({ params }: PostPageProps) {
   const tCommon = await getTranslations({ locale, namespace: 'common' })
   const supabase = createServiceRoleClient()
 
-  const { data: post } = await supabase
-    .from('posts')
-    .select('id, title, slug, excerpt, content, cover_image, published_at, tags, view_count')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .lte('published_at', new Date().toISOString())
-    .single()
+  let post: any = null
+
+  if (locale === 'en') {
+    // 1. Search post_translations by EN slug
+    const { data: enTrans } = await supabase
+      .from('post_translations')
+      .select(`
+        id, title, slug, content, excerpt, meta_title, meta_desc,
+        posts (
+          id, title, slug, excerpt, content, cover_image, published_at, tags, view_count, status
+        )
+      `)
+      .eq('locale', 'en')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    const p = enTrans?.posts as any
+    const isPublished = p?.status === 'published' && (!p?.published_at || new Date(p.published_at) <= new Date())
+    if (enTrans && isPublished) {
+      post = {
+        id: p.id,
+        title: enTrans.title || p.title,
+        slug: enTrans.slug || p.slug,
+        rawPostSlug: p.slug,
+        excerpt: enTrans.excerpt || p.excerpt,
+        content: enTrans.content || p.content,
+        cover_image: p.cover_image,
+        published_at: p.published_at,
+        tags: p.tags,
+        view_count: p.view_count,
+      }
+    }
+  }
+
+  // 2. Lookup by posts.slug if not found or locale is vi
+  if (!post) {
+    const { data: viPost } = await supabase
+      .from('posts')
+      .select(`
+        id, title, slug, excerpt, content, cover_image, published_at, tags, view_count,
+        post_translations (
+          id, locale, slug, title, content, excerpt
+        )
+      `)
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .lte('published_at', new Date().toISOString())
+      .maybeSingle()
+
+    if (viPost) {
+      if (locale === 'en') {
+        const enTrans = Array.isArray(viPost.post_translations)
+          ? viPost.post_translations.find((t: any) => t.locale === 'en')
+          : null
+        post = {
+          id: viPost.id,
+          title: enTrans?.title || viPost.title,
+          slug: enTrans?.slug || viPost.slug,
+          rawPostSlug: viPost.slug,
+          excerpt: enTrans?.excerpt || viPost.excerpt,
+          content: enTrans?.content || viPost.content,
+          cover_image: viPost.cover_image,
+          published_at: viPost.published_at,
+          tags: viPost.tags,
+          view_count: viPost.view_count,
+        }
+      } else {
+        post = {
+          ...viPost,
+          rawPostSlug: viPost.slug,
+        }
+      }
+    }
+  }
 
   if (!post) {
     notFound()
@@ -101,12 +229,32 @@ export default async function PostPage({ params }: PostPageProps) {
   // Fetch other posts for sidebar
   const { data: sidebarPosts } = await supabase
     .from('posts')
-    .select('id, title, slug, excerpt, cover_image, published_at, tags')
+    .select(`
+      id, title, slug, excerpt, cover_image, published_at, tags,
+      post_translations ( id, locale, slug, title, excerpt )
+    `)
     .eq('status', 'published')
     .lte('published_at', new Date().toISOString())
-    .neq('slug', slug)
+    .neq('slug', post.rawPostSlug)
     .order('published_at', { ascending: false })
     .limit(6)
+
+  const localizedSidebarPosts = (sidebarPosts ?? []).map((p) => {
+    if (locale === 'en') {
+      const enTrans = Array.isArray(p.post_translations)
+        ? p.post_translations.find((t: any) => t.locale === 'en')
+        : null
+      if (enTrans) {
+        return {
+          ...p,
+          title: enTrans.title || p.title,
+          slug: enTrans.slug || p.slug,
+          excerpt: enTrans.excerpt || p.excerpt,
+        }
+      }
+    }
+    return p
+  })
 
   const publishedDate = post.published_at
     ? formatDate(post.published_at, locale, { day: '2-digit', month: 'long', year: 'numeric' })
@@ -207,7 +355,7 @@ export default async function PostPage({ params }: PostPageProps) {
         {/* Sidebar */}
         <div className="lg:w-72 xl:w-80 flex-shrink-0">
           <div className="sticky top-24">
-            <BlogSidebar posts={sidebarPosts ?? []} currentSlug={slug} />
+            <BlogSidebar posts={localizedSidebarPosts} currentSlug={post.slug} />
           </div>
         </div>
       </div>

@@ -61,6 +61,37 @@ export async function createPost(formData: FormData) {
     return { success: false, error: 'Slug đã tồn tại, vui lòng chọn slug khác' }
   }
 
+  // EN translation fields
+  const enTitle = ((formData.get('en_title') as string) || '').trim() || null
+  const enSlug = ((formData.get('en_slug') as string) || '').trim() || null
+  const enContent = (formData.get('en_content') as string) || null
+  const enExcerpt = (formData.get('en_excerpt') as string) || null
+  const enMetaTitle = (formData.get('en_meta_title') as string) || null
+  const enMetaDesc = (formData.get('en_meta_desc') as string) || null
+
+  const hasEnField = Boolean(enTitle || enSlug || enContent || enExcerpt || enMetaTitle || enMetaDesc)
+
+  if (hasEnField) {
+    if (!enTitle) {
+      return { success: false, error: 'Tiêu đề tiếng Anh không được để trống' }
+    }
+    if (!enSlug) {
+      return { success: false, error: 'Slug tiếng Anh không được để trống' }
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(enSlug)) {
+      return { success: false, error: 'Slug tiếng Anh chỉ được chứa chữ thường, số và dấu gạch ngang' }
+    }
+    const { data: existingEn } = await supabase
+      .from('post_translations')
+      .select('id')
+      .eq('locale', 'en')
+      .eq('slug', enSlug)
+      .maybeSingle()
+    if (existingEn) {
+      return { success: false, error: 'Slug tiếng Anh đã tồn tại, vui lòng chọn slug khác' }
+    }
+  }
+
   let tags: string[] = []
   try {
     tags = JSON.parse(tagsRaw)
@@ -91,8 +122,29 @@ export async function createPost(formData: FormData) {
     return { success: false, error: 'Không thể tạo bài viết. Vui lòng thử lại.' }
   }
 
+  if (enTitle && enSlug) {
+    const { error: enError } = await supabase
+      .from('post_translations')
+      .insert({
+        post_id: post.id,
+        locale: 'en',
+        title: enTitle,
+        slug: enSlug,
+        content: enContent,
+        excerpt: enExcerpt,
+        meta_title: enMetaTitle,
+        meta_desc: enMetaDesc,
+      })
+    if (enError) {
+      console.error('createPost en translation error:', enError)
+      return { success: false, error: 'Không thể lưu bản dịch tiếng Anh. Vui lòng thử lại.' }
+    }
+  }
+
   revalidatePath('/blog')
+  revalidatePath('/en/blog')
   revalidatePath('/crm/admin/blog')
+  if (enSlug) revalidatePath(`/en/blog/${enSlug}`)
 
   return { success: true, id: post.id }
 }
@@ -137,6 +189,38 @@ export async function updatePost(id: string, formData: FormData) {
     return { success: false, error: 'Slug đã tồn tại, vui lòng chọn slug khác' }
   }
 
+  // EN translation fields
+  const enTitle = ((formData.get('en_title') as string) || '').trim() || null
+  const enSlug = ((formData.get('en_slug') as string) || '').trim() || null
+  const enContent = (formData.get('en_content') as string) || null
+  const enExcerpt = (formData.get('en_excerpt') as string) || null
+  const enMetaTitle = (formData.get('en_meta_title') as string) || null
+  const enMetaDesc = (formData.get('en_meta_desc') as string) || null
+
+  const hasEnField = Boolean(enTitle || enSlug || enContent || enExcerpt || enMetaTitle || enMetaDesc)
+
+  if (hasEnField) {
+    if (!enTitle) {
+      return { success: false, error: 'Tiêu đề tiếng Anh không được để trống' }
+    }
+    if (!enSlug) {
+      return { success: false, error: 'Slug tiếng Anh không được để trống' }
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(enSlug)) {
+      return { success: false, error: 'Slug tiếng Anh chỉ được chứa chữ thường, số và dấu gạch ngang' }
+    }
+    const { data: existingEn } = await supabase
+      .from('post_translations')
+      .select('id')
+      .eq('locale', 'en')
+      .eq('slug', enSlug)
+      .neq('post_id', id)
+      .maybeSingle()
+    if (existingEn) {
+      return { success: false, error: 'Slug tiếng Anh đã tồn tại, vui lòng chọn slug khác' }
+    }
+  }
+
   let tags: string[] = []
   try {
     tags = JSON.parse(tagsRaw)
@@ -179,8 +263,66 @@ export async function updatePost(id: string, formData: FormData) {
     return { success: false, error: 'Không thể cập nhật bài viết. Vui lòng thử lại.' }
   }
 
+  let oldEnSlug: string | null = null
+  if (enTitle && enSlug) {
+    const { data: currentTrans } = await supabase
+      .from('post_translations')
+      .select('id, slug')
+      .eq('post_id', id)
+      .eq('locale', 'en')
+      .maybeSingle()
+
+    if (currentTrans) {
+      oldEnSlug = currentTrans.slug || null
+      const { error: enUpdateError } = await supabase
+        .from('post_translations')
+        .update({
+          title: enTitle,
+          slug: enSlug,
+          content: enContent,
+          excerpt: enExcerpt,
+          meta_title: enMetaTitle,
+          meta_desc: enMetaDesc,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', currentTrans.id)
+      if (enUpdateError) {
+        console.error('updatePost en translation update error:', enUpdateError)
+        return { success: false, error: 'Không thể lưu bản dịch tiếng Anh. Vui lòng thử lại.' }
+      }
+    } else {
+      const { error: enInsertError } = await supabase
+        .from('post_translations')
+        .insert({
+          post_id: id,
+          locale: 'en',
+          title: enTitle,
+          slug: enSlug,
+          content: enContent,
+          excerpt: enExcerpt,
+          meta_title: enMetaTitle,
+          meta_desc: enMetaDesc,
+        })
+      if (enInsertError) {
+        console.error('updatePost en translation insert error:', enInsertError)
+        return { success: false, error: 'Không thể lưu bản dịch tiếng Anh. Vui lòng thử lại.' }
+      }
+    }
+  } else if (!hasEnField && formData.has('en_title') && !enTitle) {
+    await supabase
+      .from('post_translations')
+      .delete()
+      .eq('post_id', id)
+      .eq('locale', 'en')
+  }
+
   revalidatePath('/blog')
+  revalidatePath('/en/blog')
   revalidatePath(`/blog/${slug}`)
+  if (oldEnSlug && oldEnSlug !== enSlug) {
+    revalidatePath(`/en/blog/${oldEnSlug}`)
+  }
+  if (enSlug) revalidatePath(`/en/blog/${enSlug}`)
   revalidatePath('/crm/admin/blog')
 
   return { success: true }
@@ -199,6 +341,7 @@ export async function deletePost(id: string) {
   }
 
   revalidatePath('/blog')
+  revalidatePath('/en/blog')
   revalidatePath('/crm/admin/blog')
 
   return { success: true }

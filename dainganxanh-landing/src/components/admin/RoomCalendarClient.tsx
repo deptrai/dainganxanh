@@ -12,6 +12,8 @@ import {
     RoomCalendarData,
 } from '@/actions/adminRooms'
 import { BOOKING_STATUS_CONFIG } from '@/components/crm/BookingStatusBadge'
+import TranslationBadge from '@/components/admin/TranslationBadge'
+import { hasEnTranslation } from '@/lib/translations'
 import {
     getWeekBounds,
     getMonthCalendarDays,
@@ -578,7 +580,10 @@ export default function RoomCalendarClient({ userId: _userId }: RoomCalendarClie
                                                 }`}
                                             >
                                                 <div>
-                                                    <p className="font-semibold text-sm text-gray-900">{room.name}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className="font-semibold text-sm text-gray-900">{room.name}</p>
+                                                        <TranslationBadge hasEn={hasEnTranslation(room)} />
+                                                    </div>
                                                     <p className="text-xs text-emerald-700">{room.lotName}</p>
                                                     {room.lotRegion && (
                                                         <p className="text-[10px] text-gray-500">{room.lotRegion}</p>

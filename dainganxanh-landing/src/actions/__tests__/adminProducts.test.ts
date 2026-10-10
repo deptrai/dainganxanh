@@ -514,4 +514,182 @@ describe('adminProducts server actions', () => {
             )
         })
     })
+
+    describe('i18n translations support', () => {
+        it('persists translations in createProduct', async () => {
+            let insertedData: any = null
+            let productQueryCount = 0
+            mockServiceFrom.mockImplementation((table: string) => {
+                if (table === 'product_categories') {
+                    return createQueryChain({ data: { id: 'cat-123' }, error: null })
+                }
+                if (table === 'products') {
+                    productQueryCount++
+                    if (productQueryCount === 1) {
+                        return createQueryChain({ data: null, error: null })
+                    }
+                    const chain = createQueryChain({ data: { id: 'prod-i18n-1', slug: 'tra-hoa-vang-ba-vi' }, error: null })
+                    chain.insert = jest.fn((payload) => {
+                        insertedData = payload
+                        return chain
+                    })
+                    return chain
+                }
+                return createQueryChain({ data: null, error: null })
+            })
+
+            const inputWithTranslations: ProductInput = {
+                ...validProductInput,
+                translations: {
+                    en: {
+                        name: 'Ba Vi Golden Camellia Tea',
+                        description: 'Herbal tea from Ba Vi mountain',
+                    },
+                },
+            }
+
+            const result = await createProduct(inputWithTranslations)
+            expect(result.success).toBe(true)
+            expect(insertedData.translations).toEqual({
+                vi: {
+                    name: 'Trà Hoa Vàng Ba Vì',
+                    description: 'Mô tả trà hoa vàng chất lượng cao',
+                },
+                en: {
+                    name: 'Ba Vi Golden Camellia Tea',
+                    description: 'Herbal tea from Ba Vi mountain',
+                },
+            })
+        })
+
+        it('persists translations in updateProduct', async () => {
+            let updatedData: any = null
+            let productQueryCount = 0
+            mockServiceFrom.mockImplementation((table: string) => {
+                if (table === 'product_categories') {
+                    return createQueryChain({ data: { id: 'cat-123' }, error: null })
+                }
+                if (table === 'products') {
+                    productQueryCount++
+                    if (productQueryCount === 1) {
+                        return createQueryChain({ data: null, error: null })
+                    }
+                    const chain = createQueryChain({ data: { id: 'prod-123', slug: 'tra-hoa-vang-ba-vi' }, error: null })
+                    chain.update = jest.fn((payload) => {
+                        updatedData = payload
+                        return chain
+                    })
+                    return chain
+                }
+                return createQueryChain({ data: null, error: null })
+            })
+
+            const inputWithTranslations: ProductInput = {
+                ...validProductInput,
+                translations: {
+                    en: {
+                        name: 'Updated English Name',
+                        description: 'Updated English Description',
+                    },
+                },
+            }
+
+            const result = await updateProduct('prod-123', inputWithTranslations)
+            expect(result.success).toBe(true)
+            expect(updatedData.translations).toEqual({
+                vi: {
+                    name: 'Trà Hoa Vàng Ba Vì',
+                    description: 'Mô tả trà hoa vàng chất lượng cao',
+                },
+                en: {
+                    name: 'Updated English Name',
+                    description: 'Updated English Description',
+                },
+            })
+        })
+
+        it('[SAVE_EMPTY_EN] does not include en key when en fields are empty/whitespace, but keeps vi mirror', async () => {
+            let insertedData: any = null
+            let productQueryCount = 0
+            mockServiceFrom.mockImplementation((table: string) => {
+                if (table === 'product_categories') {
+                    return createQueryChain({ data: { id: 'cat-123' }, error: null })
+                }
+                if (table === 'products') {
+                    productQueryCount++
+                    if (productQueryCount === 1) {
+                        return createQueryChain({ data: null, error: null })
+                    }
+                    const chain = createQueryChain({ data: { id: 'prod-i18n-2', slug: 'tra-hoa-vang-ba-vi' }, error: null })
+                    chain.insert = jest.fn((payload) => {
+                        insertedData = payload
+                        return chain
+                    })
+                    return chain
+                }
+                return createQueryChain({ data: null, error: null })
+            })
+
+            const inputWithBlankEn: ProductInput = {
+                ...validProductInput,
+                translations: {
+                    en: {
+                        name: '   ',
+                        description: '',
+                    },
+                },
+            }
+
+            const result = await createProduct(inputWithBlankEn)
+            expect(result.success).toBe(true)
+            expect(insertedData.translations).toEqual({
+                vi: {
+                    name: 'Trà Hoa Vàng Ba Vì',
+                    description: 'Mô tả trà hoa vàng chất lượng cao',
+                },
+            })
+            expect(insertedData.translations).not.toHaveProperty('en')
+        })
+
+        it('strips empty-string fields from translations.en while keeping non-empty fields trimmed', async () => {
+            let insertedData: any = null
+            let productQueryCount = 0
+
+            mockServiceFrom.mockImplementation((table: string) => {
+                if (table === 'product_categories') {
+                    return createQueryChain({ data: { id: 'cat-123' }, error: null })
+                }
+                if (table === 'products') {
+                    productQueryCount++
+                    if (productQueryCount === 1) {
+                        return createQueryChain({ data: null, error: null })
+                    }
+                    const chain = createQueryChain({ data: { id: 'prod-i18n-3', slug: 'tra-hoa-vang-ba-vi' }, error: null })
+                    chain.insert = jest.fn((payload) => {
+                        insertedData = payload
+                        return chain
+                    })
+                    return chain
+                }
+                return createQueryChain({ data: null, error: null })
+            })
+
+            const inputWithPartialEn: ProductInput = {
+                ...validProductInput,
+                translations: {
+                    en: {
+                        name: '  Golden Tea  ',
+                        description: '   ',
+                    },
+                },
+            }
+
+            const result = await createProduct(inputWithPartialEn)
+            expect(result.success).toBe(true)
+            expect(insertedData.translations.en).toEqual({
+                name: 'Golden Tea',
+            })
+            expect(insertedData.translations.en).not.toHaveProperty('description')
+        })
+    })
 })

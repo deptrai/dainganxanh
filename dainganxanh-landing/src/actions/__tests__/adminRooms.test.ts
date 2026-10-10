@@ -152,7 +152,7 @@ describe('adminRooms', () => {
     mockServiceFrom
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: [{ id: 'l1', name: 'Ba Vì', region: 'MB' }], error: null }))
-      .mockReturnValueOnce(makeQueryChain({ data: [{ id: 'r1', name: 'Deluxe', status: 'active', lot_id: 'l1' }], error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: [{ id: 'r1', name: 'Deluxe', status: 'active', lot_id: 'l1', translations: { en: { name: 'Deluxe Room' } } }], error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
       .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
 
@@ -160,6 +160,7 @@ describe('adminRooms', () => {
     expect(result.error).toBeUndefined()
     expect(result.lots).toHaveLength(1)
     expect(result.lots[0].rooms[0].name).toBe('Deluxe')
+    expect(result.lots[0].rooms[0].translations).toEqual({ en: { name: 'Deluxe Room' } })
   })
 
   it('getAssignedLotIds returns lot_id array for resort_manager', async () => {

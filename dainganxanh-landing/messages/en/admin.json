@@ -103,5 +103,33 @@
       "enterTracking": "Please enter tracking number",
       "generic": "An error occurred while updating status. Please try again."
     }
+  },
+  "translation": {
+    "tabVi": "Vietnamese",
+    "tabEn": "English",
+    "hasEnContentTooltip": "English content available",
+    "badge": {
+      "viOnly": "VI only",
+      "viEn": "VI + EN",
+      "viOnlyTooltip": "Vietnamese only, not translated to English",
+      "viEnTooltip": "English translation available"
+    },
+    "fieldName": "Name (EN)",
+    "fieldDescription": "Description (EN)",
+    "fieldExcerpt": "Excerpt (EN)",
+    "fieldMetaTitle": "Meta Title (EN)",
+    "fieldMetaDesc": "Meta Description (EN)",
+    "fieldSlug": "Slug (EN)",
+    "fieldContent": "Content (EN)",
+    "fieldRegion": "Region (EN)",
+    "fieldTitle": "Title (EN)",
+    "seoOptional": "SEO (optional)",
+    "seoEnOptional": "English SEO (optional)",
+    "characters": "characters",
+    "placeholderTitle": "Enter English title...",
+    "placeholderSlug": "english-url-slug",
+    "placeholderExcerpt": "Short summary in English...",
+    "placeholderMetaTitle": "English meta title...",
+    "placeholderMetaDesc": "English meta description..."
   }
 }

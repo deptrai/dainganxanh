@@ -7,8 +7,9 @@ export interface Notification {
     id: string
     user_id: string
     type: string
-    title: string
+    title: string | null
     body: string | null
+    translations?: Record<string, unknown> | null
     data: {
         orderIds?: string[]
         lotId?: string

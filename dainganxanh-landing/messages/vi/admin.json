@@ -103,5 +103,33 @@
       "enterTracking": "Vui lòng nhập mã vận đơn",
       "generic": "Có lỗi xảy ra khi cập nhật trạng thái. Vui lòng thử lại."
     }
+  },
+  "translation": {
+    "tabVi": "Tiếng Việt",
+    "tabEn": "Tiếng Anh",
+    "hasEnContentTooltip": "Đã có nội dung tiếng Anh",
+    "badge": {
+      "viOnly": "Chỉ có VI",
+      "viEn": "VI + EN",
+      "viOnlyTooltip": "Chỉ có tiếng Việt, chưa dịch tiếng Anh",
+      "viEnTooltip": "Đã có bản dịch tiếng Anh"
+    },
+    "fieldName": "Tên (EN)",
+    "fieldDescription": "Mô tả (EN)",
+    "fieldExcerpt": "Tóm tắt (EN)",
+    "fieldMetaTitle": "Meta Title (EN)",
+    "fieldMetaDesc": "Meta Description (EN)",
+    "fieldSlug": "Slug (EN)",
+    "fieldContent": "Nội dung (EN)",
+    "fieldRegion": "Khu vực (EN)",
+    "fieldTitle": "Tiêu đề (EN)",
+    "seoOptional": "SEO (tùy chọn)",
+    "seoEnOptional": "SEO tiếng Anh (tùy chọn)",
+    "characters": "ký tự",
+    "placeholderTitle": "Enter English title...",
+    "placeholderSlug": "english-url-slug",
+    "placeholderExcerpt": "Short summary in English...",
+    "placeholderMetaTitle": "English meta title...",
+    "placeholderMetaDesc": "English meta description..."
   }
 }

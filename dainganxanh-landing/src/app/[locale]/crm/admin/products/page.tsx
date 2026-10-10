@@ -54,6 +54,7 @@ export default async function AdminProductsPage({
             origin_type,
             images,
             is_featured,
+            translations,
             created_at,
             product_categories (
                 id,

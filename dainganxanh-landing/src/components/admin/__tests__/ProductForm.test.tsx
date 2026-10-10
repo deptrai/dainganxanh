@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { renderWithIntl as render } from '@/test-utils/renderWithIntl'
 import { ProductForm } from '../ProductForm'
 
 const mockPush = jest.fn()
@@ -277,6 +278,105 @@ describe('ProductForm', () => {
                     })
                 )
                 expect(mockPush).toHaveBeenCalledWith('/crm/admin/products')
+            })
+        })
+
+        it('switches to EN tab, inputs nameEn/descriptionEn, submits and includes translations with en and vi mirror', async () => {
+            mockCreateProduct.mockResolvedValueOnce({ success: true, id: 'new-id' })
+
+            render(<ProductForm categories={mockCategories} />)
+
+            // Fill VI name & price
+            fireEvent.change(screen.getByLabelText(/Tên sản phẩm/i), {
+                target: { value: 'Trà hoa vàng' },
+            })
+            fireEvent.change(screen.getByLabelText(/Giá bán/i), {
+                target: { value: '180000' },
+            })
+
+            // Switch to EN tab
+            const enTab = screen.getByRole('button', { name: /tiếng anh/i })
+            fireEvent.click(enTab)
+
+            // Fill EN name and description
+            const enNameInput = screen.getByPlaceholderText(/Ba Vi Golden Camellia Tea/i)
+            fireEvent.change(enNameInput, {
+                target: { value: 'Golden Camellia Tea' },
+            })
+            const enDescInput = screen.getByPlaceholderText(/Product details, aroma notes/i)
+            fireEvent.change(enDescInput, {
+                target: { value: 'Premium Vietnamese organic tea' },
+            })
+
+            // Submit
+            const submitBtn = screen.getByRole('button', { name: /Lưu sản phẩm/i })
+            fireEvent.click(submitBtn)
+
+            await waitFor(() => {
+                expect(mockCreateProduct).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        name: 'Trà hoa vàng',
+                        translations: expect.objectContaining({
+                            vi: expect.objectContaining({
+                                name: 'Trà hoa vàng',
+                            }),
+                            en: {
+                                name: 'Golden Camellia Tea',
+                                description: 'Premium Vietnamese organic tea',
+                            },
+                        }),
+                    })
+                )
+            })
+        })
+
+        it('switches to EN tab in edit mode, updates nameEn and submits updateProduct with translations', async () => {
+            mockUpdateProduct.mockResolvedValueOnce({ success: true, id: 'edit-id' })
+
+            const initialData = {
+                id: 'edit-id',
+                name: 'Trà sâm',
+                slug: 'tra-sam',
+                category_id: 'cat-1',
+                price: 120000,
+                stock_quantity: 10,
+                status: 'active' as const,
+                origin_type: 'dainganxanh_harvest' as const,
+                translations: {
+                    vi: { name: 'Trà sâm' },
+                    en: { name: 'Ginseng Tea' },
+                },
+            }
+
+            render(<ProductForm initialData={initialData as any} categories={mockCategories} />)
+
+            // Switch to EN tab
+            const enTab = screen.getByRole('button', { name: /tiếng anh/i })
+            fireEvent.click(enTab)
+
+            const enNameInput = screen.getByPlaceholderText(/Ba Vi Golden Camellia Tea/i)
+            fireEvent.change(enNameInput, {
+                target: { value: 'Premium Ginseng Tea' },
+            })
+
+            // Submit
+            const submitBtn = screen.getByRole('button', { name: /Cập nhật sản phẩm/i })
+            fireEvent.click(submitBtn)
+
+            await waitFor(() => {
+                expect(mockUpdateProduct).toHaveBeenCalledWith(
+                    'edit-id',
+                    expect.objectContaining({
+                        translations: expect.objectContaining({
+                            vi: expect.objectContaining({
+                                name: 'Trà sâm',
+                            }),
+                            en: expect.objectContaining({
+                                name: 'Premium Ginseng Tea',
+                            }),
+                        }),
+                    })
+                )
             })
         })
 

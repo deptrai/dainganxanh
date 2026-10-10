@@ -174,5 +174,11 @@
     "saveSuccess": "Cập nhật hồ sơ thành công",
     "saveError": "Không thể lưu thông tin. Vui lòng thử lại sau.",
     "btnSave": "Lưu thay đổi"
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "empty": "Chưa có thông báo mới",
+    "untitled": "Thông báo"
   }
 }

@@ -246,6 +246,7 @@ export interface RoomCalendarData {
             id: string
             name: string
             status: string
+            translations?: Record<string, unknown> | null
             bookings: Array<{
                 id: string
                 code: string
@@ -304,7 +305,7 @@ export async function fetchRoomCalendarData(
 
         const { data: rooms, error: roomsError } = await serviceSupabase
             .from('rooms')
-            .select('id, name, status, lot_id')
+            .select('id, name, status, lot_id, translations')
             .in('lot_id', [...allowedLotIds])
             .order('name', { ascending: true })
 
@@ -358,6 +359,7 @@ export async function fetchRoomCalendarData(
                 id: r.id,
                 name: r.name,
                 status: r.status,
+                translations: r.translations,
                 bookings: bookingsByRoom.get(r.id) || [],
                 blocks: blocksByRoom.get(r.id) || [],
             })

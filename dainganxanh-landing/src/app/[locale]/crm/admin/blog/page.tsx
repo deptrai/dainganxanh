@@ -3,6 +3,7 @@ import { setRequestLocale } from 'next-intl/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/format'
 import DeletePostButton from './DeletePostButton'
+import TranslationBadge from '@/components/admin/TranslationBadge'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,10 @@ export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
 
   const { data: posts, error } = await supabase
     .from('posts')
-    .select('id, title, slug, status, published_at, created_at, tags')
+    .select(`
+      id, title, slug, status, published_at, created_at, tags,
+      post_translations (id, locale)
+    `)
     .order('created_at', { ascending: false })
 
   return (
@@ -58,6 +62,7 @@ export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-700">Tiêu đề</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-700">Ngôn ngữ</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-700">Trạng thái</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-700">Publish lúc</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-700">Tạo lúc</th>
@@ -65,17 +70,22 @@ export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {posts.map((post) => (
-                <tr key={post.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div>
-                      <span className="font-medium text-gray-900">{post.title}</span>
-                      <div className="text-xs text-gray-400 font-mono">/blog/{post.slug}</div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={post.status} />
-                  </td>
+              {posts.map((post) => {
+                const hasEn = Array.isArray(post.post_translations) && post.post_translations.some((t: any) => t.locale === 'en')
+                return (
+                  <tr key={post.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div>
+                        <span className="font-medium text-gray-900">{post.title}</span>
+                        <div className="text-xs text-gray-400 font-mono">/blog/{post.slug}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <TranslationBadge hasEn={hasEn} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={post.status} />
+                    </td>
                   <td className="px-4 py-3 text-gray-500">
                     {post.published_at
                       ? formatDate(post.published_at, locale)
@@ -103,9 +113,10 @@ export default async function AdminBlogPage({ params }: AdminBlogPageProps) {
                       </Link>
                       <DeletePostButton id={post.id} title={post.title} />
                     </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

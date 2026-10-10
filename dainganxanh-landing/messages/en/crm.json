@@ -174,5 +174,11 @@
     "saveSuccess": "Profile updated successfully",
     "saveError": "Failed to update profile. Please try again later.",
     "btnSave": "Save Changes"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "empty": "No new notifications",
+    "untitled": "Notification"
   }
 }

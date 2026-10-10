@@ -5,10 +5,22 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useEffect, useRef, useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
+import LocaleTabs from '@/components/admin/LocaleTabs'
 import { generateSlug } from '@/lib/utils/slug'
 import { createPost, updatePost, uploadBlogImage } from '@/actions/blog'
 import imageCompression from 'browser-image-compression'
+
+interface EnTranslation {
+  id?: string
+  title?: string
+  slug?: string
+  content?: string | null
+  excerpt?: string | null
+  meta_title?: string | null
+  meta_desc?: string | null
+}
 
 interface Post {
   id: string
@@ -21,28 +33,44 @@ interface Post {
   tags: string[]
   meta_title: string | null
   meta_desc: string | null
+  en_translation?: EnTranslation | null
 }
 
 interface BlogEditorProps {
   post?: Post
+  enTranslation?: EnTranslation | null
 }
 
-export default function BlogEditor({ post }: BlogEditorProps) {
+export default function BlogEditor({ post, enTranslation }: BlogEditorProps) {
+  const t = useTranslations('admin.translation')
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // Form fields
+  const initialEn = enTranslation || post?.en_translation || null
+  const [localeTab, setLocaleTab] = useState<'vi' | 'en'>('vi')
+
+  // Form fields (VI)
   const [title, setTitle] = useState(post?.title ?? '')
   const [slug, setSlug] = useState(post?.slug ?? '')
   const [slugManual, setSlugManual] = useState(!!post?.slug)
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? '')
+  const [metaTitle, setMetaTitle] = useState(post?.meta_title ?? '')
+  const [metaDesc, setMetaDesc] = useState(post?.meta_desc ?? '')
+
+  // Form fields (EN)
+  const [enTitle, setEnTitle] = useState(initialEn?.title ?? '')
+  const [enSlug, setEnSlug] = useState(initialEn?.slug ?? '')
+  const [enSlugManual, setEnSlugManual] = useState(!!initialEn?.slug)
+  const [enExcerpt, setEnExcerpt] = useState(initialEn?.excerpt ?? '')
+  const [enMetaTitle, setEnMetaTitle] = useState(initialEn?.meta_title ?? '')
+  const [enMetaDesc, setEnMetaDesc] = useState(initialEn?.meta_desc ?? '')
+
+  // Shared fields
   const [coverImage, setCoverImage] = useState(post?.cover_image ?? '')
   const [tags, setTags] = useState<string[]>(post?.tags ?? [])
   const [tagInput, setTagInput] = useState('')
-  const [metaTitle, setMetaTitle] = useState(post?.meta_title ?? '')
-  const [metaDesc, setMetaDesc] = useState(post?.meta_desc ?? '')
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const contentImageInputRef = useRef<HTMLInputElement>(null)
@@ -60,6 +88,21 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     immediatelyRender: false,
   })
 
+  const enEditor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [2, 3, 4] },
+        link: { openOnClick: false },
+      }),
+      Image.configure({ allowBase64: false }),
+      Placeholder.configure({ placeholder: 'Start writing blog content in English...' }),
+    ],
+    content: initialEn?.content ?? '',
+    immediatelyRender: false,
+  })
+
+  const activeEditor = localeTab === 'vi' ? editor : enEditor
+
   // Auto generate slug from title
   useEffect(() => {
     if (!slugManual && title) {
@@ -67,12 +110,19 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     }
   }, [title, slugManual])
 
+  // Auto generate enSlug from enTitle
+  useEffect(() => {
+    if (!enSlugManual && enTitle) {
+      setEnSlug(generateSlug(enTitle))
+    }
+  }, [enTitle, enSlugManual])
+
   // ─── Toolbar actions ─────────────────────────────────────────────────────
 
   function handleInsertImageFromUrl() {
     const url = window.prompt('Nhập URL hình ảnh:')
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run()
+    if (url && activeEditor) {
+      activeEditor.chain().focus().setImage({ src: url }).run()
     }
   }
 
@@ -87,7 +137,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
 
   async function handleUploadImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !editor) return
+    if (!file || !activeEditor) return
 
     setUploadingImage(true)
     setError(null)
@@ -102,7 +152,7 @@ export default function BlogEditor({ post }: BlogEditorProps) {
         setError(result.error ?? 'Upload thất bại')
         return
       }
-      editor.chain().focus().setImage({ src: result.url }).run()
+      activeEditor.chain().focus().setImage({ src: result.url }).run()
       if (contentImageInputRef.current) contentImageInputRef.current.value = ''
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload thất bại')
@@ -167,6 +217,16 @@ export default function BlogEditor({ post }: BlogEditorProps) {
     fd.append('tags', JSON.stringify(tags))
     fd.append('meta_title', metaTitle)
     fd.append('meta_desc', metaDesc)
+
+    if (post || enTitle.trim() || enSlug.trim()) {
+      fd.append('en_title', enTitle.trim())
+      fd.append('en_slug', enSlug.trim() || (enTitle.trim() ? generateSlug(enTitle) : ''))
+      fd.append('en_content', enEditor?.getHTML() ?? '')
+      fd.append('en_excerpt', enExcerpt.trim())
+      fd.append('en_meta_title', enMetaTitle.trim())
+      fd.append('en_meta_desc', enMetaDesc.trim())
+    }
+
     return fd
   }
 
@@ -209,68 +269,125 @@ export default function BlogEditor({ post }: BlogEditorProps) {
         </div>
       )}
 
-      {/* Title */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Tiêu đề <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nhập tiêu đề bài viết..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
-        />
-      </div>
+      {/* Locale switcher tabs */}
+      <LocaleTabs
+        activeTab={localeTab}
+        onChange={setLocaleTab}
+        hasEnContent={Boolean(enTitle.trim())}
+      />
 
-      {/* Slug */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Slug <span className="text-red-500">*</span>
-        </label>
-        <div className="flex gap-2">
+      {/* Title */}
+      {localeTab === 'vi' ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tiêu đề <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
-            value={slug}
-            onChange={(e) => {
-              setSlug(e.target.value)
-              setSlugManual(true)
-            }}
-            placeholder="url-slug-bai-viet"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Nhập tiêu đề bài viết..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
           />
-          <button
-            type="button"
-            onClick={() => {
-              setSlug(generateSlug(title))
-              setSlugManual(false)
-            }}
-            className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-          >
-            Tự động
-          </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">/blog/{slug || '...'}</p>
-      </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('fieldTitle')}
+          </label>
+          <input
+            type="text"
+            value={enTitle}
+            onChange={(e) => setEnTitle(e.target.value)}
+            placeholder={t('placeholderTitle')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+          />
+        </div>
+      )}
+
+      {/* Slug */}
+      {localeTab === 'vi' ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Slug <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => {
+                setSlug(e.target.value)
+                setSlugManual(true)
+              }}
+              placeholder="url-slug-bai-viet"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setSlug(generateSlug(title))
+                setSlugManual(false)
+              }}
+              className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Tự động
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">/blog/{slug || '...'}</p>
+        </div>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {t('fieldSlug')}
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={enSlug}
+              onChange={(e) => {
+                setEnSlug(e.target.value)
+                setEnSlugManual(true)
+              }}
+              placeholder={t('placeholderSlug')}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setEnSlug(generateSlug(enTitle))
+                setEnSlugManual(false)
+              }}
+              className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Tự động
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">/en/blog/{enSlug || '...'}</p>
+        </div>
+      )}
 
       {/* Content Editor */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Nội dung <span className="text-red-500">*</span>
+          {localeTab === 'vi' ? (
+            <>Nội dung <span className="text-red-500">*</span></>
+          ) : (
+            <>{t('fieldContent')}</>
+          )}
         </label>
         <div className="border border-gray-300 rounded-lg overflow-hidden">
           {/* Toolbar */}
           <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-b border-gray-200">
             <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleBold().run()}
-              active={editor?.isActive('bold')}
+              onClick={() => activeEditor?.chain().focus().toggleBold().run()}
+              active={activeEditor?.isActive('bold')}
               title="Bold"
             >
               <strong>B</strong>
             </ToolbarButton>
             <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleItalic().run()}
-              active={editor?.isActive('italic')}
+              onClick={() => activeEditor?.chain().focus().toggleItalic().run()}
+              active={activeEditor?.isActive('italic')}
               title="Italic"
             >
               <em>I</em>
@@ -279,8 +396,8 @@ export default function BlogEditor({ post }: BlogEditorProps) {
             {([2, 3, 4] as const).map((level) => (
               <ToolbarButton
                 key={level}
-                onClick={() => editor?.chain().focus().toggleHeading({ level }).run()}
-                active={editor?.isActive('heading', { level })}
+                onClick={() => activeEditor?.chain().focus().toggleHeading({ level }).run()}
+                active={activeEditor?.isActive('heading', { level })}
                 title={`Heading ${level}`}
               >
                 H{level}
@@ -288,29 +405,29 @@ export default function BlogEditor({ post }: BlogEditorProps) {
             ))}
             <div className="w-px bg-gray-300 mx-1" />
             <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleBulletList().run()}
-              active={editor?.isActive('bulletList')}
+              onClick={() => activeEditor?.chain().focus().toggleBulletList().run()}
+              active={activeEditor?.isActive('bulletList')}
               title="Danh sách"
             >
               •−
             </ToolbarButton>
             <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-              active={editor?.isActive('orderedList')}
+              onClick={() => activeEditor?.chain().focus().toggleOrderedList().run()}
+              active={activeEditor?.isActive('orderedList')}
               title="Danh sách số"
             >
               1.
             </ToolbarButton>
             <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-              active={editor?.isActive('blockquote')}
+              onClick={() => activeEditor?.chain().focus().toggleBlockquote().run()}
+              active={activeEditor?.isActive('blockquote')}
               title="Trích dẫn"
             >
               &ldquo;&rdquo;
             </ToolbarButton>
             <ToolbarButton
-              onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-              active={editor?.isActive('codeBlock')}
+              onClick={() => activeEditor?.chain().focus().toggleCodeBlock().run()}
+              active={activeEditor?.isActive('codeBlock')}
               title="Code"
             >
               {'</>'}
@@ -336,23 +453,42 @@ export default function BlogEditor({ post }: BlogEditorProps) {
           </div>
 
           {/* Editor area */}
-          <EditorContent
-            editor={editor}
-            className="min-h-[320px] p-4 prose prose-sm max-w-none focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[300px]"
-          />
+          {localeTab === 'vi' ? (
+            <EditorContent
+              editor={editor}
+              className="min-h-[320px] p-4 prose prose-sm max-w-none focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[300px]"
+            />
+          ) : (
+            <EditorContent
+              editor={enEditor}
+              className="min-h-[320px] p-4 prose prose-sm max-w-none focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[300px]"
+            />
+          )}
         </div>
       </div>
 
       {/* Excerpt */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Tóm tắt</label>
-        <textarea
-          value={excerpt}
-          onChange={(e) => setExcerpt(e.target.value)}
-          rows={3}
-          placeholder="Mô tả ngắn về bài viết..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {localeTab === 'vi' ? 'Tóm tắt' : t('fieldExcerpt')}
+        </label>
+        {localeTab === 'vi' ? (
+          <textarea
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+            rows={3}
+            placeholder="Mô tả ngắn về bài viết..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+          />
+        ) : (
+          <textarea
+            value={enExcerpt}
+            onChange={(e) => setEnExcerpt(e.target.value)}
+            rows={3}
+            placeholder={t('placeholderExcerpt')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+          />
+        )}
       </div>
 
       {/* Cover Image */}
@@ -422,29 +558,60 @@ export default function BlogEditor({ post }: BlogEditorProps) {
 
       {/* SEO */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-4 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-700">SEO (tùy chọn)</h3>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Meta Title</label>
-          <input
-            type="text"
-            value={metaTitle}
-            onChange={(e) => setMetaTitle(e.target.value)}
-            placeholder={title || 'Meta title...'}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-          />
-          <p className="text-xs text-gray-400 mt-1">{metaTitle.length}/60 ký tự</p>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Meta Description</label>
-          <textarea
-            value={metaDesc}
-            onChange={(e) => setMetaDesc(e.target.value)}
-            rows={2}
-            placeholder={excerpt || 'Mô tả ngắn hiển thị trên Google...'}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
-          />
-          <p className="text-xs text-gray-400 mt-1">{metaDesc.length}/160 ký tự</p>
-        </div>
+        <h3 className="text-sm font-semibold text-gray-700">
+          {localeTab === 'vi' ? t('seoOptional') : t('seoEnOptional')}
+        </h3>
+        {localeTab === 'vi' ? (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Meta Title</label>
+              <input
+                type="text"
+                value={metaTitle}
+                onChange={(e) => setMetaTitle(e.target.value)}
+                placeholder={title || 'Meta title...'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">{metaTitle.length}/60 {t('characters')}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Meta Description</label>
+              <textarea
+                value={metaDesc}
+                onChange={(e) => setMetaDesc(e.target.value)}
+                rows={2}
+                placeholder={excerpt || 'Mô tả ngắn hiển thị trên Google...'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">{metaDesc.length}/160 {t('characters')}</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('fieldMetaTitle')}</label>
+              <input
+                type="text"
+                value={enMetaTitle}
+                onChange={(e) => setEnMetaTitle(e.target.value)}
+                placeholder={enTitle || t('placeholderMetaTitle')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">{enMetaTitle.length}/60 {t('characters')}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('fieldMetaDesc')}</label>
+              <textarea
+                value={enMetaDesc}
+                onChange={(e) => setEnMetaDesc(e.target.value)}
+                rows={2}
+                placeholder={enExcerpt || t('placeholderMetaDesc')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
+              />
+              <p className="text-xs text-gray-400 mt-1">{enMetaDesc.length}/160 {t('characters')}</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Action Buttons */}

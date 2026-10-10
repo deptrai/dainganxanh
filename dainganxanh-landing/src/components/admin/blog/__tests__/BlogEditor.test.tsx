@@ -6,7 +6,8 @@
  */
 
 import React from 'react'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { screen, waitFor, act } from '@testing-library/react'
+import { renderWithIntl as render } from '@/test-utils/renderWithIntl'
 import userEvent from '@testing-library/user-event'
 import BlogEditor from '../BlogEditor'
 
@@ -36,27 +37,47 @@ jest.mock('browser-image-compression', () => ({
 }))
 
 // Mock Tiptap — lightweight stub supporting chain().focus().setImage({src}).run() and getHTML()
-const chainMock = {
-    focus: jest.fn(() => chainMock),
-    setImage: jest.fn(() => chainMock),
-    toggleBold: jest.fn(() => chainMock),
-    toggleItalic: jest.fn(() => chainMock),
-    toggleHeading: jest.fn(() => chainMock),
-    toggleBulletList: jest.fn(() => chainMock),
-    toggleOrderedList: jest.fn(() => chainMock),
-    toggleBlockquote: jest.fn(() => chainMock),
-    toggleCodeBlock: jest.fn(() => chainMock),
-    run: jest.fn(() => true),
+function createChainMock() {
+    const mock: any = {
+        focus: jest.fn(() => mock),
+        setImage: jest.fn(() => mock),
+        toggleBold: jest.fn(() => mock),
+        toggleItalic: jest.fn(() => mock),
+        toggleHeading: jest.fn(() => mock),
+        toggleBulletList: jest.fn(() => mock),
+        toggleOrderedList: jest.fn(() => mock),
+        toggleBlockquote: jest.fn(() => mock),
+        toggleCodeBlock: jest.fn(() => mock),
+        run: jest.fn(() => true),
+    }
+    return mock
 }
 
-const editorStub = {
-    chain: jest.fn(() => chainMock),
+const viChainMock = createChainMock()
+const enChainMock = createChainMock()
+
+const viEditorStub = {
+    chain: jest.fn(() => viChainMock),
     isActive: jest.fn(() => false),
     getHTML: jest.fn(() => '<p>Nội dung bài viết</p>'),
 }
 
+const enEditorStub = {
+    chain: jest.fn(() => enChainMock),
+    isActive: jest.fn(() => false),
+    getHTML: jest.fn(() => '<p>English content</p>'),
+}
+
+const chainMock = viChainMock
+
+let editorCallIndex = 0
+
 jest.mock('@tiptap/react', () => ({
-    useEditor: () => editorStub,
+    useEditor: () => {
+        const isEn = editorCallIndex % 2 === 1
+        editorCallIndex++
+        return isEn ? enEditorStub : viEditorStub
+    },
     EditorContent: ({ editor: _editor }: any) => <div data-testid="editor-content" />,
 }))
 jest.mock('@tiptap/starter-kit', () => ({ __esModule: true, default: {} }))
@@ -83,6 +104,7 @@ beforeAll(() => {
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
+    editorCallIndex = 0
     jest.clearAllMocks()
     mockCreatePost.mockResolvedValue({ success: true, id: 'new-post-id' })
     mockUpdatePost.mockResolvedValue({ success: true })
@@ -362,6 +384,25 @@ describe('[P2] BlogEditor — toolbar', () => {
         expect(chainMock.setImage).toHaveBeenCalledWith({ src: 'https://example.com/pic.jpg' })
         promptSpy.mockRestore()
     })
+
+    test('switching to EN tab and clicking Bold sends command to enEditor instance', async () => {
+        const user = userEvent.setup()
+        render(<BlogEditor />)
+
+        // Switch to EN tab
+        const enTabButton = screen.getByRole('button', { name: /tiếng anh/i })
+        await user.click(enTabButton)
+
+        // Clear mocks after tab switch re-renders
+        viChainMock.toggleBold.mockClear()
+        enChainMock.toggleBold.mockClear()
+
+        // Click Bold toolbar button
+        await user.click(screen.getByRole('button', { name: /^bold$/i }))
+
+        expect(enChainMock.toggleBold).toHaveBeenCalled()
+        expect(viChainMock.toggleBold).not.toHaveBeenCalled()
+    })
 })
 
 // ─── Accessibility ───────────────────────────────────────────────────────────
@@ -380,5 +421,46 @@ describe('[P2] BlogEditor — accessibility', () => {
         const metaInput = screen.getByPlaceholderText(/meta title/i)
         await user.type(metaInput, 'abcde')
         expect(screen.getByText(/5\/60 ký tự/i)).toBeInTheDocument()
+    })
+
+    describe('[i18n] Bilingual EN tab and fields', () => {
+        test('allows switching to EN tab and populates en fields in createPost', async () => {
+            const user = userEvent.setup()
+            render(<BlogEditor />)
+
+            // Fill VI title and slug
+            const viTitleInput = screen.getByPlaceholderText(/nhập tiêu đề/i)
+            await user.type(viTitleInput, 'Tiêu đề tiếng Việt')
+
+            // Switch to EN tab
+            const enTabButton = screen.getByRole('button', { name: /tiếng anh/i })
+            await user.click(enTabButton)
+
+            // Fill EN title
+            const enTitleInput = screen.getByPlaceholderText(/enter english title/i)
+            await user.type(enTitleInput, 'English Blog Post')
+
+            // Verify EN slug autogen
+            const enSlugInput = screen.getByPlaceholderText('english-url-slug') as HTMLInputElement
+            expect(enSlugInput.value).toBe('english-blog-post')
+
+            // Fill EN excerpt
+            const enExcerptInput = screen.getByPlaceholderText(/short summary in english/i)
+            await user.type(enExcerptInput, 'English summary')
+
+            // Submit draft
+            const draftBtn = screen.getByRole('button', { name: /lưu draft/i })
+            await user.click(draftBtn)
+
+            await waitFor(() => {
+                expect(mockCreatePost).toHaveBeenCalled()
+            })
+
+            const formDataArg: FormData = mockCreatePost.mock.calls[0][0]
+            expect(formDataArg.get('title')).toBe('Tiêu đề tiếng Việt')
+            expect(formDataArg.get('en_title')).toBe('English Blog Post')
+            expect(formDataArg.get('en_slug')).toBe('english-blog-post')
+            expect(formDataArg.get('en_excerpt')).toBe('English summary')
+        })
     })
 })

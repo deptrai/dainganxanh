@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { EcoTourismClient } from '@/components/eco-tourism/EcoTourismClient'
 import { calculateEffectiveRoomPrices, type RoomPricingRule } from '@/lib/pricing'
+import { getTranslatedField } from '@/lib/translations'
 
 export const revalidate = 3600
 
@@ -79,12 +80,16 @@ export default async function EcoTourismPage({ params = Promise.resolve({ locale
         .select(`
             id,
             name,
+            description,
             region,
             images,
+            translations,
             rooms!inner (
                 id,
+                name,
                 status,
-                price_per_night
+                price_per_night,
+                translations
             )
         `)
         .eq('rooms.status', 'active')
@@ -125,14 +130,14 @@ export default async function EcoTourismPage({ params = Promise.resolve({ locale
             : null
         return {
             id: lot.id,
-            name: lot.name,
-            region: lot.region,
+            name: getTranslatedField(lot, 'name', locale),
+            region: getTranslatedField(lot, 'region', locale),
             images: Array.isArray(lot.images) ? (lot.images as string[]) : [],
             priceFrom,
         }
     })
 
-    const jsonLd = buildJsonLd(rawLots, locale)
+    const jsonLd = buildJsonLd(gardenLots as any, locale)
 
     return (
         <>

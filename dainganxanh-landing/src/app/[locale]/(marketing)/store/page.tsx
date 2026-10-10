@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StoreClient } from '@/components/store/StoreClient'
+import { getTranslatedField } from '@/lib/translations'
 
 export const revalidate = 3600
 
@@ -31,24 +32,41 @@ export default async function StorePage({ params = Promise.resolve({ locale: 'vi
 
     const { data: categories } = await supabase
         .from('product_categories')
-        .select('id, name, slug')
+        .select('id, name, slug, translations')
         .order('sort_order')
 
     const { data: products } = await supabase
         .from('products')
         .select(`
             id, name, slug, description, price, compare_at_price, stock_quantity,
-            images, is_featured, status, origin_type,
-            product_categories ( name, slug )
+            images, is_featured, status, origin_type, translations,
+            product_categories ( name, slug, translations )
         `)
         .eq('status', 'active')
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
 
+    const localizedCategories = (categories ?? []).map((cat) => ({
+        ...cat,
+        name: getTranslatedField(cat, 'name', locale),
+    }))
+
+    const localizedProducts = (products ?? []).map((prod) => ({
+        ...prod,
+        name: getTranslatedField(prod, 'name', locale),
+        description: getTranslatedField(prod, 'description', locale),
+        product_categories: prod.product_categories
+            ? {
+                ...prod.product_categories,
+                name: getTranslatedField(prod.product_categories, 'name', locale),
+            }
+            : null,
+    }))
+
     return (
         <StoreClient
-            categories={categories ?? []}
-            products={(products ?? []) as any}
+            categories={localizedCategories}
+            products={localizedProducts as any}
         />
     )
 }

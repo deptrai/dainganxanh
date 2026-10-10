@@ -19,6 +19,7 @@ export interface ProductInput {
     is_featured?: boolean
     lot_id?: string | null
     batch_certificate_url?: string | null
+    translations?: Record<string, unknown>
 }
 
 export type ProductActionResult = {
@@ -74,6 +75,36 @@ export async function verifyAdmin() {
     return { supabase, user }
 }
 
+function buildProductTranslations(
+    name: string,
+    description: string | null,
+    inputTranslations?: Record<string, unknown> | null
+): Record<string, unknown> {
+    const vi: Record<string, unknown> = {
+        name,
+        description,
+    }
+
+    const translations: Record<string, unknown> = { vi }
+
+    if (inputTranslations && typeof inputTranslations === 'object') {
+        const rawEn = (inputTranslations as Record<string, unknown>).en
+        if (rawEn && typeof rawEn === 'object') {
+            const cleanEn: Record<string, string> = {}
+            for (const [k, v] of Object.entries(rawEn as Record<string, unknown>)) {
+                if (typeof v === 'string' && v.trim().length > 0) {
+                    cleanEn[k] = v.trim()
+                }
+            }
+            if (Object.keys(cleanEn).length > 0) {
+                translations.en = cleanEn
+            }
+        }
+    }
+
+    return translations
+}
+
 function parseInput(input: FormData | Partial<ProductInput>): Partial<ProductInput> {
     if (input instanceof FormData) {
         const rawPrice = input.get('price')
@@ -126,6 +157,18 @@ function parseInput(input: FormData | Partial<ProductInput>): Partial<ProductInp
             is_featured: rawIsFeatured === 'true' || rawIsFeatured === '1' || rawIsFeatured === 'on',
             lot_id: (input.get('lot_id') as string) ?? null,
             batch_certificate_url: (input.get('batch_certificate_url') as string) ?? null,
+            translations: (() => {
+                const raw = input.get('translations')
+                if (typeof raw === 'string' && raw.trim()) {
+                    try {
+                        const parsed = JSON.parse(raw)
+                        return typeof parsed === 'object' && parsed !== null ? parsed : undefined
+                    } catch {
+                        return undefined
+                    }
+                }
+                return undefined
+            })(),
         }
     }
 
@@ -260,6 +303,7 @@ export async function createProduct(rawInput: FormData | Partial<ProductInput>):
         is_featured: Boolean(input.is_featured),
         lot_id: input.lot_id?.trim() || null,
         batch_certificate_url: input.batch_certificate_url?.trim() || null,
+        translations: buildProductTranslations(name, input.description?.trim() || null, input.translations),
     }
 
     const { data: created, error: insertError } = await serviceSupabase
@@ -406,7 +450,7 @@ export async function updateProduct(id: string, rawInput: FormData | Partial<Pro
         }
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
         name,
         slug,
         category_id,
@@ -422,6 +466,11 @@ export async function updateProduct(id: string, rawInput: FormData | Partial<Pro
         is_featured: Boolean(input.is_featured),
         lot_id: input.lot_id?.trim() || null,
         batch_certificate_url: input.batch_certificate_url?.trim() || null,
+        translations: buildProductTranslations(
+            name,
+            input.description?.trim() || null,
+            input.translations
+        ),
         updated_at: new Date().toISOString(),
     }
 

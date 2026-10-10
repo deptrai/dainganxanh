@@ -15,13 +15,22 @@ export default async function EditBlogPostPage({ params }: Props) {
 
   const { data: post, error } = await supabase
     .from('posts')
-    .select('id, title, slug, content, excerpt, cover_image, status, tags, meta_title, meta_desc, published_at')
+    .select(`
+      id, title, slug, content, excerpt, cover_image, status, tags, meta_title, meta_desc, published_at,
+      post_translations (
+        id, locale, slug, title, excerpt, content, meta_title, meta_desc
+      )
+    `)
     .eq('id', id)
     .single()
 
   if (error || !post) {
     notFound()
   }
+
+  const enTranslation = Array.isArray(post.post_translations)
+    ? post.post_translations.find((t: any) => t.locale === 'en') || null
+    : null
 
   return (
     <div className="space-y-6">
@@ -65,6 +74,7 @@ export default async function EditBlogPostPage({ params }: Props) {
             meta_title: post.meta_title,
             meta_desc: post.meta_desc,
           }}
+          enTranslation={enTranslation}
         />
       </div>
     </div>

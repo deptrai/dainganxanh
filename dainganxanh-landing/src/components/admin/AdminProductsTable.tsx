@@ -9,6 +9,8 @@ import {
     ShoppingBagIcon,
     PlusIcon,
 } from '@heroicons/react/24/outline'
+import { TranslationBadge } from '@/components/admin/TranslationBadge'
+import { hasEnTranslation } from '@/lib/translations'
 
 export interface AdminProductRow {
     id: string
@@ -23,6 +25,7 @@ export interface AdminProductRow {
     origin_type?: 'mature_partner_plantation' | 'cooperative_farm' | 'dainganxanh_harvest' | string | null
     images?: string[] | null
     is_featured?: boolean | null
+    translations?: Record<string, unknown> | null
     created_at?: string
     product_categories?: {
         name: string
@@ -124,6 +127,7 @@ export default function AdminProductsTable({ products }: AdminProductsTableProps
                                                     <span className="font-medium text-gray-900 truncate">
                                                         {product.name}
                                                     </span>
+                                                    <TranslationBadge hasEn={hasEnTranslation(product)} />
                                                     {product.is_featured && (
                                                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
                                                             Nổi bật

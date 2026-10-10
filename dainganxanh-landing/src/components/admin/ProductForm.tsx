@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import { useRouter, Link } from '@/i18n/navigation'
+import LocaleTabs from './LocaleTabs'
 import { generateSlug } from '@/lib/utils/formatters'
 import { compressImage } from '@/lib/imageProcessing'
 import { PhotoUploader, type PhotoFile } from '@/components/admin/PhotoUploader'
@@ -32,8 +34,14 @@ interface SpecRow {
 }
 
 export function ProductForm({ initialData, categories, lots = [] }: ProductFormProps) {
+    const t = useTranslations('admin.translation')
     const router = useRouter()
     const isEdit = Boolean(initialData?.id)
+
+    const initialTranslations = ((initialData as any)?.translations as Record<string, Record<string, unknown>>) || {}
+    const [langTab, setLangTab] = useState<'vi' | 'en'>('vi')
+    const [nameEn, setNameEn] = useState<string>((initialTranslations.en?.name as string) || '')
+    const [descriptionEn, setDescriptionEn] = useState<string>((initialTranslations.en?.description as string) || '')
 
     // Form states
     const [name, setName] = useState(initialData?.name || '')
@@ -170,6 +178,35 @@ export function ProductForm({ initialData, categories, lots = [] }: ProductFormP
             }
         }
 
+        const existingTranslations = ((initialData as any)?.translations as Record<string, Record<string, unknown>>) || {}
+        const enObj: Record<string, string> = {
+            ...((existingTranslations.en as Record<string, string>) || {}),
+        }
+        if (nameEn.trim()) {
+            enObj.name = nameEn.trim()
+        } else {
+            delete enObj.name
+        }
+        if (descriptionEn.trim()) {
+            enObj.description = descriptionEn.trim()
+        } else {
+            delete enObj.description
+        }
+
+        const translationsPayload: Record<string, unknown> = {
+            ...existingTranslations,
+            vi: {
+                ...((existingTranslations.vi as Record<string, unknown>) || {}),
+                name: name.trim(),
+                description: description.trim() || null,
+            },
+        }
+        if (Object.keys(enObj).length > 0) {
+            translationsPayload.en = enObj
+        } else {
+            delete translationsPayload.en
+        }
+
         const payload: ProductInput = {
             name: name.trim(),
             slug: slug.trim(),
@@ -186,6 +223,7 @@ export function ProductForm({ initialData, categories, lots = [] }: ProductFormP
             is_featured: isFeatured,
             lot_id: lotId.trim() || null,
             batch_certificate_url: batchCertificateUrl.trim() || null,
+            translations: translationsPayload,
         }
 
         try {
@@ -230,26 +268,48 @@ export function ProductForm({ initialData, categories, lots = [] }: ProductFormP
 
             {/* Thông tin cơ bản */}
             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
-                <h3 className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-3">
-                    Thông tin cơ bản
+                <h3 className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-3 flex items-center justify-between">
+                    <span>Thông tin cơ bản</span>
+                    <LocaleTabs
+                        activeTab={langTab}
+                        onChange={setLangTab}
+                        hasEnContent={Boolean(nameEn.trim() || descriptionEn.trim())}
+                        variant="pills"
+                    />
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Tên sản phẩm */}
-                    <div className="md:col-span-2">
-                        <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Tên sản phẩm <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            id="product-name"
-                            type="text"
-                            required
-                            value={name}
-                            onChange={handleNameChange}
-                            placeholder="Ví dụ: Trà Hoa Vàng Ba Vì"
-                            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                        />
-                    </div>
+                    {langTab === 'vi' ? (
+                        <div className="md:col-span-2">
+                            <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 mb-1">
+                                Tên sản phẩm (Tiếng Việt) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                id="product-name"
+                                type="text"
+                                required
+                                value={name}
+                                onChange={handleNameChange}
+                                placeholder="Ví dụ: Trà Hoa Vàng Ba Vì"
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                            />
+                        </div>
+                    ) : (
+                        <div className="md:col-span-2">
+                            <label htmlFor="product-name-en" className="block text-sm font-medium text-gray-700 mb-1">
+                                {t('fieldName')}
+                            </label>
+                            <input
+                                id="product-name-en"
+                                type="text"
+                                value={nameEn}
+                                onChange={(e) => setNameEn(e.target.value)}
+                                placeholder="e.g. Ba Vi Golden Camellia Tea"
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                            />
+                        </div>
+                    )}
 
                     {/* Slug */}
                     <div className="md:col-span-2">
@@ -574,19 +634,35 @@ export function ProductForm({ initialData, categories, lots = [] }: ProductFormP
                     Mô tả & Chứng thực
                 </h3>
 
-                <div>
-                    <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 mb-1">
-                        Mô tả chi tiết sản phẩm
-                    </label>
-                    <textarea
-                        id="product-description"
-                        rows={4}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Mô tả công dụng, hương vị, hướng dẫn sử dụng sản phẩm..."
-                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                </div>
+                {langTab === 'vi' ? (
+                    <div>
+                        <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 mb-1">
+                            Mô tả chi tiết sản phẩm (Tiếng Việt)
+                        </label>
+                        <textarea
+                            id="product-description"
+                            rows={4}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Mô tả công dụng, hương vị, hướng dẫn sử dụng sản phẩm..."
+                            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        />
+                    </div>
+                ) : (
+                    <div>
+                        <label htmlFor="product-description-en" className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('fieldDescription')}
+                        </label>
+                        <textarea
+                            id="product-description-en"
+                            rows={4}
+                            value={descriptionEn}
+                            onChange={(e) => setDescriptionEn(e.target.value)}
+                            placeholder="Product details, aroma notes, instructions in English..."
+                            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        />
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Lô cây liên kết */}

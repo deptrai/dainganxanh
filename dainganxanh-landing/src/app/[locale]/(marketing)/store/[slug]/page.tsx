@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { ProductDetailClient } from '@/components/store/ProductDetailClient'
+import { getTranslatedField } from '@/lib/translations'
 
 export const revalidate = 300
 
@@ -13,16 +14,18 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const supabase = createServiceRoleClient()
   const { data: product } = await supabase
     .from('products')
-    .select('name, description, product_categories(name, slug)')
+    .select('name, description, translations, product_categories(name, slug, translations)')
     .eq('slug', slug)
     .eq('status', 'active')
     .maybeSingle()
 
   if (!product) return { title: t('notFoundTitle'), robots: { index: false, follow: false } }
+  const productName = getTranslatedField(product, 'name', locale)
+  const productDesc = getTranslatedField(product, 'description', locale)
   const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/store/${slug}` : `https://dainganxanh.com.vn/en/store/${slug}`
   return {
-    title: t('productDetailTitle', { name: product.name }),
-    description: product.description ?? t('productFallbackDesc'),
+    title: t('productDetailTitle', { name: productName }),
+    description: productDesc || t('productFallbackDesc'),
     alternates: {
       canonical,
       languages: {
@@ -44,9 +47,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     .select(`
       id, category_id, name, slug, description, price, compare_at_price, stock_quantity,
       sku, images, specifications, origin_type, batch_certificate_url,
-      is_featured, status,
-      product_categories ( id, name, slug ),
-      lots ( id, name, region )
+      is_featured, status, translations,
+      product_categories ( id, name, slug, translations ),
+      lots ( id, name, region, translations )
     `)
     .eq('slug', slug)
     .eq('status', 'active')
@@ -58,8 +61,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = rawProduct
     ? {
         ...rawProduct,
-        product_categories: pickFirst(rawProduct.product_categories),
-        lots: pickFirst(rawProduct.lots),
+        name: getTranslatedField(rawProduct, 'name', locale),
+        description: getTranslatedField(rawProduct, 'description', locale),
+        product_categories: pickFirst(rawProduct.product_categories)
+          ? {
+              ...pickFirst(rawProduct.product_categories)!,
+              name: getTranslatedField(pickFirst(rawProduct.product_categories)!, 'name', locale),
+            }
+          : null,
+        lots: pickFirst(rawProduct.lots)
+          ? {
+              ...pickFirst(rawProduct.lots)!,
+              name: getTranslatedField(pickFirst(rawProduct.lots)!, 'name', locale),
+            }
+          : null,
       }
     : null
 
@@ -68,19 +83,29 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const relatedQuery = product.category_id
     ? supabase
         .from('products')
-        .select('id, name, slug, price, compare_at_price, stock_quantity, images, product_categories(name)')
+        .select('id, name, slug, price, compare_at_price, stock_quantity, images, translations, product_categories(name, translations)')
         .eq('status', 'active')
         .neq('slug', slug)
         .eq('category_id', product.category_id)
         .limit(4)
     : null
-  const { data: related } = relatedQuery ? await relatedQuery : { data: null }
+  const { data: rawRelated } = relatedQuery ? await relatedQuery : { data: null }
+
+  const related = (rawRelated ?? []).map((item) => ({
+    ...item,
+    name: getTranslatedField(item, 'name', locale),
+    product_categories: pickFirst(item.product_categories)
+      ? {
+          name: getTranslatedField(pickFirst(item.product_categories)!, 'name', locale),
+        }
+      : null,
+  }))
 
   return (
     <ProductDetailClient
       key={product.id}
-      product={product}
-      related={related ?? []}
+      product={product as any}
+      related={related as any}
     />
   )
 }

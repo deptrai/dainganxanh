@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { GardenDetailClient, type GardenDetail } from '@/components/eco-tourism/GardenDetailClient'
 import type { RoomBooking, RoomBlock } from '@/lib/eco-tourism/availability'
 import { applyEffectiveRoomPrices, type RoomPricingRule } from '@/lib/pricing'
+import { getTranslatedField } from '@/lib/translations'
 
 export const revalidate = 3600
 
@@ -15,16 +16,18 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     const supabase = createServiceRoleClient()
     const { data: lot } = await supabase
         .from('lots')
-        .select('name, description, images')
+        .select('name, description, images, translations')
         .eq('id', lotId)
         .maybeSingle()
 
+    const lotName = getTranslatedField(lot, 'name', locale)
+    const lotDesc = getTranslatedField(lot, 'description', locale)
     const ogImage = Array.isArray(lot?.images) && lot.images.length > 0 ? lot.images[0] : undefined
     const canonical = locale === 'vi' ? `https://dainganxanh.com.vn/eco-tourism/${lotId}` : `https://dainganxanh.com.vn/en/eco-tourism/${lotId}`
 
     return {
-        title: lot ? `${lot.name} — ${t('title')}` : `${t('title')}`,
-        description: lot?.description ?? t('description'),
+        title: lot ? `${lotName} — ${t('title')}` : `${t('title')}`,
+        description: lotDesc || t('description'),
         alternates: {
             canonical,
             languages: {
@@ -34,8 +37,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
             },
         },
         openGraph: {
-            title: lot ? `${lot.name} — ${t('title')}` : `${t('title')}`,
-            description: lot?.description ?? t('description'),
+            title: lot ? `${lotName} — ${t('title')}` : `${t('title')}`,
+            description: lotDesc || t('description'),
             url: canonical,
             siteName: 'Đại Ngàn Xanh',
             type: 'website',
@@ -112,12 +115,24 @@ export default async function GardenDetailPage({ params }: { params: Promise<{ l
     const { data: rawLot, error } = await supabase
         .from('lots')
         .select(
-            'id, name, region, description, location_lat, location_lng, images, rooms(id, name, description, capacity, amenities, price_per_night, images, status)'
+            'id, name, region, description, location_lat, location_lng, images, translations, rooms(id, name, description, capacity, amenities, price_per_night, images, status, translations)'
         )
         .eq('id', lotId)
         .maybeSingle()
 
-    const lot = rawLot as LotWithRooms | null
+    const lot: LotWithRooms | null = rawLot
+        ? {
+            ...rawLot,
+            name: getTranslatedField(rawLot, 'name', locale),
+            region: getTranslatedField(rawLot, 'region', locale),
+            description: getTranslatedField(rawLot, 'description', locale),
+            rooms: (rawLot.rooms ?? []).map((r: any) => ({
+                ...r,
+                name: getTranslatedField(r, 'name', locale),
+                description: getTranslatedField(r, 'description', locale),
+            })),
+        }
+        : null
 
     if (error || !lot) {
         console.error('Failed to fetch lot:', error?.message ?? 'not found')
