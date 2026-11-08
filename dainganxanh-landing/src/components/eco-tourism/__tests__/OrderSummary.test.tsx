@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { OrderSummary } from '../OrderSummary'
 
 describe('OrderSummary Component', () => {
@@ -33,7 +34,7 @@ describe('OrderSummary Component', () => {
       }),
     })
 
-    render(<OrderSummary {...defaultProps} />)
+    renderWithIntl(<OrderSummary {...defaultProps} />)
 
     expect(screen.getByText('Bungalow Sen')).toBeInTheDocument()
     expect(screen.getByText('Vườn Trầm Hương A')).toBeInTheDocument()
@@ -53,7 +54,7 @@ describe('OrderSummary Component', () => {
       json: async () => ({ error: 'Yêu cầu đặt tối thiểu 3 đêm.' }),
     })
 
-    render(<OrderSummary {...defaultProps} />)
+    renderWithIntl(<OrderSummary {...defaultProps} />)
 
     await waitFor(() => {
       expect(screen.getByText('Yêu cầu đặt tối thiểu 3 đêm.')).toBeInTheDocument()

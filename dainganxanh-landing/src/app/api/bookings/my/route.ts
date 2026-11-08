@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getImpersonationContext } from '@/lib/getImpersonationContext'
 import { rateLimit } from '@/lib/rate-limit'
 import { captureError } from '@/lib/monitoring'
+import type { RoomBookingWithJoinedRoom } from '@/types/database.types'
 
 const PAGE_SIZE = 20
 
@@ -24,8 +25,14 @@ export async function GET(req: NextRequest) {
   }
 
   const { effectiveUserId } = ctx
-  const { searchParams } = new URL(req.url)
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+  // req.url từ Next runtime luôn hợp lệ; vẫn guard để không throw ra ngoài nếu nhận input lạ
+  let page = 1
+  try {
+    const { searchParams } = new URL(req.url)
+    page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
+  } catch {
+    // URL không parse được → dùng trang mặc định
+  }
   const start = (page - 1) * PAGE_SIZE
   const end = start + PAGE_SIZE - 1
 
@@ -63,26 +70,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Không thể tải danh sách đặt phòng' }, { status: 500 })
   }
 
-  const formatted = (bookings || []).map((row) => ({
-    id: row.id,
-    code: row.code,
-    roomName: (row.rooms as unknown as { name?: string } | null)?.name || '',
-    lotName: (() => {
-      const room = row.rooms as unknown as { lots?: { name?: string } | { name?: string }[] | null } | null
-      const lotData = room?.lots
-      const lot = Array.isArray(lotData) ? lotData[0] : lotData
-      return lot?.name || ''
-    })(),
-    checkInDate: row.check_in_date,
-    checkOutDate: row.check_out_date,
-    guestsCount: row.guests_count,
-    nightsCount: row.nights_count,
-    totalAmount: row.total_amount,
-    paymentMethod: row.payment_method,
-    status: row.status,
-    expiresAt: row.expires_at,
-    createdAt: row.created_at,
-  }))
+  const bookingRows = (bookings || []) as RoomBookingWithJoinedRoom[]
+  const formatted = bookingRows.map((row) => {
+    const roomData = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms
+    const lotData = roomData?.lots
+    const lot = Array.isArray(lotData) ? lotData[0] : lotData
+    return {
+      id: row.id,
+      code: row.code,
+      roomName: roomData?.name || '',
+      lotName: lot?.name || '',
+      checkInDate: row.check_in_date,
+      checkOutDate: row.check_out_date,
+      guestsCount: row.guests_count,
+      nightsCount: row.nights_count,
+      totalAmount: row.total_amount,
+      paymentMethod: row.payment_method,
+      status: row.status,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    }
+  })
 
   return NextResponse.json({
     bookings: formatted,

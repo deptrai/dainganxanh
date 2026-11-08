@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { ChecklistItem } from '../ChecklistItem'
 import type { ChecklistItem as ChecklistItemType } from '@/actions/fieldChecklist'
 
@@ -20,7 +21,7 @@ describe('ChecklistItem', () => {
     })
 
     it('renders checklist item with label', () => {
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -33,7 +34,7 @@ describe('ChecklistItem', () => {
     })
 
     it('shows unchecked checkbox when item is not completed', () => {
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -55,7 +56,7 @@ describe('ChecklistItem', () => {
             completed_at: '2026-04-20T12:00:00.000Z',
         }
 
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={completedItem}
                 checklistId="test-checklist-id"
@@ -70,7 +71,7 @@ describe('ChecklistItem', () => {
     })
 
     it('calls onToggle when checkbox is clicked', async () => {
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -94,7 +95,7 @@ describe('ChecklistItem', () => {
             () => new Promise((resolve) => setTimeout(resolve, 100))
         )
 
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -125,7 +126,7 @@ describe('ChecklistItem', () => {
             completed_at: '2026-01-14T10:00:00Z',
         }
 
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={completedItem}
                 checklistId="test-checklist-id"
@@ -138,7 +139,7 @@ describe('ChecklistItem', () => {
     })
 
     it('shows notes field when "Thêm ghi chú" is clicked', () => {
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -154,7 +155,7 @@ describe('ChecklistItem', () => {
     })
 
     it('saves notes when "Lưu" is clicked', async () => {
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -181,7 +182,7 @@ describe('ChecklistItem', () => {
     })
 
     it('cancels notes editing when "Hủy" is clicked', () => {
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={mockItem}
                 checklistId="test-checklist-id"
@@ -213,7 +214,7 @@ describe('ChecklistItem', () => {
             notes: 'Existing note',
         }
 
-        render(
+        renderWithIntl(
             <ChecklistItem
                 item={itemWithNotes}
                 checklistId="test-checklist-id"

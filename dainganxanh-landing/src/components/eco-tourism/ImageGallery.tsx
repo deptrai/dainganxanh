@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface ImageGalleryProps {
     images: string[]
@@ -8,6 +9,7 @@ interface ImageGalleryProps {
 }
 
 export function ImageGallery({ images, alt }: ImageGalleryProps) {
+    const t = useTranslations('eco.gallery')
     const [selected, setSelected] = useState(0)
     const validImages = Array.isArray(images) ? images : []
 
@@ -24,7 +26,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             <div className="aspect-[16/9] rounded-2xl overflow-hidden bg-gray-100">
                 <img
                     src={validImages[selected]}
-                    alt={`${alt} - Ảnh ${selected + 1}`}
+                    alt={t('imageAlt', { alt, index: selected + 1 })}
                     className="w-full h-full object-cover"
                 />
             </div>
@@ -38,7 +40,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
                                 selected === idx ? 'border-emerald-500' : 'border-transparent hover:border-gray-300'
                             }`}
                         >
-                            <img src={img} alt={`${alt} - Thu nhỏ ${idx + 1}`} className="w-full h-full object-cover" />
+                            <img src={img} alt={t('thumbnailAlt', { alt, index: idx + 1 })} className="w-full h-full object-cover" />
                         </button>
                     ))}
                 </div>

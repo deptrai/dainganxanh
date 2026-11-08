@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from 'next-intl'
 import { getAvailableBalance, getSavedBankInfo } from '@/actions/withdrawals'
 import WithdrawalForm from '@/components/crm/WithdrawalForm'
+import { formatCurrency } from '@/lib/format'
 
 interface WithdrawalButtonProps {
     userId: string
@@ -16,6 +18,7 @@ export interface SavedBankInfo {
 }
 
 export default function WithdrawalButton({ userId, userFullName }: WithdrawalButtonProps) {
+    const locale = useLocale()
     const [balance, setBalance] = useState<number>(0)
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
@@ -64,7 +67,7 @@ export default function WithdrawalButton({ userId, userFullName }: WithdrawalBut
                     <div>
                         <p className="text-sm text-gray-600 mb-1">Số dư khả dụng</p>
                         <p className="text-3xl font-bold text-emerald-600">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
+                            {formatCurrency(balance, locale)}
                         </p>
                     </div>
                     <button

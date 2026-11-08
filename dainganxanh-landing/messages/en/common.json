@@ -1,0 +1,85 @@
+{
+  "brand": {
+    "name": "Đại Ngàn Xanh",
+    "tagline": "Sowing Good Deeds, Reaping Blessings",
+    "description": "Platform to plant 1,000,000 native Aquilaria (Agarwood) trees in Vietnam, with transparent tracking and carbon credits."
+  },
+  "nav": {
+    "home": "Home",
+    "pricing": "Plant Trees",
+    "store": "Store",
+    "ecoTourism": "Eco-Tourism",
+    "blog": "Blog",
+    "myGarden": "My Garden",
+    "referrals": "Referrals",
+    "myBookings": "My Bookings",
+    "orders": "Orders",
+    "profile": "Profile",
+    "admin": "Admin",
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "register": "Register"
+  },
+  "actions": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save Changes",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "continue": "Continue",
+    "search": "Search",
+    "filter": "Filter",
+    "viewDetails": "View Details",
+    "loading": "Loading...",
+    "retry": "Try Again",
+    "delete": "Delete",
+    "edit": "Edit",
+    "backToHome": "Back to Home",
+    "backToPricing": "Back to Pricing"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "pageLoadError": "Sorry, an error occurred while loading this page. Please try again.",
+    "devOnlyDetails": "Error details (Development only)"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "paid": "Paid",
+    "unpaid": "Unpaid"
+  },
+  "share": {
+    "button": "Share Achievement",
+    "via": "Share via:",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "failed": "Could not share. Please try again or copy the link.",
+    "copyFailed": "Could not copy. Please try again.",
+    "facebook": "Share on Facebook",
+    "zalo": "Share on Zalo",
+    "twitter": "Share on Twitter",
+    "linkedin": "Share on LinkedIn",
+    "email": "Share via Email"
+  },
+  "switcher": {
+    "label": "Language",
+    "ariaLabel": "Switch language",
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "viShort": "VN",
+    "enShort": "EN",
+    "dirtyFormWarning": "You have unsaved changes. Are you sure you want to switch language?"
+  },
+  "footer": {
+    "rights": "All rights reserved by Đại Ngàn Xanh.",
+    "companyName": "Đại Ngàn Xanh Joint Stock Company",
+    "address": "Ea Ktur Commune, Cu Kuin District, Đắk Lắk Province, Vietnam",
+    "contact": "Contact Support",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
+  }
+}

@@ -89,10 +89,11 @@ export async function getSystemConfig() {
             return { success: false, error: 'Failed to fetch system configuration' }
         }
 
-        // Transform array of {key, value} to object
-        const config: Record<string, any> = {}
+        // Transform array of {key, value} to object — value là JSONB (Json type),
+        // ép về string vì các consumer chỉ đọc giá trị dạng chuỗi
+        const config: Record<string, string> = {}
         data?.forEach(item => {
-            config[item.key] = item.value
+            config[item.key] = typeof item.value === 'string' ? item.value : String(item.value ?? '')
         })
 
         return {

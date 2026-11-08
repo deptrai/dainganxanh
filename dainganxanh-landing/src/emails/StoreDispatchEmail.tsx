@@ -1,5 +1,6 @@
 import React from 'react'
 import { EmailLayout } from './EmailLayout'
+import { SUPPORT_HOTLINE } from '@/lib/constants'
 
 export interface StoreOrderItemDisplay {
   name: string
@@ -35,7 +36,7 @@ export const StoreDispatchEmail: React.FC<StoreDispatchEmailProps> = ({
   subtotal,
   shippingFee,
   totalAmount,
-  supportPhone = '1900 8888',
+  supportPhone = SUPPORT_HOTLINE,
 }) => {
   return (
     <EmailLayout previewText={`Đơn hàng ${orderCode} của bạn đã được gửi đi - Đại Ngàn Xanh Store`}>

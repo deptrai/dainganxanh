@@ -1,5 +1,8 @@
 'use client'
 
+import { useLocale } from 'next-intl'
+import { Link } from '@/i18n/navigation'
+import { formatCurrency, formatNumber } from '@/lib/format'
 import NotificationBell from './NotificationBell'
 import TreeSortFilter from './TreeSortFilter'
 
@@ -11,6 +14,7 @@ interface MyGardenHeaderProps {
 }
 
 export default function MyGardenHeader({ totalTrees, totalCO2, totalAmount, hasOrders }: MyGardenHeaderProps) {
+    const locale = useLocale()
     return (
         <div className="mb-6 space-y-3">
             {/* Title row */}
@@ -19,7 +23,7 @@ export default function MyGardenHeader({ totalTrees, totalCO2, totalAmount, hasO
                     <h1 className="text-2xl sm:text-3xl font-bold text-emerald-800">🌳 Vườn Cây Của Tôi</h1>
                     {hasOrders && (
                         <p className="text-gray-500 text-xs sm:text-sm mt-0.5 truncate">
-                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalAmount)} • {totalTrees.toLocaleString()} cây • {totalCO2.toLocaleString()} kg CO₂/năm
+                            {formatCurrency(totalAmount, locale)} • {formatNumber(totalTrees, locale)} cây • {formatNumber(totalCO2, locale)} kg CO₂/năm
                         </p>
                     )}
                 </div>
@@ -29,7 +33,7 @@ export default function MyGardenHeader({ totalTrees, totalCO2, totalAmount, hasO
             </div>
             {/* Actions row */}
             <div className="flex items-center gap-2">
-                <a
+                <Link
                     href="/crm/referrals"
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
                 >
@@ -37,7 +41,7 @@ export default function MyGardenHeader({ totalTrees, totalCO2, totalAmount, hasO
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                     Giới thiệu bạn bè
-                </a>
+                </Link>
                 <TreeSortFilter />
             </div>
         </div>

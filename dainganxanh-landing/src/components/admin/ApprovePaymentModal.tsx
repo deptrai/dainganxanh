@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from 'react'
+import { useLocale } from 'next-intl'
 import { Order } from '@/hooks/useAdminOrders'
+import { formatCurrency } from '@/lib/format'
 
 interface ApprovePaymentModalProps {
     order: Order
@@ -10,6 +12,7 @@ interface ApprovePaymentModalProps {
 }
 
 export default function ApprovePaymentModal({ order, onClose, onApprove }: ApprovePaymentModalProps) {
+    const locale = useLocale()
     const [uploading, setUploading] = useState(false)
     const [approving, setApproving] = useState(false)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -21,9 +24,6 @@ export default function ApprovePaymentModal({ order, onClose, onApprove }: Appro
     useEffect(() => {
         return () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }
     }, [previewUrl])
-
-    const formatCurrency = (amount: number) =>
-        new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -100,7 +100,7 @@ export default function ApprovePaymentModal({ order, onClose, onApprove }: Appro
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-500">Tổng tiền:</span>
-                        <span className="font-semibold text-green-700">{formatCurrency(order.total_amount)}</span>
+                        <span className="font-semibold text-green-700">{formatCurrency(order.total_amount, locale)}</span>
                     </div>
                 </div>
 

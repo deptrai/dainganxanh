@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLocale } from 'next-intl'
 import { approveWithdrawal, getWithdrawalProofUrl, rejectWithdrawal } from '@/actions/withdrawals'
+import { formatCurrency, formatDate } from '@/lib/format'
 
 interface Withdrawal {
     id: string
@@ -26,6 +28,7 @@ interface WithdrawalsListProps {
 }
 
 export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListProps) {
+    const locale = useLocale()
     const [withdrawals, setWithdrawals] = useState(initialWithdrawals)
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
     const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null)
@@ -189,7 +192,7 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
                                     <div className="text-sm text-gray-500">{withdrawal.users.email}</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(withdrawal.amount))}
+                                    {formatCurrency(Number(withdrawal.amount), locale)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{withdrawal.bank_name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{withdrawal.bank_account_number}</td>
@@ -202,7 +205,7 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(withdrawal.created_at).toLocaleDateString('vi-VN')}
+                                    {formatDate(withdrawal.created_at, locale)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                     <button
@@ -245,7 +248,7 @@ export default function WithdrawalsList({ initialWithdrawals }: WithdrawalsListP
                                 <div>
                                     <label className="text-sm font-medium text-gray-500">Số tiền</label>
                                     <p className="text-lg font-bold text-emerald-600">
-                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(selectedWithdrawal.amount))}
+                                        {formatCurrency(Number(selectedWithdrawal.amount), locale)}
                                     </p>
                                 </div>
                                 <div>

@@ -14,17 +14,17 @@ jest.mock('@/lib/admin/permissions', () => ({
     getAdminUserLots: jest.fn(),
 }))
 
-const { canAccessLot, getAdminUserLots } = require('@/lib/admin/permissions')
+const { canAccessLot: _canAccessLot, getAdminUserLots } = require('@/lib/admin/permissions')
 
 // ── Mock state ───────────────────────────────────────────────────────────────
 
 const mockGetUser = jest.fn()
-const mockInsert = jest.fn()
-const mockUpdate = jest.fn()
-const mockEqUpdate = jest.fn()
+const _mockInsert = jest.fn()
+const _mockUpdate = jest.fn()
+const _mockEqUpdate = jest.fn()
 
 // Service role client — used by verifyAdminRole (profile check) + CRUD
-const mockServiceSingle = jest.fn()
+const _mockServiceSingle = jest.fn()
 const mockServiceFrom = jest.fn()
 
 // Server client — used by verifyAdminRole (getUser)
@@ -257,5 +257,128 @@ describe('[P1] updateLot', () => {
 
         expect(result.success).toBe(false)
         expect(result.error).toBeTruthy()
+    })
+
+    test('[P1] persists translations in createLot and updateLot', async () => {
+        setupAdminUser('admin')
+        const insertMock = jest.fn().mockResolvedValue({ error: null })
+        mockServiceFrom.mockReturnValueOnce({ insert: insertMock })
+
+        const lotWithTranslations = {
+            ...baseLotData,
+            translations: {
+                en: {
+                    name: 'Garden Lot A1',
+                    description: 'English description for lot',
+                },
+            },
+        }
+
+        const createRes = await createLot(lotWithTranslations)
+        expect(createRes.success).toBe(true)
+        expect(insertMock).toHaveBeenCalledWith([
+            expect.objectContaining({
+                translations: {
+                    vi: {
+                        name: 'Lô A1',
+                        description: 'Lô cây sầu riêng',
+                        region: 'Tây Nguyên',
+                    },
+                    en: {
+                        name: 'Garden Lot A1',
+                        description: 'English description for lot',
+                    },
+                },
+            }),
+        ])
+
+        setupAdminUser('admin')
+        const updateEqMock = jest.fn().mockResolvedValue({ error: null })
+        const updateMock = jest.fn().mockReturnValue({ eq: updateEqMock })
+        mockServiceFrom.mockReturnValueOnce({ update: updateMock })
+
+        const updateRes = await updateLot('lot-123', lotWithTranslations)
+        expect(updateRes.success).toBe(true)
+        expect(updateMock).toHaveBeenCalledWith(
+            expect.objectContaining({
+                translations: {
+                    vi: {
+                        name: 'Lô A1',
+                        description: 'Lô cây sầu riêng',
+                        region: 'Tây Nguyên',
+                    },
+                    en: {
+                        name: 'Garden Lot A1',
+                        description: 'English description for lot',
+                    },
+                },
+            })
+        )
+    })
+
+    test('[SAVE_EMPTY_EN] does not include en key when en fields are empty/whitespace, but keeps vi mirror', async () => {
+        setupAdminUser('admin')
+        const insertMock = jest.fn().mockResolvedValue({ error: null })
+        mockServiceFrom.mockReturnValueOnce({ insert: insertMock })
+
+        const lotWithBlankEn = {
+            ...baseLotData,
+            translations: {
+                en: {
+                    name: '   ',
+                    description: '',
+                    region: '  ',
+                },
+            },
+        }
+
+        const createRes = await createLot(lotWithBlankEn)
+        expect(createRes.success).toBe(true)
+        expect(insertMock).toHaveBeenCalledWith([
+            expect.objectContaining({
+                translations: {
+                    vi: {
+                        name: 'Lô A1',
+                        description: 'Lô cây sầu riêng',
+                        region: 'Tây Nguyên',
+                    },
+                },
+            }),
+        ])
+    })
+
+    test('[SAVE_PARTIAL_EN] strips empty fields from en while keeping trimmed non-empty fields', async () => {
+        setupAdminUser('admin')
+        const insertMock = jest.fn().mockResolvedValue({ error: null })
+        mockServiceFrom.mockReturnValueOnce({ insert: insertMock })
+
+        const lotWithPartialEn = {
+            ...baseLotData,
+            translations: {
+                en: {
+                    name: '  Garden Lot A1  ',
+                    description: '',
+                    region: '  Highlands  ',
+                },
+            },
+        }
+
+        const createRes = await createLot(lotWithPartialEn)
+        expect(createRes.success).toBe(true)
+        expect(insertMock).toHaveBeenCalledWith([
+            expect.objectContaining({
+                translations: {
+                    vi: {
+                        name: 'Lô A1',
+                        description: 'Lô cây sầu riêng',
+                        region: 'Tây Nguyên',
+                    },
+                    en: {
+                        name: 'Garden Lot A1',
+                        region: 'Highlands',
+                    },
+                },
+            }),
+        ])
     })
 })

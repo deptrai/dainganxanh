@@ -26,4 +26,12 @@ const config: Config = {
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(config)
+export default async () => {
+    const nextConfig = await createJestConfig(config)()
+    return {
+        ...nextConfig,
+        transformIgnorePatterns: [
+            '/node_modules/(?!(next-intl|use-intl|@formatjs|intl-messageformat)/)',
+        ],
+    }
+}

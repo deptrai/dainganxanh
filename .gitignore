@@ -49,6 +49,7 @@ yarn-error.log*
 **/playwright-report/
 **/e2e-results/
 **/.playwright-artifacts-*/
+.playwright-mcp/
 **/coverage/
 
 # TypeScript incremental build info
@@ -67,3 +68,14 @@ supabase/.temp/
 # Claude config
 .claude/launch.json
 **/.claude/launch.json
+.claude/worktrees/
+
+# iCloud sync conflict copies
+* (1)*
+*(1)*
+
+# Vitest cache
+**/.vitest/
+
+# Pi agent session state
+.pi/

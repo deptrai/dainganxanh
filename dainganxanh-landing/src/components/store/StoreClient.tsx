@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { ShoppingBag, Star, Search } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
+import { originLabel, type ProductOriginType } from './originLabels'
+import { formatCurrency } from '@/lib/format'
 
 interface Category {
     id: string
@@ -10,7 +13,7 @@ interface Category {
     slug: string
 }
 
-interface Product {
+export interface Product {
     id: string
     name: string
     slug: string
@@ -20,6 +23,8 @@ interface Product {
     images: string[]
     is_featured: boolean
     status: string
+    description?: string | null
+    origin_type?: ProductOriginType | null
     product_categories: { name: string; slug: string } | null
 }
 
@@ -39,7 +44,11 @@ function FilterBtn({ label, active, onClick }: { label: string; active: boolean;
 }
 
 function ProductCard({ product }: { product: Product }) {
+    const t = useTranslations('store')
+    const locale = useLocale()
     const outOfStock = product.stock_quantity === 0
+    const origin = originLabel(product.origin_type, (k) => t(k as any))
+
     return (
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <Link href={`/store/${product.slug}`}>
@@ -51,12 +60,17 @@ function ProductCard({ product }: { product: Product }) {
                     )}
                     {product.is_featured && (
                         <span className="absolute top-2 left-2 bg-amber-400 text-amber-900 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-current" /> Nổi bật
+                            <Star className="w-3 h-3 fill-current" /> {t('featured.badge')}
                         </span>
                     )}
                     {outOfStock && (
                         <span className="absolute top-2 right-2 bg-gray-800/70 text-white text-xs px-2 py-0.5 rounded-full">
-                            Hết hàng
+                            {t('product.outOfStock')}
+                        </span>
+                    )}
+                    {origin && (
+                        <span className="absolute bottom-2 left-2 bg-emerald-700/80 text-white text-xs px-2 py-0.5 rounded-full">
+                            {origin}
                         </span>
                     )}
                 </div>
@@ -72,11 +86,11 @@ function ProductCard({ product }: { product: Product }) {
                 </Link>
                 <div className="mt-2">
                     <span className="text-base font-bold text-emerald-600">
-                        {product.price.toLocaleString('vi-VN')}đ
+                        {formatCurrency(product.price, locale)}
                     </span>
                     {product.compare_at_price && (
                         <span className="text-xs text-gray-400 line-through ml-1.5">
-                            {product.compare_at_price.toLocaleString('vi-VN')}đ
+                            {formatCurrency(product.compare_at_price, locale)}
                         </span>
                     )}
                 </div>
@@ -86,6 +100,7 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function StoreClient({ categories, products }: { categories: Category[]; products: Product[] }) {
+    const t = useTranslations('store')
     const [activeSlug, setActiveSlug] = useState<string | null>(null)
     const [search, setSearch] = useState('')
 
@@ -96,6 +111,7 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
             const matchesSearch = !query
                 ? true
                 : p.name.toLowerCase().includes(query)
+                    || p.description?.toLowerCase().includes(query)
                     || p.product_categories?.name?.toLowerCase().includes(query)
             return matchesCategory && matchesSearch
         })
@@ -109,13 +125,13 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
             <section className="bg-gradient-to-br from-[#3D2A10] to-[#1A3320] text-white py-16 px-4">
                 <div className="max-w-3xl mx-auto text-center">
                     <span className="inline-block px-4 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-200 text-sm mb-4">
-                        ✨ Từ Rừng Trầm Đại Ngàn
+                        {t('header.badge')}
                     </span>
                     <h1 className="font-serif text-3xl md:text-5xl font-bold mb-4">
-                        Sản Phẩm Trầm Hương Thuần Việt
+                        {t('header.title')}
                     </h1>
                     <p className="text-white/70 text-lg max-w-xl mx-auto">
-                        Tinh hoa trầm hương Dó Đen từ vườn cây do bạn góp phần tạo nên
+                        {t('header.subtitle')}
                     </p>
                 </div>
             </section>
@@ -128,7 +144,8 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Tìm kiếm theo tên, mô tả hoặc danh mục sản phẩm..."
+                        aria-label={t('search.ariaLabel')}
+                        placeholder={t('search.placeholder')}
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                 </div>
@@ -136,7 +153,7 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
                 {/* Category filter */}
                 {categories.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-8">
-                        <FilterBtn label="Tất cả" active={!activeSlug} onClick={() => setActiveSlug(null)} />
+                        <FilterBtn label={t('categories.all')} active={!activeSlug} onClick={() => setActiveSlug(null)} />
                         {categories.map((c) => (
                             <FilterBtn key={c.id} label={c.name} active={activeSlug === c.slug} onClick={() => setActiveSlug(c.slug)} />
                         ))}
@@ -147,7 +164,7 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
                 {!activeSlug && !search.trim() && featured.length > 0 && (
                     <section className="mb-10">
                         <h2 className="font-serif text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Star className="w-6 h-6 text-amber-400 fill-current" /> Sản Phẩm Nổi Bật
+                            <Star className="w-6 h-6 text-amber-400 fill-current" /> {t('featured.title')}
                         </h2>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {featured.slice(0, 4).map((p) => <ProductCard key={p.id} product={p} />)}
@@ -158,15 +175,15 @@ export function StoreClient({ categories, products }: { categories: Category[]; 
                 {/* All products */}
                 <section>
                     {!activeSlug && !search.trim() && featured.length > 0 && (
-                        <h2 className="font-serif text-2xl font-bold text-gray-900 mb-4">Tất Cả Sản Phẩm</h2>
+                        <h2 className="font-serif text-2xl font-bold text-gray-900 mb-4">{t('allProducts.title')}</h2>
                     )}
 
                     {filtered.length === 0 ? (
                         <div className="text-center py-20 text-gray-500">
                             <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p>Chưa có sản phẩm nào phù hợp.</p>
+                            <p>{t('empty.title')}</p>
                             {search.trim() && (
-                                <p className="text-sm mt-1">Thử từ khóa khác hoặc xóa bộ lọc tìm kiếm.</p>
+                                <p className="text-sm mt-1">{t('empty.searchHint')}</p>
                             )}
                         </div>
                     ) : (

@@ -36,11 +36,53 @@
 
 ## Deferred from: code review of 11-6-view-my-bookings-crm.md (2026-09-07)
 
-- [ ] Replace `as unknown as { name: string }` Supabase join type assertions with generated types (prevalent in eco-tourism modules).
+- [x] Replace `as unknown as { name: string }` Supabase join type assertions with generated types (prevalent in eco-tourism modules). — **DONE 2026-10-07 (TD-06):** `src/types/database.types.ts` generated từ `supabase gen types --linked`; 0 cast `as unknown as` còn lại trong production code.
 - [ ] Verify `nights_count` population in `room_bookings` — `create` route computes `diffDays` but does not insert `nights_count`; confirm generated column/trigger.
 - [ ] Revisit rate limit for `GET /api/bookings/my` (100 req/min) after production usage.
 
 
 ## Deferred from: code review of story-11.7 (2026-09-08)
 
-- [ ] [Review][Defer] Date filters use `check_in_date` only — a stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic (`check_in_date <= dateTo AND check_out_date >= dateFrom`).
+- [x] [Review][Defer] Date filters use `check_in_date` only — a stay that overlaps the range but starts before `dateFrom` is excluded. Document current behavior or switch to overlap logic (`check_in_date <= dateTo AND check_out_date >= dateFrom`). — **DONE 2026-10-07 (TD-09):** overlap logic đã áp dụng trong `src/actions/adminBookings.ts`, kèm test cả 3 trường hợp (both / only dateFrom / only dateTo).
+
+## Deferred from: Epic 11 Retrospective — tech debt cleanup (2026-10-07)
+
+Đã fix trong đợt dọn debt sau retro (chi tiết: `epic-11-retro-2026-10-07.md`):
+
+- [x] **TD-02** Region filter sync URL `?region=` (SSR pre-select + `router.replace` scroll:false).
+- [x] **TD-03** VietQR polling: pause khi tab ẩn, resume + poll ngay khi tab visible; giữ polling thay Realtime vì PII của guest.
+- [x] **TD-04** Rate-limit trang voucher công khai: 20 req/phút/IP qua `rateLimitByKey` (refactor từ `rate-limit.ts`), UI lỗi riêng không `notFound()`.
+- [x] **TD-06** Generated Supabase types (`src/types/database.types.ts`), gỡ sạch `as unknown as` trong production code.
+- [x] **TD-07** Hotline/email hỗ trợ gom về `SUPPORT_HOTLINE`/`SUPPORT_EMAIL` trong `src/lib/constants.ts`.
+- [x] **TD-08** Audit service-role client trên 6 trang CRM user-facing: tất cả scoped đúng `effectiveUserId`. **Fix thêm IDOR:** `getAvailableBalance`/`getSavedBankInfo` trong `src/actions/withdrawals.ts` thiếu auth check → thêm `assertOwnsUserId` (hỗ trợ impersonation).
+- [x] **TD-09** Admin date filter chuyển sang overlap logic.
+- [x] **TD-10 (phần lớn)** Đã giải quyết bởi story 13-6 (RLS theo lot + layout gating + `getAssignedLotIds`).
+
+Còn tồn lại (chưa fix):
+
+- [x] **TD-01** (Trung bình) — **ĐÃ FIX 2026-10-08:** giá "Giá từ" giờ tính qua `calculateEffectiveRoomPrices` (`src/lib/pricing/display.ts`): min giữa base price và các `room_pricing_rules` áp dụng trong cửa sổ 90 ngày tới (filter days_of_week), áp dụng ở listing `/eco-tourism` và trang chi tiết `[lotId]` (kèm JSON-LD). Logic tính giá đặt phòng giữ nguyên.
+- [x] **TD-05** (Thấp) — **ĐÃ FIX 2026-10-08:** migration `20261008000000_expire_pending_bookings_cron.sql` tạo `expire_pending_bookings()` (SECURITY DEFINER, search_path cố định) + pg_cron job `expire-pending-bookings` chạy `*/15 * * * *` trực tiếp trong DB (guard pg_available_extensions, idempotent). API route `/api/cron/expire-pending` giữ làm fallback.
+- [x] **TD-10 (gap nhỏ)** — **ĐÃ FIX 2026-10-08:** `src/app/crm/admin/bookings/[bookingId]/page.tsx` giờ check lot của booking thuộc `getAssignedLotIds(user.id)` với `resort_manager`, không thuộc → `notFound()`.
+- [x] **TD-11** (Trung bình) — **ĐÃ FIX 2026-10-08:** Room Calendar có toggle Tháng/Tuần (tuần bắt đầu thứ 2), drag & drop native HTML5 (kéo sang room row khác = đổi phòng, kéo sang day cell khác = dịch ngày giữ duration) qua server action `moveBooking` (validate quyền/lot, conflict check room_blocks + bookings, bắt GiST 23P01), booking `cancelled`/`expired` bị ẩn khỏi calendar.
+- [x] Chuẩn hóa pattern scoped data access — **ĐÃ FIX 2026-10-08:** helper `getScopedCrmClient()` + `assertOwnsUserId` (`src/lib/supabase/scopedClient.ts`), đã refactor 7 trang CRM user-facing (my-garden, my-garden/[orderId], harvest, my-bookings, my-bookings/[bookingId], referrals, my-store-orders).
+- [x] Thống nhất 404 — **ĐÃ FIX 2026-10-08:** `my-garden/[orderId]` và `harvest` dùng `notFound()` thay render "Truy cập bị từ chối" HTTP 200.
+- [x] Test date-dependent — **ĐÃ RÀ 2026-10-08:** audit toàn bộ `src/**/__tests__` — chỉ `book/__tests__/page.test.tsx` có nguy cơ fail (hardcode `2026-11-01`) → đã chuyển sang ngày động `getFutureDates()`. Các test khác an toàn (fake timers hoặc ngày động sẵn).
+
+Không còn item nào tồn lại cho Epic 11. Epic 12 (Trầm Hương Store) sẵn sàng kickoff.
+
+## Deferred from: code review of spec-12-2-view-product-detail (2026-10-08)
+
+- Raw `<img>` thay vì Next.js `<Image>` trong `ProductDetailClient.tsx` (và pattern tương tự ở `StoreClient.tsx`) — pre-existing, không phát sinh từ Story 12.2. Nâng cấp cần `remotePatterns` config trong `next.config` cho Supabase storage URLs + kiểm tra CLS.
+
+## Deferred from: code review of spec-12-6-view-my-store-orders (2026-10-08)
+
+- Layout-level auth redirect làm mất `?redirect=` cho guest — `src/app/crm/layout.tsx:18` gọi `redirect('/login')` khi `getUser()` null, chạy trước mọi page nên branch `redirect('/login?redirect=/crm/my-store-orders')` trong `my-store-orders/page.tsx` không bao giờ đến được. Guest vẫn redirect về login (AC thỏa) nhưng sau login không quay lại trang đơn hàng. Pre-existing từ scaffold epic-12; fix gợi ý: layout truyền `redirect` param theo pathname, hoặc chấp nhận vì ảnh hưởng UX nhỏ (low).
+
+## Deferred from: code review of spec-12-7-admin-product-crud (2026-10-08)
+
+- `URL.createObjectURL` không được revoke trong `src/components/admin/PhotoUploader.tsx:43` — mỗi file chọn tạo blob URL leak nhỏ cho tới khi đóng trang. Pre-existing shared component (blog + products đều dùng); fix nên revoke trong `onPhotoRemove` + unmount cleanup. Low.
+- Orphan storage: xóa ảnh trong ProductForm / hủy form không cleanup file đã upload vào bucket `product-images` — deliberate scope (blog flow cũng vậy); cần policy dọn rác bucket định kỳ nếu muốn xử lý.
+
+## Deferred from: sprint planning of epic-12 (2026-10-09)
+
+- Story `12-9-multi-item-persistent-cart` deferred to post-MVP **by design** (epics.md:1588, F-ST-10, P2). Lý do: single-item "Mua ngay" checkout phủ ~80% MVP use cases; multi-item cart thêm độ phức tạp lớn về inventory reservation (giữ nhiều items đồng thời + TTL policy) và payment reconciliation (1 code → nhiều items). Giữ `backlog` trong sprint-status.yaml vì vocabulary không có status `deferred`; key story đã mang suffix `-deferred`. Kích hoạt lại khi: khách phàn nàn phải mua từng món, hoặc có nhu cầu bundle sản phẩm.

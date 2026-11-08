@@ -5,6 +5,7 @@
  */
 
 import { createPost, updatePost, deletePost, uploadBlogImage } from '../blog'
+import { revalidatePath } from 'next/cache'
 
 const mockGetUser = jest.fn()
 const mockFrom = jest.fn()
@@ -395,5 +396,334 @@ describe('[P1] updatePost — slug conflict', () => {
         })
         const result = await updatePost('post-1', buildFormData(validPostData))
         expect(result?.success).toBe(true)
+    })
+})
+
+// ─── post_translations i18n support ──────────────────────────────────────────
+
+describe('[P1] post_translations i18n support', () => {
+    beforeEach(() => mockAdminAuth())
+
+    test('[P1] createPost upserts post_translations when EN fields provided', async () => {
+        let translationUpsert: any = null
+        mockFrom.mockImplementation((table: string) => {
+            if (table === 'users') {
+                return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+            }
+            if (table === 'posts') {
+                return {
+                    select: () => ({
+                        eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                    }),
+                    insert: () => ({
+                        select: () => ({
+                            single: () => Promise.resolve({ data: { id: 'post-new-123' }, error: null }),
+                        }),
+                    }),
+                }
+            }
+            if (table === 'post_translations') {
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            eq: () => ({
+                                maybeSingle: () => Promise.resolve({ data: null }),
+                                neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                            }),
+                        }),
+                    }),
+                    insert: (data: any) => {
+                        translationUpsert = data
+                        return Promise.resolve({ error: null })
+                    },
+                }
+            }
+            return {}
+        })
+
+        const fd = buildFormData({
+            ...validPostData,
+            en_title: 'English Title',
+            en_slug: 'english-title',
+            en_content: '<p>English content</p>',
+            en_excerpt: 'English excerpt',
+        })
+
+        const result = await createPost(fd)
+        expect(result.success).toBe(true)
+        expect(translationUpsert).toEqual(
+            expect.objectContaining({
+                post_id: 'post-new-123',
+                locale: 'en',
+                title: 'English Title',
+                slug: 'english-title',
+                content: '<p>English content</p>',
+                excerpt: 'English excerpt',
+            })
+        )
+    })
+
+    test('[P1] updatePost removes post_translations when EN fields are blank', async () => {
+        let deletedPostId: string | null = null
+        mockFrom.mockImplementation((table: string) => {
+            if (table === 'users') {
+                return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+            }
+            if (table === 'posts') {
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            single: () => Promise.resolve({ data: { published_at: null, status: 'draft' } }),
+                            neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                        }),
+                    }),
+                    update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+                }
+            }
+            if (table === 'post_translations') {
+                return {
+                    delete: () => ({
+                        eq: (_col1: string, val1: string) => ({
+                            eq: (_col2: string, _val2: string) => {
+                                deletedPostId = val1
+                                return Promise.resolve({ error: null })
+                            },
+                        }),
+                    }),
+                }
+            }
+            return {}
+        })
+
+        const fd = buildFormData({
+            ...validPostData,
+            en_title: '',
+        })
+
+        const result = await updatePost('post-1', fd)
+        expect(result.success).toBe(true)
+        expect(deletedPostId).toBe('post-1')
+    })
+
+    describe('[PARTIAL_EN_ROW] rejects when EN has title without slug or slug without title', () => {
+        beforeEach(() => {
+            mockFrom.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+                }
+                if (table === 'posts') {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                maybeSingle: () => Promise.resolve({ data: null }),
+                                neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                            }),
+                        }),
+                    }
+                }
+                return {}
+            })
+        })
+
+        test('createPost rejects when en_title is provided but en_slug is missing', async () => {
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: 'English Title Only',
+                en_slug: '',
+            })
+            const result = await createPost(fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/slug tiếng anh/i)
+        })
+
+        test('createPost rejects when en_slug is provided but en_title is missing', async () => {
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: '',
+                en_slug: 'english-slug-only',
+            })
+            const result = await createPost(fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/tiêu đề tiếng anh/i)
+        })
+
+        test('updatePost rejects when en_title is provided but en_slug is missing', async () => {
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: 'Updated English Title Only',
+                en_slug: '',
+            })
+            const result = await updatePost('post-1', fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/slug tiếng anh/i)
+        })
+
+        test('updatePost rejects when en_slug is provided but en_title is missing', async () => {
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: '',
+                en_slug: 'updated-english-slug-only',
+            })
+            const result = await updatePost('post-1', fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/tiêu đề tiếng anh/i)
+        })
+
+        test('createPost rejects when en_content is provided without en_title/en_slug', async () => {
+            const fd = buildFormData({
+                ...validPostData,
+                en_content: '<p>English body only</p>',
+            })
+            const result = await createPost(fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/tiêu đề tiếng anh/i)
+        })
+
+        test('updatePost rejects when en_content is provided without en_title/en_slug', async () => {
+            const fd = buildFormData({
+                ...validPostData,
+                en_content: '<p>English body only</p>',
+            })
+            const result = await updatePost('post-1', fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/tiêu đề tiếng anh/i)
+        })
+    })
+
+    describe('[TRANSLATION_ERRORS_AND_REVALIDATION]', () => {
+        test('createPost returns error when post_translations insert fails', async () => {
+            mockFrom.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+                }
+                if (table === 'posts') {
+                    return {
+                        select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }),
+                        insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: { id: 'post-new-123' }, error: null }) }) }),
+                    }
+                }
+                if (table === 'post_translations') {
+                    return {
+                        select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }) }),
+                        insert: () => Promise.resolve({ error: { message: 'db error inserting translation' } }),
+                    }
+                }
+                return {}
+            })
+
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: 'English Title',
+                en_slug: 'english-title',
+            })
+            const result = await createPost(fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/không thể lưu bản dịch tiếng anh/i)
+        })
+
+        test('updatePost returns error when post_translations update fails', async () => {
+            mockFrom.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+                }
+                if (table === 'posts') {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                single: () => Promise.resolve({ data: { published_at: null, status: 'draft' } }),
+                                neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                            }),
+                        }),
+                        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+                    }
+                }
+                if (table === 'post_translations') {
+                    return {
+                        select: (cols: string) => ({
+                            eq: () => ({
+                                eq: () => ({
+                                    neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                                    maybeSingle: () => Promise.resolve({
+                                        data: cols.includes('slug') ? { id: 'trans-1', slug: 'old-slug' } : null,
+                                    }),
+                                }),
+                            }),
+                        }),
+                        update: () => ({ eq: () => Promise.resolve({ error: { message: 'update failed' } }) }),
+                    }
+                }
+                return {}
+            })
+
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: 'Updated English Title',
+                en_slug: 'new-slug',
+            })
+            const result = await updatePost('post-1', fd)
+            expect(result.success).toBe(false)
+            expect(result.error).toMatch(/không thể lưu bản dịch tiếng anh/i)
+        })
+
+        test('updatePost revalidates both old and new EN slug when enSlug changes', async () => {
+            mockFrom.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+                }
+                if (table === 'posts') {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                single: () => Promise.resolve({ data: { published_at: null, status: 'draft' } }),
+                                neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                            }),
+                        }),
+                        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+                    }
+                }
+                if (table === 'post_translations') {
+                    return {
+                        select: (cols: string) => ({
+                            eq: () => ({
+                                eq: () => ({
+                                    neq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
+                                    maybeSingle: () => Promise.resolve({
+                                        data: cols.includes('slug') ? { id: 'trans-1', slug: 'old-en-slug' } : null,
+                                    }),
+                                }),
+                            }),
+                        }),
+                        update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+                    }
+                }
+                return {}
+            })
+
+            const fd = buildFormData({
+                ...validPostData,
+                en_title: 'Updated English Title',
+                en_slug: 'new-en-slug',
+            })
+            const result = await updatePost('post-1', fd)
+            expect(result.success).toBe(true)
+            expect(revalidatePath).toHaveBeenCalledWith('/en/blog/old-en-slug')
+            expect(revalidatePath).toHaveBeenCalledWith('/en/blog/new-en-slug')
+        })
+
+        test('deletePost revalidates /en/blog', async () => {
+            mockFrom.mockImplementation((table: string) => {
+                if (table === 'users') {
+                    return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { role: 'admin' } }) }) }) }
+                }
+                if (table === 'posts') {
+                    return { delete: () => ({ eq: () => Promise.resolve({ error: null }) }) }
+                }
+                return {}
+            })
+
+            const result = await deletePost('post-1')
+            expect(result.success).toBe(true)
+            expect(revalidatePath).toHaveBeenCalledWith('/en/blog')
+        })
     })
 })

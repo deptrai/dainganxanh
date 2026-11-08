@@ -1,40 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, usePathname } from '@/i18n/navigation'
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import Image from "next/image";
-import { Home, TreePine, Share2, Package, User, LogIn, BookOpen, UserCircle, ShoppingBag, Compass } from "lucide-react";
+import { Home, TreePine, Share2, Package, LogIn, BookOpen, UserCircle, ShoppingBag, PackageCheck, Compass } from "lucide-react";
 import { UserHeader } from "./UserHeader";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-const baseNavItems = [
-    { name: 'Trang chủ', href: '/', icon: Home },
-    { name: 'Mua cây', href: '/pricing', icon: Package },
-    { name: 'Cửa hàng', href: '/store', icon: ShoppingBag },
-    { name: 'Du lịch & Tour', href: '/eco-tourism', icon: Compass },
-]
+interface NavConfigItem {
+    key: 'home' | 'pricing' | 'store' | 'ecoTourism' | 'blog' | 'myGarden' | 'referrals' | 'orders' | 'profile';
+    href: string;
+    icon: typeof Home;
+}
 
-const guestOnlyItems = [
-    { name: 'Blog', href: '/blog', icon: BookOpen },
-]
+const baseNavItems: NavConfigItem[] = [
+    { key: 'home', href: '/', icon: Home },
+    { key: 'pricing', href: '/pricing', icon: Package },
+    { key: 'store', href: '/store', icon: ShoppingBag },
+    { key: 'ecoTourism', href: '/eco-tourism', icon: Compass },
+];
 
-const sharedNavItems = [
-    { name: 'Vườn của tôi', href: '/crm/my-garden', icon: TreePine },
-    { name: 'Giới thiệu', href: '/crm/referrals', icon: Share2 },
-]
+const guestOnlyItems: NavConfigItem[] = [
+    { key: 'blog', href: '/blog', icon: BookOpen },
+];
 
-const authOnlyItems = [
-    { name: 'Hồ sơ', href: '/crm/profile', icon: UserCircle },
-]
+const sharedNavItems: NavConfigItem[] = [
+    { key: 'myGarden', href: '/crm/my-garden', icon: TreePine },
+    { key: 'referrals', href: '/crm/referrals', icon: Share2 },
+];
 
-const guestNavItems = [...baseNavItems, ...guestOnlyItems, ...sharedNavItems]
-const authNavItems = [...baseNavItems, ...sharedNavItems, ...authOnlyItems]
+const authOnlyItems: NavConfigItem[] = [
+    { key: 'orders', href: '/crm/my-store-orders', icon: PackageCheck },
+    { key: 'profile', href: '/crm/profile', icon: UserCircle },
+];
+
+const guestNavItems = [...baseNavItems, ...guestOnlyItems, ...sharedNavItems];
+const authNavItems = [...baseNavItems, ...sharedNavItems, ...authOnlyItems];
 
 export function MarketingHeader() {
     const pathname = usePathname();
+    const t = useTranslations('common');
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -75,18 +84,21 @@ export function MarketingHeader() {
                     <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
                         {/* Brand */}
                         <Link href="/" className="flex items-center gap-2">
-                            <Image src="/logo.png" alt="Đại Ngàn Xanh" width={32} height={40} className="object-contain" />
-                            <span className="font-bold text-lg text-emerald-800">Đại Ngàn Xanh</span>
+                            <Image src="/logo.png" alt={t('brand.name')} width={32} height={40} className="object-contain" />
+                            <span className="font-bold text-lg text-emerald-800">{t('brand.name')}</span>
                         </Link>
                         
-                        {/* Login Button */}
-                        <Link 
-                            href="/login"
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                        >
-                            <LogIn className="w-4 h-4" />
-                            <span>Đăng nhập</span>
-                        </Link>
+                        {/* Language Switcher + Login Button */}
+                        <div className="flex items-center gap-2">
+                            <LanguageSwitcher />
+                            <Link 
+                                href="/login"
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                            >
+                                <LogIn className="w-4 h-4" />
+                                <span>{t('nav.login')}</span>
+                            </Link>
+                        </div>
                     </div>
                 )
             )}
@@ -109,7 +121,7 @@ export function MarketingHeader() {
                                     )}
                                 >
                                     <item.icon className={cn("w-5 h-5 mb-1", active && "stroke-[2.5px]")} />
-                                    <span>{item.name}</span>
+                                    <span>{t(`nav.${item.key}`)}</span>
                                 </Link>
                             )
                         })}

@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Minus, Plus } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface QuantitySelectorProps {
@@ -25,6 +27,8 @@ export function QuantitySelector({
     max = 1000000,
     className,
 }: QuantitySelectorProps) {
+    const t = useTranslations('checkout');
+    const locale = useLocale();
     const isMinReached = quantity <= min;
     const isMaxReached = quantity >= max;
 
@@ -32,7 +36,7 @@ export function QuantitySelector({
         <div className={cn("space-y-3", className)}>
             {/* Label */}
             <label htmlFor="quantity-input" className="block text-sm font-semibold text-gray-700">
-                Số lượng cây muốn trồng
+                {t('quantity.inputLabel')}
             </label>
 
             {/* Input Group */}
@@ -40,7 +44,7 @@ export function QuantitySelector({
                 {/* Decrement Button */}
                 <motion.button
                     type="button"
-                    aria-label="Giảm số lượng"
+                    aria-label={t('quantity.decrementAria')}
                     onClick={onDecrement}
                     disabled={isMinReached}
                     whileHover={!isMinReached ? { scale: 1.05 } : {}}
@@ -78,14 +82,14 @@ export function QuantitySelector({
                         aria-describedby={error ? "quantity-error" : undefined}
                     />
                     <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                        <span className="text-sm text-gray-500">cây</span>
+                        <span className="text-sm text-gray-500">{t('quantity.unit', { count: quantity })}</span>
                     </div>
                 </div>
 
                 {/* Increment Button */}
                 <motion.button
                     type="button"
-                    aria-label="Tăng số lượng"
+                    aria-label={t('quantity.incrementAria')}
                     onClick={onIncrement}
                     disabled={isMaxReached}
                     whileHover={!isMaxReached ? { scale: 1.05 } : {}}
@@ -117,7 +121,7 @@ export function QuantitySelector({
                     </motion.p>
                 ) : (
                     <p className="text-sm text-gray-500">
-                        Tối thiểu {min.toLocaleString('vi-VN')} - Tối đa {max.toLocaleString('vi-VN')} cây
+                        {t('quantity.minMax', { min: formatNumber(min, locale), max: formatNumber(max, locale) })}
                     </p>
                 )}
             </div>

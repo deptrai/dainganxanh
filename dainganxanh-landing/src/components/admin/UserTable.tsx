@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useLocale } from 'next-intl'
+import { formatDate, formatCurrency } from '@/lib/format'
 import { AdminUser } from '@/actions/adminUsers'
 import { startImpersonation } from '@/actions/impersonation'
 
@@ -24,13 +26,8 @@ const ROLE_LABELS: Record<string, string> = {
     user: 'User',
 }
 
-function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-    })
-}
-
 export default function UserTable({ users, changeRole, updatingId, assignReferral, currentUserRole }: UserTableProps) {
+    const locale = useLocale()
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [successMsg, setSuccessMsg] = useState<string | null>(null)
     const [impersonatingId, setImpersonatingId] = useState<string | null>(null)
@@ -82,7 +79,7 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
             setErrorMsg(result.error)
         } else {
             const msg = result.retroOrders && result.retroOrders > 0
-                ? `✅ Đã gán mã giới thiệu! Hồi tố ${result.retroOrders} đơn hàng cũ, hoa hồng: ${new Intl.NumberFormat('vi-VN').format(result.retroCommission || 0)}đ`
+                ? `✅ Đã gán mã giới thiệu! Hồi tố ${result.retroOrders} đơn hàng cũ, hoa hồng: ${formatCurrency(result.retroCommission || 0, locale)}`
                 : `✅ Đã gán mã giới thiệu thành công!`
             setSuccessMsg(msg)
             setTimeout(() => setSuccessMsg(null), 5000)
@@ -202,7 +199,7 @@ export default function UserTable({ users, changeRole, updatingId, assignReferra
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-gray-600 text-sm">
-                                        {formatDate(user.created_at)}
+                                        {formatDate(user.created_at, locale)}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">

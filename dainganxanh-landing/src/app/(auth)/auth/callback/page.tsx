@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase/client";
+import Cookies from "js-cookie";
 
 export default function AuthCallbackPage() {
+    const [locale, setLocale] = useState<string>("vi");
+
     useEffect(() => {
+        const storedLocale = Cookies.get("NEXT_LOCALE");
+        const effectiveLocale = storedLocale === "en" ? "en" : "vi";
+        setLocale(effectiveLocale);
+
+        const prefix = effectiveLocale === "en" ? "/en" : "";
+
         const handleAuthCallback = async () => {
             const supabase = createBrowserClient()
 
@@ -22,32 +31,36 @@ export default function AuthCallbackPage() {
 
                 if (error) {
                     console.error("Error setting session:", error);
-                    window.location.href = "/login?error=auth_failed";
+                    window.location.href = `${prefix}/login?error=auth_failed`;
                     return;
                 }
 
                 if (data.session) {
                     console.log("Session created successfully:", data.session.user.email);
                     // Use hard redirect to ensure cookies are synced
-                    window.location.href = "/";
+                    window.location.href = prefix || "/";
                 }
             } else {
                 // No tokens found, redirect to login
-                window.location.href = "/login";
+                window.location.href = `${prefix}/login`;
             }
         };
 
         handleAuthCallback();
     }, []);
 
+    const isEn = locale === "en";
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 flex items-center justify-center">
             <div className="text-center">
                 <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    Đang xác thực...
+                    {isEn ? "Authenticating..." : "Đang xác thực..."}
                 </h2>
-                <p className="text-gray-600">Vui lòng đợi trong giây lát</p>
+                <p className="text-gray-600">
+                    {isEn ? "Please wait a moment" : "Vui lòng đợi trong giây lát"}
+                </p>
             </div>
         </div>
     );

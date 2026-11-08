@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { motion } from "framer-motion";
 import { Copy, Check, Loader2, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { formatCurrency } from "@/lib/format";
 import { createBrowserClient } from "@/lib/supabase/client";
 
 interface BankingPaymentProps {
@@ -26,6 +28,8 @@ const POLL_TIMEOUT = 30 * 60 * 1000;
 
 export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelling, cancelError }: BankingPaymentProps) {
     const router = useRouter();
+    const t = useTranslations('checkout');
+    const locale = useLocale();
     const [qrCodeUrl, setQrCodeUrl] = useState("");
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [paymentStatus, setPaymentStatus] = useState<"waiting" | "confirmed" | "error">("waiting");
@@ -99,7 +103,9 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
             await navigator.clipboard.writeText(text);
             setCopiedField(field);
             setTimeout(() => setCopiedField(null), 2000);
-        } catch { /* */ }
+        } catch (err) {
+            console.warn("Failed to copy:", err);
+        }
     };
 
     const handleClaimPayment = async () => {
@@ -114,7 +120,7 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
 
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                throw new Error(data.error || "Có lỗi xảy ra");
+                throw new Error(data.error || t('banking.genericError'));
             }
 
             // Stop polling
@@ -128,7 +134,7 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
                 );
             }, 500);
         } catch (err) {
-            setClaimError(err instanceof Error ? err.message : "Có lỗi xảy ra");
+            setClaimError(err instanceof Error ? err.message : t('banking.genericError'));
         } finally {
             setClaimingPayment(false);
         }
@@ -138,8 +144,8 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
         <button
             onClick={() => copyToClipboard(text, field)}
             className="p-1.5 rounded hover:bg-gray-200 transition-colors shrink-0"
-            title={`Sao chép ${label}`}
-            aria-label={`Sao chép ${label}`}
+            title={t('banking.copy', { label })}
+            aria-label={t('banking.copy', { label })}
         >
             {copiedField === field
                 ? <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -151,7 +157,9 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
     const formatElapsed = (seconds: number) => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
-        return m > 0 ? `${m} phút ${s.toString().padStart(2, "0")} giây` : `${s} giây`;
+        return m > 0
+            ? t('banking.minutesSeconds', { m, s: s.toString().padStart(2, "0") })
+            : t('banking.seconds', { s });
     };
 
     if (paymentStatus === "confirmed") {
@@ -162,8 +170,8 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
                 className="bg-emerald-50 rounded-2xl p-8 shadow-xl border-2 border-emerald-300 text-center"
             >
                 <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-emerald-900 mb-2">Thanh toán thành công!</h3>
-                <p className="text-emerald-700">Đang chuyển hướng...</p>
+                <h3 className="text-xl font-bold text-emerald-900 mb-2">{t('banking.successTitle')}</h3>
+                <p className="text-emerald-700">{t('banking.redirecting')}</p>
                 <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto mt-4" />
             </motion.div>
         );
@@ -178,7 +186,7 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
             {/* QR Code */}
             {qrCodeUrl && (
                 <div className="flex justify-center p-4 pb-2">
-                    <img src={qrCodeUrl} alt="QR Code thanh toan" className="w-44 h-44 rounded-lg" />
+                    <img src={qrCodeUrl} alt={t('banking.qrAlt')} className="w-44 h-44 rounded-lg" />
                 </div>
             )}
 
@@ -187,19 +195,19 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
                 <table className="w-full text-sm">
                     <tbody>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5 w-28">Ngân hàng</td>
+                            <td className="text-gray-500 py-1.5 w-28">{t('banking.bank')}</td>
                             <td className="font-semibold py-1.5">{BANK_INFO.bank}</td>
-                            <td className="w-8"><CopyBtn text={BANK_INFO.bank} field="bank" label="ngân hàng" /></td>
+                            <td className="w-8"><CopyBtn text={BANK_INFO.bank} field="bank" label={t('banking.bank')} /></td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5">Số TK</td>
+                            <td className="text-gray-500 py-1.5">{t('banking.accountNumber')}</td>
                             <td className="font-mono font-semibold py-1.5">{BANK_INFO.accountNumber}</td>
-                            <td><CopyBtn text={BANK_INFO.accountNumber} field="account" label="số tài khoản" /></td>
+                            <td><CopyBtn text={BANK_INFO.accountNumber} field="account" label={t('banking.accountNumber')} /></td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5">Chủ TK</td>
+                            <td className="text-gray-500 py-1.5">{t('banking.accountName')}</td>
                             <td className="font-semibold py-1.5">{BANK_INFO.accountName}</td>
-                            <td><CopyBtn text={BANK_INFO.accountName} field="name" label="chủ tài khoản" /></td>
+                            <td><CopyBtn text={BANK_INFO.accountName} field="name" label={t('banking.accountName')} /></td>
                         </tr>
                     </tbody>
                 </table>
@@ -209,17 +217,17 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
             <div className="mx-4 mb-3 grid grid-cols-2 gap-2">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center justify-between">
                     <div>
-                        <p className="text-[10px] uppercase text-emerald-600 font-semibold tracking-wide">Nội dung CK</p>
+                        <p className="text-[10px] uppercase text-emerald-600 font-semibold tracking-wide">{t('banking.transferContent')}</p>
                         <p className="font-mono font-bold text-emerald-900">{orderCode}</p>
                     </div>
-                    <CopyBtn text={orderCode} field="orderCode" label="nội dung CK" />
+                    <CopyBtn text={orderCode} field="orderCode" label={t('banking.transferContent')} />
                 </div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center justify-between">
                     <div>
-                        <p className="text-[10px] uppercase text-emerald-600 font-semibold tracking-wide">Số tiền</p>
-                        <p className="font-bold text-emerald-900">{amount.toLocaleString("vi-VN")} ₫</p>
+                        <p className="text-[10px] uppercase text-emerald-600 font-semibold tracking-wide">{t('banking.amount')}</p>
+                        <p className="font-bold text-emerald-900">{formatCurrency(amount, locale)}</p>
                     </div>
-                    <CopyBtn text={amount.toString()} field="amount" label="số tiền" />
+                    <CopyBtn text={amount.toString()} field="amount" label={t('banking.amount')} />
                 </div>
             </div>
 
@@ -228,9 +236,9 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
                 <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-amber-900">Đang chờ xác nhận thanh toán...</p>
+                        <p className="text-sm font-semibold text-amber-900">{t('banking.waiting')}</p>
                         <p className="text-xs text-amber-700">
-                            Tự động xác nhận khi nhận CK ({formatElapsed(elapsedSeconds)})
+                            {t('banking.autoConfirm', { time: formatElapsed(elapsedSeconds) })}
                         </p>
                     </div>
                     <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
@@ -255,12 +263,12 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
                     {claimingPayment ? (
                         <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Đang xử lý...
+                            {t('banking.processing')}
                         </>
                     ) : (
                         <>
                             <CheckCircle2 className="w-4 h-4" />
-                            Đã chuyển tiền thành công
+                            {t('banking.confirmTransferred')}
                         </>
                     )}
                 </button>
@@ -276,7 +284,7 @@ export function BankingPayment({ orderCode, amount, quantity, onCancel, cancelli
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <XCircle className="w-4 h-4" />
                         }
-                        Hủy đơn hàng
+                        {t('banking.cancelOrder')}
                     </button>
                 )}
             </div>

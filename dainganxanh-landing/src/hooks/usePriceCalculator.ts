@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { PACKAGE_PRICE, formatVND } from "@/lib/constants";
-
+import { PACKAGE_PRICE } from "@/lib/constants";
+import { formatCurrency, formatNumber } from "@/lib/format";
+import { useLocale, useTranslations } from "next-intl";
 
 const MIN_QUANTITY = 1;
 const MAX_QUANTITY = 1000000;
@@ -21,6 +22,9 @@ interface UsePriceCalculatorReturn {
 }
 
 export function usePriceCalculator(initialQuantity: number = 1, unitPrice: number = PACKAGE_PRICE): UsePriceCalculatorReturn {
+    const locale = (useLocale() as 'vi' | 'en') || 'vi';
+    const t = useTranslations('checkout');
+
     const [quantity, setQuantityState] = useState<number>(
         Math.max(MIN_QUANTITY, Math.min(MAX_QUANTITY, initialQuantity))
     );
@@ -28,24 +32,24 @@ export function usePriceCalculator(initialQuantity: number = 1, unitPrice: numbe
 
     const validateQuantity = useCallback((value: number): boolean => {
         if (isNaN(value)) {
-            setError("Vui lòng nhập số hợp lệ");
+            setError(t('quantity.errorValid'));
             return false;
         }
         if (value < MIN_QUANTITY) {
-            setError(`Số lượng tối thiểu là ${MIN_QUANTITY} cây`);
+            setError(t('quantity.errorMin', { min: formatNumber(MIN_QUANTITY, locale) }));
             return false;
         }
         if (value > MAX_QUANTITY) {
-            setError(`Số lượng tối đa là ${MAX_QUANTITY.toLocaleString('vi-VN')} cây`);
+            setError(t('quantity.errorMax', { max: formatNumber(MAX_QUANTITY, locale) }));
             return false;
         }
         if (!Number.isInteger(value)) {
-            setError("Số lượng phải là số nguyên");
+            setError(t('quantity.errorInteger'));
             return false;
         }
         setError(null);
         return true;
-    }, []);
+    }, [t, locale]);
 
     const setQuantity = useCallback((value: number) => {
         const isValid = validateQuantity(value);
@@ -61,11 +65,11 @@ export function usePriceCalculator(initialQuantity: number = 1, unitPrice: numbe
                 setError(null);
                 return newQuantity;
             } else {
-                setError(`Số lượng tối đa là ${MAX_QUANTITY.toLocaleString('vi-VN')} cây`);
+                setError(t('quantity.errorMax', { max: formatNumber(MAX_QUANTITY, locale) }));
                 return prev;
             }
         });
-    }, []);
+    }, [t, locale]);
 
     const decrement = useCallback(() => {
         setQuantityState(prev => {
@@ -74,11 +78,11 @@ export function usePriceCalculator(initialQuantity: number = 1, unitPrice: numbe
                 setError(null);
                 return newQuantity;
             } else {
-                setError(`Số lượng tối thiểu là ${MIN_QUANTITY.toLocaleString('vi-VN')} cây`);
+                setError(t('quantity.errorMin', { min: formatNumber(MIN_QUANTITY, locale) }));
                 return prev;
             }
         });
-    }, []);
+    }, [t, locale]);
 
     const handleInputChange = useCallback((value: string) => {
         if (value === "") {
@@ -90,19 +94,19 @@ export function usePriceCalculator(initialQuantity: number = 1, unitPrice: numbe
         // Sanitize input: remove non-numeric characters except digits
         const sanitized = value.replace(/[^\d]/g, "");
         if (sanitized === "") {
-            setError("Vui lòng nhập số hợp lệ");
+            setError(t('quantity.errorValid'));
             return;
         }
 
         const numValue = parseInt(sanitized, 10);
         if (isNaN(numValue)) {
-            setError("Vui lòng nhập số hợp lệ");
+            setError(t('quantity.errorValid'));
             return;
         }
 
         setQuantityState(numValue);
         validateQuantity(numValue);
-    }, [validateQuantity]);
+    }, [validateQuantity, t]);
 
     const totalPrice = quantity * unitPrice;
     const isValid = error === null && quantity >= MIN_QUANTITY && quantity <= MAX_QUANTITY;
@@ -116,7 +120,7 @@ export function usePriceCalculator(initialQuantity: number = 1, unitPrice: numbe
         increment,
         decrement,
         handleInputChange,
-        formattedTotal: formatVND(totalPrice),
-        formattedUnitPrice: formatVND(unitPrice),
+        formattedTotal: formatCurrency(totalPrice, locale),
+        formattedUnitPrice: formatCurrency(unitPrice, locale),
     };
 }

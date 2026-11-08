@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { useRouter } from 'next/navigation'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import NotificationBell from '../NotificationBell'
 import {
     subscribeToNotifications,
@@ -10,10 +10,11 @@ import {
 import { createBrowserClient } from '@/lib/supabase/client'
 
 // Mock dependencies
-jest.mock('next/navigation', () => ({
-    useRouter: jest.fn(),
+const mockPush = jest.fn()
+jest.mock('@/i18n/navigation', () => ({
+    useRouter: () => ({ push: mockPush, refresh: jest.fn() }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
 }))
-
 jest.mock('@/lib/supabase/client', () => ({
     createBrowserClient: jest.fn(),
 }))
@@ -36,7 +37,6 @@ describe('NotificationBell', () => {
         jest.useRealTimers()
     })
 
-    const mockPush = jest.fn()
     const mockUnsubscribe = jest.fn()
 
     const mockUser = { id: 'user-123' }
@@ -66,11 +66,6 @@ describe('NotificationBell', () => {
     beforeEach(() => {
         jest.clearAllMocks()
 
-            // Mock useRouter
-            ; (useRouter as jest.Mock).mockReturnValue({
-                push: mockPush,
-            })
-
         // Mock Supabase client
         const mockSupabase = {
             auth: {
@@ -92,7 +87,7 @@ describe('NotificationBell', () => {
     })
 
     it('renders notification bell icon', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
@@ -100,7 +95,7 @@ describe('NotificationBell', () => {
     })
 
     it('displays unread count badge', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByText('1')).toBeInTheDocument()
@@ -108,7 +103,7 @@ describe('NotificationBell', () => {
     })
 
     it('fetches notifications on mount', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(fetchNotifications).toHaveBeenCalledWith('user-123')
@@ -117,7 +112,7 @@ describe('NotificationBell', () => {
     })
 
     it('subscribes to realtime notifications', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(subscribeToNotifications).toHaveBeenCalledWith(
@@ -128,7 +123,7 @@ describe('NotificationBell', () => {
     })
 
     it('opens dropdown when bell is clicked', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
@@ -143,7 +138,7 @@ describe('NotificationBell', () => {
     })
 
     it('displays notifications in dropdown', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
@@ -159,7 +154,7 @@ describe('NotificationBell', () => {
     })
 
     it('marks notification as read and navigates on click', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
@@ -182,7 +177,7 @@ describe('NotificationBell', () => {
     })
 
     it('formats time ago correctly', async () => {
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
@@ -199,7 +194,7 @@ describe('NotificationBell', () => {
     })
 
     it('unsubscribes on unmount', async () => {
-        const { unmount } = render(<NotificationBell />)
+        const { unmount } = renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(subscribeToNotifications).toHaveBeenCalled()
@@ -214,7 +209,7 @@ describe('NotificationBell', () => {
         ; (fetchNotifications as jest.Mock).mockResolvedValue([])
             ; (getUnreadCount as jest.Mock).mockResolvedValue(0)
 
-        render(<NotificationBell />)
+        renderWithIntl(<NotificationBell />)
 
         await waitFor(() => {
             expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
@@ -225,6 +220,39 @@ describe('NotificationBell', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Chưa có thông báo mới')).toBeInTheDocument()
+        })
+    })
+
+    it('[NOTIF_NULL] renders row with title: null without crashing, displaying fallback title', async () => {
+        const notifWithNullTitle = [
+            {
+                id: 'notif-null-1',
+                user_id: 'user-123',
+                type: 'harvest_ready',
+                title: null,
+                body: 'Nội dung thông báo không có tiêu đề',
+                data: {},
+                read: false,
+                created_at: FIXED_NOW.toISOString(),
+            },
+        ]
+        ;(fetchNotifications as jest.Mock).mockResolvedValueOnce(notifWithNullTitle)
+        ;(getUnreadCount as jest.Mock).mockResolvedValueOnce(1)
+
+        renderWithIntl(<NotificationBell />)
+
+        await waitFor(() => {
+            expect(screen.getByLabelText('Notifications')).toBeInTheDocument()
+        })
+
+        const bellButton = screen.getByLabelText('Notifications')
+        fireEvent.click(bellButton)
+
+        await waitFor(() => {
+            expect(screen.getByText('Nội dung thông báo không có tiêu đề')).toBeInTheDocument()
+            // In dropdown, header title is 'Thông báo' and row fallback is also 'Thông báo'
+            const fallbackTitles = screen.getAllByText('Thông báo')
+            expect(fallbackTitles.length).toBeGreaterThanOrEqual(2)
         })
     })
 })
