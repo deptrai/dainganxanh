@@ -117,7 +117,7 @@ describe('adminBookings', () => {
     expect(result.bookings[0].lotName).toBe('Ba Vì')
   })
 
-  it('applies status and lotId filters and pagination', async () => {
+  it('applies status and lotId filters, date overlap filter, and pagination', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
     mockServiceFrom
       .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
@@ -129,7 +129,43 @@ describe('adminBookings', () => {
     const dataQuery = mockServiceFrom.mock.results[2].value
     expect(countQuery.eq).toHaveBeenCalledWith('status', 'pending')
     expect(countQuery.eq).toHaveBeenCalledWith('rooms.lot_id', 'l1')
+    expect(countQuery.gte).toHaveBeenCalledWith('check_out_date', '2026-09-01')
+    expect(countQuery.lte).toHaveBeenCalledWith('check_in_date', '2026-09-30')
+    expect(dataQuery.gte).toHaveBeenCalledWith('check_out_date', '2026-09-01')
+    expect(dataQuery.lte).toHaveBeenCalledWith('check_in_date', '2026-09-30')
     expect(dataQuery.range).toHaveBeenCalledWith(20, 39)
+  })
+
+  it('applies date filter with only dateFrom (check_out_date >= dateFrom)', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ count: 1, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+
+    await fetchAdminBookings({ dateFrom: '2026-09-01' }, 1, 20)
+    const countQuery = mockServiceFrom.mock.results[1].value
+    const dataQuery = mockServiceFrom.mock.results[2].value
+    expect(countQuery.gte).toHaveBeenCalledWith('check_out_date', '2026-09-01')
+    expect(countQuery.lte).not.toHaveBeenCalled()
+    expect(dataQuery.gte).toHaveBeenCalledWith('check_out_date', '2026-09-01')
+    expect(dataQuery.lte).not.toHaveBeenCalled()
+  })
+
+  it('applies date filter with only dateTo (check_in_date <= dateTo)', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null })
+    mockServiceFrom
+      .mockReturnValueOnce(makeQueryChain({ data: { role: 'admin' }, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ count: 1, data: null, error: null }))
+      .mockReturnValueOnce(makeQueryChain({ data: [], error: null }))
+
+    await fetchAdminBookings({ dateTo: '2026-09-30' }, 1, 20)
+    const countQuery = mockServiceFrom.mock.results[1].value
+    const dataQuery = mockServiceFrom.mock.results[2].value
+    expect(countQuery.lte).toHaveBeenCalledWith('check_in_date', '2026-09-30')
+    expect(countQuery.gte).not.toHaveBeenCalled()
+    expect(dataQuery.lte).toHaveBeenCalledWith('check_in_date', '2026-09-30')
+    expect(dataQuery.gte).not.toHaveBeenCalled()
   })
 
   it('escapes search metacharacters before building or filter', async () => {

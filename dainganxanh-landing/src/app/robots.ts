@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/crm/', '/api/', '/login', '/register'],
+        disallow: ['/crm/', '/en/crm/', '/api/', '/login', '/register'],
       },
     ],
     sitemap: 'https://dainganxanh.com.vn/sitemap.xml',

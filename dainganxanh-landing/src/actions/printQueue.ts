@@ -415,18 +415,21 @@ export async function getPrintQueue() {
         }
 
         // Create lookup maps
+        // Map tra cứu user: value là row từ select 'id, full_name, email'
+        type PrintUserRow = { id: string; full_name: string; email: string }
         const usersMap = (usersData || []).reduce((acc, user) => {
             acc[user.id] = user
             return acc
-        }, {} as Record<string, any>)
+        }, {} as Record<string, PrintUserRow>)
 
+        type PrintOrderRow = NonNullable<typeof ordersData>[number]
         const ordersMap = (ordersData || []).reduce((acc, order) => {
             acc[order.id] = {
                 ...order,
-                users: usersMap[order.user_id] || { full_name: 'N/A', email: 'N/A' }
+                users: usersMap[order.user_id ?? ''] || { full_name: 'N/A', email: 'N/A' }
             }
             return acc
-        }, {} as Record<string, any>)
+        }, {} as Record<string, PrintOrderRow & { users: PrintUserRow }>)
 
         // Combine data
         const result = queueData.map(item => ({

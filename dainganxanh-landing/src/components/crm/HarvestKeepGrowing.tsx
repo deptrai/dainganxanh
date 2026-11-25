@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useLocale } from 'next-intl'
 import { submitKeepGrowing } from '@/actions/harvest'
+import { formatCurrency } from '@/lib/format'
 
 interface HarvestKeepGrowingProps {
     orderId: string
@@ -18,6 +20,7 @@ const VALUE_PROJECTIONS = [
 ]
 
 export default function HarvestKeepGrowing({ orderId, treeCode, ageInMonths }: HarvestKeepGrowingProps) {
+    const locale = useLocale()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isConfirmed, setIsConfirmed] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -54,7 +57,7 @@ export default function HarvestKeepGrowing({ orderId, treeCode, ageInMonths }: H
                 <div className="bg-white rounded-lg p-4 border border-emerald-200">
                     <p className="text-sm text-gray-600">
                         Hợp đồng chăm sóc đã được gia hạn. Phí chăm sóc hàng năm{' '}
-                        <strong>{ANNUAL_CARE_FEE.toLocaleString('vi-VN')} VND/năm</strong> sẽ được tính
+                        <strong>{formatCurrency(ANNUAL_CARE_FEE, locale)}/năm</strong> sẽ được tính
                         từ kỳ tiếp theo. Bạn sẽ nhận thông báo khi đến hạn thanh toán.
                     </p>
                 </div>
@@ -76,7 +79,7 @@ export default function HarvestKeepGrowing({ orderId, treeCode, ageInMonths }: H
             <div className="bg-emerald-50 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-emerald-800 mb-1">Phí chăm sóc hàng năm</h4>
                 <p className="text-2xl font-bold text-emerald-700">
-                    {ANNUAL_CARE_FEE.toLocaleString('vi-VN')} VND
+                    {formatCurrency(ANNUAL_CARE_FEE, locale)}
                     <span className="text-sm font-normal text-gray-500">/năm</span>
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
@@ -122,7 +125,7 @@ export default function HarvestKeepGrowing({ orderId, treeCode, ageInMonths }: H
                 {showTerms && (
                     <div className="mt-3 bg-gray-50 rounded-lg p-4 text-sm text-gray-600 space-y-2">
                         <p><strong>1.</strong> Hợp đồng chăm sóc được gia hạn thêm 1 năm, tự động gia hạn nếu không có yêu cầu dừng.</p>
-                        <p><strong>2.</strong> Phí chăm sóc {ANNUAL_CARE_FEE.toLocaleString('vi-VN')} VND/năm, thanh toán vào đầu mỗi kỳ.</p>
+                        <p><strong>2.</strong> Phí chăm sóc {formatCurrency(ANNUAL_CARE_FEE, locale)}/năm, thanh toán vào đầu mỗi kỳ.</p>
                         <p><strong>3.</strong> Đại Ngàn Xanh cam kết duy trì chất lượng chăm sóc cây theo tiêu chuẩn.</p>
                         <p><strong>4.</strong> Bạn có thể chọn thu hoạch hoặc chuyển nhượng cây bất kỳ lúc nào trong thời gian gia hạn.</p>
                         <p><strong>5.</strong> Giá trị cây được đánh giá lại mỗi năm dựa trên kích thước và tình trạng sức khỏe thực tế.</p>

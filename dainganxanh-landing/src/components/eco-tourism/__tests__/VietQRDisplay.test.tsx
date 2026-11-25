@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { VietQRDisplay } from '../VietQRDisplay'
 
 describe('VietQRDisplay Component', () => {
@@ -38,7 +39,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('renders booking code, bank details, and VietQR image', () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const codes = screen.getAllByText('BKABC123')
     expect(codes.length).toBeGreaterThanOrEqual(1)
     expect(codes[0]).toBeInTheDocument()
@@ -50,8 +51,8 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('allows copying bank info to clipboard', async () => {
-    render(<VietQRDisplay {...defaultProps} />)
-    const copyCodeBtn = screen.getByRole('button', { name: 'Sao chép nội dung CK' })
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
+    const copyCodeBtn = screen.getByRole('button', { name: /Sao chép nội dung CK/i })
     await act(async () => {
       fireEvent.click(copyCodeBtn)
     })
@@ -64,7 +65,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ ok: true }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const claimBtn = screen.getByRole('button', { name: /Đã chuyển tiền thành công/i })
     fireEvent.click(claimBtn)
 
@@ -78,7 +79,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('opens confirmation modal on "Hủy đặt phòng" click and can be dismissed', async () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -93,7 +94,7 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('closes confirmation modal on Escape key', async () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -109,7 +110,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ ok: true }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -131,7 +132,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ status: 'confirmed' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
 
     act(() => {
       jest.advanceTimersByTime(5000)
@@ -149,7 +150,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ status: 'cancelled' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
 
     act(() => {
       jest.advanceTimersByTime(5000)
@@ -169,12 +170,12 @@ describe('VietQRDisplay Component', () => {
       },
     }
 
-    render(<VietQRDisplay {...pastProps} />)
+    renderWithIntl(<VietQRDisplay {...pastProps} />)
     expect(defaultProps.onExpired).toHaveBeenCalled()
   })
 
   it('closes confirmation modal on backdrop click', () => {
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -194,7 +195,7 @@ describe('VietQRDisplay Component', () => {
       json: async () => ({ error: 'Đơn đặt phòng không còn ở trạng thái chờ thanh toán' }),
     })
 
-    render(<VietQRDisplay {...defaultProps} />)
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const cancelBtn = screen.getByRole('button', { name: /Hủy đặt phòng/i })
     fireEvent.click(cancelBtn)
 
@@ -209,10 +210,91 @@ describe('VietQRDisplay Component', () => {
   })
 
   it('cleans up intervals on unmount', () => {
-    const { unmount } = render(<VietQRDisplay {...defaultProps} />)
+    const { unmount } = renderWithIntl(<VietQRDisplay {...defaultProps} />)
     const clearIntervalSpy = jest.spyOn(global, 'clearInterval')
     unmount()
     expect(clearIntervalSpy).toHaveBeenCalledTimes(2)
     clearIntervalSpy.mockRestore()
+  })
+
+  it('pauses polling when document is hidden and resumes immediately when visible', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'pending' }),
+    })
+
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
+
+    // Initial polling tick after 5s
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+
+    // Simulate tab becoming hidden
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    // Advance 10s while hidden -> fetch should NOT be called
+    act(() => {
+      jest.advanceTimersByTime(10000)
+    })
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+
+    // Simulate tab becoming visible again
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    // Resuming tab should trigger immediate poll
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+
+    // And periodic polling resumes
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    expect(global.fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not resume polling on visibility change after terminal state reached', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'confirmed' }),
+    })
+
+    renderWithIntl(<VietQRDisplay {...defaultProps} />)
+
+    // First poll confirms booking
+    act(() => {
+      jest.advanceTimersByTime(5000)
+    })
+    await waitFor(() => {
+      expect(defaultProps.onSuccess).toHaveBeenCalled()
+    })
+
+    // Simulate tab switch hidden -> visible
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    })
+    fireEvent(document, new Event('visibilitychange'))
+
+    // Fetch should not have been called again after confirmation
+    expect(global.fetch).toHaveBeenCalledTimes(1)
   })
 })

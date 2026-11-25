@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Copy, Check, Loader2, Clock, XCircle } from 'lucide-react'
-import { BookingResponse } from '@/app/(marketing)/eco-tourism/[lotId]/book/BookingPageClient'
+import { useTranslations, useLocale } from 'next-intl'
+import { formatCurrency } from '@/lib/format'
+import { BookingResponse } from '@/app/[locale]/(marketing)/eco-tourism/[lotId]/book/BookingPageClient'
 
 interface VietQRDisplayProps {
     booking: BookingResponse
@@ -18,11 +20,14 @@ const BANK_INFO = {
     accountName: process.env.NEXT_PUBLIC_BANK_HOLDER || 'CONG TY CO PHAN DAI NGAN XANH GROUP',
 }
 
-export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }: VietQRDisplayProps) {
+export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId: _lotId }: VietQRDisplayProps) {
+    const t = useTranslations('eco')
+    const locale = useLocale()
     const [remaining, setRemaining] = useState(0)
     const [copiedField, setCopiedField] = useState<string | null>(null)
     const [claiming, setClaiming] = useState(false)
     const [claimMessage, setClaimMessage] = useState('')
+    const [claimSuccess, setClaimSuccess] = useState(false)
     const [cancelling, setCancelling] = useState(false)
     const [cancelError, setCancelError] = useState('')
     const [showCancelModal, setShowCancelModal] = useState(false)
@@ -33,11 +38,19 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const hasExpiredRef = useRef(false)
     const isCancellingRef = useRef(false)
+    const isTerminalRef = useRef(false)
 
     useEffect(() => {
         const url = `https://img.vietqr.io/image/MB-${BANK_INFO.accountNumber}-compact.png?amount=${booking.totalAmount}&addInfo=${encodeURIComponent(booking.bookingCode)}&accountName=${encodeURIComponent(BANK_INFO.accountName)}`
         setQrUrl(url)
     }, [booking.totalAmount, booking.bookingCode])
+
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current)
+            pollRef.current = null
+        }
+    }, [])
 
     const updateRemaining = useCallback(() => {
         const now = Date.now()
@@ -45,34 +58,37 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         setRemaining(diff)
         if (diff <= 0 && !hasExpiredRef.current) {
             hasExpiredRef.current = true
-            if (pollRef.current) clearInterval(pollRef.current)
-            if (timerRef.current) clearInterval(timerRef.current)
+            isTerminalRef.current = true
+            stopPolling()
+            if (timerRef.current) {
+                clearInterval(timerRef.current)
+                timerRef.current = null
+            }
             onExpired()
         }
-    }, [onExpired])
+    }, [onExpired, stopPolling])
 
+    // Dùng polling qua endpoint /api/bookings/status đã strip PII thay vì Supabase Realtime (postgres_changes).
+    // Guest booking flow là anonymous; subscribe postgres_changes vào room_bookings sẽ làm lộ
+    // toàn bộ row chứa PII (họ tên, SĐT, email) cho bất kỳ client nào có mã đơn.
     const pollStatus = useCallback(async () => {
-        // Do not poll while a cancellation request is in-flight
-        if (isCancellingRef.current) return
+        // Do not poll while a cancellation request is in-flight or terminal state reached
+        if (isCancellingRef.current || isTerminalRef.current) return
         try {
             const res = await fetch(`/api/bookings/status?code=${booking.bookingCode}`)
             if (!res.ok) return
             const data = await res.json()
             if (data.status === 'confirmed') {
-                if (pollRef.current) {
-                    clearInterval(pollRef.current)
-                    pollRef.current = null
-                }
+                isTerminalRef.current = true
+                stopPolling()
                 if (timerRef.current) {
                     clearInterval(timerRef.current)
                     timerRef.current = null
                 }
                 onSuccess()
             } else if (data.status === 'cancelled' || data.status === 'expired') {
-                if (pollRef.current) {
-                    clearInterval(pollRef.current)
-                    pollRef.current = null
-                }
+                isTerminalRef.current = true
+                stopPolling()
                 if (timerRef.current) {
                     clearInterval(timerRef.current)
                     timerRef.current = null
@@ -82,24 +98,52 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         } catch {
             // silent fail
         }
-    }, [booking.bookingCode, onSuccess, onExpired])
+    }, [booking.bookingCode, onSuccess, onExpired, stopPolling])
+
+    const startPolling = useCallback(() => {
+        if (isTerminalRef.current || isCancellingRef.current) return
+        if (pollRef.current) return
+        pollRef.current = setInterval(pollStatus, 5000)
+    }, [pollStatus])
 
     useEffect(() => {
         updateRemaining()
         timerRef.current = setInterval(updateRemaining, 1000)
-        pollRef.current = setInterval(pollStatus, 5000)
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current)
-            if (timerRef.current) clearInterval(timerRef.current)
+        if (typeof document !== 'undefined' && document.visibilityState !== 'hidden') {
+            startPolling()
         }
-    }, [updateRemaining, pollStatus])
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                stopPolling()
+            } else if (document.visibilityState === 'visible') {
+                if (!isTerminalRef.current && !isCancellingRef.current) {
+                    pollStatus()
+                    startPolling()
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+            stopPolling()
+            if (timerRef.current) {
+                clearInterval(timerRef.current)
+                timerRef.current = null
+            }
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [updateRemaining, pollStatus, startPolling, stopPolling])
 
     const copyToClipboard = async (text: string, field: string) => {
         try {
             await navigator.clipboard.writeText(text)
             setCopiedField(field)
             setTimeout(() => setCopiedField(null), 2000)
-        } catch {}
+        } catch (err) {
+            console.error('Copy to clipboard failed:', err)
+        }
     }
 
     const handleClaim = async () => {
@@ -112,10 +156,12 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                 body: JSON.stringify({ bookingCode: booking.bookingCode }),
             })
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra')
-            setClaimMessage('Đã ghi nhận. Chúng tôi sẽ xác nhận trong ít phút.')
+            if (!res.ok) throw new Error(data.error || t('form.errors.generalError'))
+            setClaimSuccess(true)
+            setClaimMessage(t('payment.claimSuccess'))
         } catch (err) {
-            setClaimMessage(err instanceof Error ? err.message : 'Có lỗi xảy ra')
+            setClaimSuccess(false)
+            setClaimMessage(err instanceof Error ? err.message : t('form.errors.generalError'))
         } finally {
             setClaiming(false)
         }
@@ -138,10 +184,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         setCancelling(true)
         setCancelError('')
         // Stop polling/timer immediately to prevent onExpired() firing mid-cancel
-        if (pollRef.current) {
-            clearInterval(pollRef.current)
-            pollRef.current = null
-        }
+        stopPolling()
         if (timerRef.current) {
             clearInterval(timerRef.current)
             timerRef.current = null
@@ -153,31 +196,35 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                 body: JSON.stringify({ bookingCode: booking.bookingCode }),
             })
             const data = await res.json()
-            if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra')
+            if (!res.ok) throw new Error(data.error || t('form.errors.generalError'))
+            isTerminalRef.current = true
             setShowCancelModal(false)
             onCancel()
         } catch (err) {
             isCancellingRef.current = false
-            setCancelError(err instanceof Error ? err.message : 'Có lỗi xảy ra')
+            setCancelError(err instanceof Error ? err.message : t('form.errors.generalError'))
         } finally {
             setCancelling(false)
         }
     }
 
-    const CopyBtn = ({ text, field, label }: { text: string; field: string; label: string }) => (
-        <button
-            onClick={() => copyToClipboard(text, field)}
-            className="p-1.5 rounded hover:bg-gray-200 transition-colors shrink-0"
-            title={`Sao chép ${label}`}
-            aria-label={`Sao chép ${label}`}
-        >
-            {copiedField === field ? (
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-            ) : (
-                <Copy className="w-3.5 h-3.5 text-gray-400" />
-            )}
-        </button>
-    )
+    const CopyBtn = ({ text, field, label }: { text: string; field: string; label: string }) => {
+        const copyLabel = t('payment.copy', { label })
+        return (
+            <button
+                onClick={() => copyToClipboard(text, field)}
+                className="p-1.5 rounded hover:bg-gray-200 transition-colors shrink-0"
+                title={copyLabel}
+                aria-label={copyLabel}
+            >
+                {copiedField === field ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                    <Copy className="w-3.5 h-3.5 text-gray-400" />
+                )}
+            </button>
+        )
+    }
 
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60)
@@ -185,45 +232,42 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
     }
 
-    const formatVND = (value: number) =>
-        new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
-
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-emerald-100 overflow-hidden">
             <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-amber-600" />
-                    <span className="text-sm font-medium text-amber-800">Thời gian giữ chỗ còn lại</span>
+                    <span className="text-sm font-medium text-amber-800">{t('payment.remainingTime')}</span>
                 </div>
                 <span className="text-lg font-bold text-amber-700">{formatTime(remaining)}</span>
             </div>
 
             <div className="px-4 py-4 border-b border-gray-100 space-y-2">
                 <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Mã đặt phòng</span>
+                    <span className="text-gray-600">{t('payment.bookingCode')}</span>
                     <span className="font-mono font-bold text-emerald-600">{booking.bookingCode}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Phòng</span>
+                    <span className="text-gray-600">{t('payment.room')}</span>
                     <span className="font-medium">{booking.roomName}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Nhận phòng</span>
+                    <span className="text-gray-600">{t('payment.checkIn')}</span>
                     <span className="font-medium">{booking.checkInDate}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Trả phòng</span>
+                    <span className="text-gray-600">{t('payment.checkOut')}</span>
                     <span className="font-medium">{booking.checkOutDate}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Số đêm</span>
-                    <span className="font-medium">{booking.nightsCount} đêm</span>
+                    <span className="text-gray-600">{t('payment.nights')}</span>
+                    <span className="font-medium">{t('payment.nightsCount', { count: booking.nightsCount })}</span>
                 </div>
             </div>
 
             {qrUrl && (
                 <div className="flex justify-center p-4 pb-2">
-                    <img src={qrUrl} alt="QR Code thanh toán" className="w-48 h-48 rounded-lg" />
+                    <img src={qrUrl} alt={t('payment.qrAlt')} className="w-48 h-48 rounded-lg" />
                 </div>
             )}
 
@@ -231,29 +275,29 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                 <table className="w-full text-sm">
                     <tbody>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5 w-28">Ngân hàng</td>
+                            <td className="text-gray-500 py-1.5 w-28">{t('payment.bank')}</td>
                             <td className="font-semibold py-1.5">{BANK_INFO.bank}</td>
-                            <td className="w-8"><CopyBtn text={BANK_INFO.bank} field="bank" label="ngân hàng" /></td>
+                            <td className="w-8"><CopyBtn text={BANK_INFO.bank} field="bank" label={t('payment.bank')} /></td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5">Số TK</td>
+                            <td className="text-gray-500 py-1.5">{t('payment.accountNumber')}</td>
                             <td className="font-mono font-semibold py-1.5">{BANK_INFO.accountNumber}</td>
-                            <td><CopyBtn text={BANK_INFO.accountNumber} field="account" label="số tài khoản" /></td>
+                            <td><CopyBtn text={BANK_INFO.accountNumber} field="account" label={t('payment.accountNumber')} /></td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5">Chủ TK</td>
+                            <td className="text-gray-500 py-1.5">{t('payment.accountName')}</td>
                             <td className="font-semibold py-1.5">{BANK_INFO.accountName}</td>
-                            <td><CopyBtn text={BANK_INFO.accountName} field="name" label="chủ tài khoản" /></td>
+                            <td><CopyBtn text={BANK_INFO.accountName} field="name" label={t('payment.accountName')} /></td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5">Số tiền</td>
-                            <td className="font-bold text-emerald-600 py-1.5">{formatVND(booking.totalAmount)}</td>
-                            <td><CopyBtn text={booking.totalAmount.toString()} field="amount" label="số tiền" /></td>
+                            <td className="text-gray-500 py-1.5">{t('payment.amount')}</td>
+                            <td className="font-bold text-emerald-600 py-1.5">{formatCurrency(booking.totalAmount, locale)}</td>
+                            <td><CopyBtn text={booking.totalAmount.toString()} field="amount" label={t('payment.amount')} /></td>
                         </tr>
                         <tr className="border-b border-gray-100">
-                            <td className="text-gray-500 py-1.5">Nội dung CK</td>
+                            <td className="text-gray-500 py-1.5">{t('payment.transferContent')}</td>
                             <td className="font-mono font-semibold py-1.5">{booking.bookingCode}</td>
-                            <td><CopyBtn text={booking.bookingCode} field="code" label="nội dung CK" /></td>
+                            <td><CopyBtn text={booking.bookingCode} field="code" label={t('payment.transferContent')} /></td>
                         </tr>
                     </tbody>
                 </table>
@@ -263,15 +307,15 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                 <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-amber-600 shrink-0" />
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-amber-900">Đang chờ xác nhận thanh toán...</p>
-                        <p className="text-xs text-amber-700">Tự động xác nhận khi nhận CK</p>
+                        <p className="text-sm font-semibold text-amber-900">{t('payment.waitingConfirmation')}</p>
+                        <p className="text-xs text-amber-700">{t('payment.autoConfirmNotice')}</p>
                     </div>
                 </div>
             </div>
 
             <div className="px-4 pb-4 space-y-2">
                 {claimMessage && (
-                    <p className={`text-sm text-center ${claimMessage.includes('Đã ghi nhận') ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <p className={`text-sm text-center ${claimSuccess ? 'text-emerald-600' : 'text-red-600'}`}>
                         {claimMessage}
                     </p>
                 )}
@@ -285,7 +329,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                     className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     {claiming ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                    Đã chuyển tiền thành công
+                    {t('payment.paidConfirmation')}
                 </button>
 
                 <div className="pt-2 border-t border-gray-100">
@@ -296,7 +340,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                         className="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <XCircle className="w-4 h-4" />
-                        Hủy đặt phòng
+                        {t('payment.cancelBooking')}
                     </button>
                 </div>
             </div>
@@ -320,14 +364,14 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                             </div>
                             <div>
                                 <h3 id="cancel-dialog-title" className="text-lg font-bold text-gray-900">
-                                    Xác nhận hủy đặt phòng
+                                    {t('payment.modal.title')}
                                 </h3>
-                                <p className="text-xs text-gray-500">Mã đơn: {booking.bookingCode}</p>
+                                <p className="text-xs text-gray-500">{t('payment.modal.code', { code: booking.bookingCode })}</p>
                             </div>
                         </div>
 
                         <p className="text-sm text-gray-600 leading-relaxed">
-                            Bạn có chắc chắn muốn hủy đơn đặt phòng này? Phòng sẽ được giải phóng ngay lập tức cho khách hàng khác.
+                            {t('payment.modal.desc')}
                         </p>
 
                         {cancelError && (
@@ -341,7 +385,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                                 onClick={() => setShowCancelModal(false)}
                                 className="flex-1 py-2.5 px-4 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
                             >
-                                Không, quay lại
+                                {t('payment.modal.back')}
                             </button>
                             <button
                                 type="button"
@@ -350,7 +394,7 @@ export function VietQRDisplay({ booking, onSuccess, onExpired, onCancel, lotId }
                                 className="flex-1 py-2.5 px-4 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                                Xác nhận hủy
+                                {t('payment.modal.confirm')}
                             </button>
                         </div>
                     </div>

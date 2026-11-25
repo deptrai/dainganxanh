@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { MapPin } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 const MiniMap = dynamic(() => import('@/components/admin/MiniMap'), { ssr: false })
 
@@ -12,11 +13,12 @@ interface MapSectionProps {
 }
 
 export function MapSection({ lat, lng, label }: MapSectionProps) {
+    const t = useTranslations('eco.detail')
     if (lat == null || lng == null) {
         return (
             <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 flex items-center gap-2 text-gray-500">
                 <MapPin className="w-5 h-5" />
-                <span>Chưa có vị trí</span>
+                <span>{t('noLocation')}</span>
             </div>
         )
     }

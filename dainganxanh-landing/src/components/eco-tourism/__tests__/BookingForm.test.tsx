@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { BookingForm } from '../BookingForm'
 
 describe('BookingForm Component', () => {
@@ -19,7 +20,7 @@ describe('BookingForm Component', () => {
   })
 
   it('renders all form inputs and button', () => {
-    render(<BookingForm {...defaultProps} />)
+    renderWithIntl(<BookingForm {...defaultProps} />)
     expect(screen.getByPlaceholderText('Nguyễn Văn A')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('0901234567')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('email@example.com')).toBeInTheDocument()
@@ -28,7 +29,7 @@ describe('BookingForm Component', () => {
   })
 
   it('validates required fields on submit', async () => {
-    render(<BookingForm {...defaultProps} />)
+    renderWithIntl(<BookingForm {...defaultProps} />)
     fireEvent.click(screen.getByRole('button', { name: 'Đặt phòng' }))
 
     expect(await screen.findByText('Vui lòng nhập họ tên')).toBeInTheDocument()
@@ -37,7 +38,7 @@ describe('BookingForm Component', () => {
   })
 
   it('validates invalid phone number format', async () => {
-    render(<BookingForm {...defaultProps} />)
+    renderWithIntl(<BookingForm {...defaultProps} />)
     fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'Trần Văn B' } })
     fireEvent.change(screen.getByPlaceholderText('0901234567'), { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'Đặt phòng' }))
@@ -63,7 +64,7 @@ describe('BookingForm Component', () => {
       json: async () => mockBookingResponse,
     })
 
-    render(<BookingForm {...defaultProps} />)
+    renderWithIntl(<BookingForm {...defaultProps} />)
     fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'Nguyễn Văn A' } })
     fireEvent.change(screen.getByPlaceholderText('0901234567'), { target: { value: '0987654321' } })
     fireEvent.change(screen.getByPlaceholderText('email@example.com'), { target: { value: 'test@dainganxanh.vn' } })
@@ -85,7 +86,7 @@ describe('BookingForm Component', () => {
       json: async () => ({ error: 'Phòng đã có người đặt trong thời gian này.' }),
     })
 
-    render(<BookingForm {...defaultProps} />)
+    renderWithIntl(<BookingForm {...defaultProps} />)
     fireEvent.change(screen.getByPlaceholderText('Nguyễn Văn A'), { target: { value: 'Nguyễn Văn A' } })
     fireEvent.change(screen.getByPlaceholderText('0901234567'), { target: { value: '0987654321' } })
     fireEvent.click(screen.getByRole('button', { name: 'Đặt phòng' }))
@@ -95,7 +96,7 @@ describe('BookingForm Component', () => {
   })
 
   it('disables submit button and shows pricing error if provided', () => {
-    render(<BookingForm {...defaultProps} pricingError="Yêu cầu đặt tối thiểu 2 đêm" />)
+    renderWithIntl(<BookingForm {...defaultProps} pricingError="Yêu cầu đặt tối thiểu 2 đêm" />)
     expect(screen.getByText('Yêu cầu đặt tối thiểu 2 đêm')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Đặt phòng' })).toBeDisabled()
   })

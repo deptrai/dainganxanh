@@ -1,9 +1,9 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { ScaleHover } from '@/components/MotionWrapper'
 
 interface CTAButtonProps {
     href?: string
-    children?: React.ReactNode
+    children: React.ReactNode
     variant?: 'primary' | 'secondary'
     size?: 'default' | 'large'
     className?: string
@@ -11,7 +11,7 @@ interface CTAButtonProps {
 
 export function CTAButton({
     href = '/pricing',
-    children = 'Gieo Mầm Ngay',
+    children,
     variant = 'primary',
     size = 'default',
     className = '',

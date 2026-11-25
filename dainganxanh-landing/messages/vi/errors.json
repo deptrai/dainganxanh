@@ -1,0 +1,36 @@
+{
+  "checkout": {
+    "outOfStock": "Số lượng cây còn lại không đủ",
+    "invalidQuantity": "Số lượng cây không hợp lệ",
+    "createOrderFailed": "Không thể tạo đơn hàng, vui lòng thử lại",
+    "paymentExpired": "Phiên thanh toán đã hết hạn"
+  },
+  "store": {
+    "productNotFound": "Không tìm thấy sản phẩm",
+    "outOfStock": "Sản phẩm đã hết hàng",
+    "priceMismatch": "Giá sản phẩm đã thay đổi, vui lòng tải lại trang",
+    "createFailed": "Không thể tạo đơn hàng cửa hàng",
+    "statusFailed": "Không thể cập nhật trạng thái đơn hàng"
+  },
+  "eco": {
+    "roomNotFound": "Không tìm thấy phòng nghỉ",
+    "roomUnavailable": "Phòng không còn trống trong khoảng thời gian đã chọn",
+    "datesInvalid": "Ngày nhận và trả phòng không hợp lệ",
+    "createFailed": "Không thể tạo lịch đặt phòng",
+    "voucherInvalid": "Mã voucher không hợp lệ hoặc đã hết hạn"
+  },
+  "auth": {
+    "invalidPhone": "Số điện thoại không hợp lệ",
+    "invalidEmail": "Email không hợp lệ",
+    "otpFailed": "Mã xác thực OTP không chính xác hoặc đã hết hạn",
+    "sendOtpFailed": "Không thể gửi mã xác thực, vui lòng thử lại sau",
+    "userExists": "Người dùng đã tồn tại",
+    "userNotFound": "Không tìm thấy thông tin tài khoản",
+    "unauthorized": "Vui lòng đăng nhập để tiếp tục"
+  },
+  "common": {
+    "networkError": "Lỗi kết nối mạng, vui lòng kiểm tra lại",
+    "serverError": "Có lỗi xảy ra phía máy chủ, vui lòng thử lại sau",
+    "unknown": "Đã có lỗi xảy ra"
+  }
+}

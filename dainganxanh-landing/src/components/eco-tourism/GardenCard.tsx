@@ -1,5 +1,7 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
 import { MapPin } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
+import { formatCurrency } from '@/lib/format'
 
 export interface GardenLot {
     id: string
@@ -9,11 +11,10 @@ export interface GardenLot {
     priceFrom: number | null
 }
 
-function formatVND(value: number): string {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
-}
-
 export function GardenCard({ lot }: { lot: GardenLot }) {
+    const t = useTranslations('eco')
+    const locale = useLocale()
+
     return (
         <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <Link href={'/eco-tourism/' + lot.id}>
@@ -40,16 +41,16 @@ export function GardenCard({ lot }: { lot: GardenLot }) {
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                     <div>
-                        <p className="text-xs text-gray-400">Giá từ</p>
+                        <p className="text-xs text-gray-400">{t('card.priceFrom')}</p>
                         <p className="text-lg font-bold text-emerald-600">
-                            {lot.priceFrom ? formatVND(lot.priceFrom) : '—'}
+                            {lot.priceFrom ? formatCurrency(lot.priceFrom, locale) : '—'}
                         </p>
                     </div>
                     <Link
                         href={'/eco-tourism/' + lot.id}
                         className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                     >
-                        Xem phòng
+                        {t('card.viewRooms')}
                     </Link>
                 </div>
             </div>

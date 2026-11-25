@@ -2,7 +2,9 @@
 
 import { motion } from "framer-motion";
 import { Sprout, Heart, Users, Shield, ArrowRight } from "lucide-react";
-import { formatVND, type CostBreakdown, type PackageInfo, type PackageType } from "@/lib/constants";
+import { useTranslations, useLocale } from "next-intl";
+import { formatCurrency } from "@/lib/format";
+import { type CostBreakdown, type PackageInfo, type PackageType } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const iconMap = { Sprout, Heart, Users, Shield };
@@ -16,6 +18,9 @@ interface PackageCardProps {
 }
 
 export function PackageCard({ packageData, packageType, onSelectPackage, highlighted, className }: PackageCardProps) {
+    const t = useTranslations('pricing');
+    const locale = useLocale();
+
     const getIcon = (iconName: string) => {
         const Icon = iconMap[iconName as keyof typeof iconMap];
         return Icon ? <Icon className="w-5 h-5" /> : null;
@@ -40,7 +45,7 @@ export function PackageCard({ packageData, packageType, onSelectPackage, highlig
             {isInsurance && (
                 <div className="absolute top-4 right-4 flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
                     <Shield className="w-3.5 h-3.5" />
-                    Kèm Bảo Hiểm
+                    {t('card.withInsurance')}
                 </div>
             )}
 
@@ -56,15 +61,15 @@ export function PackageCard({ packageData, packageType, onSelectPackage, highlig
                 </div>
                 <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-emerald-600">
-                        {formatVND(packageData.price)}
+                        {formatCurrency(packageData.price, locale)}
                     </span>
-                    <span className="text-lg text-gray-600">/cây</span>
+                    <span className="text-lg text-gray-600">{t('card.perTree')}</span>
                 </div>
             </div>
 
             {/* Cost Breakdown */}
             <div className="mb-6 space-y-3">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Chi phí bao gồm:</p>
+                <p className="text-sm font-semibold text-gray-700 mb-3">{t('card.breakdownTitle')}</p>
                 {packageData.breakdown.map((item: CostBreakdown, index: number) => (
                         <motion.div
                             key={index}
@@ -80,7 +85,7 @@ export function PackageCard({ packageData, packageType, onSelectPackage, highlig
                                 <div className="flex items-center justify-between gap-2 mb-1">
                                     <p className="text-sm font-medium text-gray-900">{item.label}</p>
                                     <span className="text-sm font-semibold whitespace-nowrap text-emerald-600">
-                                        {formatVND(item.amount)}
+                                        {formatCurrency(item.amount, locale)}
                                     </span>
                                 </div>
                                 <p className="text-xs text-gray-600">{item.description}</p>
@@ -91,7 +96,7 @@ export function PackageCard({ packageData, packageType, onSelectPackage, highlig
 
             {/* Features */}
             <div className="mb-6 space-y-2">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Quyền lợi:</p>
+                <p className="text-sm font-semibold text-gray-700 mb-3">{t('card.featuresTitle')}</p>
                 {packageData.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm text-gray-700">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -103,7 +108,7 @@ export function PackageCard({ packageData, packageType, onSelectPackage, highlig
             {/* CTA Button */}
             <motion.button
                 type="button"
-                aria-label="Tùy chỉnh số lượng cây muốn trồng"
+                aria-label={t('card.customizeAria')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onSelectPackage}
@@ -114,7 +119,7 @@ export function PackageCard({ packageData, packageType, onSelectPackage, highlig
                     "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600"
                 )}
             >
-                <span>Tùy chỉnh số lượng</span>
+                <span>{t('card.customize')}</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </motion.button>
 

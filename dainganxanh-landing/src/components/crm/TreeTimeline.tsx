@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useLocale } from 'next-intl'
 import Image from 'next/image'
 import { PHOTO_PLACEHOLDER_MONTHS, HARVEST_MONTHS } from '@/lib/constants'
 
@@ -108,6 +109,7 @@ function StagePhoto({ photo }: { photo: TreePhoto }) {
 }
 
 export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos = [] }: TreeTimelineProps) {
+    const locale = useLocale()
     const currentStageIndex = useMemo(() => {
         return TIMELINE_STAGES.findIndex((stage, index) => {
             const nextStage = TIMELINE_STAGES[index + 1]
@@ -124,7 +126,7 @@ export default function TreeTimeline({ plantedAt, createdAt, ageInMonths, photos
     const getEstimatedDate = (monthsFromNow: number) => {
         const baseDate = plantedAt ? new Date(plantedAt) : new Date(createdAt)
         const estimatedDate = addMonths(baseDate, monthsFromNow)
-        return estimatedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
+        return estimatedDate.toLocaleDateString(locale === 'en' ? 'en-US' : 'vi-VN', { month: 'long', year: 'numeric' })
     }
 
     // Memoize photos grouped by stage - prevents recalculation on each render

@@ -1,8 +1,8 @@
 "use client"
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, usePathname } from '@/i18n/navigation'
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import {
     ClipboardDocumentListIcon,
     ChartBarIcon,
@@ -20,32 +20,36 @@ import {
     CalendarIcon,
     WrenchScrewdriverIcon,
     ShoppingBagIcon,
+    TruckIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
-    { name: 'Đơn hàng', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
-    { name: 'Đặt phòng', href: '/crm/admin/bookings', icon: CalendarIcon },
-    { name: 'Lịch phòng', href: '/crm/admin/rooms', icon: WrenchScrewdriverIcon },
-    { name: 'Người dùng', href: '/crm/admin/users', icon: UsersIcon },
-    { name: 'Lô cây', href: '/crm/admin/lots', icon: RectangleGroupIcon },
-    { name: 'Hoa hồng', href: '/crm/admin/referrals', icon: GiftIcon },
-    { name: 'Rút tiền', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
-    { name: 'Lịch sử Casso', href: '/crm/admin/casso', icon: ArrowPathIcon },
-    { name: 'Phantom', href: '/crm/admin/phantom', icon: UserPlusIcon },
-    { name: 'Blog', href: '/crm/admin/blog', icon: DocumentTextIcon },
-    { name: 'Thống kê', href: '/crm/admin/analytics', icon: ChartBarIcon },
-    { name: 'Cài đặt', href: '/crm/admin/settings', icon: Cog6ToothIcon },
-]
+    { key: 'orders', href: '/crm/admin/orders', icon: ClipboardDocumentListIcon },
+    { key: 'bookings', href: '/crm/admin/bookings', icon: CalendarIcon },
+    { key: 'rooms', href: '/crm/admin/rooms', icon: WrenchScrewdriverIcon },
+    { key: 'products', href: '/crm/admin/products', icon: ShoppingBagIcon },
+    { key: 'storeOrders', href: '/crm/admin/store-orders', icon: TruckIcon },
+    { key: 'users', href: '/crm/admin/users', icon: UsersIcon },
+    { key: 'lots', href: '/crm/admin/lots', icon: RectangleGroupIcon },
+    { key: 'referrals', href: '/crm/admin/referrals', icon: GiftIcon },
+    { key: 'withdrawals', href: '/crm/admin/withdrawals', icon: BanknotesIcon },
+    { key: 'casso', href: '/crm/admin/casso', icon: ArrowPathIcon },
+    { key: 'phantom', href: '/crm/admin/phantom', icon: UserPlusIcon },
+    { key: 'blog', href: '/crm/admin/blog', icon: DocumentTextIcon },
+    { key: 'analytics', href: '/crm/admin/analytics', icon: ChartBarIcon },
+    { key: 'settings', href: '/crm/admin/settings', icon: Cog6ToothIcon },
+] as const
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+    const t = useTranslations('admin.sidebar')
     const pathname = usePathname()
 
     return (
         <div className="flex flex-col h-full">
             {/* Logo/Header */}
             <div className="p-6 border-b border-gray-200 shrink-0">
-                <h1 className="text-xl font-bold text-green-600">Đại Ngàn Xanh</h1>
-                <p className="text-sm text-gray-500 mt-1">Quản trị hệ thống</p>
+                <h1 className="text-xl font-bold text-green-600">{t('title')}</h1>
+                <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
             </div>
 
             {/* Navigation */}
@@ -55,7 +59,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     const Icon = item.icon
                     return (
                         <Link
-                            key={item.name}
+                            key={item.key}
                             href={item.href}
                             onClick={onNavigate}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -65,7 +69,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                             }`}
                         >
                             <Icon className="w-5 h-5 shrink-0" />
-                            <span>{item.name}</span>
+                            <span>{t(`nav.${item.key}`)}</span>
                         </Link>
                     )
                 })}
@@ -79,7 +83,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
                 >
                     <HomeIcon className="w-5 h-5 shrink-0" />
-                    <span>Về trang người dùng</span>
+                    <span>{t('backToUser')}</span>
                 </Link>
             </div>
         </div>
@@ -87,6 +91,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export default function AdminSidebar() {
+    const t = useTranslations('admin.sidebar')
     const [open, setOpen] = useState(false)
     const pathname = usePathname()
 
@@ -101,7 +106,7 @@ export default function AdminSidebar() {
             <button
                 onClick={() => setOpen(true)}
                 className="lg:hidden fixed top-[110px] left-3 z-40 p-2 bg-white border border-gray-200 rounded-lg shadow-sm"
-                aria-label="Mở menu"
+                aria-label={t('aria.openMenu')}
             >
                 <Bars3Icon className="w-5 h-5 text-gray-700" />
             </button>
@@ -121,7 +126,7 @@ export default function AdminSidebar() {
                 <button
                     onClick={() => setOpen(false)}
                     className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-100"
-                    aria-label="Đóng menu"
+                    aria-label={t('aria.closeMenu')}
                 >
                     <XMarkIcon className="w-5 h-5 text-gray-500" />
                 </button>

@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { formatDistanceToNow } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { useRouter } from '@/i18n/navigation'
+import { useLocale, useTranslations } from 'next-intl'
 import { createBrowserClient } from '@/lib/supabase/client'
 import {
     subscribeToNotifications,
@@ -18,8 +17,10 @@ export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false)
     const [notifications, setNotifications] = useState<NotificationType[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
-    const [isLoading, setIsLoading] = useState(true)
+    const [_isLoading, setIsLoading] = useState(true)
     const router = useRouter()
+    const locale = useLocale()
+    const t = useTranslations('crm.notifications')
 
     // Get current user and setup subscription
     useEffect(() => {
@@ -45,9 +46,14 @@ export default function NotificationBell() {
                         setNotifications((prev) => [newNotification, ...prev])
                         setUnreadCount((prev) => prev + 1)
 
-                        // Show browser notification if permitted
+                        // Show browser notification if permitted and title is non-null
                         // Using 'window.Notification' to avoid shadowing with our NotificationType
-                        if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                        if (
+                            newNotification.title &&
+                            typeof window !== 'undefined' &&
+                            'Notification' in window &&
+                            window.Notification.permission === 'granted'
+                        ) {
                             new window.Notification(newNotification.title, {
                                 body: newNotification.body || undefined,
                                 icon: '/icon-192x192.png',
@@ -100,10 +106,28 @@ export default function NotificationBell() {
     }, [router])
 
     const formatTimeAgo = (timestamp: string) => {
-        return formatDistanceToNow(new Date(timestamp), {
-            addSuffix: true,
-            locale: vi
-        })
+        try {
+            const date = new Date(timestamp)
+            const diffSeconds = Math.round((date.getTime() - Date.now()) / 1000)
+            if (Math.abs(diffSeconds) < 60) {
+                return locale === 'en' ? 'just now' : 'vừa xong'
+            }
+            const diffMinutes = Math.round(diffSeconds / 60)
+            if (Math.abs(diffMinutes) < 60) {
+                const rtf = new Intl.RelativeTimeFormat(locale === 'en' ? 'en' : 'vi', { numeric: 'auto' })
+                return rtf.format(diffMinutes, 'minute')
+            }
+            const diffHours = Math.round(diffMinutes / 60)
+            if (Math.abs(diffHours) < 24) {
+                const rtf = new Intl.RelativeTimeFormat(locale === 'en' ? 'en' : 'vi', { numeric: 'auto' })
+                return rtf.format(diffHours, 'hour')
+            }
+            const diffDays = Math.round(diffHours / 24)
+            const rtf = new Intl.RelativeTimeFormat(locale === 'en' ? 'en' : 'vi', { numeric: 'auto' })
+            return rtf.format(diffDays, 'day')
+        } catch {
+            return timestamp
+        }
     }
 
     const handleMarkAllAsRead = useCallback(async () => {
@@ -160,14 +184,14 @@ export default function NotificationBell() {
                     <div className="absolute right-0 z-20 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
                         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                             <h3 className="text-lg font-semibold text-gray-900">
-                                Thông báo
+                                {t('title')}
                             </h3>
                             {unreadCount > 0 && (
                                 <button
                                     onClick={handleMarkAllAsRead}
                                     className="text-sm text-green-600 hover:text-green-700 font-medium"
                                 >
-                                    Đánh dấu tất cả đã đọc
+                                    {t('markAllAsRead')}
                                 </button>
                             )}
                         </div>
@@ -187,7 +211,7 @@ export default function NotificationBell() {
                                         d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
                                     />
                                 </svg>
-                                <p>Chưa có thông báo mới</p>
+                                <p>{t('empty')}</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-100">
@@ -209,7 +233,7 @@ export default function NotificationBell() {
                                             {/* Content */}
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-medium text-gray-900">
-                                                    {notification.title}
+                                                    {notification.title || t('untitled')}
                                                 </p>
                                                 {notification.body && (
                                                     <p className="text-sm text-gray-600 mt-1">

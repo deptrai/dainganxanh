@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 export interface BookingResponse {
     bookingId: string
@@ -36,6 +37,7 @@ export function BookingForm({
     onSuccess,
     pricingError,
 }: BookingFormProps) {
+    const t = useTranslations('eco')
     const [form, setForm] = useState({
         guest_name: '',
         guest_phone: '',
@@ -48,11 +50,11 @@ export function BookingForm({
 
     const validate = (): boolean => {
         const next: Record<string, string> = {}
-        if (!form.guest_name.trim()) next.guest_name = 'Vui lòng nhập họ tên'
-        if (!/^0\d{9}$/.test(form.guest_phone)) next.guest_phone = 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)'
-        if (form.guest_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.guest_email)) next.guest_email = 'Email không hợp lệ'
-        if (guestsCount < 1 || guestsCount > capacity) next.guests_count = `Số khách phải từ 1 đến ${capacity}`
-        if (form.special_requests.length > 500) next.special_requests = 'Yêu cầu đặc biệt không quá 500 ký tự'
+        if (!form.guest_name.trim()) next.guest_name = t('form.errors.nameRequired')
+        if (!/^0\d{9}$/.test(form.guest_phone)) next.guest_phone = t('form.errors.phoneInvalid')
+        if (form.guest_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.guest_email)) next.guest_email = t('form.errors.emailInvalid')
+        if (guestsCount < 1 || guestsCount > capacity) next.guests_count = t('form.errors.guestsRange', { capacity })
+        if (form.special_requests.length > 500) next.special_requests = t('form.errors.specialRequestsTooLong')
         setErrors(next)
         return Object.keys(next).length === 0
     }
@@ -83,12 +85,12 @@ export function BookingForm({
             const data = await res.json()
 
             if (!res.ok) {
-                throw new Error(data.error || 'Có lỗi xảy ra')
+                throw new Error(data.error || t('form.errors.generalError'))
             }
 
             onSuccess(data)
         } catch (err) {
-            setSubmitError(err instanceof Error ? err.message : 'Có lỗi xảy ra')
+            setSubmitError(err instanceof Error ? err.message : t('form.errors.generalError'))
         } finally {
             setIsSubmitting(false)
         }
@@ -99,46 +101,46 @@ export function BookingForm({
 
     return (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-5">
-            <h2 className="text-xl font-semibold text-gray-900">Thông tin đặt phòng</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t('form.title')}</h2>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.name')}</label>
                 <input
                     type="text"
                     value={form.guest_name}
                     onChange={(e) => setForm({ ...form, guest_name: e.target.value })}
                     className={inputClass('guest_name')}
-                    placeholder="Nguyễn Văn A"
+                    placeholder={t('form.namePlaceholder')}
                 />
                 {errors.guest_name && <p className="text-sm text-red-600 mt-1">{errors.guest_name}</p>}
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.phone')}</label>
                 <input
                     type="tel"
                     value={form.guest_phone}
                     onChange={(e) => setForm({ ...form, guest_phone: e.target.value })}
                     className={inputClass('guest_phone')}
-                    placeholder="0901234567"
+                    placeholder={t('form.phonePlaceholder')}
                 />
                 {errors.guest_phone && <p className="text-sm text-red-600 mt-1">{errors.guest_phone}</p>}
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email (tuỳ chọn)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.email')}</label>
                 <input
                     type="email"
                     value={form.guest_email}
                     onChange={(e) => setForm({ ...form, guest_email: e.target.value })}
                     className={inputClass('guest_email')}
-                    placeholder="email@example.com"
+                    placeholder={t('form.emailPlaceholder')}
                 />
                 {errors.guest_email && <p className="text-sm text-red-600 mt-1">{errors.guest_email}</p>}
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Số khách *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.guests')}</label>
                 <input
                     type="number"
                     min={1}
@@ -147,19 +149,19 @@ export function BookingForm({
                     onChange={(e) => onGuestsCountChange(parseInt(e.target.value, 10) || 1)}
                     className={inputClass('guests_count')}
                 />
-                <p className="text-xs text-gray-500 mt-1">Số khách tối đa: {capacity}</p>
+                <p className="text-xs text-gray-500 mt-1">{t('form.maxGuests', { count: capacity })}</p>
                 {errors.guests_count && <p className="text-sm text-red-600 mt-1">{errors.guests_count}</p>}
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Yêu cầu đặc biệt (tuỳ chọn)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.specialRequests')}</label>
                 <textarea
                     value={form.special_requests}
                     onChange={(e) => setForm({ ...form, special_requests: e.target.value })}
                     rows={3}
                     maxLength={500}
                     className={inputClass('special_requests')}
-                    placeholder="Ví dụ: cần thêm giường phụ, view vườn..."
+                    placeholder={t('form.specialRequestsPlaceholder')}
                 />
                 <p className="text-xs text-gray-400 mt-1 text-right">{form.special_requests.length}/500</p>
                 {errors.special_requests && <p className="text-sm text-red-600 mt-1">{errors.special_requests}</p>}
@@ -179,10 +181,10 @@ export function BookingForm({
                 {isSubmitting ? (
                     <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Đang xử lý...
+                        {t('form.processing')}
                     </>
                 ) : (
-                    'Đặt phòng'
+                    t('form.submit')
                 )}
             </button>
         </form>

@@ -1,12 +1,12 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { DateRangePicker } from '../DateRangePicker'
 
 describe('DateRangePicker', () => {
     it('renders date inputs with min/max constraints', () => {
         const onCheckIn = jest.fn()
         const onCheckOut = jest.fn()
-        render(
+        renderWithIntl(
             <DateRangePicker
                 checkIn=""
                 checkOut=""
@@ -23,7 +23,7 @@ describe('DateRangePicker', () => {
     })
 
     it('shows nights count when dates selected', () => {
-        render(
+        renderWithIntl(
             <DateRangePicker
                 checkIn="2026-09-10"
                 checkOut="2026-09-12"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Share2, Copy, Check, MessageCircle, Facebook, Mail, Twitter, Linkedin } from "lucide-react";
 import { getShareMessage, ShareContext, ShareMessageData } from "@/lib/shareMessages";
@@ -15,6 +16,7 @@ interface ShareButtonProps {
 }
 
 export function ShareButton({ context, data, source = 'success_screen', className = "", onShareComplete }: ShareButtonProps) {
+    const t = useTranslations('common');
     const [copied, setCopied] = useState(false);
     const [showFallback, setShowFallback] = useState(false);
     const [shareError, setShareError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
             } catch (error) {
                 // User cancelled or share failed
                 if ((error as Error).name !== "AbortError") {
-                    setShareError("Không thể chia sẻ. Vui lòng thử lại hoặc sao chép link.");
+                    setShareError(t('share.failed'));
                     // Fallback to custom UI on error
                     setShowFallback(true);
                 }
@@ -106,7 +108,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
 
             onShareComplete?.('copy');
         } catch (error) {
-            setShareError("Không thể sao chép. Vui lòng thử lại.");
+            setShareError(t('share.copyFailed'));
             setTimeout(() => setShareError(null), 3000);
         }
     };
@@ -240,7 +242,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                 className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3"
             >
                 <Share2 className="w-5 h-5" />
-                <span>Chia sẻ thành tựu</span>
+                <span>{t('share.button')}</span>
             </button>
 
             {/* Error Message */}
@@ -262,14 +264,14 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                     className="mt-4 p-4 bg-gray-50 rounded-xl"
                 >
                     <p className="text-sm text-gray-600 mb-3 text-center">
-                        Chia sẻ qua:
+                        {t('share.via')}
                     </p>
                     <div className="grid grid-cols-4 gap-3 mb-3">
                         {/* Facebook */}
                         <button
                             onClick={shareToFacebook}
                             className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors flex items-center justify-center"
-                            aria-label="Chia sẻ lên Facebook"
+                            aria-label={t('share.facebook')}
                         >
                             <Facebook className="w-5 h-5" />
                         </button>
@@ -278,7 +280,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                         <button
                             onClick={shareToZalo}
                             className="p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors flex items-center justify-center"
-                            aria-label="Chia sẻ lên Zalo"
+                            aria-label={t('share.zalo')}
                         >
                             <MessageCircle className="w-5 h-5" />
                         </button>
@@ -287,7 +289,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                         <button
                             onClick={shareToTwitter}
                             className="p-3 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition-colors flex items-center justify-center"
-                            aria-label="Chia sẻ lên Twitter"
+                            aria-label={t('share.twitter')}
                         >
                             <Twitter className="w-5 h-5" />
                         </button>
@@ -296,7 +298,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                         <button
                             onClick={shareToLinkedIn}
                             className="p-3 bg-blue-700 text-white rounded-full hover:bg-blue-800 transition-colors flex items-center justify-center"
-                            aria-label="Chia sẻ lên LinkedIn"
+                            aria-label={t('share.linkedin')}
                         >
                             <Linkedin className="w-5 h-5" />
                         </button>
@@ -307,7 +309,7 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                         <button
                             onClick={shareViaEmail}
                             className="p-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                            aria-label="Chia sẻ qua Email"
+                            aria-label={t('share.email')}
                         >
                             <Mail className="w-4 h-4" />
                             <span className="text-sm">Email</span>
@@ -317,17 +319,17 @@ export function ShareButton({ context, data, source = 'success_screen', classNam
                         <button
                             onClick={copyToClipboard}
                             className="p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
-                            aria-label="Sao chép link"
+                            aria-label={t('share.copyLink')}
                         >
                             {copied ? (
                                 <>
                                     <Check className="w-4 h-4" />
-                                    <span className="text-sm">Đã copy!</span>
+                                    <span className="text-sm">{t('share.copied')}</span>
                                 </>
                             ) : (
                                 <>
                                     <Copy className="w-4 h-4" />
-                                    <span className="text-sm">Copy link</span>
+                                    <span className="text-sm">{t('share.copyLink')}</span>
                                 </>
                             )}
                         </button>

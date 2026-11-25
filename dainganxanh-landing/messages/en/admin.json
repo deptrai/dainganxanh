@@ -1,0 +1,135 @@
+{
+  "sidebar": {
+    "title": "Dai Ngan Xanh",
+    "subtitle": "System Administration",
+    "backToUser": "Back to user page",
+    "aria": {
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
+    },
+    "nav": {
+      "orders": "Orders",
+      "bookings": "Bookings",
+      "rooms": "Room Calendar",
+      "products": "Products",
+      "storeOrders": "Store Orders",
+      "users": "Users",
+      "lots": "Tree Lots",
+      "referrals": "Referrals",
+      "withdrawals": "Withdrawals",
+      "casso": "Casso History",
+      "phantom": "Phantom",
+      "blog": "Blog",
+      "analytics": "Analytics",
+      "settings": "Settings"
+    }
+  },
+  "bookingsTable": {
+    "emptyTitle": "No bookings found",
+    "emptyDescription": "Try adjusting your filters or check back later.",
+    "thCode": "Booking Code",
+    "thGuest": "Guest",
+    "thRoom": "Room",
+    "thGarden": "Garden",
+    "thCheckIn": "Check-in",
+    "thCheckOut": "Check-out",
+    "thStatus": "Status",
+    "thTotal": "Total Amount",
+    "anonymousGuest": "Anonymous"
+  },
+  "storeOrders": {
+    "tabs": {
+      "all": "All",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "emptyTitle": "No store orders found",
+    "emptyFiltered": "No orders match this status filter.",
+    "emptyDefault": "No store orders have been created yet.",
+    "thCode": "Order Code",
+    "thCustomer": "Customer",
+    "thProducts": "Products",
+    "thTotal": "Total Amount",
+    "thAddress": "Address",
+    "thStatus": "Status",
+    "thDate": "Created Date",
+    "thActions": "Actions",
+    "actions": {
+      "confirm": "Confirm Order",
+      "process": "Start Processing",
+      "ship": "Ship Order",
+      "deliver": "Complete",
+      "cancel": "Cancel Order"
+    },
+    "productDetails": "Product Details",
+    "noProducts": "No products",
+    "otherProducts": "other items",
+    "quantity": "Quantity",
+    "unitPrice": "Unit Price",
+    "subtotal": "Subtotal",
+    "shippingFee": "Shipping Fee",
+    "freeShipping": "Free",
+    "total": "Total",
+    "shippingAddress": "Shipping Address",
+    "province": "Province/City",
+    "note": "Note",
+    "payment": "Payment",
+    "banking": "Bank Transfer",
+    "cod": "Cash on Delivery (COD)",
+    "transactionCode": "Trans Code",
+    "paymentDeadline": "Payment Deadline",
+    "shipping": "Shipping",
+    "trackingCode": "Tracking Number",
+    "cancellationReason": "Cancellation Reason",
+    "confirmBankingAlert": "Confirm that bank transfer payment has been received for this order?",
+    "cancelModal": {
+      "title": "Cancel order #{code}",
+      "description": "Are you sure you want to cancel this order? This action will restore reserved product stock.",
+      "reasonLabel": "Cancellation reason (default: Admin cancelled)",
+      "placeholder": "Enter cancellation reason...",
+      "confirm": "Confirm Cancel",
+      "close": "Close"
+    },
+    "aria": {
+      "closeError": "Close error notification",
+      "collapseDetails": "Collapse details",
+      "viewDetails": "View order details"
+    },
+    "errors": {
+      "enterTracking": "Please enter tracking number",
+      "generic": "An error occurred while updating status. Please try again."
+    }
+  },
+  "translation": {
+    "tabVi": "Vietnamese",
+    "tabEn": "English",
+    "hasEnContentTooltip": "English content available",
+    "badge": {
+      "viOnly": "VI only",
+      "viEn": "VI + EN",
+      "viOnlyTooltip": "Vietnamese only, not translated to English",
+      "viEnTooltip": "English translation available"
+    },
+    "fieldName": "Name (EN)",
+    "fieldDescription": "Description (EN)",
+    "fieldExcerpt": "Excerpt (EN)",
+    "fieldMetaTitle": "Meta Title (EN)",
+    "fieldMetaDesc": "Meta Description (EN)",
+    "fieldSlug": "Slug (EN)",
+    "fieldContent": "Content (EN)",
+    "fieldRegion": "Region (EN)",
+    "fieldTitle": "Title (EN)",
+    "seoOptional": "SEO (optional)",
+    "seoEnOptional": "English SEO (optional)",
+    "characters": "characters",
+    "placeholderTitle": "Enter English title...",
+    "placeholderSlug": "english-url-slug",
+    "placeholderExcerpt": "Short summary in English...",
+    "placeholderMetaTitle": "English meta title...",
+    "placeholderMetaDesc": "English meta description..."
+  }
+}

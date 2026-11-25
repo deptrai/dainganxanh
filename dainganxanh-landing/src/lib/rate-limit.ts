@@ -5,8 +5,9 @@
  * multiple replicas, replace this with an upstash/redis-based limiter.
  *
  * Usage:
- *   import { rateLimit } from '@/lib/rate-limit'
+ *   import { rateLimit, rateLimitByKey } from '@/lib/rate-limit'
  *
+ *   // In API route handler:
  *   const result = rateLimit(req, { limit: 10, windowMs: 60_000 })
  *   if (!result.ok) {
  *     return NextResponse.json({ error: 'Too many requests' }, {
@@ -14,20 +15,24 @@
  *       headers: { 'Retry-After': String(result.retryAfterSec) },
  *     })
  *   }
+ *
+ *   // In server component or custom context:
+ *   const result = rateLimitByKey(clientIp, { limit: 20, windowMs: 60_000, keyPrefix: 'voucher' })
+ *   if (!result.ok) { ... }
  */
 
 import { NextRequest } from 'next/server'
 
-interface RateLimitOptions {
+export interface RateLimitOptions {
     /** Maximum requests allowed within `windowMs`. Default: 20 */
     limit?: number
     /** Window duration in milliseconds. Default: 60_000 (1 min) */
     windowMs?: number
-    /** Key prefix to namespace different limiters. Default: route pathname */
+    /** Key prefix to namespace different limiters. Default: route pathname or empty */
     keyPrefix?: string
 }
 
-interface RateLimitResult {
+export interface RateLimitResult {
     ok: boolean
     remaining: number
     /** Seconds to wait before retrying (only present when ok=false) */
@@ -53,28 +58,19 @@ function evict(key: string, windowMs: number): void {
 }
 
 /**
- * Extract a stable client identifier from the request.
- * Priority: X-Forwarded-For (behind proxy) → remoteAddress → fallback.
+ * Core sliding-window rate limiter by string key.
  */
-function getClientKey(req: NextRequest, prefix: string): string {
-    const forwarded = req.headers.get('x-forwarded-for')
-    const ip = forwarded ? forwarded.split(',')[0].trim() : (req.headers.get('x-real-ip') ?? 'unknown')
-    return `rl:${prefix}:${ip}`
-}
-
-export function rateLimit(req: NextRequest, options: RateLimitOptions = {}): RateLimitResult {
+export function rateLimitByKey(key: string, options: RateLimitOptions = {}): RateLimitResult {
     const { limit = 20, windowMs = 60_000, keyPrefix } = options
-    const prefix = keyPrefix ?? req.nextUrl.pathname
-
-    const key = getClientKey(req, prefix)
-    evict(key, windowMs)
+    const fullKey = keyPrefix ? `rl:${keyPrefix}:${key}` : `rl:${key}`
+    evict(fullKey, windowMs)
 
     const now = Date.now()
-    const entry = store.get(key)
+    const entry = store.get(fullKey)
 
     if (!entry || now - entry.windowStart > windowMs) {
         // Start new window
-        store.set(key, { count: 1, windowStart: now })
+        store.set(fullKey, { count: 1, windowStart: now })
         return { ok: true, remaining: limit - 1 }
     }
 
@@ -85,4 +81,21 @@ export function rateLimit(req: NextRequest, options: RateLimitOptions = {}): Rat
 
     entry.count++
     return { ok: true, remaining: limit - entry.count }
+}
+
+/**
+ * Rate limiter wrapper for NextRequest route handlers.
+ */
+export function rateLimit(req: NextRequest, options: RateLimitOptions = {}): RateLimitResult {
+    const prefix = options.keyPrefix ?? req.nextUrl.pathname
+    const forwarded = req.headers.get('x-forwarded-for')
+    const ip = forwarded ? forwarded.split(',')[0].trim() : (req.headers.get('x-real-ip') ?? 'unknown')
+    return rateLimitByKey(ip, { ...options, keyPrefix: prefix })
+}
+
+/**
+ * Clear the internal rate-limit store (mainly for tests).
+ */
+export function _resetRateLimitStore(): void {
+    store.clear()
 }

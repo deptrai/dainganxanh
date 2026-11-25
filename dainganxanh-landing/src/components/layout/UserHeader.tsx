@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { LogOut, User, Shield } from "lucide-react";
-import Link from "next/link";
+import { Link } from '@/i18n/navigation'
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export function UserHeader() {
-    const router = useRouter();
+    const t = useTranslations('common');
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -80,19 +81,20 @@ export function UserHeader() {
                 <Link
                     href="/crm/admin"
                     className="flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                    title="Quản lý"
+                    title={t('nav.admin')}
                 >
                     <Shield className="w-4 h-4" />
-                    <span className="hidden sm:inline">Admin</span>
+                    <span className="hidden sm:inline">{t('nav.admin')}</span>
                 </Link>
             )}
+            <LanguageSwitcher />
             <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Đăng xuất"
+                title={t('nav.logout')}
             >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Đăng xuất</span>
+                <span className="hidden sm:inline">{t('nav.logout')}</span>
             </button>
         </div>
     );

@@ -1,8 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import BookingTable, { MyBooking } from '../BookingTable'
 import { formatDateVN, formatVND } from '@/lib/date'
 
 const mockPush = jest.fn()
+jest.mock('@/i18n/navigation', () => ({
+    useRouter: () => ({ push: mockPush }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+}))
 jest.mock('next/navigation', () => ({
     useRouter: () => ({ push: mockPush }),
 }))
@@ -75,7 +80,7 @@ describe('BookingTable', () => {
     })
 
     it('renders desktop table headers', () => {
-        render(<BookingTable {...defaultProps} />)
+        renderWithIntl(<BookingTable {...defaultProps} />)
         expect(screen.getByRole('columnheader', { name: 'Mã đặt phòng' })).toBeInTheDocument()
         expect(screen.getByRole('columnheader', { name: 'Phòng' })).toBeInTheDocument()
         expect(screen.getByRole('columnheader', { name: 'Khu vườn' })).toBeInTheDocument()
@@ -85,8 +90,19 @@ describe('BookingTable', () => {
         expect(screen.getAllByText('Tổng tiền').length).toBeGreaterThanOrEqual(1)
     })
 
+    it('renders desktop table headers in English when locale is en', () => {
+        renderWithIntl(<BookingTable {...defaultProps} />, { locale: 'en' })
+        expect(screen.getByRole('columnheader', { name: 'Booking code' })).toBeInTheDocument()
+        expect(screen.getByRole('columnheader', { name: 'Room' })).toBeInTheDocument()
+        expect(screen.getByRole('columnheader', { name: 'Garden' })).toBeInTheDocument()
+        expect(screen.getByRole('columnheader', { name: 'Check-in' })).toBeInTheDocument()
+        expect(screen.getByRole('columnheader', { name: 'Check-out' })).toBeInTheDocument()
+        expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument()
+        expect(screen.getAllByText('Total Amount').length).toBeGreaterThanOrEqual(1)
+    })
+
     it('renders booking data correctly in table and card list', () => {
-        render(<BookingTable {...defaultProps} />)
+        renderWithIntl(<BookingTable {...defaultProps} />)
 
         // Code
         const code1Elements = screen.getAllByText('BKABC123')
@@ -104,8 +120,8 @@ describe('BookingTable', () => {
         expect(screen.getAllByText('Vườn Đắk Lắk').length).toBeGreaterThanOrEqual(1)
 
         // Formatted dates
-        expect(screen.getAllByText('10/9/2026').length).toBeGreaterThanOrEqual(1)
-        expect(screen.getAllByText('12/9/2026').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText(/10\/0?9\/2026/).length).toBeGreaterThanOrEqual(1)
+        expect(screen.getAllByText(/12\/0?9\/2026/).length).toBeGreaterThanOrEqual(1)
 
         // Status badges
         expect(screen.getAllByText('Đã xác nhận').length).toBeGreaterThanOrEqual(1)
@@ -113,7 +129,7 @@ describe('BookingTable', () => {
     })
 
     it('navigates to /crm/my-bookings/[id] on row click', () => {
-        render(<BookingTable {...defaultProps} />)
+        renderWithIntl(<BookingTable {...defaultProps} />)
 
         const rows = screen.getAllByRole('row')
         expect(rows.length).toBe(3)
@@ -124,7 +140,7 @@ describe('BookingTable', () => {
     })
 
     it('renders empty state when no bookings exist', () => {
-        render(<BookingTable {...defaultProps} bookings={[]} totalCount={0} totalPages={0} />)
+        renderWithIntl(<BookingTable {...defaultProps} bookings={[]} totalCount={0} totalPages={0} />)
 
         expect(screen.getByText('Bạn chưa có đặt phòng nào')).toBeInTheDocument()
         const exploreBtn = screen.getByRole('link', { name: /Khám phá vườn nghỉ dưỡng/i })
@@ -134,14 +150,14 @@ describe('BookingTable', () => {
 
     describe('Pagination', () => {
         it('does not show pagination when totalPages is 1', () => {
-            render(<BookingTable {...defaultProps} totalPages={1} />)
+            renderWithIntl(<BookingTable {...defaultProps} totalPages={1} />)
             expect(screen.queryByLabelText('Trang trước')).not.toBeInTheDocument()
             expect(screen.queryByLabelText('Trang sau')).not.toBeInTheDocument()
         })
 
         it('renders pagination and handles page changes when totalPages > 1', () => {
             const onPageChange = jest.fn()
-            render(
+            renderWithIntl(
                 <BookingTable
                     {...defaultProps}
                     page={2}
@@ -165,13 +181,13 @@ describe('BookingTable', () => {
         })
 
         it('disables previous button on first page', () => {
-            render(<BookingTable {...defaultProps} page={1} totalPages={3} />)
+            renderWithIntl(<BookingTable {...defaultProps} page={1} totalPages={3} />)
             const prevBtn = screen.getByLabelText('Trang trước')
             expect(prevBtn).toBeDisabled()
         })
 
         it('disables next button on last page', () => {
-            render(<BookingTable {...defaultProps} page={3} totalPages={3} />)
+            renderWithIntl(<BookingTable {...defaultProps} page={3} totalPages={3} />)
             const nextBtn = screen.getByLabelText('Trang sau')
             expect(nextBtn).toBeDisabled()
         })

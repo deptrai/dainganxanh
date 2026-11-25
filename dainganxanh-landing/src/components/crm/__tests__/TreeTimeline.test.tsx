@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import TreeTimeline from '../TreeTimeline'
 
 describe('TreeTimeline', () => {
@@ -9,7 +10,7 @@ describe('TreeTimeline', () => {
     }
 
     it('renders timeline with all stages', () => {
-        render(<TreeTimeline {...mockProps} />)
+        renderWithIntl(<TreeTimeline {...mockProps} />)
 
         expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()
         expect(screen.getByText('Đặt hàng thành công')).toBeInTheDocument()
@@ -19,13 +20,13 @@ describe('TreeTimeline', () => {
     })
 
     it('shows current position indicator for young trees', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={6} />)
+        renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={6} />)
 
         expect(screen.getByText('← Bạn đang ở đây')).toBeInTheDocument()
     })
 
     it('displays placeholder text for trees < 9 months', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={3} />)
+        renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={3} />)
 
         // Should show "Đang trong giai đoạn này" for current placeholder stages
         const placeholderTexts = screen.getAllByText(/Đang trong giai đoạn này/)
@@ -33,20 +34,20 @@ describe('TreeTimeline', () => {
     })
 
     it('shows progress percentage to harvest', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={60} />)
+        renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={60} />)
 
         // 60 months / 120 months = 50%
         expect(screen.getByText('50%')).toBeInTheDocument()
     })
 
     it('displays tree age in months', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={12} />)
+        renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={12} />)
 
         expect(screen.getByText('12 tháng')).toBeInTheDocument()
     })
 
     it('marks completed stages with green styling', () => {
-        const { container } = render(<TreeTimeline {...mockProps} ageInMonths={12} />)
+        const { container } = renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={12} />)
 
         // Stages before month 12 should have completed styling
         const completedStages = container.querySelectorAll('.bg-green-100')
@@ -54,7 +55,7 @@ describe('TreeTimeline', () => {
     })
 
     it('shows current stage with emerald styling and pulse animation', () => {
-        const { container } = render(<TreeTimeline {...mockProps} ageInMonths={6} />)
+        const { container } = renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={6} />)
 
         // Current stage should have emerald background and pulse animation
         const currentStage = container.querySelector('.bg-emerald-500.animate-pulse')
@@ -62,7 +63,7 @@ describe('TreeTimeline', () => {
     })
 
     it('displays future stages with gray styling', () => {
-        const { container } = render(<TreeTimeline {...mockProps} ageInMonths={3} />)
+        const { container } = renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={3} />)
 
         // Future stages should have gray styling
         const futureStages = container.querySelectorAll('.bg-gray-100')
@@ -70,7 +71,7 @@ describe('TreeTimeline', () => {
     })
 
     it('shows estimated dates for future milestones', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={3} />)
+        renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={3} />)
 
         // Should show "Dự kiến:" for future stages
         const estimatedDates = screen.getAllByText(/Dự kiến:/)
@@ -78,14 +79,14 @@ describe('TreeTimeline', () => {
     })
 
     it('handles trees without planted_at date', () => {
-        render(<TreeTimeline {...mockProps} plantedAt={null} />)
+        renderWithIntl(<TreeTimeline {...mockProps} plantedAt={null} />)
 
         // Should still render without errors
         expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()
     })
 
     it('caps progress percentage at 100%', () => {
-        render(<TreeTimeline {...mockProps} ageInMonths={130} />)
+        renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={130} />)
 
         // Should show 100% even though tree is older than 120 months
         expect(screen.getByText('100%')).toBeInTheDocument()
@@ -108,7 +109,7 @@ describe('TreeTimeline', () => {
         ]
 
         it('renders photos in timeline stages', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
 
             // Photos should be rendered as images
             const images = screen.getAllByRole('img')
@@ -116,7 +117,7 @@ describe('TreeTimeline', () => {
         })
 
         it('shows photo alt text for accessibility', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={12} photos={mockPhotos} />)
 
             // Image should have alt text for accessibility (caption used as alt)
             const images = screen.getAllByRole('img')
@@ -124,7 +125,7 @@ describe('TreeTimeline', () => {
         })
 
         it('renders without photos gracefully', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={12} photos={[]} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={12} photos={[]} />)
 
             // Should still render the timeline
             expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()
@@ -133,7 +134,7 @@ describe('TreeTimeline', () => {
 
     describe('Edge Cases', () => {
         it('handles ageInMonths of 0 correctly', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={0} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={0} />)
 
             // Should show first stage as current
             expect(screen.getByText('Đặt hàng thành công')).toBeInTheDocument()
@@ -141,21 +142,21 @@ describe('TreeTimeline', () => {
         })
 
         it('handles very large ageInMonths (beyond 120 months)', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={150} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={150} />)
 
             // Should cap progress at 100%
             expect(screen.getByText('100%')).toBeInTheDocument()
         })
 
         it('handles exactly 120 months (harvest time)', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={120} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={120} />)
 
             // Should be at final stage
             expect(screen.getByText('Năm 10: Thu hoạch')).toBeInTheDocument()
         })
 
         it('renders timeline stages with aria labels for accessibility', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={6} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={6} />)
 
             // Check for role="list" and role="listitem"
             expect(screen.getByRole('list', { name: /giai đoạn phát triển/i })).toBeInTheDocument()
@@ -163,7 +164,7 @@ describe('TreeTimeline', () => {
         })
 
         it('handles photos prop as undefined', () => {
-            render(<TreeTimeline {...mockProps} ageInMonths={12} />)
+            renderWithIntl(<TreeTimeline {...mockProps} ageInMonths={12} />)
 
             // Should render without errors
             expect(screen.getByText('Hành Trình Cây')).toBeInTheDocument()

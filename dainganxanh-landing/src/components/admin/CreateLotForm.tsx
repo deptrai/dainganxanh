@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createLot } from '@/actions/lots'
+import LocaleTabs from '@/components/admin/LocaleTabs'
 
 interface CreateLotFormProps {
     onClose: () => void
@@ -9,6 +11,8 @@ interface CreateLotFormProps {
 }
 
 export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps) {
+    const t = useTranslations('admin.translation')
+    const [localeTab, setLocaleTab] = useState<'vi' | 'en'>('vi')
     const [formData, setFormData] = useState({
         name: '',
         region: '',
@@ -17,6 +21,9 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
         location_lng: '',
         total_trees: '',
     })
+    const [nameEn, setNameEn] = useState('')
+    const [descriptionEn, setDescriptionEn] = useState('')
+    const [regionEn, setRegionEn] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -49,6 +56,16 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
                 location_lng = lng
             }
 
+            const translations = (nameEn.trim() || descriptionEn.trim() || regionEn.trim())
+                ? {
+                    en: {
+                        ...(nameEn.trim() ? { name: nameEn.trim() } : {}),
+                        ...(descriptionEn.trim() ? { description: descriptionEn.trim() } : {}),
+                        ...(regionEn.trim() ? { region: regionEn.trim() } : {}),
+                    }
+                }
+                : null
+
             const result = await createLot({
                 name: formData.name,
                 region: formData.region,
@@ -56,6 +73,7 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
                 total_trees: totalTrees,
                 location_lat,
                 location_lng,
+                translations,
             })
 
             if (!result.success) {
@@ -112,40 +130,78 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
                         </div>
                     )}
 
+                    {/* Locale switcher tabs */}
+                    <LocaleTabs
+                        activeTab={localeTab}
+                        onChange={setLocaleTab}
+                        hasEnContent={Boolean(nameEn.trim() || descriptionEn.trim() || regionEn.trim())}
+                        className="mb-4"
+                    />
+
                     <div className="space-y-4">
                         {/* Name */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Tên Lô <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, name: e.target.value })
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                placeholder="Ví dụ: Lô A1 - Đồng Nai"
-                                required
-                            />
-                        </div>
+                        {localeTab === 'vi' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tên Lô <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, name: e.target.value })
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="Ví dụ: Lô A1 - Đồng Nai"
+                                    required
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t('fieldName')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={nameEn}
+                                    onChange={(e) => setNameEn(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="e.g. Lot A1 - Dong Nai"
+                                />
+                            </div>
+                        )}
 
                         {/* Region */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Khu Vực <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.region}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, region: e.target.value })
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                placeholder="Ví dụ: Đồng Nai, Bình Phước"
-                                required
-                            />
-                        </div>
+                        {localeTab === 'vi' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Khu Vực <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.region}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, region: e.target.value })
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="Ví dụ: Đồng Nai, Bình Phước"
+                                    required
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t('fieldRegion')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={regionEn}
+                                    onChange={(e) => setRegionEn(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="e.g. Dong Nai, Binh Phuoc"
+                                />
+                            </div>
+                        )}
 
                         {/* Total Trees */}
                         <div>
@@ -166,20 +222,35 @@ export default function CreateLotForm({ onClose, onSuccess }: CreateLotFormProps
                         </div>
 
                         {/* Description */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Mô Tả
-                            </label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, description: e.target.value })
-                                }
-                                rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                placeholder="Mô tả về lô cây..."
-                            />
-                        </div>
+                        {localeTab === 'vi' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Mô Tả
+                                </label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, description: e.target.value })
+                                    }
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="Mô tả về lô cây..."
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t('fieldDescription')}
+                                </label>
+                                <textarea
+                                    value={descriptionEn}
+                                    onChange={(e) => setDescriptionEn(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="Description in English..."
+                                />
+                            </div>
+                        )}
 
                         {/* GPS Coordinates */}
                         <div className="border-t border-gray-200 pt-4">

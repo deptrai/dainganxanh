@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, Fragment } from 'react'
+import { useLocale } from 'next-intl'
 import { Order } from '@/hooks/useAdminOrders'
 import VerifyOrderButton from './VerifyOrderButton'
 import LotAssignmentModal from './LotAssignmentModal'
 import { assignOrderToLot } from '@/actions/assignOrderToLot'
 import { ContractActions } from '@/components/admin/ContractActions'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { formatCurrency as formatCurrencyHelper, formatDateTime } from '@/lib/format'
 
 interface OrderTableProps {
     orders: Order[]
@@ -40,6 +42,7 @@ const statusLabels = {
 }
 
 export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTableProps) {
+    const locale = useLocale()
     const [sortField, setSortField] = useState<SortField>('created_at')
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
     const [expandedRow, setExpandedRow] = useState<string | null>(null)
@@ -85,14 +88,11 @@ export default function OrderTable({ orders, verifyOrder, refundOrder }: OrderTa
     })
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleString('vi-VN')
+        return formatDateTime(dateString, locale)
     }
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(amount)
+        return formatCurrencyHelper(amount, locale)
     }
 
     const SortIcon = ({ field }: { field: SortField }) => {

@@ -1,8 +1,15 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import BookingDetail, { MyBookingDetail } from '../BookingDetail'
 
-// Mock next/navigation
+// Mock navigation
 const mockPush = jest.fn()
+jest.mock('@/i18n/navigation', () => ({
+    useRouter: () => ({
+        push: mockPush,
+    }),
+    Link: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
+}))
 jest.mock('next/navigation', () => ({
     useRouter: () => ({
         push: mockPush,
@@ -40,7 +47,7 @@ describe('BookingDetail', () => {
     })
 
     it('renders back to list link and basic booking details', () => {
-        render(<BookingDetail booking={baseBooking} />)
+        renderWithIntl(<BookingDetail booking={baseBooking} />)
 
         const backLink = screen.getByRole('link', { name: /Quay lại danh sách/i })
         expect(backLink).toHaveAttribute('href', '/crm/my-bookings')
@@ -56,18 +63,18 @@ describe('BookingDetail', () => {
     })
 
     it('renders check-in instructions for confirmed bookings', () => {
-        render(<BookingDetail booking={{ ...baseBooking, status: 'confirmed' }} />)
+        renderWithIntl(<BookingDetail booking={{ ...baseBooking, status: 'confirmed' }} />)
         expect(screen.getByText('Hướng dẫn nhận phòng')).toBeInTheDocument()
     })
 
     it('renders check-in instructions for completed bookings', () => {
-        render(<BookingDetail booking={{ ...baseBooking, status: 'completed' }} />)
+        renderWithIntl(<BookingDetail booking={{ ...baseBooking, status: 'completed' }} />)
         expect(screen.getByText('Hướng dẫn nhận phòng')).toBeInTheDocument()
     })
 
     it('renders continue payment and cancel button for active pending bookings', () => {
         const futureExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
-        render(
+        renderWithIntl(
             <BookingDetail
                 booking={{
                     ...baseBooking,
@@ -90,7 +97,7 @@ describe('BookingDetail', () => {
 
     it('renders expired notice for pending booking when expiresAt has passed', () => {
         const pastExpiresAt = new Date(Date.now() - 1000).toISOString()
-        render(
+        renderWithIntl(
             <BookingDetail
                 booking={{
                     ...baseBooking,
@@ -105,7 +112,7 @@ describe('BookingDetail', () => {
     })
 
     it('renders cancellation reason for cancelled bookings if reason exists', () => {
-        render(
+        renderWithIntl(
             <BookingDetail
                 booking={{
                     ...baseBooking,
@@ -121,7 +128,7 @@ describe('BookingDetail', () => {
     })
 
     it('renders cancellation reason for no_show bookings if reason exists', () => {
-        render(
+        renderWithIntl(
             <BookingDetail
                 booking={{
                     ...baseBooking,

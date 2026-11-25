@@ -1,0 +1,36 @@
+{
+  "checkout": {
+    "outOfStock": "Not enough trees in stock",
+    "invalidQuantity": "Invalid number of trees",
+    "createOrderFailed": "Failed to create order, please try again",
+    "paymentExpired": "Payment session has expired"
+  },
+  "store": {
+    "productNotFound": "Product not found",
+    "outOfStock": "Product is out of stock",
+    "priceMismatch": "Product price has changed, please refresh the page",
+    "createFailed": "Failed to create store order",
+    "statusFailed": "Failed to update order status"
+  },
+  "eco": {
+    "roomNotFound": "Room not found",
+    "roomUnavailable": "Room is unavailable for the selected dates",
+    "datesInvalid": "Invalid check-in and check-out dates",
+    "createFailed": "Failed to create booking",
+    "voucherInvalid": "Invalid or expired voucher code"
+  },
+  "auth": {
+    "invalidPhone": "Invalid phone number",
+    "invalidEmail": "Invalid email",
+    "otpFailed": "OTP code is incorrect or expired",
+    "sendOtpFailed": "Failed to send OTP code, please try again later",
+    "userExists": "User already exists",
+    "userNotFound": "Account not found",
+    "unauthorized": "Please sign in to continue"
+  },
+  "common": {
+    "networkError": "Network error, please check your connection",
+    "serverError": "Server error occurred, please try again later",
+    "unknown": "An unknown error occurred"
+  }
+}

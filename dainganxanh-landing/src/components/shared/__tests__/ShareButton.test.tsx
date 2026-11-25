@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { ShareButton } from '../ShareButton'
 import * as analytics from '@/lib/analytics/tracking'
 
@@ -29,7 +30,7 @@ describe('ShareButton', () => {
     })
 
     it('should render share button', () => {
-        render(
+        renderWithIntl(
             <ShareButton
                 context="purchase"
                 data={{ trees: 5, refCode: 'TEST123' }}
@@ -47,7 +48,7 @@ describe('ShareButton', () => {
             configurable: true,
         })
 
-        render(
+        renderWithIntl(
             <ShareButton
                 context="purchase"
                 data={{ trees: 5, refCode: 'TEST123' }}
@@ -71,7 +72,7 @@ describe('ShareButton', () => {
     it('should show fallback when Web Share API not available', () => {
         Object.assign(navigator, { share: undefined })
 
-        render(
+        renderWithIntl(
             <ShareButton
                 context="purchase"
                 data={{ trees: 5, refCode: 'TEST123' }}
@@ -89,7 +90,7 @@ describe('ShareButton', () => {
         mockClipboard.writeText.mockResolvedValue(undefined)
         Object.assign(navigator, { share: undefined }) // Disable Web Share API
 
-        render(
+        renderWithIntl(
             <ShareButton
                 context="purchase"
                 data={{ trees: 5, refCode: 'TEST123' }}
@@ -101,12 +102,12 @@ describe('ShareButton', () => {
         fireEvent.click(shareBtn)
 
         // Click copy button
-        const copyBtn = screen.getByLabelText(/Sao chép link/i)
+        const copyBtn = screen.getByLabelText(/Sao chép/i)
         fireEvent.click(copyBtn)
 
         await waitFor(() => {
             expect(mockClipboard.writeText).toHaveBeenCalled()
-            expect(screen.getByText(/Đã copy!/i)).toBeInTheDocument()
+            expect(screen.getByText(/Đã sao chép/i)).toBeInTheDocument()
         })
     })
 
@@ -120,7 +121,7 @@ describe('ShareButton', () => {
                 configurable: true,
             })
 
-            render(
+            renderWithIntl(
                 <ShareButton
                     context="purchase"
                     source="success_screen"
@@ -153,7 +154,7 @@ describe('ShareButton', () => {
             mockClipboard.writeText.mockResolvedValue(undefined)
             Object.assign(navigator, { share: undefined })
 
-            render(
+            renderWithIntl(
                 <ShareButton
                     context="purchase"
                     source="dashboard"
@@ -164,7 +165,7 @@ describe('ShareButton', () => {
             const shareBtn = screen.getByText(/Chia sẻ/i)
             fireEvent.click(shareBtn)
 
-            const copyBtn = screen.getByLabelText(/Sao chép link/i)
+            const copyBtn = screen.getByLabelText(/Sao chép/i)
             fireEvent.click(copyBtn)
 
             await waitFor(() => {
@@ -190,7 +191,7 @@ describe('ShareButton', () => {
             const mockOpen = jest.fn()
             window.open = mockOpen
 
-            render(
+            renderWithIntl(
                 <ShareButton
                     context="progress"
                     data={{ months: 6, refCode: 'XYZ789' }}

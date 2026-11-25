@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import '@testing-library/jest-dom'
 
 // Mock heroicons
@@ -63,7 +64,7 @@ describe('OrderTable', () => {
     }
 
     it('renders desktop table with correct column headers', () => {
-        const { container } = render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+        const { container } = renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
         const desktop = getDesktopTable(container)
 
         expect(desktop).toBeInTheDocument()
@@ -85,7 +86,7 @@ describe('OrderTable', () => {
     })
 
     it('displays order data correctly', () => {
-        render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+        renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
         // Email appears in both mobile and desktop views
         const emails = screen.getAllByText('test@example.com')
@@ -101,7 +102,7 @@ describe('OrderTable', () => {
     })
 
     it('shows status badges with correct colors', () => {
-        render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+        renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
         // Grab status badge elements and verify at least one has correct classes
         const pendingBadges = screen.getAllByText('Chờ thanh toán')
@@ -112,7 +113,7 @@ describe('OrderTable', () => {
     })
 
     it('shows verify button only for pending/paid orders', () => {
-        render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+        renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
         // VerifyOrderButton renders "Xác minh" for the pending order
         const verifyButtons = screen.getAllByText('Xác minh')
@@ -120,7 +121,7 @@ describe('OrderTable', () => {
     })
 
     it('formats currency correctly', () => {
-        render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+        renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
         // Currency formatted as Vietnamese dong — appears in both views
         const amount5m = screen.getAllByText(/5\.000\.000/)
@@ -131,7 +132,7 @@ describe('OrderTable', () => {
 
     describe('Referrer Column', () => {
         it('should display referral_code and email when referrer exists', () => {
-            render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+            renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
             // Referral code appears in both mobile card and desktop table
             const refCodes = screen.getAllByText('REF123')
@@ -142,7 +143,7 @@ describe('OrderTable', () => {
         })
 
         it('should display "Không có" when referrer is null', () => {
-            render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+            renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
             // Second order has no referrer — desktop shows "Không có"
             const noReferrerTexts = screen.getAllByText('Không có')
@@ -150,7 +151,7 @@ describe('OrderTable', () => {
         })
 
         it('should use correct colSpan in expanded rows', async () => {
-            const { container } = render(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
+            const { container } = renderWithIntl(<OrderTable orders={mockOrders} verifyOrder={mockVerifyOrder} />)
 
             const { fireEvent } = await import('@testing-library/react')
             // Click the first desktop table row to expand it

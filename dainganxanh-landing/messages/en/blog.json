@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "title": "Blog & News — Đại Ngàn Xanh",
+    "description": "Forestry knowledge, sustainable development, and latest updates",
+    "notFound": "Article not found — Đại Ngàn Xanh",
+    "defaultPostTitle": "Article — Đại Ngàn Xanh"
+  },
+  "header": {
+    "badge": "News & Insights",
+    "title": "Đại Ngàn Xanh Blog",
+    "subtitle": "Sharing insights on reforestation, environmental protection, and green investment."
+  },
+  "search": {
+    "placeholder": "Search articles...",
+    "button": "Search",
+    "noResults": "No matching articles found"
+  },
+  "categories": {
+    "all": "All",
+    "forestry": "Forestry",
+    "environment": "Environment",
+    "community": "Community",
+    "news": "Project news"
+  },
+  "sidebar": {
+    "featured": "Featured articles",
+    "recent": "Recent articles",
+    "tags": "Popular tags",
+    "otherPosts": "Other articles",
+    "topics": "Topics",
+    "ctaTitle": "Plant trees today",
+    "ctaDesc": "Own Aquilaria crassna trees — a precious species offering economic value and environmental sustainability.",
+    "ctaButton": "View tree packages"
+  },
+  "list": {
+    "all": "All",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {totalPages}"
+  },
+  "page": {
+    "headerTitle": "Đại Ngàn Xanh Blog",
+    "headerSubtitle": "News and insights on Aquilaria crassna, carbon credits, and garden updates.",
+    "tagFilterActive": "Articles tagged \"{tag}\"",
+    "empty": "No articles yet",
+    "emptyWithTag": "No articles tagged \"{tag}\"",
+    "emptyDesc": "We are preparing content. Please check back soon for the latest updates from our gardens!"
+  },
+  "post": {
+    "readMore": "Read more",
+    "readingTime": "{min} min read",
+    "author": "Author",
+    "publishedAt": "Published on",
+    "share": "Share article",
+    "copied": "Link copied!",
+    "backToList": "Back to articles",
+    "backToBlog": "Back to Blog",
+    "viewMore": "View more articles",
+    "views": "{count, plural, one {# view} other {# views}}",
+    "relatedPosts": "Related articles"
+  }
+}

@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { renderWithIntl } from '@/test-utils/renderWithIntl'
 import { CustomerIdentityForm } from '@/components/checkout/CustomerIdentityForm'
 
 // Mock Supabase client
@@ -32,7 +33,7 @@ describe('CustomerIdentityForm', () => {
   })
 
   it('renders all required fields', async () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
 
     expect(screen.getByLabelText(/họ và tên/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/ngày sinh/i)).toBeInTheDocument()
@@ -45,13 +46,13 @@ describe('CustomerIdentityForm', () => {
   })
 
   it('defaults nationality to "Việt Nam"', () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
     const nationalityInput = screen.getByLabelText(/quốc tịch/i)
     expect(nationalityInput).toHaveValue('Việt Nam')
   })
 
   it('shows error when CCCD is not 12 digits', async () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
 
     const cccdInput = screen.getByLabelText(/số cccd/i)
     fireEvent.change(cccdInput, { target: { value: '12345' } })
@@ -63,7 +64,7 @@ describe('CustomerIdentityForm', () => {
   })
 
   it('shows error when phone number is invalid', async () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
 
     const phoneInput = screen.getByLabelText(/số điện thoại/i)
     fireEvent.change(phoneInput, { target: { value: '123456789' } })
@@ -75,7 +76,7 @@ describe('CustomerIdentityForm', () => {
   })
 
   it('shows errors for empty required fields on submit', async () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
     const user = userEvent.setup()
 
     const submitBtn = screen.getByRole('button', { name: /tiếp tục/i })
@@ -89,7 +90,7 @@ describe('CustomerIdentityForm', () => {
   })
 
   it('calls onSubmit with correct data when form is valid', async () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
     const user = userEvent.setup()
 
     // Wait for async pre-fill to complete
@@ -123,7 +124,7 @@ describe('CustomerIdentityForm', () => {
   })
 
   it('pre-fills full_name from user metadata', async () => {
-    render(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
+    renderWithIntl(<CustomerIdentityForm onSubmit={mockOnSubmit} />)
 
     await waitFor(() => {
       expect(screen.getByLabelText(/họ và tên/i)).toHaveValue('Nguyễn Văn A')

@@ -1,5 +1,6 @@
 import React from 'react'
 import { EmailLayout } from './EmailLayout'
+import { SUPPORT_HOTLINE } from '@/lib/constants'
 
 export interface EcoStayVoucherEmailProps {
   guestName: string
@@ -127,7 +128,7 @@ export const EcoStayVoucherEmail: React.FC<EcoStayVoucherEmailProps> = ({
         <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
           <li>Xuất trình mã voucher <strong>{bookingCode}</strong> và CCCD/Hộ chiếu tại quầy lễ tân vườn.</li>
           <li>Giờ nhận phòng: từ <strong>14:00</strong> | Giờ trả phòng: trước <strong>12:00</strong>.</li>
-          <li>Nếu cần hỗ trợ đón hoặc nhận phòng muộn, vui lòng liên hệ hotline: <strong>1900 8888</strong>.</li>
+          <li>Nếu cần hỗ trợ đón hoặc nhận phòng muộn, vui lòng liên hệ hotline: <strong>{SUPPORT_HOTLINE}</strong>.</li>
         </ul>
       </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations, useLocale } from "next-intl";
+import { formatNumber } from "@/lib/format";
 
 interface ShareCardPreviewProps {
     userName: string;
@@ -9,6 +11,10 @@ interface ShareCardPreviewProps {
 }
 
 export function ShareCardPreview({ userName, treeCount, orderCode }: ShareCardPreviewProps) {
+    const t = useTranslations('checkout');
+    const tCommon = useTranslations('common');
+    const locale = useLocale();
+
     const co2Impact = treeCount * 20;
     // FIXED: Use env var for base URL instead of hardcoded domain
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://dainganxanh.com.vn');
@@ -22,7 +28,7 @@ export function ShareCardPreview({ userName, treeCount, orderCode }: ShareCardPr
             className="mx-auto max-w-md"
         >
             <h3 className="text-lg font-semibold text-gray-900 mb-3 text-center">
-                Thẻ chia sẻ của bạn
+                {t('shareCard.previewTitle')}
             </h3>
 
             {/* Share Card Preview */}
@@ -42,22 +48,22 @@ export function ShareCardPreview({ userName, treeCount, orderCode }: ShareCardPr
                     {/* Logo */}
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">🌿</span>
-                        <span className="text-white font-bold text-lg">Đại Ngàn Xanh</span>
+                        <span className="text-white font-bold text-lg">{tCommon('brand.name')}</span>
                     </div>
 
                     {/* Main Content */}
                     <div className="text-center">
                         <p className="text-white/80 text-sm mb-1">
-                            {userName || "Người hùng xanh"} đã trồng
+                            {t('shareCard.plantedBy', { name: userName || t('shareCard.greenHero') })}
                         </p>
                         <div className="flex items-center justify-center gap-2 mb-2">
                             <span className="text-5xl md:text-6xl font-bold text-yellow-400">
-                                {treeCount}
+                                {formatNumber(treeCount, locale)}
                             </span>
-                            <span className="text-white text-xl">cây</span>
+                            <span className="text-white text-xl">{t('quantity.unit', { count: treeCount })}</span>
                         </div>
                         <p className="text-emerald-200 text-sm">
-                            Giảm ~{co2Impact.toLocaleString()} kg CO₂/năm 🌍
+                            {t('shareCard.co2Impact', { amount: formatNumber(co2Impact, locale) })}
                         </p>
                     </div>
 
@@ -76,7 +82,7 @@ export function ShareCardPreview({ userName, treeCount, orderCode }: ShareCardPr
             </div>
 
             <p className="text-center text-gray-500 text-sm mt-3">
-                Chia sẻ để inspire bạn bè cùng tham gia!
+                {t('shareCard.inspire')}
             </p>
         </motion.div>
     );

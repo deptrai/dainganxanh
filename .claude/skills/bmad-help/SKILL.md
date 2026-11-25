@@ -1,92 +1,77 @@
 ---
 name: bmad-help
-description: 'Analyzes current state and user query to answer BMad questions or recommend the next workflow or agent. Use when user says what should I do next, what do I do now, or asks a question about BMad'
+description: 'Analyzes current state and user query to answer BMad questions or recommend the next skill(s) to use. Use when user asks for help, bmad help, what to do next, or what to start with in BMad'
 ---
 
-# Task: BMAD Help
+# BMad Help
 
-## ROUTING RULES
+## Purpose
 
-- **Empty `phase` = anytime** — Universal tools work regardless of workflow state
-- **Numbered phases indicate sequence** — Phases like `1-discover` → `2-define` → `3-build` → `4-ship` flow in order (naming varies by module)
-- **Phase with no Required Steps** - If an entire phase has no required, true items, the entire phase is optional. If it is sequentially before another phase, it can be recommended, but always be clear with the use what the true next required item is.
-- **Stay in module** — Guide through the active module's workflow based on phase+sequence ordering
-- **Descriptions contain routing** — Read for alternate paths (e.g., "back to previous if fixes needed")
-- **`required=true` blocks progress** — Required workflows must complete before proceeding to later phases
-- **Artifacts reveal completion** — Search resolved output paths for `outputs` patterns, fuzzy-match found files to workflow rows
+Help the user understand where they are in their BMad workflow and what to do next, and also answer broader questions when asked that could be augmented with remote sources such as module documentation sources.
 
-## DISPLAY RULES
+## Desired Outcomes
 
-### Command-Based Workflows
-When `command` field has a value:
-- Show the command as a skill name in backticks (e.g., `bmad-bmm-create-prd`)
+When this skill completes, the user should:
 
-### Skill-Referenced Workflows
-When `workflow-file` starts with `skill:`:
-- The value is a skill reference (e.g., `skill:bmad-quick-dev`), NOT a file path
-- Do NOT attempt to resolve or load it as a file path
-- Display using the `command` column value as a skill name in backticks (same as command-based workflows)
+1. **Know where they are** — which module and phase they're in, what's already been completed
+2. **Know what to do next** — the next recommended and/or required step, with clear reasoning
+3. **Know how to invoke it** — skill name, menu code, action context, and any args that shortcut the conversation
+4. **Get offered a quick start** — when a single skill is the clear next step, offer to run it for the user right now rather than just listing it
+5. **Feel oriented, not overwhelmed** — surface only what's relevant to their current position; don't dump the entire catalog
+6. **Get answers to general questions** — when the question doesn't map to a specific skill, use the module's registered documentation to give a grounded answer
 
-### Agent-Based Workflows
-When `command` field is empty:
-- User loads agent first by invoking the agent skill (e.g., `bmad-pm`)
-- Then invokes by referencing the `code` field or describing the `name` field
-- Do NOT show a slash command — show the code value and agent load instruction instead
+## Data Sources
 
-Example presentation for empty command:
+- **Catalog**: `{project-root}/_bmad/_config/bmad-help.csv` — assembled manifest of all installed module skills
+- **Config**: Run `uv run {project-root}/_bmad/scripts/resolve_config.py --project-root {project-root}` and use the merged JSON to resolve `output-location` variables and read `core.communication_language` and `modules.bmm.project_knowledge`. The resolver merges `_bmad/config.toml`, `_bmad/config.user.toml`, `_bmad/custom/config.toml`, and `_bmad/custom/config.user.toml` in that order.
+- **Artifacts**: Files matching `outputs` patterns at resolved `output-location` paths reveal which steps are possibly completed; their content may also provide grounding context for recommendations
+- **Project knowledge**: If `project_knowledge` resolves to an existing path, read it for grounding context. Never fabricate project-specific details.
+- **Module docs**: Rows with `_meta` in the `skill` column carry a URL or path in `output-location` pointing to the module's documentation. Fetch and use these to answer general questions about that module.
+
+## CSV Interpretation
+
+The catalog uses this format:
+
 ```
-Explain Concept (EC)
-Load: tech-writer agent skill, then ask to "EC about [topic]"
-Agent: Tech Writer
-Description: Create clear technical explanations with examples...
+module,skill,display-name,menu-code,description,action,args,phase,preceded-by,followed-by,required,output-location,outputs
 ```
 
-## MODULE DETECTION
+**Phases** determine the high-level flow:
+- `anytime` — available regardless of workflow state
+- Skills group into folders (`plan`, `ship`; some modules use numbered phases) and flow in order; naming varies by module
 
-- **Empty `module` column** → universal tools (work across all modules)
-- **Named `module`** → module-specific workflows
+**Sequencing** determines recommended ordering within and across phases (these are soft suggestions, not hard gates — see `required` for gating):
+- `preceded-by` — skills that should ideally complete before this one
+- `followed-by` — skills that should ideally run after this one
+- Format: `skill-name` for single-action skills, `skill-name:action` for multi-action skills
 
-Detect the active module from conversation context, recent workflows, or user query keywords. If ambiguous, ask the user.
+**Required gates**:
+- `required=true` items must complete before the user can meaningfully proceed to later phases
+- A phase with no required items is entirely optional — recommend it but be clear about what's actually required next
 
-## INPUT ANALYSIS
+**Completion detection**:
+- Search resolved output paths for `outputs` patterns and fuzzy-match found files to catalog rows
+- Treat a matching output as evidence that the skill started, not that it completed
+- Inspect matched artifacts for explicit completion evidence, such as final status or finalization markers; a draft or incomplete marker means the skill is still in progress
+- Honor completion stated by the user or established in the current conversation
+- When completion cannot be determined reliably, say so and ask the user; do not recommend advancing based on file presence alone
 
-Determine what was just completed:
-- Explicit completion stated by user
-- Workflow completed in current conversation
-- Artifacts found matching `outputs` patterns
-- If `index.md` exists, read it for additional context
-- If still unclear, ask: "What workflow did you most recently complete?"
+**Descriptions carry routing context** — some contain cycle info and alternate paths (e.g., "back to DS if fixes needed"). Read them as navigation hints, not just display text.
 
-## EXECUTION
+## Response Format
 
-1. **Load catalog** — Load `{project-root}/_bmad/_config/bmad-help.csv`
+For each recommended item, present:
+- `[menu-code]` **Display name** — e.g., "[PR] PRD"
+- Skill name in backticks — e.g., `bmad-prd`
+- For multi-action skills: action invocation context — e.g., "dev lets run a code review!"
+- Description if present in CSV; otherwise your existing knowledge of the skill suffices
+- Args if available
 
-2. **Resolve output locations and config** — Scan each folder under `{project-root}/_bmad/` (except `_config`) for `config.yaml`. For each workflow row, resolve its `output-location` variables against that module's config so artifact paths can be searched. Also extract `communication_language` and `project_knowledge` from each scanned module's config.
+**Ordering**: Show optional items first, then the next required item. Make it clear which is which.
 
-3. **Ground in project knowledge** — If `project_knowledge` resolves to an existing path, read available documentation files (architecture docs, project overview, tech stack references) for grounding context. Use discovered project facts when composing any project-specific output. Never fabricate project-specific details — if documentation is unavailable, state so.
+## Constraints
 
-4. **Detect active module** — Use MODULE DETECTION above
-
-5. **Analyze input** — Task may provide a workflow name/code, conversational phrase, or nothing. Infer what was just completed using INPUT ANALYSIS above.
-
-6. **Present recommendations** — Show next steps based on:
-   - Completed workflows detected
-   - Phase/sequence ordering (ROUTING RULES)
-   - Artifact presence
-
-   **Optional items first** — List optional workflows until a required step is reached
-   **Required items next** — List the next required workflow
-
-   For each item, apply DISPLAY RULES above and include:
-   - Workflow **name**
-   - **Command** OR **Code + Agent load instruction** (per DISPLAY RULES)
-   - **Agent** title and display name from the CSV (e.g., "🎨 Alex (Designer)")
-   - Brief **description**
-
-7. **Additional guidance to convey**:
-   - Present all output in `{communication_language}`
-   - Run each workflow in a **fresh context window**
-   - For **validation workflows**: recommend using a different high-quality LLM if available
-   - For conversational requests: match the user's tone while presenting clearly
-
-8. Return to the calling process after presenting recommendations.
+- Present all output in `{communication_language}`
+- Recommend running each skill in a **fresh context window**
+- Match the user's tone — conversational when they're casual, structured when they want specifics
+- If the active module is ambiguous, retrieve all meta rows remote sources to find relevant info also to help answer their question

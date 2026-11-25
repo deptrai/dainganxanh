@@ -11,6 +11,7 @@ interface LotData {
     total_trees: number
     location_lat?: number | null
     location_lng?: number | null
+    translations?: Record<string, unknown> | null
 }
 
 interface LotActionResult {
@@ -25,6 +26,7 @@ export interface LotSummary {
     description?: string | null
     total_trees: number
     planted: number
+    translations?: Record<string, unknown> | null
 }
 
 export interface FetchLotsResult {
@@ -74,6 +76,38 @@ async function verifyAdminRole(lotId?: string): Promise<{ userId: string | null;
     return { userId: user.id, error: null }
 }
 
+function buildLotTranslations(
+    name: string,
+    description: string | null,
+    region: string,
+    inputTranslations?: Record<string, unknown> | null
+): Record<string, unknown> {
+    const vi: Record<string, unknown> = {
+        name,
+        description,
+        region,
+    }
+
+    const translations: Record<string, unknown> = { vi }
+
+    if (inputTranslations && typeof inputTranslations === 'object') {
+        const rawEn = (inputTranslations as Record<string, unknown>).en
+        if (rawEn && typeof rawEn === 'object') {
+            const cleanEn: Record<string, string> = {}
+            for (const [k, v] of Object.entries(rawEn as Record<string, unknown>)) {
+                if (typeof v === 'string' && v.trim().length > 0) {
+                    cleanEn[k] = v.trim()
+                }
+            }
+            if (Object.keys(cleanEn).length > 0) {
+                translations.en = cleanEn
+            }
+        }
+    }
+
+    return translations
+}
+
 export async function createLot(data: LotData): Promise<LotActionResult> {
     const { userId, error: authError } = await verifyAdminRole()
     if (!userId) {
@@ -88,6 +122,12 @@ export async function createLot(data: LotData): Promise<LotActionResult> {
         description: data.description?.trim() || null,
         total_trees: data.total_trees,
         planted: 0,
+        translations: buildLotTranslations(
+            data.name.trim(),
+            data.description?.trim() || null,
+            data.region.trim(),
+            data.translations
+        ),
     }
 
     if (data.location_lat != null && data.location_lng != null) {
@@ -120,6 +160,12 @@ export async function updateLot(lotId: string, data: LotData): Promise<LotAction
         region: data.region.trim(),
         description: data.description?.trim() || null,
         total_trees: data.total_trees,
+        translations: buildLotTranslations(
+            data.name.trim(),
+            data.description?.trim() || null,
+            data.region.trim(),
+            data.translations
+        ),
     }
 
     if (data.location_lat != null && data.location_lng != null) {
@@ -152,7 +198,7 @@ export async function fetchLots(): Promise<FetchLotsResult> {
     const serviceClient = createServiceRoleClient()
     const { data, error } = await serviceClient
         .from('lots')
-        .select('id, name, region, description, total_trees, planted')
+        .select('id, name, region, description, total_trees, planted, translations')
         .order('name')
 
     if (error) {
@@ -186,7 +232,7 @@ export async function fetchAssignedLots(): Promise<FetchLotsResult> {
     if (['admin', 'super_admin'].includes(profile.role)) {
         const { data, error } = await serviceClient
             .from('lots')
-            .select('id, name, region, description, total_trees, planted')
+            .select('id, name, region, description, total_trees, planted, translations')
             .order('name')
 
         if (error) {

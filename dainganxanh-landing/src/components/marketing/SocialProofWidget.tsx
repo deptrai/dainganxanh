@@ -2,18 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import type { SocialProofOrder } from '@/actions/socialProof'
-
-function timeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const minutes = Math.floor(diff / 60_000)
-    if (minutes < 1) return 'vừa xong'
-    if (minutes < 60) return `${minutes} phút trước`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours} giờ trước`
-    const days = Math.floor(hours / 24)
-    return `${days} ngày trước`
-}
 
 interface Props {
     orders: SocialProofOrder[]
@@ -23,6 +13,18 @@ interface Props {
 export function SocialProofWidget({ orders, activeCount }: Props) {
     const [index, setIndex] = useState(0)
     const [dismissed, setDismissed] = useState(false)
+    const t = useTranslations('landing')
+
+    function formatTimeAgo(dateStr: string): string {
+        const diff = Date.now() - new Date(dateStr).getTime()
+        const minutes = Math.floor(diff / 60_000)
+        if (minutes < 1) return t('socialProof.justNow')
+        if (minutes < 60) return t('socialProof.minutesAgo', { minutes })
+        const hours = Math.floor(minutes / 60)
+        if (hours < 24) return t('socialProof.hoursAgo', { hours })
+        const days = Math.floor(hours / 24)
+        return t('socialProof.daysAgo', { days })
+    }
 
     useEffect(() => {
         if (orders.length <= 1) return
@@ -50,20 +52,20 @@ export function SocialProofWidget({ orders, activeCount }: Props) {
                     <button
                         onClick={() => setDismissed(true)}
                         className="absolute top-1.5 right-2 text-gray-400 hover:text-gray-600 text-lg leading-none"
-                        aria-label="Đóng"
+                        aria-label={t('socialProof.close')}
                     >
                         ×
                     </button>
                     <p className="text-sm text-gray-800">
                         <span className="font-semibold text-green-700">{order.maskedName}</span>
-                        {' '}vừa mua{' '}
-                        <span className="font-semibold">{order.quantity} cây</span>
+                        {' '}{t('socialProof.justBought')}{' '}
+                        <span className="font-semibold">{t('socialProof.trees', { count: order.quantity })}</span>
                         {' — '}
-                        <span className="text-gray-500">{timeAgo(order.createdAt)}</span>
+                        <span className="text-gray-500">{formatTimeAgo(order.createdAt)}</span>
                     </p>
                     {activeCount > 0 && (
                         <p className="text-xs text-orange-600 mt-1 font-medium">
-                            🔥 {activeCount} người đang đặt mua
+                            {t('socialProof.activeOrdering', { count: activeCount })}
                         </p>
                     )}
                 </motion.div>

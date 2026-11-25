@@ -110,6 +110,13 @@ afterAll(() => {
 describe('Withdrawal Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default: caller is the owner of 'user-1' data (used by balance/bank-info tests)
+    ;(getEffectiveUser as jest.Mock).mockResolvedValue({
+      userId: 'user-1',
+      email: 'user@example.com',
+      name: 'Nguyen Van A',
+      isImpersonating: false,
+    })
   })
 
   // =========================================================================
@@ -182,6 +189,34 @@ describe('Withdrawal Actions', () => {
       const balance = await getAvailableBalance('user-1')
       expect(balance).toBe(33333)
     })
+
+    it('returns 0 when the caller queries another user\'s balance (IDOR guard)', async () => {
+      ;(getEffectiveUser as jest.Mock).mockResolvedValue({
+        userId: 'attacker-1',
+        email: 'attacker@example.com',
+        name: 'Attacker',
+        isImpersonating: false,
+      })
+
+      const mockService = buildServiceClient({})
+      ;(createServiceRoleClient as jest.Mock).mockReturnValue(mockService)
+
+      const balance = await getAvailableBalance('user-1')
+      expect(balance).toBe(0)
+      // Must not query any data for the victim
+      expect(mockService.from).not.toHaveBeenCalled()
+    })
+
+    it('returns 0 when the caller is not authenticated', async () => {
+      ;(getEffectiveUser as jest.Mock).mockResolvedValue(null)
+
+      const mockService = buildServiceClient({})
+      ;(createServiceRoleClient as jest.Mock).mockReturnValue(mockService)
+
+      const balance = await getAvailableBalance('user-1')
+      expect(balance).toBe(0)
+      expect(mockService.from).not.toHaveBeenCalled()
+    })
   })
 
   // =========================================================================
@@ -217,6 +252,22 @@ describe('Withdrawal Actions', () => {
 
       const result = await getSavedBankInfo('user-1')
       expect(result).toBeNull()
+    })
+
+    it('returns null when the caller queries another user\'s bank info (IDOR guard)', async () => {
+      ;(getEffectiveUser as jest.Mock).mockResolvedValue({
+        userId: 'attacker-1',
+        email: 'attacker@example.com',
+        name: 'Attacker',
+        isImpersonating: false,
+      })
+
+      const mockService = buildServiceClient({})
+      ;(createServiceRoleClient as jest.Mock).mockReturnValue(mockService)
+
+      const result = await getSavedBankInfo('user-1')
+      expect(result).toBeNull()
+      expect(mockService.from).not.toHaveBeenCalled()
     })
   })
 

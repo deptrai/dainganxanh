@@ -1,0 +1,3 @@
+# Tắt kiểm tra nội dung file cho dự án tiếng Việt
+[default]
+check-file-content = false

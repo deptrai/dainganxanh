@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, KeyboardEvent, ClipboardEvent, ChangeEvent } from "react";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,8 @@ export function OTPInput({
     error = null,
     className,
 }: OTPInputProps) {
+    const t = useTranslations('auth.otp');
+    const tErrors = useTranslations('errors');
     const [otp, setOtp] = useState<string[]>(Array(length).fill(""));
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -97,7 +100,7 @@ export function OTPInput({
             {/* OTP Input Boxes */}
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                    Nhập mã OTP (6 chữ số)
+                    {t('label', { length })}
                 </label>
                 <div className="grid grid-cols-6 gap-2 sm:gap-3">
                     {otp.map((digit, index) => (
@@ -126,7 +129,7 @@ export function OTPInput({
                                         : "border-gray-200 hover:border-emerald-300",
                                 loading && "opacity-50 cursor-not-allowed"
                             )}
-                            aria-label={`Digit ${index + 1}`}
+                            aria-label={t('digitAria', { index: index + 1 })}
                         />
                     ))}
                 </div>
@@ -140,7 +143,17 @@ export function OTPInput({
                         role="alert"
                     >
                         <span className="font-medium">⚠</span>
-                        <span>{error}</span>
+                        <span>
+                            {error.startsWith('errors.')
+                                ? (() => {
+                                    try {
+                                        return tErrors(error.slice(7) as any)
+                                    } catch {
+                                        return error
+                                    }
+                                })()
+                                : error}
+                        </span>
                     </motion.p>
                 )}
             </div>
@@ -149,7 +162,7 @@ export function OTPInput({
             <div className="text-center">
                 {countdown > 0 ? (
                     <p className="text-sm text-gray-600">
-                        Gửi lại mã sau <span className="font-semibold text-emerald-600">{countdown}s</span>
+                        {t('countdown', { countdown })}
                     </p>
                 ) : (
                     <button
@@ -163,7 +176,7 @@ export function OTPInput({
                                 : "text-gray-400 cursor-not-allowed"
                         )}
                     >
-                        Gửi lại mã OTP
+                        {t('resend')}
                     </button>
                 )}
             </div>
@@ -172,7 +185,7 @@ export function OTPInput({
             {loading && (
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                     <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                    <span>Đang xác thực...</span>
+                    <span>{t('verifying')}</span>
                 </div>
             )}
         </div>

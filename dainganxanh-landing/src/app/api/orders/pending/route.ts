@@ -26,6 +26,7 @@ interface PendingOrderRequest {
   has_insurance?: boolean
   payment_method: 'banking'
   referred_by?: string | null
+  locale?: 'vi' | 'en'
   // Customer identity fields (optional, for contract generation)
   dob?: string | null
   nationality?: string | null
@@ -143,6 +144,15 @@ export async function POST(req: NextRequest) {
       referredBy = null
     }
 
+    const rawCookie = req.cookies.get('NEXT_LOCALE')?.value
+    const bodyLocale = body.locale
+    const locale: 'vi' | 'en' =
+      rawCookie === 'en' || rawCookie === 'vi'
+        ? rawCookie
+        : bodyLocale === 'en' || bodyLocale === 'vi'
+          ? bodyLocale
+          : 'vi'
+
     // Step 1: Upsert base order fields (ignoreDuplicates: true preserves existing order intact)
     const { error: upsertError } = await serviceSupabase
       .from('orders')
@@ -159,6 +169,7 @@ export async function POST(req: NextRequest) {
           payment_method: body.payment_method,
           referred_by: referredBy,
           status: 'pending',
+          locale,
         },
         { onConflict: 'code', ignoreDuplicates: true }
       )

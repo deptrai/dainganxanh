@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import confetti from "canvas-confetti";
 
 interface SuccessAnimationProps {
@@ -9,6 +10,7 @@ interface SuccessAnimationProps {
 }
 
 export function SuccessAnimation({ treeCount }: SuccessAnimationProps) {
+    const t = useTranslations('checkout');
     const hasPlayedConfetti = useRef(false);
 
     useEffect(() => {
@@ -56,7 +58,7 @@ export function SuccessAnimation({ treeCount }: SuccessAnimationProps) {
                     delay: 0.3,
                 }}
                 className="text-7xl mb-4"
-                aria-label="Chúc mừng! Thanh toán thành công"
+                aria-label={t('success.ariaLabel')}
                 role="img"
             >
                 🎉
@@ -108,7 +110,7 @@ export function SuccessAnimation({ treeCount }: SuccessAnimationProps) {
                 transition={{ delay: 1.5 }}
                 className="text-3xl md:text-4xl font-bold text-emerald-700 mb-2"
             >
-                <TypewriterText text="🌱 Cây đang được gieo mầm..." />
+                <TypewriterText text={t('success.sprouting')} />
             </motion.h1>
 
             <motion.p
@@ -117,7 +119,7 @@ export function SuccessAnimation({ treeCount }: SuccessAnimationProps) {
                 transition={{ delay: 2.5 }}
                 className="text-gray-600 text-lg"
             >
-                Cảm ơn bạn đã chung tay bảo vệ Mẹ Thiên Nhiên!
+                {t('success.thankYouNature')}
             </motion.p>
         </div>
     );

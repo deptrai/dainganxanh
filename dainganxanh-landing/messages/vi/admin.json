@@ -1,0 +1,135 @@
+{
+  "sidebar": {
+    "title": "Đại Ngàn Xanh",
+    "subtitle": "Quản trị hệ thống",
+    "backToUser": "Về trang người dùng",
+    "aria": {
+      "openMenu": "Mở menu",
+      "closeMenu": "Đóng menu"
+    },
+    "nav": {
+      "orders": "Đơn hàng",
+      "bookings": "Đặt phòng",
+      "rooms": "Lịch phòng",
+      "products": "Sản phẩm",
+      "storeOrders": "Đơn hàng shop",
+      "users": "Người dùng",
+      "lots": "Lô cây",
+      "referrals": "Hoa hồng",
+      "withdrawals": "Rút tiền",
+      "casso": "Lịch sử Casso",
+      "phantom": "Phantom",
+      "blog": "Blog",
+      "analytics": "Thống kê",
+      "settings": "Cài đặt"
+    }
+  },
+  "bookingsTable": {
+    "emptyTitle": "Không có đơn đặt phòng nào",
+    "emptyDescription": "Thử điều chỉnh bộ lọc hoặc quay lại sau.",
+    "thCode": "Mã đặt phòng",
+    "thGuest": "Khách",
+    "thRoom": "Phòng",
+    "thGarden": "Khu vườn",
+    "thCheckIn": "Nhận phòng",
+    "thCheckOut": "Trả phòng",
+    "thStatus": "Trạng thái",
+    "thTotal": "Tổng tiền",
+    "anonymousGuest": "Không tên"
+  },
+  "storeOrders": {
+    "tabs": {
+      "all": "Tất cả",
+      "pending": "Chờ xác nhận",
+      "confirmed": "Đã xác nhận",
+      "processing": "Đang xử lý",
+      "shipped": "Đang giao",
+      "delivered": "Đã giao",
+      "cancelled": "Đã hủy"
+    },
+    "emptyTitle": "Chưa có đơn hàng nào",
+    "emptyFiltered": "Không có đơn hàng nào với trạng thái này.",
+    "emptyDefault": "Chưa có đơn hàng nào được tạo.",
+    "thCode": "Mã đơn",
+    "thCustomer": "Khách hàng",
+    "thProducts": "Sản phẩm",
+    "thTotal": "Tổng tiền",
+    "thAddress": "Địa chỉ",
+    "thStatus": "Trạng thái",
+    "thDate": "Ngày tạo",
+    "thActions": "Thao tác",
+    "actions": {
+      "confirm": "Xác nhận đơn",
+      "process": "Bắt đầu xử lý",
+      "ship": "Giao hàng",
+      "deliver": "Hoàn tất",
+      "cancel": "Hủy đơn"
+    },
+    "productDetails": "Chi tiết sản phẩm",
+    "noProducts": "Không có sản phẩm",
+    "otherProducts": "sp khác",
+    "quantity": "Số lượng",
+    "unitPrice": "Đơn giá",
+    "subtotal": "Tạm tính",
+    "shippingFee": "Phí vận chuyển",
+    "freeShipping": "Miễn phí",
+    "total": "Tổng cộng",
+    "shippingAddress": "Địa chỉ giao hàng",
+    "province": "Tỉnh/Thành phố",
+    "note": "Ghi chú",
+    "payment": "Thanh toán",
+    "banking": "Chuyển khoản ngân hàng",
+    "cod": "Thanh toán khi nhận hàng (COD)",
+    "transactionCode": "Mã GD",
+    "paymentDeadline": "Hạn thanh toán",
+    "shipping": "Vận chuyển",
+    "trackingCode": "Mã vận đơn",
+    "cancellationReason": "Lý do hủy đơn",
+    "confirmBankingAlert": "Xác nhận đã nhận thanh toán chuyển khoản cho đơn này?",
+    "cancelModal": {
+      "title": "Hủy đơn hàng #{code}",
+      "description": "Bạn có chắc chắn muốn hủy đơn hàng này? Thao tác này sẽ hoàn trả kho sản phẩm đã giữ.",
+      "reasonLabel": "Lý do hủy đơn (mặc định: Admin hủy đơn)",
+      "placeholder": "Nhập lý do hủy...",
+      "confirm": "Xác nhận hủy",
+      "close": "Đóng"
+    },
+    "aria": {
+      "closeError": "Đóng thông báo lỗi",
+      "collapseDetails": "Thu gọn chi tiết",
+      "viewDetails": "Xem chi tiết đơn hàng"
+    },
+    "errors": {
+      "enterTracking": "Vui lòng nhập mã vận đơn",
+      "generic": "Có lỗi xảy ra khi cập nhật trạng thái. Vui lòng thử lại."
+    }
+  },
+  "translation": {
+    "tabVi": "Tiếng Việt",
+    "tabEn": "Tiếng Anh",
+    "hasEnContentTooltip": "Đã có nội dung tiếng Anh",
+    "badge": {
+      "viOnly": "Chỉ có VI",
+      "viEn": "VI + EN",
+      "viOnlyTooltip": "Chỉ có tiếng Việt, chưa dịch tiếng Anh",
+      "viEnTooltip": "Đã có bản dịch tiếng Anh"
+    },
+    "fieldName": "Tên (EN)",
+    "fieldDescription": "Mô tả (EN)",
+    "fieldExcerpt": "Tóm tắt (EN)",
+    "fieldMetaTitle": "Meta Title (EN)",
+    "fieldMetaDesc": "Meta Description (EN)",
+    "fieldSlug": "Slug (EN)",
+    "fieldContent": "Nội dung (EN)",
+    "fieldRegion": "Khu vực (EN)",
+    "fieldTitle": "Tiêu đề (EN)",
+    "seoOptional": "SEO (tùy chọn)",
+    "seoEnOptional": "SEO tiếng Anh (tùy chọn)",
+    "characters": "ký tự",
+    "placeholderTitle": "Enter English title...",
+    "placeholderSlug": "english-url-slug",
+    "placeholderExcerpt": "Short summary in English...",
+    "placeholderMetaTitle": "English meta title...",
+    "placeholderMetaDesc": "English meta description..."
+  }
+}

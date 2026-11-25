@@ -11,7 +11,7 @@ import { sendEcoStayVoucherEmail } from '@/lib/email'
 const ORDER_CODE_REGEX = /\b((?:DH|BK|ST)[A-Z0-9]{6})\b/i
 const POLYMORPHIC_WEBHOOK_ENABLED = process.env.POLYMORPHIC_WEBHOOK_ENABLED !== 'false'
 
-interface OrderLike {
+export interface OrderLike {
   id: string
   code: string
   user_id: string | null
@@ -27,17 +27,22 @@ interface OrderLike {
   check_out_date?: string | null
   nights_count?: number | null
   guests_count?: number | null
+  // Store order fields
+  customer_name?: string | null
+  customer_email?: string | null
 }
 
 // Verify Casso Webhook V2 HMAC signature
 // Header: x-casso-signature: t=<timestamp>,v1=<hmac-sha512>
 // Signed payload: `${timestamp}.${JSON.stringify(sortedByKey(body))}`
 // Ref: https://github.com/CassoHQ/casso-webhook-v2-verify-signature
-function sortObjByKey(obj: unknown): unknown {
+type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[]
+
+function sortObjByKey(obj: JsonValue): JsonValue {
   if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj
-  const sorted: Record<string, unknown> = {}
-  Object.keys(obj as Record<string, unknown>).sort().forEach(k => {
-    sorted[k] = sortObjByKey((obj as Record<string, unknown>)[k])
+  const sorted: { [key: string]: JsonValue } = {}
+  Object.keys(obj).sort().forEach(k => {
+    sorted[k] = sortObjByKey(obj[k])
   })
   return sorted
 }
@@ -377,7 +382,20 @@ async function processBooking(
   return { ok: true }
 }
 
-async function processStoreOrder(
+// Late payment on an already-cancelled store order: money arrived but stock was
+// released — alert ops for manual refund/confirm instead of silently accepting.
+async function alertLateStorePayment(orderCode: string, txId: string) {
+  console.error(`[Casso] Payment received for cancelled store order ${orderCode}`)
+  captureError(new Error(`Payment received for cancelled store order ${orderCode}`), {
+    route: '/api/webhooks/casso',
+    orderType: 'store',
+    orderCode,
+    action: 'late_payment_cancelled_order',
+  })
+  await notifyWebhookError('store', orderCode, `Payment received for cancelled order ${orderCode}`, txId)
+}
+
+export async function processStoreOrder(
   supabase: ReturnType<typeof createServiceRoleClient>,
   tx: any,
   orderCode: string,
@@ -397,44 +415,82 @@ async function processStoreOrder(
     .single()
 
   if (!current) return { ok: false, error: 'Store order not found' }
+
+  if (current.status === 'cancelled') {
+    // Still mark the transaction processed — payment DID arrive — but alert ops.
+    await alertLateStorePayment(orderCode, String(tx.id ?? tx.tid ?? ''))
+    return { ok: true }
+  }
+
   if (current.status !== 'pending') return { ok: true } // already processed
 
-  // Get items and decrement reserved stock atomically
+  // Get items for stock confirmation after the status flip
   const { data: items } = await supabase
     .from('store_order_items')
     .select('id, product_id, quantity')
     .eq('store_order_id', order.id)
 
-  if (items && items.length > 0) {
-    for (const item of items) {
-      await supabase.rpc('release_product_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })
-      // release_product_stock adds stock back and removes reserved;
-      // we then want to decrement actual stock (not reserved)
-      const { error: stockError } = await supabase.rpc('reserve_product_stock', {
-        p_product_id: item.product_id,
-        p_qty: item.quantity,
-      })
-      if (stockError) {
-        console.error('[Casso] Stock finalization failed:', stockError)
-      }
-    }
-  }
-
-  const { error: updateError } = await supabase
+  // Flip status first with a conditional update: only the delivery that wins the
+  // pending→confirmed transition proceeds to confirm stock — prevents double
+  // decrement on concurrent webhooks or retries after a failed update.
+  const { data: updatedRows, error: updateError } = await supabase
     .from('store_orders')
     .update({ status: 'confirmed', payment_ref: String(tx.id ?? tx.tid), expires_at: null })
     .eq('id', order.id)
+    .eq('status', 'pending')
+    .select('id')
 
   if (updateError) {
     console.error('[Casso] Store order confirm failed:', updateError)
     return { ok: false, error: updateError.message }
   }
 
-  revalidatePath('/store')
-  notifyStoreOrderConfirmed(orderCode, (order as any).customer_name ?? '', order.total_amount)
+  if (!updatedRows || updatedRows.length === 0) {
+    // Status changed between the read and the update — find out who won the race.
+    const { data: latest } = await supabase
+      .from('store_orders')
+      .select('status')
+      .eq('id', order.id)
+      .single()
+    if (latest?.status === 'cancelled') {
+      await alertLateStorePayment(orderCode, String(tx.id ?? tx.tid ?? ''))
+    }
+    return { ok: true }
+  }
+
+  if (items && items.length > 0) {
+    for (const item of items) {
+      const { error: stockError } = await supabase.rpc('confirm_product_stock', {
+        p_product_id: item.product_id,
+        p_qty: item.quantity,
+      })
+      if (stockError) {
+        console.error('[Casso] Stock confirmation failed:', stockError)
+        const errorMessage =
+          stockError instanceof Error
+            ? stockError.message
+            : typeof stockError === 'object' && stockError !== null && 'message' in stockError
+              ? String((stockError as { message: unknown }).message)
+              : String(stockError)
+        captureError(stockError instanceof Error ? stockError : new Error(errorMessage), {
+          route: '/api/webhooks/casso',
+          orderType: 'store',
+          orderCode,
+          action: 'confirm_product_stock',
+        })
+        notifyWebhookError('store', orderCode, `confirm_product_stock failed: ${errorMessage}`, String(tx.id ?? tx.tid ?? ''))
+      }
+    }
+  }
+
+  try {
+    revalidatePath('/store')
+    revalidatePath('/store/[slug]', 'page')
+    revalidatePath('/crm/my-store-orders')
+  } catch {
+    // best-effort revalidation
+  }
+  notifyStoreOrderConfirmed(orderCode, order.customer_name ?? '', order.total_amount)
   return { ok: true }
 }
 
@@ -460,7 +516,7 @@ async function findPendingOrder(
       .eq('code', orderCode)
       .eq('status', 'pending')
       .single()
-    return { order: booking as unknown as OrderLike | null, table: 'room_bookings' }
+    return { order: booking as OrderLike | null, table: 'room_bookings' }
   }
 
   const { data: storeOrder } = await supabase
@@ -469,7 +525,7 @@ async function findPendingOrder(
     .eq('code', orderCode)
     .eq('status', 'pending')
     .single()
-  return { order: storeOrder as unknown as OrderLike | null, table: 'store_orders' }
+  return { order: storeOrder as OrderLike | null, table: 'store_orders' }
 }
 
 export async function POST(req: NextRequest) {

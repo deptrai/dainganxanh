@@ -1,4 +1,5 @@
 import React from 'react'
+import { SUPPORT_EMAIL, SUPPORT_HOTLINE } from '@/lib/constants'
 
 export interface EmailLayoutProps {
   previewText?: string
@@ -111,7 +112,7 @@ export const EmailLayout: React.FC<EmailLayoutProps> = ({ previewText, children 
                 Công ty Cổ phần Đại Ngàn Xanh Group
               </p>
               <p style={{ margin: '0 0 6px 0' }}>
-                Hotline hỗ trợ: <strong>1900 8888</strong> | Email: <strong>hotro@dainganxanh.com.vn</strong>
+                Hotline hỗ trợ: <strong>{SUPPORT_HOTLINE}</strong> | Email: <strong>{SUPPORT_EMAIL}</strong>
               </p>
               <p style={{ margin: 0, fontSize: '11px', color: '#9ca3af' }}>
                 © 2026 Đại Ngàn Xanh. Mọi quyền được bảo lưu. Email này được gửi tự động, vui lòng không trả lời trực tiếp.

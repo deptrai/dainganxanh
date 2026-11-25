@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { updateLot } from '@/actions/lots'
+import LocaleTabs from '@/components/admin/LocaleTabs'
 
 interface Lot {
     id: string
@@ -12,6 +14,7 @@ interface Lot {
     location_lng: number | null
     total_trees: number
     planted: number
+    translations?: Record<string, unknown> | null
 }
 
 interface EditLotFormProps {
@@ -21,6 +24,12 @@ interface EditLotFormProps {
 }
 
 export default function EditLotForm({ lot, onClose, onSuccess }: EditLotFormProps) {
+    const t = useTranslations('admin.translation')
+    const initialEn = (lot.translations as Record<string, unknown> | null | undefined)?.en as Record<string, string> | undefined
+    const [localeTab, setLocaleTab] = useState<'vi' | 'en'>('vi')
+    const [nameEn, setNameEn] = useState(initialEn?.name ?? '')
+    const [descriptionEn, setDescriptionEn] = useState(initialEn?.description ?? '')
+    const [regionEn, setRegionEn] = useState(initialEn?.region ?? '')
     const [formData, setFormData] = useState({
         name: lot.name,
         region: lot.region,
@@ -68,6 +77,24 @@ export default function EditLotForm({ lot, onClose, onSuccess }: EditLotFormProp
                 location_lng = lng
             }
 
+            const oldEn = ((lot.translations as Record<string, unknown> | null | undefined)?.en || {}) as Record<string, unknown>
+            const unmanagedEn: Record<string, unknown> = {}
+            for (const [k, v] of Object.entries(oldEn)) {
+                if (k !== 'name' && k !== 'description' && k !== 'region') {
+                    unmanagedEn[k] = v
+                }
+            }
+
+            const translations = {
+                ...(lot.translations || {}),
+                en: {
+                    ...unmanagedEn,
+                    name: nameEn,
+                    description: descriptionEn,
+                    region: regionEn,
+                },
+            }
+
             const result = await updateLot(lot.id, {
                 name: formData.name,
                 region: formData.region,
@@ -75,6 +102,7 @@ export default function EditLotForm({ lot, onClose, onSuccess }: EditLotFormProp
                 total_trees: totalTrees,
                 location_lat,
                 location_lng,
+                translations,
             })
 
             if (!result.success) {
@@ -131,38 +159,76 @@ export default function EditLotForm({ lot, onClose, onSuccess }: EditLotFormProp
                         </div>
                     )}
 
+                    {/* Locale switcher tabs */}
+                    <LocaleTabs
+                        activeTab={localeTab}
+                        onChange={setLocaleTab}
+                        hasEnContent={Boolean(nameEn.trim() || descriptionEn.trim() || regionEn.trim())}
+                        className="mb-4"
+                    />
+
                     <div className="space-y-4">
                         {/* Name */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Tên Lô <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, name: e.target.value })
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                required
-                            />
-                        </div>
+                        {localeTab === 'vi' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tên Lô <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, name: e.target.value })
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    required
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t('fieldName')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={nameEn}
+                                    onChange={(e) => setNameEn(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="Lot name in English..."
+                                />
+                            </div>
+                        )}
 
                         {/* Region */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Khu Vực <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={formData.region}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, region: e.target.value })
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                required
-                            />
-                        </div>
+                        {localeTab === 'vi' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Khu Vực <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.region}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, region: e.target.value })
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    required
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t('fieldRegion')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={regionEn}
+                                    onChange={(e) => setRegionEn(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="e.g. Dong Nai, Binh Phuoc"
+                                />
+                            </div>
+                        )}
 
                         {/* Total Trees */}
                         <div>
@@ -185,19 +251,34 @@ export default function EditLotForm({ lot, onClose, onSuccess }: EditLotFormProp
                         </div>
 
                         {/* Description */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Mô Tả
-                            </label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, description: e.target.value })
-                                }
-                                rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                            />
-                        </div>
+                        {localeTab === 'vi' ? (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Mô Tả
+                                </label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, description: e.target.value })
+                                    }
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t('fieldDescription')}
+                                </label>
+                                <textarea
+                                    value={descriptionEn}
+                                    onChange={(e) => setDescriptionEn(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                                    placeholder="Description in English..."
+                                />
+                            </div>
+                        )}
 
                         {/* GPS Coordinates */}
                         <div className="border-t border-gray-200 pt-4">

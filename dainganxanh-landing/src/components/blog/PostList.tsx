@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import { Link } from '@/i18n/navigation'
+import { useTranslations } from 'next-intl'
 import { PostCard, type PostCardData } from './PostCard'
 import { TagBadge } from './TagBadge'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -12,6 +13,8 @@ interface PostListProps {
 }
 
 export function PostList({ posts, currentTag, allTags, page, totalPages }: PostListProps) {
+  const t = useTranslations('blog')
+
   const buildUrl = (p: number, tag?: string) => {
     const params = new URLSearchParams()
     if (tag) params.set('tag', tag)
@@ -33,7 +36,7 @@ export function PostList({ posts, currentTag, allTags, page, totalPages }: PostL
                 : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-300'
             }`}
           >
-            Tất cả
+            {t('list.all')}
           </Link>
           {allTags.map((tag) => (
             <TagBadge key={tag} tag={tag} active={tag === currentTag} asLink />
@@ -57,17 +60,17 @@ export function PostList({ posts, currentTag, allTags, page, totalPages }: PostL
               className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors text-sm"
             >
               <ChevronLeft className="w-4 h-4" />
-              Trước
+              {t('list.prev')}
             </Link>
           ) : (
             <span className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-100 text-gray-300 text-sm cursor-not-allowed">
               <ChevronLeft className="w-4 h-4" />
-              Trước
+              {t('list.prev')}
             </span>
           )}
 
           <span className="text-sm text-gray-500">
-            Trang {page} / {totalPages}
+            {t('list.pageOf', { page, totalPages })}
           </span>
 
           {page < totalPages ? (
@@ -75,12 +78,12 @@ export function PostList({ posts, currentTag, allTags, page, totalPages }: PostL
               href={buildUrl(page + 1, currentTag)}
               className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors text-sm"
             >
-              Tiếp
+              {t('list.next')}
               <ChevronRight className="w-4 h-4" />
             </Link>
           ) : (
             <span className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-100 text-gray-300 text-sm cursor-not-allowed">
-              Tiếp
+              {t('list.next')}
               <ChevronRight className="w-4 h-4" />
             </span>
           )}

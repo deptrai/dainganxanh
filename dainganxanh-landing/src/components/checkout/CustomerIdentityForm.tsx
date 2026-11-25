@@ -2,17 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { z } from "zod";
+import { useTranslations, useLocale } from "next-intl";
 import { createBrowserClient } from "@/lib/supabase/client";
 
 export const customerIdentitySchema = z.object({
-    full_name: z.string().min(1, "Vui lòng nhập họ tên"),
-    dob: z.string().min(1, "Vui lòng nhập ngày sinh"),
+    full_name: z.string().min(1),
+    dob: z.string().min(1),
     nationality: z.string().default("Việt Nam"),
-    id_number: z.string().regex(/^\d{12}$/, "Số CCCD phải có 12 chữ số"),
-    id_issue_date: z.string().min(1, "Vui lòng nhập ngày cấp"),
-    id_issue_place: z.string().min(1, "Vui lòng nhập nơi cấp"),
-    address: z.string().min(1, "Vui lòng nhập địa chỉ"),
-    phone: z.string().regex(/^0\d{9}$/, "Số điện thoại không hợp lệ (VD: 0901234567)"),
+    id_number: z.string().regex(/^\d{12}$/),
+    id_issue_date: z.string().min(1),
+    id_issue_place: z.string().min(1),
+    address: z.string().min(1),
+    phone: z.string().regex(/^0\d{9}$/),
+});
+
+export const createCustomerIdentitySchema = (t: (key: string) => string) => z.object({
+    full_name: z.string().min(1, t('identity.errorFullName')),
+    dob: z.string().min(1, t('identity.errorDob')),
+    nationality: z.string().default(t('identity.nationalityPlaceholder')),
+    id_number: z.string().regex(/^\d{12}$/, t('identity.errorIdNumber')),
+    id_issue_date: z.string().min(1, t('identity.errorIdIssueDate')),
+    id_issue_place: z.string().min(1, t('identity.errorIdIssuePlace')),
+    address: z.string().min(1, t('identity.errorAddress')),
+    phone: z.string().regex(/^0\d{9}$/, t('identity.errorPhone')),
 });
 
 export type CustomerIdentityData = z.infer<typeof customerIdentitySchema>;
@@ -27,10 +39,12 @@ interface CustomerIdentityFormProps {
 type FieldErrors = Partial<Record<keyof CustomerIdentityData, string>>;
 
 export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues }: CustomerIdentityFormProps) {
+    const t = useTranslations('checkout');
+    const locale = useLocale();
     const [values, setValues] = useState<Partial<CustomerIdentityData>>({
         full_name: "",
         dob: "",
-        nationality: "Việt Nam",
+        nationality: locale === 'en' ? 'Vietnam' : 'Việt Nam',
         id_number: "",
         id_issue_date: "",
         id_issue_place: "",
@@ -64,17 +78,18 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                     id_number: prev.id_number || userProfile?.id_number || "",
                     dob: prev.dob || (userProfile?.date_of_birth ? userProfile.date_of_birth : ""),
                 }));
-            } catch {
-                // Silent fail — user just won't get pre-fill
+            } catch (err) {
+                console.warn("Failed to load user profile:", err);
             }
         };
         loadUserProfile();
     }, []);
 
     const validateField = (name: keyof CustomerIdentityData, value: string) => {
-        const result = customerIdentitySchema.shape[name].safeParse(value);
+        const schema = createCustomerIdentitySchema((k) => t(k as any));
+        const result = schema.shape[name].safeParse(value);
         if (!result.success) {
-            return result.error.issues[0]?.message ?? "Không hợp lệ";
+            return result.error.issues[0]?.message ?? t('identity.invalid');
         }
         return undefined;
     };
@@ -96,7 +111,8 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
         e.preventDefault();
 
         // Validate all fields
-        const result = customerIdentitySchema.safeParse(values);
+        const schema = createCustomerIdentitySchema((k) => t(k as any));
+        const result = schema.safeParse(values);
         if (!result.success) {
             const errors: FieldErrors = {};
             result.error.issues.forEach((issue) => {
@@ -131,7 +147,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 {/* Họ và tên */}
                 <div>
                     <label htmlFor="full_name" className={labelClass}>
-                        Họ và tên <span className="text-red-500">*</span>
+                        {t('identity.fullName')} <span className="text-red-500">*</span>
                     </label>
                     <input
                         id="full_name"
@@ -140,7 +156,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                         onChange={(e) => handleChange("full_name", e.target.value)}
                         onBlur={() => handleBlur("full_name")}
                         className={inputClass(!!fieldErrors.full_name)}
-                        placeholder="Nguyễn Văn A"
+                        placeholder={t('identity.fullNamePlaceholder')}
                         autoComplete="name"
                     />
                     {fieldErrors.full_name && <p className={errorClass}>{fieldErrors.full_name}</p>}
@@ -149,7 +165,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 {/* Ngày sinh */}
                 <div>
                     <label htmlFor="dob" className={labelClass}>
-                        Ngày sinh <span className="text-red-500">*</span>
+                        {t('identity.dob')} <span className="text-red-500">*</span>
                     </label>
                     <input
                         id="dob"
@@ -166,16 +182,16 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 {/* Quốc tịch */}
                 <div>
                     <label htmlFor="nationality" className={labelClass}>
-                        Quốc tịch
+                        {t('identity.nationality')}
                     </label>
                     <input
                         id="nationality"
                         type="text"
-                        value={values.nationality ?? "Việt Nam"}
+                        value={values.nationality ?? t('identity.nationalityPlaceholder')}
                         onChange={(e) => handleChange("nationality", e.target.value)}
                         onBlur={() => handleBlur("nationality")}
                         className={inputClass(!!fieldErrors.nationality)}
-                        placeholder="Việt Nam"
+                        placeholder={t('identity.nationalityPlaceholder')}
                     />
                     {fieldErrors.nationality && <p className={errorClass}>{fieldErrors.nationality}</p>}
                 </div>
@@ -183,7 +199,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 {/* Số CCCD */}
                 <div>
                     <label htmlFor="id_number" className={labelClass}>
-                        Số CCCD <span className="text-red-500">*</span>
+                        {t('identity.idNumber')} <span className="text-red-500">*</span>
                     </label>
                     <input
                         id="id_number"
@@ -194,7 +210,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                         onChange={(e) => handleChange("id_number", e.target.value.replace(/\D/g, ""))}
                         onBlur={() => handleBlur("id_number")}
                         className={inputClass(!!fieldErrors.id_number)}
-                        placeholder="123456789012"
+                        placeholder={t('identity.idNumberPlaceholder')}
                     />
                     {fieldErrors.id_number && <p className={errorClass}>{fieldErrors.id_number}</p>}
                 </div>
@@ -203,7 +219,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="id_issue_date" className={labelClass}>
-                            Ngày cấp <span className="text-red-500">*</span>
+                            {t('identity.idIssueDate')} <span className="text-red-500">*</span>
                         </label>
                         <input
                             id="id_issue_date"
@@ -218,7 +234,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                     </div>
                     <div>
                         <label htmlFor="id_issue_place" className={labelClass}>
-                            Nơi cấp <span className="text-red-500">*</span>
+                            {t('identity.idIssuePlace')} <span className="text-red-500">*</span>
                         </label>
                         <input
                             id="id_issue_place"
@@ -227,7 +243,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                             onChange={(e) => handleChange("id_issue_place", e.target.value)}
                             onBlur={() => handleBlur("id_issue_place")}
                             className={inputClass(!!fieldErrors.id_issue_place)}
-                            placeholder="Cục Cảnh sát QLHC về TTXH"
+                            placeholder={t('identity.idIssuePlacePlaceholder')}
                         />
                         {fieldErrors.id_issue_place && <p className={errorClass}>{fieldErrors.id_issue_place}</p>}
                     </div>
@@ -236,7 +252,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 {/* Địa chỉ */}
                 <div>
                     <label htmlFor="address" className={labelClass}>
-                        Địa chỉ thường trú <span className="text-red-500">*</span>
+                        {t('identity.address')} <span className="text-red-500">*</span>
                     </label>
                     <textarea
                         id="address"
@@ -245,7 +261,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                         onChange={(e) => handleChange("address", e.target.value)}
                         onBlur={() => handleBlur("address")}
                         className={inputClass(!!fieldErrors.address)}
-                        placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                        placeholder={t('identity.addressPlaceholder')}
                     />
                     {fieldErrors.address && <p className={errorClass}>{fieldErrors.address}</p>}
                 </div>
@@ -253,7 +269,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                 {/* Số điện thoại */}
                 <div>
                     <label htmlFor="phone" className={labelClass}>
-                        Số điện thoại <span className="text-red-500">*</span>
+                        {t('identity.phone')} <span className="text-red-500">*</span>
                     </label>
                     <input
                         id="phone"
@@ -264,7 +280,7 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                         onChange={(e) => handleChange("phone", e.target.value.replace(/\D/g, ""))}
                         onBlur={() => handleBlur("phone")}
                         className={inputClass(!!fieldErrors.phone)}
-                        placeholder="0901234567"
+                        placeholder={t('identity.phonePlaceholder')}
                         autoComplete="tel"
                     />
                     {fieldErrors.phone && <p className={errorClass}>{fieldErrors.phone}</p>}
@@ -283,10 +299,10 @@ export function CustomerIdentityForm({ onSubmit, isLoading, error, defaultValues
                     {busy ? (
                         <>
                             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Đang xử lý...
+                            {t('identity.processing')}
                         </>
                     ) : (
-                        "Tiếp tục →"
+                        t('identity.continue')
                     )}
                 </button>
             </div>

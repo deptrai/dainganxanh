@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from 'next-intl'
+import { formatNumber, formatCurrency } from '@/lib/format'
 import {
     CursorArrowRaysIcon,
     ShoppingCartIcon,
@@ -17,22 +19,23 @@ interface ReferralStatsProps {
 }
 
 export function ReferralStats({ stats }: ReferralStatsProps) {
+    const locale = useLocale()
     const statCards = [
         {
             label: 'Tổng Clicks',
-            value: stats.totalClicks.toLocaleString('vi-VN'),
+            value: formatNumber(stats.totalClicks, locale),
             icon: CursorArrowRaysIcon,
             color: 'blue',
         },
         {
             label: 'Chuyển Đổi',
-            value: stats.conversions.toLocaleString('vi-VN'),
+            value: formatNumber(stats.conversions, locale),
             icon: ShoppingCartIcon,
             color: 'green',
         },
         {
             label: 'Hoa Hồng',
-            value: `${stats.commission.toLocaleString('vi-VN')}đ`,
+            value: formatCurrency(stats.commission, locale),
             icon: BanknotesIcon,
             color: 'yellow',
         },

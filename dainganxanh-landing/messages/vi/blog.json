@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "title": "Blog & Tin Tức — Đại Ngàn Xanh",
+    "description": "Thông tin, kiến thức lâm nghiệp, phát triển bền vững và cập nhật mới nhất",
+    "notFound": "Không tìm thấy bài viết — Đại Ngàn Xanh",
+    "defaultPostTitle": "Bài viết — Đại Ngàn Xanh"
+  },
+  "header": {
+    "badge": "Tin tức & Kiến thức",
+    "title": "Blog Đại Ngàn Xanh",
+    "subtitle": "Chia sẻ kiến thức về trồng rừng, bảo vệ môi trường và đầu tư xanh bền vững."
+  },
+  "search": {
+    "placeholder": "Tìm kiếm bài viết...",
+    "button": "Tìm kiếm",
+    "noResults": "Không tìm thấy bài viết nào phù hợp"
+  },
+  "categories": {
+    "all": "Tất cả",
+    "forestry": "Lâm nghiệp",
+    "environment": "Môi trường",
+    "community": "Cộng đồng",
+    "news": "Tin tức dự án"
+  },
+  "sidebar": {
+    "featured": "Bài viết nổi bật",
+    "recent": "Bài viết mới nhất",
+    "tags": "Chủ đề quan tâm",
+    "otherPosts": "Bài viết khác",
+    "topics": "Chủ đề",
+    "ctaTitle": "Trồng cây ngay hôm nay",
+    "ctaDesc": "Sở hữu cây Dó Đen Việt — loài cây quý mang giá trị kinh tế và môi trường bền vững.",
+    "ctaButton": "Xem gói trồng cây"
+  },
+  "list": {
+    "all": "Tất cả",
+    "prev": "Trước",
+    "next": "Tiếp",
+    "pageOf": "Trang {page} / {totalPages}"
+  },
+  "page": {
+    "headerTitle": "Blog Đại Ngàn Xanh",
+    "headerSubtitle": "Tin tức, kiến thức về cây Dó Đen, carbon credit và cập nhật từ vườn cây.",
+    "tagFilterActive": "Bài viết về \"{tag}\"",
+    "empty": "Chưa có bài viết nào",
+    "emptyWithTag": "Chưa có bài viết về \"{tag}\"",
+    "emptyDesc": "Chúng tôi đang chuẩn bị nội dung. Hãy quay lại sớm để cập nhật tin tức mới nhất từ vườn cây!"
+  },
+  "post": {
+    "readMore": "Đọc tiếp",
+    "readingTime": "{min} phút đọc",
+    "author": "Tác giả",
+    "publishedAt": "Đăng ngày",
+    "share": "Chia sẻ bài viết",
+    "copied": "Đã sao chép liên kết!",
+    "backToList": "Quay lại danh sách bài viết",
+    "backToBlog": "Quay lại Blog",
+    "viewMore": "Xem thêm bài viết",
+    "views": "{count} lượt xem",
+    "relatedPosts": "Bài viết liên quan"
+  }
+}

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 interface DateRangePickerProps {
     checkIn: string
     checkOut: string
@@ -8,16 +10,17 @@ interface DateRangePickerProps {
 }
 
 export function DateRangePicker({ checkIn, checkOut, onCheckInChange, onCheckOutChange }: DateRangePickerProps) {
+    const t = useTranslations('eco')
     const today = new Date().toISOString().split('T')[0]
     const maxDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Chọn ngày lưu trú</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('datePicker.title')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="check-in" className="block text-sm font-medium text-gray-700 mb-1">
-                        Ngày nhận phòng
+                        {t('datePicker.checkIn')}
                     </label>
                     <input
                         id="check-in"
@@ -31,7 +34,7 @@ export function DateRangePicker({ checkIn, checkOut, onCheckInChange, onCheckOut
                 </div>
                 <div>
                     <label htmlFor="check-out" className="block text-sm font-medium text-gray-700 mb-1">
-                        Ngày trả phòng
+                        {t('datePicker.checkOut')}
                     </label>
                     <input
                         id="check-out"
@@ -50,10 +53,11 @@ export function DateRangePicker({ checkIn, checkOut, onCheckInChange, onCheckOut
                         const nights = Math.ceil(
                             (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)
                         )
-                        return nights > 0 ? `${nights} đêm` : 'Ngày không hợp lệ'
+                        return nights > 0 ? t('datePicker.nights', { count: nights }) : t('datePicker.invalidDates')
                     })()}
                 </p>
             )}
         </div>
     )
 }
+
